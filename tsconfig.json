@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2021", "dom"],
+    "types": ["jest", "@testing-library/jest-dom"],
+    "jsx": "react-jsx",
+    "outDir": "./dist",
+    "rootDir": "./src",
+//    "strict": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "isolatedModules": true,
+    "module": "commonjs",
+    "baseUrl": "./",
+    "paths": {
+      "src/*": ["./src/*"]
+    },
+    "target": "ES2019",              // Set your desired target version
+    "downlevelIteration": true       // Enable downlevel iteration
+  },
+  "include": [
+    "src/**/*",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+  ],
+  "exclude": ["node_modules", "build", "dist"],
+}

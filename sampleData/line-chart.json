@@ -1,0 +1,62 @@
+[
+  {
+    "label": "Africa",
+    "data": [
+      {
+        "year": 2017,
+        "value": 0.7
+      },
+      {
+        "year": 2018,
+        "value": 1.7
+      },
+      {
+        "year": 2019,
+        "value": 2.7
+      },
+      {
+        "year": 2021,
+        "value": 0.7
+      },
+      {
+        "year": 2022,
+        "value": 7
+      },
+      {
+        "year": 2023,
+        "value": -0.7
+      }
+    ]
+  },
+  [
+    {
+      "label": "Euro",
+      "data": [
+        {
+          "year": 2015,
+          "value": 0.7
+        },
+        {
+          "year": 2018,
+          "value": 1.7
+        },
+        {
+          "year": 2019,
+          "value": 2.7
+        },
+        {
+          "year": 2021,
+          "value": 0.7
+        },
+        {
+          "year": 2022,
+          "value": -1
+        },
+        {
+          "year": 2023,
+          "value": -0.7
+        }
+      ]
+    }
+  ]
+]
