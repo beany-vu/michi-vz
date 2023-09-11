@@ -356,15 +356,23 @@ const LineChart: React.FC<LineChartProps> = ({
         <Title x={width / 2} y={margin.top / 2}>
           {title}
         </Title>
-        <HorizontalAxisLinear xScale={xScale} height={height} margin={margin} />
-        <VerticalAxisLinear
-          yScale={yScale}
-          width={width}
-          height={height}
-          margin={margin}
-          highlightZeroLine={true}
-          format={yAxisFormat}
-        />
+        {dataSet.length > 0 && (
+          <>
+            <HorizontalAxisLinear
+              xScale={xScale}
+              height={height}
+              margin={margin}
+            />
+            <VerticalAxisLinear
+              yScale={yScale}
+              width={width}
+              height={height}
+              margin={margin}
+              highlightZeroLine={true}
+              format={yAxisFormat}
+            />
+          </>
+        )}
       </svg>
       <div id="tooltip" style={{ position: "fixed" }} />
     </div>

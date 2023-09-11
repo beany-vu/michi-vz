@@ -51,6 +51,7 @@ const VerticalAxisLinear: FC<Props> = ({
           }),
       );
   }, [yScale, width, height, margin, highlightZeroLine]);
+
   return <g ref={ref}></g>;
 };
 
