@@ -27,81 +27,144 @@ export default {
 export const Primary = {
     args: {
         colorsMapping: {
-            "Africa": "red",
-            "Europe": "blue",
-            "Asia": "green",
+            "Angola": "red",
+            "Cameroon": "blue",
+            "Congo, Democratic Republic of": "green",
         },
-        keys: ["Africa", "Europe", "Asia"],
+        keys: ["Angola", "Cameroon", "Congo, Democratic Republic of"],
         "series": [
             {
                 "date": 2001,
-                "Africa": 100,
-                Asia: null,
-                Europe: 130,
+                "Angola": 0,
+                "Cameroon": 80158,
+                "Congo, Democratic Republic of": 0
             },
             {
                 "date": 2002,
-                "Africa": 400,
-                Europe: 230,
-                Asia: 100,
+                "Angola": 0,
+                "Cameroon": 94222,
+                "Congo, Democratic Republic of": 0
             },
             {
                 "date": 2003,
-                "Africa": 30,
-                Europe: 30,
-                Asia: 20,
+                "Angola": 0,
+                "Cameroon": 125793,
+                "Congo, Democratic Republic of": 0
             },
             {
                 "date": 2004,
-                "Africa": -40,
-                Europe: 30,
-                Asia: 30,
-
+                "Angola": 189177,
+                "Cameroon": 117840,
+                "Congo, Democratic Republic of": 0
             },
             {
                 "date": 2005,
-                "Africa": 50,
-                Europe: 30,
-                Asia: 40,
+                "Angola": 165134,
+                "Cameroon": 117576,
+                "Congo, Democratic Republic of": 0
             },
             {
                 "date": 2006,
-                "Africa": 0,
-                Europe: 30,
-                Asia: 0,
+                "Angola": 249790,
+                "Cameroon": 133130,
+                "Congo, Democratic Republic of": 0
             },
             {
                 "date": 2007,
-                "Africa": 60,
-                Europe: 70,
-                Asia: 60,
+                "Angola": 175881,
+                "Cameroon": 178204,
+                "Congo, Democratic Republic of": 0
             },
             {
                 "date": 2008,
-                "Africa": 30,
-                Europe: 30,
-                Asia: 30,
-
+                "Angola": 0,
+                "Cameroon": 254772,
+                "Congo, Democratic Republic of": 0
             },
             {
                 "date": 2009,
-                "Africa": null,
-                Europe: 30,
-                Asia: 0,
+                "Angola": 506650,
+                "Cameroon": 287263,
+                "Congo, Democratic Republic of": 0
             },
             {
                 "date": 2010,
-                "Africa": 60,
-                Europe: 70,
-                Asia: 60,
+                "Angola": 249170,
+                "Cameroon": 261767,
+                "Congo, Democratic Republic of": 0
             },
             {
                 "date": 2011,
-                "Africa": 30,
-                Europe: 30,
-                Asia: 30,
+                "Angola": 379337,
+                "Cameroon": 302474,
+                "Congo, Democratic Republic of": 0
             },
-
+            {
+                "date": 2012,
+                "Angola": 615377,
+                "Cameroon": 228929,
+                "Congo, Democratic Republic of": 0
+            },
+            {
+                "date": 2013,
+                "Angola": 506171,
+                "Cameroon": 219934,
+                "Congo, Democratic Republic of": 0
+            },
+            {
+                "date": 2014,
+                "Angola": 600079,
+                "Cameroon": 269275,
+                "Congo, Democratic Republic of": 0
+            },
+            {
+                "date": 2015,
+                "Angola": 330261,
+                "Cameroon": 279611,
+                "Congo, Democratic Republic of": 249151
+            },
+            {
+                "date": 2016,
+                "Angola": 360429,
+                "Cameroon": 305050,
+                "Congo, Democratic Republic of": 171525
+            },
+            {
+                "date": 2017,
+                "Angola": 498322,
+                "Cameroon": 231740,
+                "Congo, Democratic Republic of": 169311
+            },
+            {
+                "date": 2018,
+                "Angola": 408313,
+                "Cameroon": 301313,
+                "Congo, Democratic Republic of": 142786
+            },
+            {
+                "date": 2019,
+                "Angola": 274171,
+                "Cameroon": 297302,
+                "Congo, Democratic Republic of": 137248
+            },
+            {
+                "date": 2020,
+                "Angola": 173969,
+                "Cameroon": 317259,
+                "Congo, Democratic Republic of": 126883
+            },
+            {
+                "date": 2021,
+                "Angola": 161692,
+                "Cameroon": 350653,
+                "Congo, Democratic Republic of": 204285
+            },
+            {
+                "date": 2022,
+                "Angola": 224453,
+                "Cameroon": 0,
+                "Congo, Democratic Republic of": 316332
+            }
         ],
         width: 900,
         height: 400,
@@ -111,7 +174,7 @@ export const Primary = {
             bottom: 50,
             left: 50,
         },
-        yAxisFormat: (d) => `${d}%`,//
+        yAxisFormat: (d) => `${d}`,//
         title: 'My Robbin Chart',
     },
 };
