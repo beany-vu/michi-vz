@@ -75,7 +75,6 @@ const RibbonChart: React.FC<Props> = ({
     return [0, max];
   }, [series, keys]);
 
-
   const yScale = useMemo(
     () =>
       d3
