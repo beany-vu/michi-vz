@@ -73,16 +73,16 @@ const RibbonChart: React.FC<Props> = ({
 
   // yScale
   const yScaleDomain = useMemo(() => {
-    const totalValuePerKey: { [key: string]: number } = {};
-    keys.forEach((key) => {
-      totalValuePerKey[key] = 0;
-    });
-    series.forEach((yearData) => {
-      keys.forEach((key) => {
-        totalValuePerKey[key] += yearData[key] || 0; // Adds the key's value or 0 if undefined
-      });
-    });
-    return [0, Math.max(...Object.values(totalValuePerKey))];
+    // return the max value of the sum of all the keys, don't count the date
+    const max = d3.max(
+      series,
+      (d) =>
+        d3.sum(
+          Object.keys(d).map((key) => (key === "date" ? 0 : d[key] || 0)),
+        ) || 0,
+    );
+
+    return [0, max];
   }, [series, keys]);
 
   const yScale = useMemo(

@@ -98,11 +98,11 @@ const LineChart: React.FC<LineChartProps> = ({
     return dataPoint ? dataPoint.value : undefined;
   }
 
-  function getMaxYValueAtX(x: number): number {
-    return Math.max(
-      ...dataSet.map((data) => getYValueAtX(data.series, x) || 0),
-    );
-  }
+  // function getMaxYValueAtX(x: number): number {
+  //   return Math.max(
+  //     ...dataSet.map((data) => getYValueAtX(data.series, x) || 0),
+  //   );
+  // }
 
   function getPathLengthAtX(path: SVGPathElement, x: number) {
     const l = path.getTotalLength();
@@ -222,6 +222,7 @@ const LineChart: React.FC<LineChartProps> = ({
 
         .on("mouseenter", (event, d) => {
           setHighlightItems([data.label]);
+          const [x, y] = d3.pointer(event);
           const tooltip = d3.select("#tooltip");
           const htmlContent = tooltipFormatter(
             { ...d, label: data.label } as DataPoint,
@@ -231,8 +232,8 @@ const LineChart: React.FC<LineChartProps> = ({
 
           // Position the tooltip near the circle
           tooltip
-            .style("left", event.pageX + 10 + "px")
-            .style("top", event.pageY - 25 + "px")
+            .style("left", x + 10 + "px")
+            .style("top", y - 25 + "px")
             .style("visibility", "visible")
             .style("background", "#fff")
             .style("padding", "5px")
@@ -252,8 +253,6 @@ const LineChart: React.FC<LineChartProps> = ({
         .attr("stroke", colorsMapping[key])
         .attr("fill", colorsMapping[key]);
       svg.selectAll(`.line-group-${key}`).attr("stroke", colorsMapping[key]);
-
-      console.log(svg.selectAll(`.line-group-${key}`));
     });
   }, [colorsMapping]);
 
@@ -299,8 +298,8 @@ const LineChart: React.FC<LineChartProps> = ({
           }
         })
         .on("mousemove", function (event) {
-          const mouseX = d3.pointer(event)[0];
-          const xValue = Math.round(xScale.invert(mouseX));
+          const [x, y] = d3.pointer(event);
+          const xValue = Math.round(xScale.invert(x));
 
           const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
           const tooltipContent = dataSet
@@ -313,8 +312,8 @@ const LineChart: React.FC<LineChartProps> = ({
 
           const tooltipWidth = tooltip.clientWidth;
           const tooltipHeight = tooltip.clientHeight;
-          const tooltipX = mouseX - tooltipWidth / 2;
-          const tooltipY = yScale(getMaxYValueAtX(xValue)) - tooltipHeight - 10;
+          const tooltipX = x - tooltipWidth / 2;
+          const tooltipY = y - tooltipHeight - 10;
 
           tooltip.style.left = tooltipX + "px";
           tooltip.style.top = tooltipY + "px";
@@ -374,7 +373,7 @@ const LineChart: React.FC<LineChartProps> = ({
           </>
         )}
       </svg>
-      <div id="tooltip" style={{ position: "fixed" }} />
+      <div id="tooltip" style={{ position: "absolute" }} />
     </div>
   );
 };

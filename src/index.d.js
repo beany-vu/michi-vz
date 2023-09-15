@@ -1,1 +1,1 @@
-export {DataPoint, Margin} from './types/data';
+export { DataPoint, Margin } from "./types/data";
