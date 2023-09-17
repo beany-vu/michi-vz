@@ -175,6 +175,7 @@ const LineChart: React.FC<LineChartProps> = ({
       .curve(d3.curveBumpX);
 
     // draw lines
+
     dataSet.forEach((data, i) => {
       const path = svg
         .append("path")
@@ -185,9 +186,10 @@ const LineChart: React.FC<LineChartProps> = ({
         )
         .attr("d", (d: DataPoint[]) => line(d)) // Explicitly specify the type and use line function
         .attr("stroke", colorsMapping[data.label] ?? data.color)
-        .attr("stroke-width", 4)
+        .attr("stroke-width", 5)
         .attr("fill", "none")
         .attr("pointer-events", "stroke")
+        .attr("transition", "all 0.1s ease-out")
         .on("mouseenter", () => {
           setHighlightItems([data.label]);
         })
@@ -197,9 +199,36 @@ const LineChart: React.FC<LineChartProps> = ({
           d3.select("#tooltip").style("visibility", "hidden");
         });
 
-      path.attr("stroke-dasharray", function () {
-        return getDashArray(data.series, this, xScale);
-      });
+      if (data.series) {
+        path.attr("stroke-dasharray", function () {
+          return getDashArray(data.series, this, xScale);
+        });
+      }
+    });
+
+    // draw lines one more time to fix the side effect of line losing focused on mouseover the dash array
+    dataSet.forEach((data, i) => {
+      svg
+        .append("path")
+        .datum(data.series)
+        .attr(
+          "class",
+          `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${data.label} line-group-overlay-${data.label}`,
+        )
+        .attr("d", (d: DataPoint[]) => line(d)) // Explicitly specify the type and use line function
+        .attr("stroke", colorsMapping[data.label] ?? data.color)
+        .attr("stroke-width", 5)
+        .attr("fill", "none")
+        .attr("pointer-events", "stroke")
+        .attr("opacity", 0.1)
+        .on("mouseenter", () => {
+          setHighlightItems([data.label]);
+        })
+
+        .on("mouseout", () => {
+          setHighlightItems([]);
+          d3.select("#tooltip").style("visibility", "hidden");
+        });
     });
 
     // draw circles on the line to indicate data points
@@ -213,12 +242,13 @@ const LineChart: React.FC<LineChartProps> = ({
           "class",
           `circle-data circle-data-${i} data-group data-group-${i} data-group-${data.label}`,
         )
-        .attr("fill", colorsMapping[data.label] ?? data.color)
+        .attr("fill", colorsMapping[data.label] ?? data.color ?? "transparent")
         .attr("data-label", data.label)
-        .attr("r", 4)
+        .attr("r", 5)
         .attr("pointer-events", "all")
         .attr("cx", (d: DataPoint) => xScale(d.date))
         .attr("cy", (d: DataPoint) => yScale(d.value))
+        .attr("transition", "all 0.1s ease-out")
 
         .on("mouseenter", (event, d) => {
           setHighlightItems([data.label]);
@@ -267,6 +297,7 @@ const LineChart: React.FC<LineChartProps> = ({
     if (highlightItems.length === 0) {
       d3.select("#tooltip").style("visibility", "hidden");
     }
+    svg.selectAll("data-group-overlay").attr("opacity", 0.1);
   }, [highlightItems]);
 
   useEffect(() => {
