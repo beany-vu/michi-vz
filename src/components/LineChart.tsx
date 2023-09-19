@@ -166,6 +166,7 @@ const LineChart: React.FC<LineChartProps> = ({
     const svg = d3.select(svgRef.current);
 
     svg.selectAll(".line").remove();
+    svg.selectAll(".line-overlay").remove();
     svg.selectAll(".circle-data").remove();
 
     const line = d3
@@ -189,8 +190,8 @@ const LineChart: React.FC<LineChartProps> = ({
         .attr("stroke-width", 5)
         .attr("fill", "none")
         .attr("pointer-events", "stroke")
-        .attr("transition", "all 0.1s ease-out")
-        .on("mouseenter", () => {
+        .attr("transition", "opacity 0.3s ease-out")
+        .on("mouseover", () => {
           setHighlightItems([data.label]);
         })
 
@@ -250,9 +251,9 @@ const LineChart: React.FC<LineChartProps> = ({
         .attr("cy", (d: DataPoint) => yScale(d.value))
         .attr("transition", "all 0.1s ease-out")
 
-        .on("mouseenter", (event, d) => {
+        .on("mouseover mousemove", (event, d) => {
           setHighlightItems([data.label]);
-          const [x, y] = d3.pointer(event);
+          const [x, y] = d3.pointer(event, svgRef.current);
           const tooltip = d3.select("#tooltip");
           const htmlContent = tooltipFormatter(
             { ...d, label: data.label } as DataPoint,
@@ -270,10 +271,11 @@ const LineChart: React.FC<LineChartProps> = ({
             .html(htmlContent);
         })
         .on("mouseout", () => {
-          d3.select("#tooltip").style("visibility", "hidden");
+          const tooltip = d3.select("#tooltip");
+          tooltip.style("visibility", "hidden").html();
         });
     });
-  }, [dataSet, width, height, margin]);
+  }, [JSON.stringify(dataSet), width, height, margin]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -322,6 +324,8 @@ const LineChart: React.FC<LineChartProps> = ({
         })
         .on("mouseout", () => {
           tooltip.style.visibility = "hidden";
+          tooltip.style.opacity = "0";
+          tooltip.style.pointerEvents = "none";
           tooltip.innerHTML = "";
           hoverLinesGroup.style("display", "none");
           if (hoverLine) {
@@ -329,7 +333,7 @@ const LineChart: React.FC<LineChartProps> = ({
           }
         })
         .on("mousemove", function (event) {
-          const [x, y] = d3.pointer(event);
+          const [x, y] = d3.pointer(event.nativeEvent, svgRef.current);
           const xValue = Math.round(xScale.invert(x));
 
           const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
@@ -341,13 +345,10 @@ const LineChart: React.FC<LineChartProps> = ({
             .join("");
           tooltip.innerHTML = `<div style="background: #fff; padding: 5px">${tooltipTitle}${tooltipContent}</div>`;
 
-          const tooltipWidth = tooltip.clientWidth;
-          const tooltipHeight = tooltip.clientHeight;
-          const tooltipX = x - tooltipWidth / 2;
-          const tooltipY = y - tooltipHeight - 10;
-
-          tooltip.style.left = tooltipX + "px";
-          tooltip.style.top = tooltipY + "px";
+          tooltip.style.left = x + "px";
+          tooltip.style.top = y + "px";
+          tooltip.style.opacity = "1";
+          tooltip.style.pointerEvents = "auto";
 
           if (!hoverLine) {
             hoverLine = hoverLinesGroup
@@ -376,8 +377,8 @@ const LineChart: React.FC<LineChartProps> = ({
     <div style={{ position: "relative", width: width, height: height }}>
       <svg
         ref={svgRef}
-        width={width + margin.left + margin.right}
-        height={height + margin.top + margin.bottom}
+        width={width}
+        height={height}
         onMouseOut={() => {
           setHighlightItems([]);
         }}
@@ -404,7 +405,13 @@ const LineChart: React.FC<LineChartProps> = ({
           </>
         )}
       </svg>
-      <div id="tooltip" style={{ position: "absolute" }} />
+      <div
+        id="tooltip"
+        style={{
+          position: "absolute",
+          transition: "visibility 0.1s ease-out,opacity 0.1s ease-out",
+        }}
+      />
     </div>
   );
 };
