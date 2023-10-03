@@ -62,13 +62,26 @@ const VerticalStackBarChart: React.FC<Props> = ({
   tooltipFormatter,
   showCombined = false,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems } =
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
   const ref = useRef<SVGSVGElement>(null);
-  const flattenedDataSet = useMemo(
-    () => dataSet.map(({ series }) => series).flat(),
-    [dataSet],
-  );
+  const flattenedDataSet = useMemo(() => {
+    return dataSet
+      .map(({ series }) => series)
+      .flat()
+      .map((dataPoint) => {
+        // Convert the DataPoint object to an array of [key, value] pairs.
+        const entries = Object.entries(dataPoint);
+        // Filter out the keys that are present in the disabledItems array.
+        const filteredEntries = entries.filter(
+          ([key]) => !disabledItems.includes(key),
+        );
+        // Convert the filtered [key, value] pairs back to an object.
+        return Object.fromEntries(filteredEntries);
+      });
+  }, [dataSet]);
+
+  console.log({ flattenedDataSet });
 
   // xScale
   const extractDates = (data: DataPoint): string => String(data.date);
@@ -109,13 +122,15 @@ const VerticalStackBarChart: React.FC<Props> = ({
   const prepareStackedData = (
     rawDataSet: DataSet[],
   ): { [p: string]: RectData[] } => {
-    const stackedData = keys.reduce(
-      (acc, key) => {
-        acc[key] = [];
-        return acc;
-      },
-      {} as { [key: string]: RectData[] },
-    );
+    const stackedData = keys
+      .filter((key) => !disabledItems.includes(key))
+      .reduce(
+        (acc, key) => {
+          acc[key] = [];
+          return acc;
+        },
+        {} as { [key: string]: RectData[] },
+      );
 
     rawDataSet.forEach((dataItem, groupIndex) => {
       const series = dataItem.series;
@@ -123,32 +138,35 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
       series.forEach((yearData) => {
         let y0 = 0;
-        keys.sort().forEach((key) => {
-          const y1 =
-            parseInt(String(y0)) +
-            parseInt((yearData[key] || 0) as unknown as string);
-          const itemHeight = yScale(y0) - yScale(y1);
-          const rectData = {
-            key,
-            height: itemHeight,
-            width: groupWidth - 4, // adjust the width here
-            y: yScale(y1), // adjust the x position based on groupIndex
-            x:
-              xScale(String(yearData.date)) +
-              groupWidth * groupIndex +
-              groupWidth / 2 -
-              groupWidth / 2 +
-              2,
-            fill: colorsMapping[key],
-            data: yearData,
-            seriesKey: dataItem.seriesKey,
-            seriesKeyAbbreviation: dataItem.seriesKeyAbbreviation,
-            value: yearData[key],
-            date: yearData.date,
-          };
-          y0 = y1;
-          stackedData[key].push(rectData as unknown as RectData);
-        });
+        keys
+          .filter((key) => !disabledItems.includes(key))
+          .sort()
+          .forEach((key) => {
+            const y1 =
+              parseInt(String(y0)) +
+              parseInt((yearData[key] || 0) as unknown as string);
+            const itemHeight = yScale(y0) - yScale(y1);
+            const rectData = {
+              key,
+              height: itemHeight,
+              width: groupWidth - 4, // adjust the width here
+              y: yScale(y1), // adjust the x position based on groupIndex
+              x:
+                xScale(String(yearData.date)) +
+                groupWidth * groupIndex +
+                groupWidth / 2 -
+                groupWidth / 2 +
+                2,
+              fill: colorsMapping[key],
+              data: yearData,
+              seriesKey: dataItem.seriesKey,
+              seriesKeyAbbreviation: dataItem.seriesKeyAbbreviation,
+              value: yearData[key],
+              date: yearData.date,
+            };
+            y0 = y1;
+            stackedData[key].push(rectData as unknown as RectData);
+          });
       });
     });
 

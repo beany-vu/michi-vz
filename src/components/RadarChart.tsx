@@ -47,7 +47,7 @@ export interface RadarChartProps {
   tooltipFormatter?: (data: { date: string; value: number }) => React.ReactNode;
   seriesData: DataPoint[];
   // The poles within the radar chart to present data in circular form
-  poles: {
+  poles?: {
     domain: number[];
     range: number[];
     labels: string[];
@@ -63,7 +63,7 @@ export const RadarChart = ({
   tooltipFormatter,
   children,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems } =
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
   const svgRef = useRef(null);
   const [tooltipData, setTooltipData] = useState<{
@@ -78,6 +78,7 @@ export const RadarChart = ({
       0,
       Math.max(
         ...seriesData
+          .filter((d: DataPoint) => !disabledItems.includes(d.label))
           .map((d: DataPoint) => d.data)
           .flat()
           .map((d: DataPoint) => d.value),
@@ -128,6 +129,7 @@ export const RadarChart = ({
 
   const processedSeriesData = seriesData
     // sort disabled items first
+    .filter((d: DataPoint) => !disabledItems.includes(d.label))
     .map((item: DataPoint) => ({
       ...genPolygonPoints(item.data, yScale),
       ...item,
@@ -289,16 +291,15 @@ export const RadarChart = ({
                           strokeWidth={3}
                           fill={colorsMapping[label] ?? color}
                           onMouseOver={(e) => {
+                            const [x, y] = d3.pointer(e, svgRef.current);
                             setHighlightItems([label]);
                             setTooltipData({
                               date: point.date,
                               value: point.value,
                             });
                             if (tooltipRef.current) {
-                              tooltipRef.current.style.top = `${e.clientY}px`;
-                              tooltipRef.current.style.left = `${
-                                e.clientX + 10
-                              }px`;
+                              tooltipRef.current.style.top = `${x}px`;
+                              tooltipRef.current.style.left = `${y + 10}px`;
                               tooltipRef.current.style.display = "block";
                             }
                           }}

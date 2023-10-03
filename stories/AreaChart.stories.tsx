@@ -16,6 +16,7 @@ export default {
                     "Europe": "purple",
                     "Asia": "orange",
                 }}
+                initialDisabledItems={["Africa"]}
                 initialHighlightItems={["Europe"]}>
                 <Story/>
             </MichiVzProvider>
@@ -32,7 +33,7 @@ export const Primary = {
             "Europe": "blue",
             "Asia": "green",
         },
-        keys: ["Africa", "Asia", "Europe",],
+        keys: [ "Asia", "Europe",],
         "series": [
             {
                 "date": 2001,

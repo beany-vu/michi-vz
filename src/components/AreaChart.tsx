@@ -52,7 +52,7 @@ const RibbonChart: React.FC<Props> = ({
   //   `<div>${d.label} - ${d.year}: ${d.value}</div>`,
   children,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems } =
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const [hoveredDate] = useState<number | null>(null);
@@ -78,7 +78,9 @@ const RibbonChart: React.FC<Props> = ({
       series,
       (d) =>
         d3.sum(
-          Object.keys(d).map((key) => (key === "date" ? 0 : d[key] || 0)),
+          Object.keys(d)
+            .filter((key) => !disabledItems.includes(key))
+            .map((key) => (key === "date" ? 0 : d[key] || 0)),
         ) || 0,
     );
 

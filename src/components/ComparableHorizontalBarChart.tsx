@@ -56,12 +56,20 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     colorsBasedMapping,
     highlightItems,
     setHighlightItems,
+    disabledItems,
   } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const yAxisDomain = useMemo(() => dataSet.map((d) => d.label), [dataSet]);
+  const yAxisDomain = useMemo(
+    () =>
+      dataSet
+        .filter((d) => !disabledItems.includes(d.label))
+        .map((d) => d.label),
+    [dataSet],
+  );
   const xAxisDomain = useMemo(
     () => [
       dataSet
+        .filter((d) => !disabledItems.includes(d.label))
         .map((d) => [d.valueBased, d.valueCompared])
         .flat()
         .reduce((a, b) => Math.max(a, b)),
@@ -79,7 +87,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     .domain(xAxisDomain)
     .range([width - margin.left, margin.right])
     .clamp(true)
-    .nice();
+    .nice(1);
 
   const handleMouseOver = (
     d: DataPoint,
@@ -133,77 +141,79 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           margin={margin}
           yAxisFormat={yAxisFormat}
         />
-        {dataSet.map((d, i) => {
-          const x1 = xAxisScale(d.valueBased);
-          const x2 = xAxisScale(d.valueCompared);
-          const y = yAxisScale(d.label) || 0;
-          const standardHeight = yAxisScale.bandwidth();
-          return (
-            <g
-              className={`bar bar-${d.label.replaceAll(" ", "-")}`}
-              key={i}
-              style={{
-                opacity:
-                  highlightItems.includes(d.label) ||
-                  highlightItems.length === 0
-                    ? 1
-                    : 0.3,
-              }}
-              onMouseOver={() => setHighlightItems([d.label])}
-              onMouseOut={() => setHighlightItems([])}
-            >
-              <rect
-                x={margin.left}
-                // y should be aligned to the center of the bandwidth's unit with height = 30
-                y={y + (standardHeight - 30) / 2}
-                width={x1}
-                height={30}
-                fill={colorsBasedMapping[d.label]}
-                rx={5}
-                ry={5}
-                onMouseOver={(event) => handleMouseOver(d, event)}
-                onMouseOut={handleMouseOut}
-              />
-              <rect
-                x={margin.left}
-                y={y + (standardHeight - 30) / 2}
-                width={x2}
-                height={30}
-                fill={colorsMapping[d.label]}
-                opacity={0.8}
-                rx={5}
-                ry={5}
-                onMouseOver={(event) => handleMouseOver(d, event)}
-                onMouseOut={handleMouseOut}
-              />
-              {!d.valueBased && !d.valueCompared && (
-                <>
-                  <rect
-                    x={margin.left}
-                    // y should be aligned to the center of the bandwidth's unit with height = 30
-                    y={y + (standardHeight - 30) / 2}
-                    width={10}
-                    height={30}
-                    fill={colorsBasedMapping[d.label]}
-                    rx={5}
-                    ry={5}
-                    onMouseOver={(event) => handleMouseOver(d, event)}
-                    onMouseOut={handleMouseOut}
-                  />
-                  <text
-                    x={margin.left + 15}
-                    y={y + (standardHeight - 30) / 2 + 20}
-                    fill="black"
-                    fontSize="12px"
-                    fontWeight="bold"
-                  >
-                    N/A
-                  </text>
-                </>
-              )}
-            </g>
-          );
-        })}
+        {dataSet
+          .filter((d) => !disabledItems.includes(d.label))
+          .map((d, i) => {
+            const x1 = xAxisScale(d.valueBased);
+            const x2 = xAxisScale(d.valueCompared);
+            const y = yAxisScale(d.label) || 0;
+            const standardHeight = yAxisScale.bandwidth();
+            return (
+              <g
+                className={`bar bar-${d.label.replaceAll(" ", "-")}`}
+                key={i}
+                style={{
+                  opacity:
+                    highlightItems.includes(d.label) ||
+                    highlightItems.length === 0
+                      ? 1
+                      : 0.3,
+                }}
+                onMouseOver={() => setHighlightItems([d.label])}
+                onMouseOut={() => setHighlightItems([])}
+              >
+                <rect
+                  x={margin.left}
+                  // y should be aligned to the center of the bandwidth's unit with height = 30
+                  y={y + (standardHeight - 30) / 2}
+                  width={x1}
+                  height={30}
+                  fill={colorsBasedMapping[d.label]}
+                  rx={5}
+                  ry={5}
+                  onMouseOver={(event) => handleMouseOver(d, event)}
+                  onMouseOut={handleMouseOut}
+                />
+                <rect
+                  x={margin.left}
+                  y={y + (standardHeight - 30) / 2}
+                  width={x2}
+                  height={30}
+                  fill={colorsMapping[d.label]}
+                  opacity={0.8}
+                  rx={5}
+                  ry={5}
+                  onMouseOver={(event) => handleMouseOver(d, event)}
+                  onMouseOut={handleMouseOut}
+                />
+                {!d.valueBased && !d.valueCompared && (
+                  <>
+                    <rect
+                      x={margin.left}
+                      // y should be aligned to the center of the bandwidth's unit with height = 30
+                      y={y + (standardHeight - 30) / 2}
+                      width={10}
+                      height={30}
+                      fill={colorsBasedMapping[d.label]}
+                      rx={5}
+                      ry={5}
+                      onMouseOver={(event) => handleMouseOver(d, event)}
+                      onMouseOut={handleMouseOut}
+                    />
+                    <text
+                      x={margin.left + 15}
+                      y={y + (standardHeight - 30) / 2 + 20}
+                      fill="black"
+                      fontSize="12px"
+                      fontWeight="bold"
+                    >
+                      N/A
+                    </text>
+                  </>
+                )}
+              </g>
+            );
+          })}
       </svg>
       {tooltip && (
         <div

@@ -12,9 +12,9 @@ export default {
         (Story) => (
             <MichiVzProvider
                 initialColorsMapping={{
-                    "Africa": "red",
-                    "Europe": "blue",
-                    "Asia": "orange",
+                    "Angola": "red",
+                    "Cameroon": "blue",
+                    "Congo, Democratic Republic of": "orange",
                 }}
                 initialHighlightItems={["Africa"]}>
             <Story/>

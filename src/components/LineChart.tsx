@@ -49,7 +49,7 @@ const LineChart: React.FC<LineChartProps> = ({
   showCombined = false,
   children,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems } =
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
 
@@ -59,15 +59,19 @@ const LineChart: React.FC<LineChartProps> = ({
         .scaleLinear()
         .domain([
           d3.min(
-            dataSet.flatMap(({ series }) =>
-              series.filter((dd) => dd.value !== null),
-            ),
+            dataSet
+              .filter((d) => !disabledItems.includes(d.label))
+              .flatMap(({ series }) =>
+                series.filter((dd) => dd.value !== null),
+              ),
             (d) => d.value,
           ) || 0,
           d3.max(
-            dataSet.flatMap(({ series }) =>
-              series.filter((dd) => dd.value !== null),
-            ),
+            dataSet
+              .filter((d) => !disabledItems.includes(d.label))
+              .flatMap(({ series }) =>
+                series.filter((dd) => dd.value !== null),
+              ),
             (d) => d.value,
           ) || 1,
         ])
@@ -83,10 +87,14 @@ const LineChart: React.FC<LineChartProps> = ({
         .scaleLinear()
         .domain([
           d3.min(
-            dataSet.flatMap((item) => item.series.map((d) => d.date as number)),
+            dataSet
+              .filter((d) => !disabledItems.includes(d.label))
+              .flatMap((item) => item.series.map((d) => d.date as number)),
           ) || 0,
           d3.max(
-            dataSet.flatMap((item) => item.series.map((d) => d.date as number)),
+            dataSet
+              .filter((d) => !disabledItems.includes(d.label))
+              .flatMap((item) => item.series.map((d) => d.date as number)),
           ) || 1,
         ])
         .range([MARGIN.left, width - margin.right]),
@@ -107,12 +115,13 @@ const LineChart: React.FC<LineChartProps> = ({
   function getPathLengthAtX(path: SVGPathElement, x: number) {
     const l = path.getTotalLength();
     const precision = 90;
-
+    if (!path) {
+      return 0;
+    }
     for (let i = 0; i <= precision; i++) {
       const pos = path.getPointAtLength((l * i) / precision);
       if (pos.x >= x) return (l * i) / precision;
     }
-    return 0;
   }
 
   function getDashArray(
@@ -177,104 +186,113 @@ const LineChart: React.FC<LineChartProps> = ({
 
     // draw lines
 
-    dataSet.forEach((data, i) => {
-      const path = svg
-        .append("path")
-        .datum(data.series)
-        .attr(
-          "class",
-          `line line-${i} data-group data-group-${i} data-group-${data.label} line-group-${data.label}`,
-        )
-        .attr("d", (d: DataPoint[]) => line(d)) // Explicitly specify the type and use line function
-        .attr("stroke", colorsMapping[data.label] ?? data.color)
-        .attr("stroke-width", 5)
-        .attr("fill", "none")
-        .attr("pointer-events", "stroke")
-        .attr("transition", "opacity 0.3s ease-out")
-        .on("mouseover", () => {
-          setHighlightItems([data.label]);
-        })
+    dataSet
+      .filter((d) => !disabledItems.includes(d.label))
+      .forEach((data, i) => {
+        const path = svg
+          .append("path")
+          .datum(data.series)
+          .attr(
+            "class",
+            `line line-${i} data-group data-group-${i} data-group-${data.label} line-group-${data.label}`,
+          )
+          .attr("d", (d: DataPoint[]) => line(d)) // Explicitly specify the type and use line function
+          .attr("stroke", colorsMapping[data.label] ?? data.color)
+          .attr("stroke-width", 5)
+          .attr("fill", "none")
+          .attr("pointer-events", "stroke")
+          .attr("transition", "opacity 0.3s ease-out")
+          .on("mouseover", () => {
+            setHighlightItems([data.label]);
+          })
 
-        .on("mouseout", () => {
-          setHighlightItems([]);
-          d3.select("#tooltip").style("visibility", "hidden");
-        });
+          .on("mouseout", () => {
+            setHighlightItems([]);
+            d3.select("#tooltip").style("visibility", "hidden");
+          });
 
-      if (data.series) {
-        path.attr("stroke-dasharray", function () {
-          return getDashArray(data.series, this, xScale);
-        });
-      }
-    });
+        if (data.series) {
+          path.attr("stroke-dasharray", function () {
+            return getDashArray(data.series, this, xScale);
+          });
+        }
+      });
 
     // draw lines one more time to fix the side effect of line losing focused on mouseover the dash array
-    dataSet.forEach((data, i) => {
-      svg
-        .append("path")
-        .datum(data.series)
-        .attr(
-          "class",
-          `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${data.label} line-group-overlay-${data.label}`,
-        )
-        .attr("d", (d: DataPoint[]) => line(d)) // Explicitly specify the type and use line function
-        .attr("stroke", colorsMapping[data.label] ?? data.color)
-        .attr("stroke-width", 5)
-        .attr("fill", "none")
-        .attr("pointer-events", "stroke")
-        .attr("opacity", 0.1)
-        .on("mouseenter", () => {
-          setHighlightItems([data.label]);
-        })
+    dataSet
+      .filter((d) => !disabledItems.includes(d.label))
+      .forEach((data, i) => {
+        svg
+          .append("path")
+          .datum(data.series)
+          .attr(
+            "class",
+            `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${data.label} line-group-overlay-${data.label}`,
+          )
+          .attr("d", (d: DataPoint[]) => line(d)) // Explicitly specify the type and use line function
+          .attr("stroke", colorsMapping[data.label] ?? data.color)
+          .attr("stroke-width", 5)
+          .attr("fill", "none")
+          .attr("pointer-events", "stroke")
+          .attr("opacity", 0.1)
+          .on("mouseenter", () => {
+            setHighlightItems([data.label]);
+          })
 
-        .on("mouseout", () => {
-          setHighlightItems([]);
-          d3.select("#tooltip").style("visibility", "hidden");
-        });
-    });
+          .on("mouseout", () => {
+            setHighlightItems([]);
+            d3.select("#tooltip").style("visibility", "hidden");
+          });
+      });
 
     // draw circles on the line to indicate data points
-    dataSet.forEach((data, i) => {
-      svg
-        .selectAll(`.circle-data-${i}`)
-        .data(data.series)
-        .enter()
-        .append("circle")
-        .attr(
-          "class",
-          `circle-data circle-data-${i} data-group data-group-${i} data-group-${data.label}`,
-        )
-        .attr("fill", colorsMapping[data.label] ?? data.color ?? "transparent")
-        .attr("data-label", data.label)
-        .attr("r", 5)
-        .attr("pointer-events", "all")
-        .attr("cx", (d: DataPoint) => xScale(d.date))
-        .attr("cy", (d: DataPoint) => yScale(d.value))
-        .attr("transition", "all 0.1s ease-out")
+    dataSet
+      .filter((d) => !disabledItems.includes(d.label))
+      .forEach((data, i) => {
+        svg
+          .selectAll(`.circle-data-${i}`)
+          .data(data.series)
+          .enter()
+          .append("circle")
+          .attr(
+            "class",
+            `circle-data circle-data-${i} data-group data-group-${i} data-group-${data.label}`,
+          )
+          .attr(
+            "fill",
+            colorsMapping[data.label] ?? data.color ?? "transparent",
+          )
+          .attr("data-label", data.label)
+          .attr("r", 5)
+          .attr("pointer-events", "all")
+          .attr("cx", (d: DataPoint) => xScale(d.date))
+          .attr("cy", (d: DataPoint) => yScale(d.value))
+          .attr("transition", "all 0.1s ease-out")
 
-        .on("mouseover mousemove", (event, d) => {
-          setHighlightItems([data.label]);
-          const [x, y] = d3.pointer(event, svgRef.current);
-          const tooltip = d3.select("#tooltip");
-          const htmlContent = tooltipFormatter(
-            { ...d, label: data.label } as DataPoint,
-            data.series,
-            dataSet,
-          );
+          .on("mouseover mousemove", (event, d) => {
+            setHighlightItems([data.label]);
+            const [x, y] = d3.pointer(event, svgRef.current);
+            const tooltip = d3.select("#tooltip");
+            const htmlContent = tooltipFormatter(
+              { ...d, label: data.label } as DataPoint,
+              data.series,
+              dataSet,
+            );
 
-          // Position the tooltip near the circle
-          tooltip
-            .style("left", x + 10 + "px")
-            .style("top", y - 25 + "px")
-            .style("visibility", "visible")
-            .style("background", "#fff")
-            .style("padding", "5px")
-            .html(htmlContent);
-        })
-        .on("mouseout", () => {
-          const tooltip = d3.select("#tooltip");
-          tooltip.style("visibility", "hidden").html();
-        });
-    });
+            // Position the tooltip near the circle
+            tooltip
+              .style("left", x + 10 + "px")
+              .style("top", y - 25 + "px")
+              .style("visibility", "visible")
+              .style("background", "#fff")
+              .style("padding", "5px")
+              .html(htmlContent);
+          })
+          .on("mouseout", () => {
+            const tooltip = d3.select("#tooltip");
+            tooltip.style("visibility", "hidden").html();
+          });
+      });
   }, [JSON.stringify(dataSet), width, height, margin]);
 
   useEffect(() => {

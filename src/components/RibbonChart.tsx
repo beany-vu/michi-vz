@@ -45,7 +45,7 @@ const RibbonChart: React.FC<Props> = ({
   keys,
   children,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems } =
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
   const ref = useRef<SVGSVGElement>(null);
 
@@ -68,7 +68,9 @@ const RibbonChart: React.FC<Props> = ({
       series,
       (d) =>
         d3.sum(
-          Object.keys(d).map((key) => (key === "date" ? 0 : d[key] || 0)),
+          Object.keys(d)
+            .filter((key) => !disabledItems.includes(key))
+            .map((key) => (key === "date" ? 0 : d[key] || 0)),
         ) || 0,
     );
 
@@ -94,6 +96,7 @@ const RibbonChart: React.FC<Props> = ({
     seriesData.forEach((yearData) => {
       let y0 = 0;
       [...keys]
+        .filter((key) => !disabledItems.includes(key))
         .sort((a, b) => (yearData[a] || 0) - (yearData[b] || 0))
         .forEach((key) => {
           const y1 = y0 + (yearData[key] || 0);
@@ -121,6 +124,7 @@ const RibbonChart: React.FC<Props> = ({
   };
 
   const stackedRectData = useMemo(
+    // remove keys from object that are disabled
     () => prepareStackedData(series),
     [series, width, height, margin],
   );
@@ -176,119 +180,124 @@ const RibbonChart: React.FC<Props> = ({
           format={yAxisFormat}
         />
         <g>
-          {keys.map((key) => {
-            return (
-              <g
-                key={`stack-${key}.replaceAll(" ", "-")`}
-                className={`stack-${key}.replaceAll(" ", "-")`}
-              >
-                {stackedRectData[key] &&
-                  stackedRectData[key].map((d: RectData, i: number) => {
-                    const pointTopLeft = {
-                      x: d.x + d.width,
-                      y: d.y,
-                      height: d.height,
-                    };
-                    const pointTopRight = {
-                      x: stackedRectData[key][i + 1]?.x,
-                      y: stackedRectData[key][i + 1]?.y,
-                      height: stackedRectData[key][i + 1]?.height,
-                    };
-                    const topCurveControl = `Q${d.x + d.width} ${d.y}`;
-                    const segmentTopCurve = `M${pointTopLeft.x} ${
-                      pointTopLeft.y
-                    } ${topCurveControl} ${pointTopRight.x ?? 0} ${
-                      pointTopRight.y ?? 0
-                    }`;
+          {keys
+            .filter((key) => !disabledItems.includes(key))
+            .map((key) => {
+              return (
+                <g
+                  key={`stack-${key}.replaceAll(" ", "-")`}
+                  className={`stack-${key}.replaceAll(" ", "-")`}
+                >
+                  {stackedRectData[key] &&
+                    stackedRectData[key].map((d: RectData, i: number) => {
+                      const pointTopLeft = {
+                        x: d.x + d.width,
+                        y: d.y,
+                        height: d.height,
+                      };
+                      const pointTopRight = {
+                        x: stackedRectData[key][i + 1]?.x,
+                        y: stackedRectData[key][i + 1]?.y,
+                        height: stackedRectData[key][i + 1]?.height,
+                      };
+                      const topCurveControl = `Q${d.x + d.width} ${d.y}`;
+                      const segmentTopCurve = `M${pointTopLeft.x} ${
+                        pointTopLeft.y
+                      } ${topCurveControl} ${pointTopRight.x ?? 0} ${
+                        pointTopRight.y ?? 0
+                      }`;
 
-                    const rightSideLine = `V ${
-                      pointTopRight.y + pointTopRight.height
-                    } `;
-                    const segmentBottomCurve = `Q${d.x + d.width} ${
-                      d.y + d.height
-                    } ${pointTopLeft.x} ${
-                      pointTopLeft.y + pointTopLeft.height
-                    } `;
-                    const leftSideLine = `V ${pointTopLeft.y} `;
-                    const pathD = `${segmentTopCurve} ${rightSideLine} ${segmentBottomCurve} ${leftSideLine} Z`;
+                      const rightSideLine = `V ${
+                        pointTopRight.y + pointTopRight.height
+                      } `;
+                      const segmentBottomCurve = `Q${d.x + d.width} ${
+                        d.y + d.height
+                      } ${pointTopLeft.x} ${
+                        pointTopLeft.y + pointTopLeft.height
+                      } `;
+                      const leftSideLine = `V ${pointTopLeft.y} `;
+                      const pathD = `${segmentTopCurve} ${rightSideLine} ${segmentBottomCurve} ${leftSideLine} Z`;
 
-                    return (
-                      <React.Fragment key={`item-${i}`}>
-                        {i < stackedRectData[key].length - 1 && (
-                          <path
-                            d={pathD}
+                      return (
+                        <React.Fragment key={`item-${i}`}>
+                          {i < stackedRectData[key].length - 1 && (
+                            <path
+                              d={pathD}
+                              fill={d.fill}
+                              opacity={
+                                highlightItems.length === 0 ||
+                                highlightItems.includes(d.key)
+                                  ? 0.4
+                                  : 0.1
+                              }
+                              stroke={"#fff"}
+                              strokeOpacity={0.4}
+                              style={{ transition: "opacity 0.1s ease-out" }}
+                              onMouseOver={() => setHighlightItems([d.key])}
+                              onMouseOut={() => setHighlightItems([])}
+                            />
+                          )}
+                          <rect
+                            key={`item-${i}`}
+                            x={d.x}
+                            y={d.y}
+                            width={d.width}
+                            height={d.height}
                             fill={d.fill}
+                            rx={1.5}
+                            stroke={"#fff"}
+                            strokeOpacity={0.5}
                             opacity={
                               highlightItems.length === 0 ||
                               highlightItems.includes(d.key)
-                                ? 0.4
+                                ? 1
                                 : 0.1
                             }
-                            stroke={"#fff"}
-                            strokeOpacity={0.4}
-                            style={{ transition: "opacity 0.1s ease-out" }}
-                            onMouseOver={() => setHighlightItems([d.key])}
-                            onMouseOut={() => setHighlightItems([])}
-                          />
-                        )}
-                        <rect
-                          key={`item-${i}`}
-                          x={d.x}
-                          y={d.y}
-                          width={d.width}
-                          height={d.height}
-                          fill={d.fill}
-                          rx={1.5}
-                          stroke={"#fff"}
-                          strokeOpacity={0.5}
-                          opacity={
-                            highlightItems.length === 0 ||
-                            highlightItems.includes(d.key)
-                              ? 1
-                              : 0.1
-                          }
-                          ref={(node) => {
-                            if (node) {
-                              d3.select(node)
-                                .on("mouseover", function () {
-                                  setHighlightItems([d.key]);
-                                  d3.select(".tooltip")
-                                    .style("visibility", "visible")
-                                    .html(generateTooltipContent(d.data)); // you can define this function or inline its logic
-                                })
-                                .on("mousemove", function (event) {
-                                  const [x, y] = d3.pointer(event);
-                                  const tooltip = d3
-                                    .select(".tooltip")
-                                    .node() as HTMLElement;
-                                  const tooltipWidth =
-                                    tooltip.getBoundingClientRect().width;
-                                  const tooltipHeight =
-                                    tooltip.getBoundingClientRect().height;
+                            ref={(node) => {
+                              if (node) {
+                                d3.select(node)
+                                  .on("mouseover", function () {
+                                    setHighlightItems([d.key]);
+                                    d3.select(".tooltip")
+                                      .style("visibility", "visible")
+                                      .html(generateTooltipContent(d.data)); // you can define this function or inline its logic
+                                  })
+                                  .on("mousemove", function (event) {
+                                    const [x, y] = d3.pointer(event);
+                                    const tooltip = d3
+                                      .select(".tooltip")
+                                      .node() as HTMLElement;
+                                    const tooltipWidth =
+                                      tooltip.getBoundingClientRect().width;
+                                    const tooltipHeight =
+                                      tooltip.getBoundingClientRect().height;
 
-                                  d3.select(".tooltip")
-                                    .style("left", x - tooltipWidth / 2 + "px")
-                                    .style(
-                                      "top",
-                                      y - tooltipHeight - 10 + "px",
+                                    d3.select(".tooltip")
+                                      .style(
+                                        "left",
+                                        x - tooltipWidth / 2 + "px",
+                                      )
+                                      .style(
+                                        "top",
+                                        y - tooltipHeight - 10 + "px",
+                                      );
+                                  })
+                                  .on("mouseout", function () {
+                                    setHighlightItems([]);
+                                    d3.select(".tooltip").style(
+                                      "visibility",
+                                      "hidden",
                                     );
-                                })
-                                .on("mouseout", function () {
-                                  setHighlightItems([]);
-                                  d3.select(".tooltip").style(
-                                    "visibility",
-                                    "hidden",
-                                  );
-                                });
-                            }
-                          }}
-                        />
-                      </React.Fragment>
-                    );
-                  })}
-              </g>
-            );
-          })}
+                                  });
+                              }
+                            }}
+                          />
+                        </React.Fragment>
+                      );
+                    })}
+                </g>
+              );
+            })}
         </g>
       </svg>
     </div>

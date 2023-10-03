@@ -93,7 +93,7 @@ export const Primary = {
                     },
                     {
                         "date": 2011,
-                        "value": 3,
+                        "value": 1,
                         certainty: true,
                     },
 

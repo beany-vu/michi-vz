@@ -17,6 +17,7 @@ export default {
                     "Europe": "purple",
                     "Asia": "orange",
                 }}
+                initialDisabledItems={["Africa", "Europe"]}
                 initialHighlightItems={["Europe"]}>
                 <Story/>
             </MichiVzProvider>

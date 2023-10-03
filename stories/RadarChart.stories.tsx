@@ -221,6 +221,7 @@ export default {
                 "France": "#17BECF",
                 "UAE": "#D62728",
             }}
+                             initialDisabledItems={["China"]}
                              initialHighlightItems={["France"]}>
                 <Story/>
             </MichiVzProvider>
