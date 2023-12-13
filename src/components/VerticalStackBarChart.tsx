@@ -4,6 +4,7 @@ import Title from "./shared/Title";
 import HorizontalAxisBand from "./shared/HorizontalAxisBand";
 import VerticalAxisLinear from "./shared/VerticalAxisLinear";
 import { useChartContext } from "./MichiVzProvider";
+import LoadingIndicator from "./shared/LoadingIndicator";
 
 interface DataPoint {
   date: string | null;
@@ -16,6 +17,13 @@ interface DataSet {
   series: DataPoint[];
 }
 
+interface TooltipData {
+  item: DataPoint;
+  key: string;
+  seriesKey: string;
+  series: DataPoint[];
+}
+
 interface Props {
   dataSet: DataSet[];
   keys: string[];
@@ -23,14 +31,14 @@ interface Props {
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
   title?: string;
+  xAxisFormat?: (d: number) => string;
   yAxisFormat?: (d: number) => string;
-  tooltipFormatter?: (
-    key: string,
-    seriesKey: string,
-    data: DataPoint,
-    series: DataPoint[],
-  ) => string;
+  tooltipFormatter?: (tooltipData: TooltipData) => string;
   showCombined?: boolean;
+  children?: React.ReactNode;
+  isLoading?: boolean;
+  isLoadingComponent?: React.ReactNode;
+  isNodataComponent?: React.ReactNode;
 }
 
 interface RectData {
@@ -58,9 +66,14 @@ const VerticalStackBarChart: React.FC<Props> = ({
   margin = MARGIN,
   title,
   keys,
+  xAxisFormat,
   yAxisFormat,
   tooltipFormatter,
   showCombined = false,
+  children,
+  isLoading = false,
+  isLoadingComponent,
+  isNodataComponent,
 }) => {
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
@@ -79,15 +92,13 @@ const VerticalStackBarChart: React.FC<Props> = ({
         // Convert the filtered [key, value] pairs back to an object.
         return Object.fromEntries(filteredEntries);
       });
-  }, [dataSet]);
-
-  console.log({ flattenedDataSet });
+  }, [dataSet, disabledItems]);
 
   // xScale
   const extractDates = (data: DataPoint): string => String(data.date);
   const dates = useMemo(
     () => flattenedDataSet.map(extractDates),
-    [flattenedDataSet],
+    [flattenedDataSet, disabledItems],
   );
 
   const xScale = useMemo(
@@ -97,15 +108,18 @@ const VerticalStackBarChart: React.FC<Props> = ({
         .domain(dates)
         .range([margin.left, width - margin.right])
         .padding(0.1),
-    [flattenedDataSet, width, height, margin],
+    [flattenedDataSet, width, height, margin, disabledItems],
   );
 
   // yScale
   const yScaleDomain = useMemo(() => {
     const totalValuePerYear: number[] = flattenedDataSet.map((yearData) =>
-      keys.reduce((acc, key) => acc + (parseInt(yearData[key]) || 0), 0),
+      keys.reduce(
+        (acc, key) => acc + (yearData[key] ? parseFloat(yearData[key]) : 0),
+        0,
+      ),
     );
-    return [0, Math.max(...totalValuePerYear)];
+    return [Math.min(...totalValuePerYear), Math.max(...totalValuePerYear)];
   }, [flattenedDataSet, keys]);
 
   const yScale = useMemo(
@@ -116,7 +130,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
         .range([height - margin.bottom, margin.top])
         .clamp(true)
         .nice(),
-    [flattenedDataSet, width, height, margin],
+    [flattenedDataSet, width, height, margin, disabledItems],
   );
 
   const prepareStackedData = (
@@ -143,8 +157,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
           .sort()
           .forEach((key) => {
             const y1 =
-              parseInt(String(y0)) +
-              parseInt((yearData[key] || 0) as unknown as string);
+              parseFloat(String(y0)) +
+              parseFloat((yearData[key] || 0) as unknown as string);
             const itemHeight = yScale(y0) - yScale(y1);
             const rectData = {
               key,
@@ -184,7 +198,12 @@ const VerticalStackBarChart: React.FC<Props> = ({
     series: DataPoint[],
   ) => {
     if (tooltipFormatter) {
-      return tooltipFormatter(key, seriesKey, data, series);
+      return tooltipFormatter({
+        item: data,
+        key: key,
+        seriesKey: seriesKey,
+        series: series,
+      });
     }
 
     if (!showCombined) {
@@ -223,7 +242,6 @@ const VerticalStackBarChart: React.FC<Props> = ({
           position: "absolute",
           background: "white",
           padding: "5px",
-          border: "1px solid #333",
           pointerEvents: "none",
           zIndex: 1000,
           visibility: "hidden",
@@ -236,18 +254,30 @@ const VerticalStackBarChart: React.FC<Props> = ({
         width={width}
         height={height}
         style={{ overflow: "visible" }}
+        onMouseOut={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setHighlightItems([]);
+          d3.select(".tooltip").style("visibility", "hidden");
+        }}
       >
+        {children}
         <Title x={width / 2} y={MARGIN.top / 2}>
           {title}
         </Title>
-        <HorizontalAxisBand xScale={xScale} height={height} margin={margin} />
+        <HorizontalAxisBand
+          xScale={xScale}
+          height={height}
+          margin={margin}
+          xAxisFormat={xAxisFormat}
+        />
         <VerticalAxisLinear
           yScale={yScale}
           width={width}
           height={height}
           margin={margin}
           highlightZeroLine={true}
-          format={yAxisFormat}
+          yAxisFormat={yAxisFormat}
         />
         <g>
           {keys.map((key) => {
@@ -263,7 +293,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                           width={d.width}
                           height={d.height}
                           fill={d.fill ?? "transparent"}
-                          rx={1.5}
+                          rx={2}
                           stroke={"#fff"}
                           opacity={
                             highlightItems.length === 0 ||
@@ -341,6 +371,11 @@ const VerticalStackBarChart: React.FC<Props> = ({
           })}
         </g>
       </svg>
+      {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
+      {isLoading && !isLoadingComponent && <LoadingIndicator />}
+      {!isLoading && dataSet.length === 0 && isNodataComponent && (
+        <>{isNodataComponent}</>
+      )}
     </div>
   );
 };

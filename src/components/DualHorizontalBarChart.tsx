@@ -9,8 +9,8 @@ import LoadingIndicator from "./shared/LoadingIndicator";
 interface DataPoint {
   label: string;
   color?: string;
-  valueBased: number;
-  valueCompared: number;
+  value1: number;
+  value2: number;
 }
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
@@ -39,7 +39,7 @@ interface LineChartProps {
   isNodataComponent?: React.ReactNode;
 }
 
-const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
+const DualHorizontalBarChart: React.FC<LineChartProps> = ({
   dataSet,
   title,
   width = WIDTH,
@@ -77,7 +77,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     () => [
       dataSet
         .filter((d) => !disabledItems.includes(d.label))
-        .map((d) => [d.valueBased, d.valueCompared])
+        .map((d) => [d.value1, d.value2])
         .flat()
         .reduce((a, b) => Math.max(a, b)),
       0,
@@ -89,10 +89,17 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     .domain(yAxisDomain)
     .range([margin.top, height - margin.bottom]);
 
-  const xAxisScale = d3
+  const xAxis1Scale = d3
     .scaleLinear()
     .domain(xAxisDomain)
-    .range([width - margin.left, margin.right])
+    .range([width - margin.right, width / 2])
+    .clamp(true)
+    .nice(1);
+
+  const xAxis2Scale = d3
+    .scaleLinear()
+    .domain(xAxisDomain)
+    .range([margin.left, width / 2])
     .clamp(true)
     .nice(1);
 
@@ -142,7 +149,13 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           {title}
         </Title>
         <HorizontalAxisLinear
-          xScale={xAxisScale}
+          xScale={xAxis1Scale}
+          height={height}
+          margin={margin}
+          xAxisFormat={xAxisFormat}
+        />
+        <HorizontalAxisLinear
+          xScale={xAxis2Scale}
           height={height}
           margin={margin}
           xAxisFormat={xAxisFormat}
@@ -156,8 +169,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         {dataSet
           .filter((d) => !disabledItems.includes(d.label))
           .map((d, i) => {
-            const x1 = xAxisScale(d.valueBased);
-            const x2 = xAxisScale(d.valueCompared);
+            const x1 = xAxis1Scale(d.value1) - width / 2; // Corrected width calculation
+            const x2 = xAxis2Scale(0) - xAxis2Scale(d.value2); // Corrected width calculation
             const y = yAxisScale(d.label) || 0;
             const standardHeight = yAxisScale.bandwidth();
             return (
@@ -175,8 +188,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                 onMouseOut={() => setHighlightItems([])}
               >
                 <rect
-                  className="value-based"
-                  x={margin.left}
+                  x={width / 2}
                   // y should be aligned to the center of the bandwidth's unit with height = 30
                   y={y + (standardHeight - 30) / 2}
                   width={x1}
@@ -186,36 +198,37 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   ry={5}
                   onMouseOver={(event) => handleMouseOver(d, event)}
                   onMouseOut={handleMouseOut}
+                  stroke={"#fff"}
                 />
                 <rect
-                  className="value-compared"
-                  x={margin.left}
+                  x={width / 2 - x2}
                   y={y + (standardHeight - 30) / 2}
                   width={x2}
                   height={30}
                   fill={colorsMapping[d.label]}
                   opacity={0.8}
-                  rx={5}
-                  ry={5}
+                  rx={3}
+                  ry={3}
                   onMouseOver={(event) => handleMouseOver(d, event)}
                   onMouseOut={handleMouseOut}
+                  stroke={"#fff"}
                 />
-                {!d.valueBased && !d.valueCompared && (
+                {!d.value1 && !d.value2 && (
                   <>
                     <rect
-                      x={margin.left}
+                      x={width / 2 - 5}
                       // y should be aligned to the center of the bandwidth's unit with height = 30
                       y={y + (standardHeight - 30) / 2}
                       width={10}
                       height={30}
                       fill={colorsBasedMapping[d.label]}
-                      rx={5}
-                      ry={5}
+                      rx={3}
+                      ry={3}
                       onMouseOver={(event) => handleMouseOver(d, event)}
                       onMouseOut={handleMouseOut}
                     />
                     <text
-                      x={margin.left + 15}
+                      x={width / 2 + 15}
                       y={y + (standardHeight - 30) / 2 + 20}
                       fill="black"
                       fontSize="12px"
@@ -237,14 +250,13 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
             top: `${tooltip?.y}px`,
             background: "white",
             padding: "5px",
-            border: "1px solid black",
             pointerEvents: "none",
           }}
         >
           {!tooltipFormatter && (
             <div>
-              ${tooltip?.data?.label}: ${tooltip?.data?.valueBased} - $
-              {tooltip?.data?.valueCompared}
+              ${tooltip?.data?.label}: ${tooltip?.data?.value1} - $
+              {tooltip?.data?.value2}
             </div>
           )}
           {tooltipFormatter && tooltipFormatter(tooltip?.data)}
@@ -259,4 +271,4 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   );
 };
 
-export default ComparableHorizontalBarChart;
+export default DualHorizontalBarChart;

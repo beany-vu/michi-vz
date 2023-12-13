@@ -4,6 +4,7 @@ import Title from "./shared/Title";
 import HorizontalAxisBand from "./shared/HorizontalAxisBand";
 import VerticalAxisLinear from "./shared/VerticalAxisLinear";
 import { useChartContext } from "./MichiVzProvider";
+import LoadingIndicator from "./shared/LoadingIndicator";
 
 interface DataPoint {
   date: number;
@@ -19,6 +20,9 @@ interface Props {
   title?: string;
   yAxisFormat?: (d: number) => string;
   children?: React.ReactNode;
+  isLoading?: boolean;
+  isLoadingComponent?: React.ReactNode;
+  isNodataComponent?: React.ReactNode;
 }
 
 interface RectData {
@@ -44,6 +48,9 @@ const RibbonChart: React.FC<Props> = ({
   yAxisFormat,
   keys,
   children,
+  isLoading = false,
+  isLoadingComponent,
+  isNodataComponent,
 }) => {
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
@@ -165,6 +172,12 @@ const RibbonChart: React.FC<Props> = ({
         width={width}
         height={height}
         style={{ overflow: "visible" }}
+        onMouseOut={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setHighlightItems([]);
+          d3.select(".tooltip").style("visibility", "hidden");
+        }}
       >
         {children}
         <Title x={width / 2} y={MARGIN.top / 2}>
@@ -177,7 +190,7 @@ const RibbonChart: React.FC<Props> = ({
           height={height}
           margin={margin}
           highlightZeroLine={true}
-          format={yAxisFormat}
+          yAxisFormat={yAxisFormat}
         />
         <g>
           {keys
@@ -300,6 +313,11 @@ const RibbonChart: React.FC<Props> = ({
             })}
         </g>
       </svg>
+      {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
+      {isLoading && !isLoadingComponent && <LoadingIndicator />}
+      {!isLoading && series.length === 0 && isNodataComponent && (
+        <>{isNodataComponent}</>
+      )}
     </div>
   );
 };

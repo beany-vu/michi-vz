@@ -13,7 +13,7 @@ export default {
         (Story) => (
             <MichiVzProvider
                 initialColorsMapping={{
-                    "Africa": "#ff0",
+                    "Madagascar": "#ff0",
                     "Europe": "purple",
                     "Asia": "orange",
                 }}
@@ -30,159 +30,126 @@ export const Primary = {
     args: {
         colorsMapping: {
             "Africa": "red",
-            "Europe": "blue",
+            "Non-LDC": "blue",
             "Asia": "green",
         },
-        keys: ["Africa", "Asia", "Europe"],
-        dataSet: [
-            {
-                seriesKey: "import",
-                seriesKeyAbbreviation: "I",
-                "series": [
-                    {
-                        "date": 2001,
-                        "Africa": 100,
-                        Europe: 130,
-                    },
-                    {
-                        "date": 2002,
-                        "Africa": 400,
-                        Europe: 230,
-                        Asia: 100,
-                    },
-                    {
-                        "date": 2003,
-                        "Africa": 30,
-                        Europe: 30,
-                        Asia: 20,
-                    },
-                    {
-                        "date": 2004,
-                        "Africa": -40,
-                        Europe: 30,
-                        Asia: 30,
-
-                    },
-                    {
-                        "date": 2005,
-                        "Africa": 50,
-                        Europe: 30,
-                        Asia: 40,
-                    },
-                    {
-                        "date": 2006,
-                        "Africa": 0,
-                        Europe: 30,
-                        Asia: 0,
-                    },
-                    {
-                        "date": 2007,
-                        "Africa": 60,
-                        Europe: 70,
-                        Asia: 60,
-                    },
-                    {
-                        "date": 2008,
-                        "Africa": 30,
-                        Europe: 30,
-                        Asia: 30,
-
-                    },
-                    {
-                        "date": 2009,
-                        "Africa": null,
-                        Europe: 30,
-                        Asia: 0,
-                    },
-                    {
-                        "date": 2010,
-                        "Africa": 60,
-                        Europe: 70,
-                        Asia: 60,
-                    },
-                    {
-                        "date": 2011,
-                        "Africa": 30,
-                        Europe: 30,
-                        Asia: 30,
-                    },
-
-                ],
-            },
-            {
-                seriesKey: "export",
-                seriesKeyAbbreviation: "E",
-                "series": [
-                    {
-                        "date": 2001,
-                        "Africa": 10,
-                        Europe: 130,
-                    },
-                    {
-                        "date": 2002,
-                        "Africa": 40,
-                        Europe: 30,
-                        Asia: 10,
-                    },
-                    {
-                        "date": 2003,
-                        "Africa": 30,
-                        Europe: 30,
-                        Asia: 20,
-                    },
-                    {
-                        "date": 2004,
-                        "Africa": 40,
-                        Europe: 30,
-                        Asia: 30,
-
-                    },
-                    {
-                        "date": 2005,
-                        "Africa": 50,
-                        Europe: 30,
-                        Asia: 40,
-                    },
-                    {
-                        "date": 2006,
-                        "Africa": 0,
-                        Europe: 30,
-                        Asia: 0,
-                    },
-                    {
-                        "date": 2007,
-                        "Africa": 60,
-                        Europe: 70,
-                        Asia: 60,
-                    },
-                    {
-                        "date": 2008,
-                        "Africa": 30,
-                        Europe: 30,
-                        Asia: 30,
-
-                    },
-                    {
-                        "date": 2009,
-                        "Africa": null,
-                        Europe: 30,
-                        Asia: 0,
-                    },
-                    {
-                        "date": 2010,
-                        "Africa": 60,
-                        Europe: 70,
-                        Asia: 60,
-                    },
-                    {
-                        "date": 2011,
-                        "Africa": 10,
-                        Europe: 20,
-                        Asia: 30,
-                    },
-
-                ],
-            }
+        keys: ["Africa", "Non-LDC"],
+        dataSet: [{
+            "seriesKey": "exports",
+            "seriesKeyAbbreviation": "X",
+            "series": [
+                {
+                    "date": 2001,
+                    "Africa": 55043000,
+                    "Non-LDC": 52029000
+                },
+                {
+                    "date": 2002,
+                    "Africa": 38845000,
+                    "Non-LDC": 36259000
+                },
+                {
+                    "date": 2003,
+                    "Africa": 72065000,
+                    "Non-LDC": 68184000
+                },
+                {
+                    "date": 2004,
+                    "Africa": 49430000,
+                    "Non-LDC": 44885000
+                },
+                {
+                    "date": 2005,
+                    "Africa": 34591000,
+                    "Non-LDC": 27383000
+                },
+                {
+                    "date": 2006,
+                    "Africa": 42614000,
+                    "Non-LDC": 35785000
+                },
+                {
+                    "date": 2007,
+                    "Africa": 73025000,
+                    "Non-LDC": 65233000
+                },
+                {
+                    "date": 2008,
+                    "Africa": 72409000,
+                    "Non-LDC": 64434000
+                },
+                {
+                    "date": 2009,
+                    "Africa": 57623000,
+                    "Non-LDC": 49501000
+                },
+                {
+                    "date": 2010,
+                    "Africa": 96652000,
+                    "Non-LDC": 74377000
+                },
+                {
+                    "date": 2011,
+                    "Africa": 85460000,
+                    "Non-LDC": 72787000
+                },
+                {
+                    "date": 2012,
+                    "Africa": 84525000,
+                    "Non-LDC": 69596000
+                },
+                {
+                    "date": 2013,
+                    "Africa": 146841000,
+                    "Non-LDC": 130649000
+                },
+                {
+                    "date": 2014,
+                    "Africa": 187843000,
+                    "Non-LDC": 170250000
+                },
+                {
+                    "date": 2015,
+                    "Africa": 158761000,
+                    "Non-LDC": 138940000
+                },
+                {
+                    "date": 2016,
+                    "Africa": 177270000,
+                    "Non-LDC": 155546000
+                },
+                {
+                    "date": 2017,
+                    "Africa": 216721000,
+                    "Non-LDC": 197103000
+                },
+                {
+                    "date": 2018,
+                    "Africa": 236890000,
+                    "Non-LDC": 215081000
+                },
+                {
+                    "date": 2019,
+                    "Africa": 195539000,
+                    "Non-LDC": 174568000
+                },
+                {
+                    "date": 2020,
+                    "Africa": 127133000,
+                    "Non-LDC": 112096000
+                },
+                {
+                    "date": 2021,
+                    "Africa": 162748000,
+                    "Non-LDC": 142205000
+                },
+                {
+                    "date": 2022,
+                    "Africa": 213893000,
+                    "Non-LDC": 179994000
+                }
+            ]
+        }
         ],
 
         width: 900,

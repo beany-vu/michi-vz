@@ -11,11 +11,11 @@ export default {
     decorators: [
         (Story) => (
             <MichiVzProvider initialColorsMapping={{
-                "Africa": "red",
+                "Egypt": "red",
                 "Euro": "purple",
                 "Asia": "orange",
             }}
-                initialHighlightItems={["Euro"]}>
+                initialHighlightItems={["Egypt"]}>
                 <Story/>
             </MichiVzProvider>
         )
@@ -27,104 +27,29 @@ export const Primary = {
     args: {
         dataSet: [
             {
-                "label": "Africa",
-                color: "blue",
+                "label": "Egypt",
                 "series": [
                     {
-                        "date": 2001,
-                        "value": -10,
-                        certainty: false,
+                        "date": "2001",
+                        // "date": 2001,
+                        "value": "68.45",
+                        "certainty": false
                     },
                     {
-                        "date": 2017,
-                        "value": -10,
-                        certainty: false,
-                    },
-                    {
-                        "date": 2018,
-                        "value": 1.7,
-                        certainty: true,
-                    },
-                    {
-                        "date": 2019,
-                        "value": -10,
-                        certainty: true,
-                    },
-                    {
-                        "date": 2021,
-                        "value": 0.7,
-                        certainty: false,
-                    },
-                    {
-                        "date": 2022,
-                        "value": -10,
-                        certainty: true,
-                    },
-                    {
-                        "date": 2023,
+                        "date": "2002",
+                        // "date": 2002,
                         "value": 7,
                         certainty: true,
                     },
                     {
-                        "date": 2025,
+                        "date": "2025",
+                        // "date": 2005,
                         "value": 7,
-                        certainty: false
-                    },
-                    {
-                        "date": 2026,
-                        "value": 7,
-                        certainty: true
-                    },
-                    {
-                        "date": 2039,
-                        "value": -7,
                         certainty: false
                     },
                 ]
             },
-            {
-                "label": "Euro",
-                color: "red",
-                "series": [
-                    {
-                        "date": 2010,
-                        "value": 3,
-                        certainty: false,
-                    },
-                    {
-                        "date": 2011,
-                        "value": 1,
-                        certainty: true,
-                    },
 
-                    {
-                        "date": 2018,
-                        "value": 3,
-                        certainty: false,
-                    },
-                    {
-                        "date": 2019,
-                        "value": 3,
-                        certainty: true,
-                    },
-                    {
-                        "date": 2021,
-                        "value": 3,
-                        certainty: false,
-                    },
-                    {
-                        "date": 2022,
-                        "value": 3,
-                        certainty: true,
-                    },
-                    {
-                        "date": 2023,
-                        "value": 3,
-                        certainty: true,
-                    },
-
-                ]
-            },
         ],
         width: 900,
         height: 400,
@@ -136,6 +61,7 @@ export const Primary = {
         },
         showCombined: false,
         yAxisFormat: (d) => `${d}%`,// Example: format values as percentages
+        xAxisDateType: "date_annual",
         title: 'My Line Chart',
         tooltipFormatter: (dataSet, d) => {
             return JSON.stringify(d);

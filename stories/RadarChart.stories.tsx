@@ -235,7 +235,7 @@ export const Primary = Template.bind({});
 Primary.args = {
     width: 400,
     height: 400,
-    seriesData: mockData2,
+    series: mockData2,
     poles: {
         range: [0, Math.PI * 3],
         domain: [360, 0],
@@ -288,7 +288,7 @@ Primary.args = {
                 formatter: (value) => value,
             },
         },
-        seriesData: [
+        series: [
             // line:
         ],
     },

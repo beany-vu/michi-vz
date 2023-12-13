@@ -6,29 +6,47 @@ interface Props {
   xScale: ScaleBand<string>;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
+  xAxisFormat?: (d: string | number) => string;
 }
 
-const HorizontalAxisBand: FC<Props> = ({ xScale, height, margin }) => {
+const HorizontalAxisBand: FC<Props> = ({
+  xScale,
+  height,
+  margin,
+  xAxisFormat,
+}) => {
   const ref = useRef<SVGGElement>(null);
 
   useEffect(() => {
     const g = d3.select(ref.current);
     if (g) {
+      g.attr("transform", "translate(0," + (height - margin.bottom + 25) + ")")
+        .call(
+          d3
+            .axisBottom(xScale)
+            .tickFormat((d) => (xAxisFormat ? xAxisFormat(d) : String(d))),
+        )
+        .call((g) => g.select(".domain").attr("stroke-opacity", 1))
+        .call((g) => g.select(".domain").remove())
+        .call((g) => g.selectAll(".tick line").remove());
+
+      if (xScale.domain().length > 20) {
+        g.selectAll(".tick")
+          .filter(function (d, i) {
+            return i % 3 !== 0;
+          })
+          .remove();
+      }
+
       g.selectAll(".tick")
         .append("circle")
         .attr("class", "tickValueDot")
         .attr("cx", 0)
-        .attr("cy", 0) // 10 units above the x-axis. Adjust as needed.
-        .attr("r", 2) // Radius of the circle
-        .attr("fill", "lightgray"); // Color of the circle
-      g.attr("transform", "translate(0," + (height - margin.bottom + 25) + ")")
-        .call(d3.axisBottom(xScale))
-        .call((g) => g.select(".domain").attr("stroke-opacity", 1))
-        .call((g) => g.select(".domain").remove())
-        .call((g) => g.selectAll(".tick line").remove())
-        .call((g) => g.selectAll(".tick line").remove());
+        .attr("cy", 0)
+        .attr("r", 2)
+        .attr("fill", "lightgray");
     }
-  }, [xScale, height, margin]);
+  }, [xScale, height, margin, xAxisFormat]);
 
   return <g ref={ref} className={"x-axis"} />;
 };

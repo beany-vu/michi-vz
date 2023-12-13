@@ -8,7 +8,7 @@ interface Props {
   height: number;
   highlightZeroLine?: boolean;
   margin: { top: number; right: number; bottom: number; left: number };
-  format?: (d: number) => string;
+  yAxisFormat?: (d: number) => string;
 }
 
 const VerticalAxisLinear: FC<Props> = ({
@@ -17,7 +17,7 @@ const VerticalAxisLinear: FC<Props> = ({
   height,
   highlightZeroLine = true,
   margin,
-  format,
+  yAxisFormat,
 }) => {
   const ref = useRef<SVGGElement>(null);
   useEffect(() => {
@@ -26,11 +26,14 @@ const VerticalAxisLinear: FC<Props> = ({
     const yAxis = d3.axisLeft(yScale).tickSize(0).tickPadding(10);
 
     // Apply the formatter if provided
-    if (format) {
-      yAxis.tickFormat(format);
+    if (yAxisFormat) {
+      yAxis.tickFormat(yAxisFormat);
     }
 
-    g.attr("transform", "translate(" + margin.left + ",0)")
+    g.attr(
+      "transform",
+      "translate(" + (margin.left > 0 ? margin.left : 0) + ",0)",
+    )
       .call(yAxis)
       .call((g) => g.select(".domain").remove())
       .call((g) => g.selectAll(".tick line").attr("stroke-width", "1.5"))

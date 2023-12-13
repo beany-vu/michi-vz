@@ -2,7 +2,8 @@ import React, { useRef, useEffect, useMemo, useState } from "react";
 import * as d3 from "d3";
 import styled from "styled-components";
 import range from "lodash/range";
-import { useChartContext } from "src/components/MichiVzProvider";
+import { useChartContext } from "../components/MichiVzProvider";
+import LoadingIndicator from "./shared/LoadingIndicator";
 
 const Polygon = styled.polygon`
   stroke-linejoin: round;
@@ -45,7 +46,7 @@ export interface RadarChartProps {
   width: number;
   height: number;
   tooltipFormatter?: (data: { date: string; value: number }) => React.ReactNode;
-  seriesData: DataPoint[];
+  series: DataPoint[];
   // The poles within the radar chart to present data in circular form
   poles?: {
     domain: number[];
@@ -53,15 +54,21 @@ export interface RadarChartProps {
     labels: string[];
   };
   children?: React.ReactNode;
+  isLoading?: boolean;
+  isLoadingComponent?: React.ReactNode;
+  isNodataComponent?: React.ReactNode;
 }
 
 export const RadarChart = ({
   width,
   height,
-  seriesData,
+  series,
   poles: poles,
   tooltipFormatter,
   children,
+  isLoading = false,
+  isLoadingComponent,
+  isNodataComponent,
 }) => {
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
@@ -73,11 +80,11 @@ export const RadarChart = ({
   const tooltipRef = useRef<HTMLDivElement | null>(null);
 
   const yScaleDomain = useMemo(() => {
-    if (!seriesData) return [0, 30];
+    if (!series) return [0, 30];
     return [
       0,
       Math.max(
-        ...seriesData
+        ...series
           .filter((d: DataPoint) => !disabledItems.includes(d.label))
           .map((d: DataPoint) => d.data)
           .flat()
@@ -127,7 +134,7 @@ export const RadarChart = ({
     return { points, pointString };
   };
 
-  const processedSeriesData = seriesData
+  const processedseries = series
     // sort disabled items first
     .filter((d: DataPoint) => !disabledItems.includes(d.label))
     .map((item: DataPoint) => ({
@@ -197,7 +204,7 @@ export const RadarChart = ({
         })
         .text(label);
     });
-  }, [width, height, seriesData, poles]);
+  }, [width, height, series, poles]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -219,7 +226,7 @@ export const RadarChart = ({
 
   return (
     <div style={{ position: "relative" }}>
-      <Tooltip ref={tooltipRef} style={{ display: "none" }}>
+      <Tooltip ref={tooltipRef} style={{ display: "none" }} className="tooltip">
         {tooltipData && (
           <>
             {tooltipFormatter ? (
@@ -240,9 +247,15 @@ export const RadarChart = ({
         height={height}
         style={{ overflow: "visible" }}
         ref={svgRef}
+        onMouseOut={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setHighlightItems([]);
+          setTooltipData(null);
+        }}
       >
         {children}
-        {processedSeriesData.map(
+        {processedseries.map(
           ({ label, pointString, points, color }, i: number) => (
             <g
               key={`series-${i}`}
@@ -319,6 +332,11 @@ export const RadarChart = ({
           ),
         )}
       </svg>
+      {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
+      {isLoading && !isLoadingComponent && <LoadingIndicator />}
+      {!isLoading && series.length === 0 && isNodataComponent && (
+        <>{isNodataComponent}</>
+      )}
     </div>
   );
 };

@@ -2,8 +2,9 @@ import React, { useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import VerticalAxisLinear from "./shared/VerticalAxisLinear";
-import HorizontalAxisLinear from "./shared/HorizontalAxisLinear";
 import { useChartContext } from "./MichiVzProvider";
+import HorizontalAxisLinear from "./shared/HorizontalAxisLinear";
+import LoadingIndicator from "./shared/LoadingIndicator";
 
 interface DataPoint {
   date: number;
@@ -23,56 +24,82 @@ interface Props {
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
   title?: string;
+  xAxisFormat?: (d: number) => string;
   yAxisFormat?: (d: number) => string;
+  yAxisDomain?: [number, number] | null;
   tooltipFormatter?: (
     d: DataPoint,
     series: DataPoint[],
-    dataSet: {
-      label: string;
-      color: string;
-      series: DataPoint[];
-    }[],
-  ) => string;
+    key: string,
+  ) => string | null;
   children?: React.ReactNode;
+  xAxisDataType: "number" | "date_annual" | "date_monthly";
+  isLoading?: boolean;
+  isLoadingComponent?: React.ReactNode;
+  isNodataComponent?: React.ReactNode;
 }
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900;
 const HEIGHT = 480;
 
-const RibbonChart: React.FC<Props> = ({
+const AreaChart: React.FC<Props> = ({
   series,
   width = WIDTH,
   height = HEIGHT,
   margin = MARGIN,
   title,
   keys,
+  xAxisFormat,
   yAxisFormat,
-  // tooltipFormatter = (d: DataPoint) =>
-  //   `<div>${d.label} - ${d.year}: ${d.value}</div>`,
+  yAxisDomain = null,
+  tooltipFormatter = null,
+  xAxisDataType = "number",
   children,
+  isLoading = false,
+  isLoadingComponent,
+  isNodataComponent,
 }) => {
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const [hoveredDate] = useState<number | null>(null);
-  const rectWidth = (width - margin.left - margin.right) / series.length;
 
-  // xScale
-  const xScale = useMemo(
-    () =>
-      d3
+  const xScale = useMemo(() => {
+    if (xAxisDataType === "number") {
+      return d3
         .scaleLinear()
         .domain([
-          d3.min(series, (d) => d.date)!,
-          d3.max(series, (d) => d.date)!,
+          d3.min(series, (d) => d.date || 0),
+          d3.max(series, (d) => d.date || 1),
         ])
-        .range([margin.left, width - margin.right]),
-    [series, width, height, margin],
-  );
+        .range([margin.left, width - margin.right])
+        .clamp(true)
+        .nice();
+    }
+
+    const minDate = d3.min(
+      series.map(
+        (d) =>
+          new Date(
+            xAxisDataType === "date_annual" ? `${d.date} 01 01` : d.date,
+          ),
+      ),
+    );
+    const maxDate = d3.max(series.map((d) => new Date(d.date)));
+
+    return d3
+      .scaleTime()
+      .domain([minDate || 0, maxDate || 1])
+      .range([MARGIN.left, width - margin.right]);
+    // .nice();
+  }, [series, width, height, disabledItems, xAxisDataType]);
 
   // yScale
   const yScaleDomain = useMemo(() => {
+    if (yAxisDomain) {
+      return yAxisDomain;
+    }
     // return the max value of the sum of all the keys, don't count the date
     const max = d3.max(
       series,
@@ -115,40 +142,27 @@ const RibbonChart: React.FC<Props> = ({
   const areaGenerator = d3
     .area<AreaDataPoint>()
     .defined((d) => d[0] !== null && d[1] !== null)
-    .x((d) => xScale(d.data.date))
+    .x((d) => {
+      if (xAxisDataType === "number") {
+        return xScale(d.data.date);
+      } else {
+        return xScale(new Date(d.data.date).getTime()); // Assuming d.data.date is a JavaScript Date object
+      }
+    })
     .y0((d) => yScale(d[0]))
     .y1((d) => yScale(d[1]))
     .curve(d3.curveMonotoneX);
 
-  /*
-  const generateTooltipContentForYear = (year: number) => {
-    const yearData = series.find((d) => d.date === year);
-    if (!yearData) return "";
-    return `
-        <div style="background: #fff; padding: 5px">
-            <p>${yearData.date}</p>
-            ${Object.keys(yearData)
-              .filter((key) => key !== "date" && yearData[key] !== undefined)
-              .map(
-                (key) =>
-                  `<p style="color:${colorsMapping[key]}">${key}: ${
-                    yearData[key] ?? "N/A"
-                  }</p>`,
-              )
-              .join("")}
-        </div>`;
-  };
-*/
-
   const handleAreaSegmentHover = (dataPoint: DataPoint, key: string) => {
-    const yearData = series.find((d) => d.date === dataPoint.date);
-    if (!yearData) return "";
+    if (tooltipFormatter) {
+      return tooltipFormatter(dataPoint, series, key);
+    }
 
     return `
         <div style="background: #fff; padding: 5px">
-            <p>${yearData.date}</p>
+            <p>${dataPoint.date}</p>
             <p style="color:${colorsMapping[key]}">${key}: ${
-              yearData[key] ?? "N/A"
+              dataPoint[key] ?? "N/A"
             }</p>
         </div>`;
   };
@@ -161,7 +175,6 @@ const RibbonChart: React.FC<Props> = ({
           position: "absolute",
           background: "white",
           padding: "5px",
-          border: "1px solid #333",
           pointerEvents: "none",
           zIndex: 1000,
           visibility: "hidden", // Initially hidden
@@ -174,19 +187,29 @@ const RibbonChart: React.FC<Props> = ({
         width={width}
         height={height}
         style={{ overflow: "visible" }}
+        onMouseOut={() => {
+          d3.select(".tooltip").style("visibility", "hidden");
+          setHighlightItems([]);
+        }}
       >
         {children}
         <Title x={width / 2} y={MARGIN.top / 2}>
           {title}
         </Title>
-        <HorizontalAxisLinear xScale={xScale} height={height} margin={margin} />
+        <HorizontalAxisLinear
+          xScale={xScale}
+          height={height}
+          margin={margin}
+          xAxisFormat={xAxisFormat}
+          xAxisDataType={xAxisDataType}
+        />
         <VerticalAxisLinear
           yScale={yScale}
           width={width}
           height={height}
           margin={margin}
           highlightZeroLine={true}
-          format={yAxisFormat}
+          yAxisFormat={yAxisFormat}
         />
         <g>
           {prepareAreaData().map((areaData) => (
@@ -204,7 +227,6 @@ const RibbonChart: React.FC<Props> = ({
                 }
                 style={{ transition: "opacity 0.1s ease-out" }}
                 onMouseMove={() => {
-                  console.log({ areaData });
                   setHighlightItems([areaData.key]);
                 }}
                 onMouseOut={() => {
@@ -215,13 +237,22 @@ const RibbonChart: React.FC<Props> = ({
               {areaData.values.map((dataPoint) => (
                 <rect
                   key={`${areaData.key}-${dataPoint.data.date}`}
-                  x={xScale(dataPoint.data.date) - 2}
+                  x={
+                    xScale(
+                      xAxisDataType === "number"
+                        ? dataPoint.data.date
+                        : new Date(dataPoint.data.date),
+                    ) - 2
+                  }
                   y={yScale(dataPoint[1])} // Start from top of the area segment
                   width={4}
-                  strokeWidth={rectWidth / 2 - 2}
+                  strokeWidth={1}
+                  rx={3}
+                  ry={3}
+                  stroke={"#ccc"}
                   height={yScale(dataPoint[0]) - yScale(dataPoint[1])} // Height of the area segment
                   fill="#fff"
-                  opacity={highlightItems.includes(areaData.key) ? 1 : 0}
+                  opacity={highlightItems.includes(areaData.key) ? 0.5 : 0}
                   onMouseEnter={(event) => {
                     setHighlightItems([areaData.key]);
                     d3.select(".tooltip")
@@ -239,7 +270,7 @@ const RibbonChart: React.FC<Props> = ({
                       .style("left", x - tooltipWidth / 2 + "px")
                       .style("top", y - tooltipHeight - 10 + "px");
                   }}
-                  onMouseLeave={() => {
+                  onMouseOut={() => {
                     d3.select(".tooltip").style("visibility", "hidden");
                   }}
                 />
@@ -294,8 +325,13 @@ const RibbonChart: React.FC<Props> = ({
         {/*    ))}*/}
         {/*</g>*/}
       </svg>
+      {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
+      {isLoading && !isLoadingComponent && <LoadingIndicator />}
+      {!isLoading && series.length === 0 && isNodataComponent && (
+        <>{isNodataComponent}</>
+      )}
     </div>
   );
 };
 
-export default RibbonChart;
+export default AreaChart;

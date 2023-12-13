@@ -1,0 +1,90 @@
+import React, { FC, useEffect, useMemo, useRef } from "react";
+import { ScaleBand, ScaleLinear } from "d3-scale"; // Import ScaleLinear for the x-axis scale
+import * as d3 from "d3";
+
+const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
+const WIDTH = 900 - MARGIN.left - MARGIN.right;
+const HEIGHT = 480 - MARGIN.top - MARGIN.bottom;
+const DASH_LENGTH = 4;
+
+interface Props {
+  xScale: ScaleLinear<number, number>; // Add xScale for the x-axis
+  yScale: ScaleBand<string>;
+  width: number;
+  height: number;
+  margin: { top: number; right: number; bottom: number; left: number };
+  yAxisFormat?: (d: number | string) => string;
+  series: { x: number; y: string; radius: number }[]; // Add data with x, y, and radius values
+}
+
+const ScatterPlotChart: FC<Props> = ({
+  width = WIDTH,
+  height = HEIGHT,
+  margin,
+  yAxisFormat,
+  series, // Pass the data as a prop
+}) => {
+  const ref = useRef<SVGGElement>(null);
+
+  // Define yScale within the component
+  const yScale = useMemo(() => {
+    const minValue = d3.min(series, (d) => d.y) || 0;
+    const maxValue = d3.max(series, (d) => d.y) || 1;
+    return d3
+      .scaleLinear()
+      .domain([minValue, maxValue])
+      .range([height - margin.bottom, margin.top])
+      .clamp(true)
+      .nice();
+  }, [series, height, margin]);
+
+  // Define xScale within the component
+  const xScale = useMemo(() => {
+    const minDate = d3.min(series, (d) => d.x) || 0;
+    const maxDate = d3.max(series, (d) => d.x) || 1;
+    return d3
+      .scaleLinear()
+      .domain([minDate, maxDate])
+      .range([margin.left, width - margin.right]);
+  }, [series, width, margin]);
+
+  useEffect(() => {
+    const g = d3.select(ref.current);
+
+    // Create circles for each data point
+    g.selectAll(".circle")
+      .data(series)
+      .enter()
+      .append("circle")
+      .attr("class", "circle")
+      .attr("cx", (d) => xScale(d.x)) // Use xScale for x-coordinate
+      .attr("cy", (d) => yScale(d.y))
+      .attr("r", (d) => d.radius) // Use the 'radius' property for the circle size
+      .attr("fill", "lightgray");
+  }, [series, xScale, yScale]);
+  return (
+    <div style={{ position: "relative" }}>
+      <div
+        className={"tooltip"}
+        style={{
+          position: "absolute",
+          background: "white",
+          padding: "5px",
+          pointerEvents: "none",
+          zIndex: 1000,
+          visibility: "hidden", // Initially hidden
+        }}
+      />
+
+      <svg
+        className={"chart"}
+        ref={ref}
+        width={width}
+        height={height}
+        style={{ overflow: "visible" }}
+      ></svg>
+    </div>
+  );
+};
+
+export default ScatterPlotChart;

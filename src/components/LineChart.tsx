@@ -1,11 +1,15 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
-import { DataPoint } from "src/types/data";
-import { ScaleLinear } from "d3-scale";
+import { DataPoint } from "../types/data";
+// import { ScaleLinear } from "d3-scale";
 import Title from "./shared/Title";
 import VerticalAxisLinear from "./shared/VerticalAxisLinear";
 import HorizontalAxisLinear from "./shared/HorizontalAxisLinear";
 import { useChartContext } from "./MichiVzProvider";
+import { ScaleTime } from "d3";
+import { ScaleLinear } from "d3-scale";
+import { debounce } from "lodash";
+import LoadingIndicator from "./shared/LoadingIndicator";
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
@@ -23,7 +27,10 @@ interface LineChartProps {
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
   title?: string;
+  yAxisDomain?: [number, number];
   yAxisFormat?: (d: number) => string;
+  xAxisFormat?: (d: number) => string;
+  xAxisDataType: "number" | "date_annual" | "date_monthly";
   tooltipFormatter?: (
     d: DataPoint,
     series: DataPoint[],
@@ -35,6 +42,9 @@ interface LineChartProps {
   ) => string;
   showCombined?: boolean;
   children?: React.ReactNode;
+  isLoading?: boolean;
+  isLoadingComponent?: React.ReactNode;
+  isNodataComponent?: React.ReactNode;
 }
 
 const LineChart: React.FC<LineChartProps> = ({
@@ -43,47 +53,58 @@ const LineChart: React.FC<LineChartProps> = ({
   width = WIDTH,
   height = HEIGHT,
   margin = MARGIN,
+  yAxisDomain,
   yAxisFormat,
+  xAxisFormat,
+  xAxisDataType = "number",
   tooltipFormatter = (d: DataPoint) =>
     `<div>${d.label} - ${d.date}: ${d.value}</div>`,
   showCombined = false,
   children,
+  isLoading = false,
+  isLoadingComponent,
+  isNodataComponent,
 }) => {
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
 
   const yScale = useMemo(
     () =>
       d3
         .scaleLinear()
-        .domain([
-          d3.min(
-            dataSet
-              .filter((d) => !disabledItems.includes(d.label))
-              .flatMap(({ series }) =>
-                series.filter((dd) => dd.value !== null),
-              ),
-            (d) => d.value,
-          ) || 0,
-          d3.max(
-            dataSet
-              .filter((d) => !disabledItems.includes(d.label))
-              .flatMap(({ series }) =>
-                series.filter((dd) => dd.value !== null),
-              ),
-            (d) => d.value,
-          ) || 1,
-        ])
+        .domain(
+          yAxisDomain
+            ? yAxisDomain
+            : [
+                d3.min(
+                  dataSet
+                    .filter((d) => !disabledItems.includes(d.label))
+                    .flatMap(({ series }) =>
+                      series.filter((dd) => dd.value !== null),
+                    ),
+                  (d) => d.value,
+                ) || 0,
+                d3.max(
+                  dataSet
+                    .filter((d) => !disabledItems.includes(d.label))
+                    .flatMap(({ series }) =>
+                      series.filter((dd) => dd.value !== null),
+                    ),
+                  (d) => d.value,
+                ) || 1,
+              ],
+        )
         .range([height - margin.bottom, margin.top])
         .clamp(true)
         .nice(),
-    [dataSet, width, height],
+    [dataSet, width, height, disabledItems, yAxisDomain],
   );
 
-  const xScale = useMemo(
-    () =>
-      d3
+  const xScale = useMemo(() => {
+    if (xAxisDataType === "number") {
+      return d3
         .scaleLinear()
         .domain([
           d3.min(
@@ -97,25 +118,62 @@ const LineChart: React.FC<LineChartProps> = ({
               .flatMap((item) => item.series.map((d) => d.date as number)),
           ) || 1,
         ])
-        .range([MARGIN.left, width - margin.right]),
-    [dataSet, width, height],
-  );
+        .range([margin.left, width - margin.right])
+        .clamp(true)
+        .nice();
+    }
 
-  function getYValueAtX(series: DataPoint[], x: number): number | undefined {
-    const dataPoint = series.find((d) => d.date === x);
+    if (xAxisDataType === "date_annual") {
+      // sometimes the first tick is missing, so do a hack here
+      const minDate = d3.min(
+        dataSet.flatMap((item) =>
+          item.series.map((d) => new Date(`${d.date}-01`)),
+        ),
+      );
+      const maxDate = d3.max(
+        dataSet.flatMap((item) =>
+          item.series.map((d) => new Date(`${d.date}`)),
+        ),
+      );
+
+      return d3
+        .scaleTime()
+        .domain([minDate || 0, maxDate || 1])
+        .range([margin.left, width - margin.right]);
+    }
+
+    const minDate = d3.min(
+      dataSet.flatMap((item) => item.series.map((d) => new Date(d.date))),
+    );
+    const maxDate = d3.max(
+      dataSet.flatMap((item) => item.series.map((d) => new Date(d.date))),
+    );
+
+    return d3
+      .scaleTime()
+      .domain([minDate || 0, maxDate || 1])
+      .range([margin.left, width - margin.right]);
+  }, [dataSet, width, height, disabledItems, xAxisDataType]);
+
+  function getYValueAtX(
+    series: DataPoint[],
+    x: number | Date,
+  ): number | undefined {
+    if (x instanceof Date) {
+      const dataPoint = series.find(
+        (d) => new Date(d.date).getTime() === x.getTime(),
+      );
+      return dataPoint ? dataPoint.value : undefined;
+    }
+
+    const dataPoint = series.find((d) => Number(d.date) === x);
     return dataPoint ? dataPoint.value : undefined;
   }
-
-  // function getMaxYValueAtX(x: number): number {
-  //   return Math.max(
-  //     ...dataSet.map((data) => getYValueAtX(data.series, x) || 0),
-  //   );
-  // }
 
   function getPathLengthAtX(path: SVGPathElement, x: number) {
     const l = path.getTotalLength();
     const precision = 90;
-    if (!path) {
+    if (!path || path.getTotalLength() === 0) {
       return 0;
     }
     for (let i = 0; i <= precision; i++) {
@@ -127,11 +185,13 @@ const LineChart: React.FC<LineChartProps> = ({
   function getDashArray(
     series: DataPoint[],
     pathNode: SVGPathElement,
-    xScale: ScaleLinear<number, number, never>,
+    xScale:
+      | ScaleLinear<number, number, never>
+      | ScaleTime<number, number, never>,
   ) {
     const totalLength = pathNode.getTotalLength();
     const lengths = series.map((d) =>
-      getPathLengthAtX(pathNode, xScale(d.date)),
+      getPathLengthAtX(pathNode, xScale(new Date(d.date))),
     );
 
     const dashArray = [];
@@ -146,10 +206,9 @@ const LineChart: React.FC<LineChartProps> = ({
         const dashes = Math.floor(
           segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH),
         );
-        const remainder =
-          Math.ceil(
-            segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH),
-          ) - 20;
+        const remainder = Math.ceil(
+          segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH),
+        ); /* - 20*/
 
         for (let j = 0; j < dashes; j++) {
           dashArray.push(DASH_LENGTH);
@@ -180,12 +239,11 @@ const LineChart: React.FC<LineChartProps> = ({
 
     const line = d3
       .line<DataPoint>()
-      .x((d) => xScale(d.date))
+      .x((d) => xScale(new Date(d.date)))
       .y((d) => yScale(d.value))
       .curve(d3.curveBumpX);
 
     // draw lines
-
     dataSet
       .filter((d) => !disabledItems.includes(d.label))
       .forEach((data, i) => {
@@ -201,14 +259,18 @@ const LineChart: React.FC<LineChartProps> = ({
           .attr("stroke-width", 5)
           .attr("fill", "none")
           .attr("pointer-events", "stroke")
-          .attr("transition", "opacity 0.3s ease-out")
-          .on("mouseover", () => {
+          .attr("transition", "all 0.3s ease-out")
+          .on("mouseenter", (event) => {
+            event.preventDefault();
             setHighlightItems([data.label]);
           })
 
-          .on("mouseout", () => {
+          .on("mouseout", (event) => {
+            event.preventDefault();
             setHighlightItems([]);
-            d3.select("#tooltip").style("visibility", "hidden");
+            if (tooltipRef?.current) {
+              tooltipRef.current.style.visibility = "hidden";
+            }
           });
 
         if (data.series) {
@@ -241,7 +303,9 @@ const LineChart: React.FC<LineChartProps> = ({
 
           .on("mouseout", () => {
             setHighlightItems([]);
-            d3.select("#tooltip").style("visibility", "hidden");
+            if (tooltipRef?.current) {
+              tooltipRef.current.style.visibility = "hidden";
+            }
           });
       });
 
@@ -263,44 +327,59 @@ const LineChart: React.FC<LineChartProps> = ({
             colorsMapping[data.label] ?? data.color ?? "transparent",
           )
           .attr("data-label", data.label)
-          .attr("r", 5)
-          .attr("pointer-events", "all")
-          .attr("cx", (d: DataPoint) => xScale(d.date))
+          .attr("r", 6)
+          .attr("stroke-width", 5)
+          // .attr("pointer-events", "all")
+          .attr("stroke", "#fff")
+          .attr("cx", (d: DataPoint) => xScale(new Date(d.date)))
           .attr("cy", (d: DataPoint) => yScale(d.value))
           .attr("transition", "all 0.1s ease-out")
+          .attr("cursor", "crosshair")
+          .on(
+            "mouseenter",
+            debounce((event, d) => {
+              event.preventDefault();
+              setHighlightItems([data.label]);
+              const [x, y] = d3.pointer(event, svgRef.current);
+              const htmlContent = tooltipFormatter(
+                {
+                  ...d,
+                  label: data.label,
+                } as DataPoint,
+                data.series,
+                dataSet,
+              );
 
-          .on("mouseover mousemove", (event, d) => {
-            setHighlightItems([data.label]);
-            const [x, y] = d3.pointer(event, svgRef.current);
-            const tooltip = d3.select("#tooltip");
-            const htmlContent = tooltipFormatter(
-              { ...d, label: data.label } as DataPoint,
-              data.series,
-              dataSet,
-            );
-
-            // Position the tooltip near the circle
-            tooltip
-              .style("left", x + 10 + "px")
-              .style("top", y - 25 + "px")
-              .style("visibility", "visible")
-              .style("background", "#fff")
-              .style("padding", "5px")
-              .html(htmlContent);
-          })
-          .on("mouseout", () => {
-            const tooltip = d3.select("#tooltip");
-            tooltip.style("visibility", "hidden").html();
+              // Position the tooltip near the circle
+              if (tooltipRef?.current) {
+                tooltipRef.current.style.visibility = "hidden";
+                tooltipRef.current.style.left = x + 10 + "px";
+                tooltipRef.current.style.top = y - 25 + "px";
+                tooltipRef.current.style.visibility = "visible";
+                tooltipRef.current.style.background = "#fff";
+                tooltipRef.current.style.padding = "5px";
+                tooltipRef.current.innerHTML = htmlContent;
+              }
+            }, 5),
+          )
+          .on("mouseout", (event) => {
+            event.preventDefault();
+            setHighlightItems([]);
+            if (tooltipRef?.current) {
+              tooltipRef.current.style.visibility = "hidden";
+              tooltipRef.current.innerHTML = "";
+            }
           });
       });
-  }, [JSON.stringify(dataSet), width, height, margin]);
+  }, [dataSet, width, height, margin, disabledItems, xAxisDataType]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
     Object.keys(colorsMapping).forEach((key) => {
       svg
         .selectAll(`circle.data-group-${key}`)
-        .attr("stroke", colorsMapping[key])
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 5)
         .attr("fill", colorsMapping[key]);
       svg.selectAll(`.line-group-${key}`).attr("stroke", colorsMapping[key]);
     });
@@ -310,14 +389,18 @@ const LineChart: React.FC<LineChartProps> = ({
     const svg = d3.select(svgRef.current);
     svg
       .selectAll(".data-group")
+      // .attr("pointer-events", highlightItems.length === 0 ? "all" : "none")
+      .attr("transition", "opacity 0.1s ease-out")
       .attr("opacity", highlightItems.length === 0 ? 1 : 0.2);
     highlightItems.forEach((item) => {
-      svg.selectAll(`.data-group-${item}`).attr("opacity", 1);
+      svg
+        .selectAll(`.data-group-${item}`)
+        .attr("opacity", 1)
+        .attr("pointer-events", "stroke");
     });
     if (highlightItems.length === 0) {
       d3.select("#tooltip").style("visibility", "hidden");
     }
-    svg.selectAll("data-group-overlay").attr("opacity", 0.1);
   }, [highlightItems]);
 
   useEffect(() => {
@@ -336,10 +419,10 @@ const LineChart: React.FC<LineChartProps> = ({
         .attr("height", height)
         .style("fill", "none")
         .style("pointer-events", "all")
-        .on("mouseover", () => {
-          tooltip.style.visibility = "visible";
-          hoverLinesGroup.style("display", "block");
-        })
+        // .on("mouseover", () => {
+        //   tooltip.style.visibility = "visible";
+        //   hoverLinesGroup.style("display", "block");
+        // })
         .on("mouseout", () => {
           tooltip.style.visibility = "hidden";
           tooltip.style.opacity = "0";
@@ -352,7 +435,7 @@ const LineChart: React.FC<LineChartProps> = ({
         })
         .on("mousemove", function (event) {
           const [x, y] = d3.pointer(event.nativeEvent, svgRef.current);
-          const xValue = Math.round(xScale.invert(x));
+          const xValue = xScale.invert(x);
 
           const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
           const tooltipContent = dataSet
@@ -397,8 +480,11 @@ const LineChart: React.FC<LineChartProps> = ({
         ref={svgRef}
         width={width}
         height={height}
-        onMouseOut={() => {
+        onMouseOut={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
           setHighlightItems([]);
+          d3.select("#tooltip").style("visibility", "hidden");
         }}
       >
         {children}
@@ -411,6 +497,8 @@ const LineChart: React.FC<LineChartProps> = ({
               xScale={xScale}
               height={height}
               margin={margin}
+              xAxisFormat={xAxisFormat}
+              xAxisDataType={xAxisDataType}
             />
             <VerticalAxisLinear
               yScale={yScale}
@@ -418,18 +506,24 @@ const LineChart: React.FC<LineChartProps> = ({
               height={height}
               margin={margin}
               highlightZeroLine={true}
-              format={yAxisFormat}
+              yAxisFormat={yAxisFormat}
             />
           </>
         )}
       </svg>
       <div
-        id="tooltip"
+        ref={tooltipRef}
         style={{
           position: "absolute",
           transition: "visibility 0.1s ease-out,opacity 0.1s ease-out",
+          transform: "translateZ(0)",
         }}
       />
+      {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
+      {isLoading && !isLoadingComponent && <LoadingIndicator />}
+      {!isLoading && dataSet.length === 0 && isNodataComponent && (
+        <>{isNodataComponent}</>
+      )}
     </div>
   );
 };
