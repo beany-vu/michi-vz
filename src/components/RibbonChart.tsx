@@ -1,8 +1,8 @@
 import React, { useMemo, useRef } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
-import HorizontalAxisBand from "./shared/HorizontalAxisBand";
-import VerticalAxisLinear from "./shared/VerticalAxisLinear";
+import XaxisBand from "./shared/XaxisBand";
+import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
 
@@ -183,8 +183,8 @@ const RibbonChart: React.FC<Props> = ({
         <Title x={width / 2} y={MARGIN.top / 2}>
           {title}
         </Title>
-        <HorizontalAxisBand xScale={xScale} height={height} margin={margin} />
-        <VerticalAxisLinear
+        <XaxisBand xScale={xScale} height={height} margin={margin} />
+        <YaxisLinear
           yScale={yScale}
           width={width}
           height={height}
@@ -198,8 +198,8 @@ const RibbonChart: React.FC<Props> = ({
             .map((key) => {
               return (
                 <g
-                  key={`stack-${key}.replaceAll(" ", "-")`}
-                  className={`stack-${key}.replaceAll(" ", "-")`}
+                  key={`stack-${key}.replaceAll(" ", "-").replaceAll(",", "")`}
+                  className={`stack-${key}.replaceAll(" ", "-").replaceAll(",", "")`}
                 >
                   {stackedRectData[key] &&
                     stackedRectData[key].map((d: RectData, i: number) => {

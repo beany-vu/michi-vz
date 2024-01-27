@@ -14,10 +14,10 @@ export default {
             <MichiVzProvider
                 initialColorsMapping={{
                     "Madagascar": "#ff0",
-                    "Europe": "purple",
-                    "Asia": "orange",
+                    "Non-LDC": "purple",
+                    "Africa": "orange",
                 }}
-                initialDisabledItems={["Africa", "Europe"]}
+                initialDisabledItems={["Europe"]}
                 initialHighlightItems={["Europe"]}>
                 <Story/>
             </MichiVzProvider>

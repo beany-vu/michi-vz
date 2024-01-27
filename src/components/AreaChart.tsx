@@ -1,9 +1,9 @@
 import React, { useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
-import VerticalAxisLinear from "./shared/VerticalAxisLinear";
+import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
-import HorizontalAxisLinear from "./shared/HorizontalAxisLinear";
+import XaxisLinear from "./shared/XaxisLinear";
 import LoadingIndicator from "./shared/LoadingIndicator";
 
 interface DataPoint {
@@ -196,14 +196,14 @@ const AreaChart: React.FC<Props> = ({
         <Title x={width / 2} y={MARGIN.top / 2}>
           {title}
         </Title>
-        <HorizontalAxisLinear
+        <XaxisLinear
           xScale={xScale}
           height={height}
           margin={margin}
           xAxisFormat={xAxisFormat}
           xAxisDataType={xAxisDataType}
         />
-        <VerticalAxisLinear
+        <YaxisLinear
           yScale={yScale}
           width={width}
           height={height}

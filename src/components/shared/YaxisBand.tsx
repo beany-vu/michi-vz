@@ -9,27 +9,37 @@ interface Props {
   yAxisFormat?: (d: number | string) => string;
 }
 
-const VerticalAxisBand: FC<Props> = ({
-  yScale,
-  width,
-  margin,
-  yAxisFormat,
-}) => {
+const YaxisBand: FC<Props> = ({ yScale, width, margin, yAxisFormat }) => {
   const ref = useRef<SVGGElement>(null);
 
   useEffect(() => {
     const g = d3.select(ref.current);
+
+    // Add the y-axis with ticks
     g.attr("class", "y-axis")
       .attr("transform", "translate(" + margin.left + ",0)")
       .call(
         d3
           .axisLeft(yScale)
           .tickFormat((d) => (yAxisFormat ? yAxisFormat(d) : d)),
-      )
-      .call((g) => g.select(".domain").attr("stroke-opacity", 1))
-      .call((g) => g.select(".domain").remove())
-      .call((g) => g.selectAll(".tick line").remove())
-      .call((g) => g.selectAll(".tick line").remove());
+      );
+
+    // Remove existing domain line and tick lines
+    g.select(".domain").remove();
+    g.selectAll(".tick line").remove();
+
+    // Add dashed lines on each tick
+    g.selectAll(".tick")
+      .append("line")
+      .attr("class", "tick-line")
+      .attr("x1", 0)
+      .attr("x2", width - margin.left - margin.right)
+      .attr("y1", 0)
+      .attr("y2", 0)
+      .style("stroke-dasharray", "1.5") // Set dash pattern
+      .style("stroke", "transparent"); // Color of the dashed line
+
+    // Add circles at each tick
     g.selectAll(".tick")
       .append("circle")
       .attr("class", "tickValueDot")
@@ -42,4 +52,4 @@ const VerticalAxisBand: FC<Props> = ({
   return <g ref={ref} />;
 };
 
-export default VerticalAxisBand;
+export default YaxisBand;

@@ -1,8 +1,8 @@
 import * as d3 from "d3";
 import React, { useEffect, useMemo, useRef } from "react";
 import Title from "../components/shared/Title";
-import HorizontalAxisLinear from "../components/shared/HorizontalAxisLinear";
-import VerticalAxisBand from "../components/shared/VerticalAxisBand";
+import XaxisLinear from "./shared/XaxisLinear";
+import YaxisBand from "./shared/YaxisBand";
 import { useChartContext } from "../components/MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
 
@@ -23,6 +23,7 @@ interface LineChartProps {
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
   xAxisFormat?: (d: number | { valueOf(): number }) => string;
+  xAxisDataType: "number" | "date_annual" | "date_monthly";
   yAxisFormat?: (d: number | string) => string;
   title?: string;
   tooltipFormatter?: (
@@ -47,6 +48,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
   margin = MARGIN,
   yAxisFormat,
   xAxisFormat,
+  xAxisDataType = "number",
   tooltipFormatter,
   children,
   isLoading = false,
@@ -73,17 +75,26 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
         .map((d) => d.label),
     [dataSet],
   );
-  const xAxisDomain = useMemo(
-    () => [
-      dataSet
-        .filter((d) => !disabledItems.includes(d.label))
-        .map((d) => [d.value1, d.value2])
-        .flat()
-        .reduce((a, b) => Math.max(a, b)),
-      0,
-    ],
-    [dataSet],
-  );
+  const xAxisDomain = useMemo(() => {
+    const flattenedValues = dataSet
+      .filter((d) => !disabledItems.includes(d.label))
+      .map((d) => [d.value1, d.value2])
+      .flat();
+
+    if (xAxisDataType === "number") {
+      return [Math.max(...flattenedValues), 0];
+    }
+
+    if (xAxisDataType === "date_annual" || xAxisDataType === "date_monthly") {
+      return [
+        new Date(Math.max(...flattenedValues), 1, 1),
+        new Date(0, 1, 1), // Assuming the minimum date is January 1, 1900
+      ];
+    }
+
+    return [];
+  }, [dataSet, disabledItems, xAxisDataType]);
+
   const yAxisScale = d3
     .scaleBand()
     .domain(yAxisDomain)
@@ -126,7 +137,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     d3.select(svgRef.current).select(".bar").attr("opacity", 0.3);
     highlightItems.forEach((item) => {
       d3.select(svgRef.current)
-        .select(`.bar-${item.replaceAll(" ", "-")}`)
+        .select(`.bar-${item.replaceAll(" ", "-").replaceAll(",", "")}`)
         .attr("opacity", 1);
     });
   }, [highlightItems]);
@@ -148,19 +159,21 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
         <Title x={width / 2} y={margin.top / 2}>
           {title}
         </Title>
-        <HorizontalAxisLinear
+        <XaxisLinear
           xScale={xAxis1Scale}
           height={height}
           margin={margin}
           xAxisFormat={xAxisFormat}
+          xAxisDataType={xAxisDataType}
         />
-        <HorizontalAxisLinear
+        <XaxisLinear
           xScale={xAxis2Scale}
           height={height}
           margin={margin}
           xAxisFormat={xAxisFormat}
+          xAxisDataType={xAxisDataType}
         />
-        <VerticalAxisBand
+        <YaxisBand
           yScale={yAxisScale}
           width={width}
           margin={margin}
@@ -175,7 +188,9 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
             const standardHeight = yAxisScale.bandwidth();
             return (
               <g
-                className={`bar bar-${d.label.replaceAll(" ", "-")}`}
+                className={`bar bar-${d.label
+                  .replaceAll(" ", "-")
+                  .replaceAll(",", "")}`}
                 key={i}
                 style={{
                   opacity:

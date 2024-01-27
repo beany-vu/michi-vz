@@ -11,7 +11,7 @@ interface Props {
   yAxisFormat?: (d: number) => string;
 }
 
-const VerticalAxisLinear: FC<Props> = ({
+const YaxisLinear: FC<Props> = ({
   yScale,
   width,
   height,
@@ -58,4 +58,4 @@ const VerticalAxisLinear: FC<Props> = ({
   return <g ref={ref}></g>;
 };
 
-export default VerticalAxisLinear;
+export default YaxisLinear;

@@ -10,7 +10,7 @@ const mockData2 = [
         "data": [
             {
                 "partner": "156",
-                "value": "120",
+                "value": 120,
                 "date": "Jan"
             },
             {
@@ -206,7 +206,94 @@ const mockData2 = [
         "partner": "251"
     }
 ]
+const mockData3 = [
+    {
+        "label": "UAE",
+        "color": "#1F77B4",
+        "data": [
+            {
+                "date": "01",
+                "value": "3"
+            },
+            {
+                "date": "02",
+                "value": "3"
+            },
+            {
+                "date": "05",
+                "value": "2"
+            },
+            {
+                "date": "06",
+                "value": "1"
+            },
+            {
+                "date": "07",
+                "value": "1"
+            },
+            {
+                "date": "08",
+                "value": "1"
+            },
+            {
+                "date": "09",
+                "value": "1"
+            },
+            {
+                "date": "10",
+                "value": "1"
+            },
+            {
+                "date": "11",
+                "value": "0"
+            },
+            {
+                "date": "12",
+                "value": "1"
+            }
+        ]
+    },
+    {
+        "label": "France",
+        "color": "#D62728",
+        "data": [
+            {
+                "date": "01",
+                "value": "3"
+            },
 
+
+            {
+                "date": "06",
+                "value": "1"
+            },
+            {
+                "date": "07",
+                "value": "1"
+            },
+            {
+                "date": "08",
+                "value": "1"
+            },
+            {
+                "date": "09",
+                "value": "1"
+            },
+            {
+                "date": "10",
+                "value": "1"
+            },
+            {
+                "date": "11",
+                "value": "0"
+            },
+            {
+                "date": "12",
+                "value": "1"
+            }
+        ]
+    },
+]
 
 export default {
     title: 'Charts/Radar Chart',
@@ -235,18 +322,22 @@ export const Primary = Template.bind({});
 Primary.args = {
     width: 400,
     height: 400,
-    series: mockData2,
+    // series: mockData2,
+    series: mockData3,
+    tooltipFormatter: (item) => (
+        <>
+            {console.log(item)}
+            {JSON.stringify(item)}
+        </>),
+    radialLabelFormatter: (item) => `${item}`,
     poles: {
         range: [0, Math.PI * 3],
         domain: [360, 0],
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        // labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        labels: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"],
     },
     conf: {
         padding: 30,
-        tooltipContent: ({item}) => (
-            <>
-                {JSON.stringify(item)}
-            </>),
         radialScale: {
             range: [0, Math.PI * 3],
             domain: [360, 0],

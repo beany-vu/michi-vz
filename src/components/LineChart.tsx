@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
 import { DataPoint } from "../types/data";
-// import { ScaleLinear } from "d3-scale";
 import Title from "./shared/Title";
-import VerticalAxisLinear from "./shared/VerticalAxisLinear";
-import HorizontalAxisLinear from "./shared/HorizontalAxisLinear";
+import YaxisLinear from "./shared/YaxisLinear";
+import XaxisLinear from "./shared/XaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import { ScaleTime } from "d3";
 import { ScaleLinear } from "d3-scale";
@@ -55,8 +54,8 @@ const LineChart: React.FC<LineChartProps> = ({
   margin = MARGIN,
   yAxisDomain,
   yAxisFormat,
-  xAxisFormat,
   xAxisDataType = "number",
+  xAxisFormat,
   tooltipFormatter = (d: DataPoint) =>
     `<div>${d.label} - ${d.date}: ${d.value}</div>`,
   showCombined = false,
@@ -127,7 +126,7 @@ const LineChart: React.FC<LineChartProps> = ({
       // sometimes the first tick is missing, so do a hack here
       const minDate = d3.min(
         dataSet.flatMap((item) =>
-          item.series.map((d) => new Date(`${d.date}-01`)),
+          item.series.map((d) => new Date(`${d.date}-01-01`)),
         ),
       );
       const maxDate = d3.max(
@@ -182,53 +181,54 @@ const LineChart: React.FC<LineChartProps> = ({
     }
   }
 
-  function getDashArray(
-    series: DataPoint[],
-    pathNode: SVGPathElement,
-    xScale:
-      | ScaleLinear<number, number, never>
-      | ScaleTime<number, number, never>,
-  ) {
-    const totalLength = pathNode.getTotalLength();
-    const lengths = series.map((d) =>
-      getPathLengthAtX(pathNode, xScale(new Date(d.date))),
-    );
+  const getDashArrayMemoized = useMemo(() => {
+    return (
+      series: DataPoint[],
+      pathNode: SVGPathElement,
+      xScale: ScaleLinear<number, number> | ScaleTime<number, number>,
+    ) => {
+      const totalLength = pathNode.getTotalLength();
+      const lengths = series.map((d) =>
+        getPathLengthAtX(pathNode, xScale(new Date(d.date))),
+      );
 
-    const dashArray = [];
+      const dashArray = [];
 
-    for (let i = 1; i <= series.length; i++) {
-      const segmentLength =
-        i === series.length - 1
-          ? totalLength - lengths[i - 1]
-          : lengths[i] - lengths[i - 1];
+      for (let i = 1; i <= series.length; i++) {
+        const segmentLength =
+          i === series.length - 1
+            ? totalLength - lengths[i - 1]
+            : lengths[i] - lengths[i - 1];
 
-      if (!series[i]?.certainty ?? true) {
-        const dashes = Math.floor(
-          segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH),
-        );
-        const remainder = Math.ceil(
-          segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH),
-        ); /* - 20*/
+        if (!series[i]?.certainty ?? true) {
+          const dashes = Math.floor(
+            segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH),
+          );
+          const remainder =
+            Math.ceil(
+              segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH),
+            ) + 5;
 
-        for (let j = 0; j < dashes; j++) {
-          dashArray.push(DASH_LENGTH);
-          dashArray.push(DASH_SEPARATOR_LENGTH);
-        }
+          for (let j = 0; j < dashes; j++) {
+            dashArray.push(DASH_LENGTH);
+            dashArray.push(DASH_SEPARATOR_LENGTH);
+          }
 
-        if (remainder > 0) dashArray.push(remainder);
-      } else {
-        // if dashArray.length is odd, then the coming up last segment is dash
-        // we will have to add a "0" as space before we add the segmentLength so that the new added segment is not dashed
-        if (dashArray.length % 2 === 1) {
-          dashArray.push(0);
-          dashArray.push(segmentLength);
+          if (remainder > 0) dashArray.push(remainder);
         } else {
-          dashArray.push(segmentLength);
+          // if dashArray.length is odd, then the coming up last segment is dash
+          // we will have to add a "0" as space before we add the segmentLength so that the new added segment is not dashed
+          if (dashArray.length % 2 === 1) {
+            dashArray.push(0);
+            dashArray.push(segmentLength);
+          } else {
+            dashArray.push(segmentLength);
+          }
         }
       }
-    }
-    return dashArray.join(",");
-  }
+      return dashArray.join(",");
+    };
+  }, [DASH_LENGTH, DASH_SEPARATOR_LENGTH]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -254,28 +254,16 @@ const LineChart: React.FC<LineChartProps> = ({
             "class",
             `line line-${i} data-group data-group-${i} data-group-${data.label} line-group-${data.label}`,
           )
+          .attr("data-label", data.label)
           .attr("d", (d: DataPoint[]) => line(d)) // Explicitly specify the type and use line function
           .attr("stroke", colorsMapping[data.label] ?? data.color)
-          .attr("stroke-width", 5)
+          .attr("stroke-width", 2)
           .attr("fill", "none")
-          .attr("pointer-events", "stroke")
-          .attr("transition", "all 0.3s ease-out")
-          .on("mouseenter", (event) => {
-            event.preventDefault();
-            setHighlightItems([data.label]);
-          })
-
-          .on("mouseout", (event) => {
-            event.preventDefault();
-            setHighlightItems([]);
-            if (tooltipRef?.current) {
-              tooltipRef.current.style.visibility = "hidden";
-            }
-          });
+          .attr("pointer-events", "none");
 
         if (data.series) {
           path.attr("stroke-dasharray", function () {
-            return getDashArray(data.series, this, xScale);
+            return getDashArrayMemoized(data.series, this, xScale);
           });
         }
       });
@@ -297,11 +285,15 @@ const LineChart: React.FC<LineChartProps> = ({
           .attr("fill", "none")
           .attr("pointer-events", "stroke")
           .attr("opacity", 0.1)
-          .on("mouseenter", () => {
+          .on("mouseenter", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
             setHighlightItems([data.label]);
           })
 
-          .on("mouseout", () => {
+          .on("mouseout", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
             setHighlightItems([]);
             if (tooltipRef?.current) {
               tooltipRef.current.style.visibility = "hidden";
@@ -329,7 +321,6 @@ const LineChart: React.FC<LineChartProps> = ({
           .attr("data-label", data.label)
           .attr("r", 6)
           .attr("stroke-width", 5)
-          // .attr("pointer-events", "all")
           .attr("stroke", "#fff")
           .attr("cx", (d: DataPoint) => xScale(new Date(d.date)))
           .attr("cy", (d: DataPoint) => yScale(d.value))
@@ -339,6 +330,9 @@ const LineChart: React.FC<LineChartProps> = ({
             "mouseenter",
             debounce((event, d) => {
               event.preventDefault();
+              event.stopPropagation();
+              // event.nativeEvent.stopImmediatePropagation();
+
               setHighlightItems([data.label]);
               const [x, y] = d3.pointer(event, svgRef.current);
               const htmlContent = tooltipFormatter(
@@ -364,24 +358,48 @@ const LineChart: React.FC<LineChartProps> = ({
           )
           .on("mouseout", (event) => {
             event.preventDefault();
-            setHighlightItems([]);
+            // event.stopPropagation();
+
+            // Check if the mouse is still over the line below the circle
+            const relatedTarget = event.relatedTarget;
+            const isMouseOverLine =
+              relatedTarget &&
+              (relatedTarget.classList.contains("line") ||
+                relatedTarget.classList.contains("line-overlay"));
+
+            if (!isMouseOverLine) {
+              setHighlightItems([]);
+              if (tooltipRef?.current) {
+                tooltipRef.current.style.visibility = "hidden";
+                tooltipRef.current.innerHTML = "";
+              }
+            }
+
             if (tooltipRef?.current) {
               tooltipRef.current.style.visibility = "hidden";
               tooltipRef.current.innerHTML = "";
             }
           });
       });
-  }, [dataSet, width, height, margin, disabledItems, xAxisDataType]);
+  }, [
+    dataSet,
+    width,
+    height,
+    margin,
+    disabledItems,
+    xAxisDataType,
+    getDashArrayMemoized,
+  ]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
     Object.keys(colorsMapping).forEach((key) => {
       svg
-        .selectAll(`circle.data-group-${key}`)
+        .selectAll(`circle[data-label="${key}"]`)
         .attr("stroke", "#fff")
         .attr("stroke-width", 5)
         .attr("fill", colorsMapping[key]);
-      svg.selectAll(`.line-group-${key}`).attr("stroke", colorsMapping[key]);
+      svg.selectAll(`[label="${key}"]`).attr("fill", colorsMapping[key]);
     });
   }, [colorsMapping]);
 
@@ -389,14 +407,9 @@ const LineChart: React.FC<LineChartProps> = ({
     const svg = d3.select(svgRef.current);
     svg
       .selectAll(".data-group")
-      // .attr("pointer-events", highlightItems.length === 0 ? "all" : "none")
-      .attr("transition", "opacity 0.1s ease-out")
       .attr("opacity", highlightItems.length === 0 ? 1 : 0.2);
     highlightItems.forEach((item) => {
-      svg
-        .selectAll(`.data-group-${item}`)
-        .attr("opacity", 1)
-        .attr("pointer-events", "stroke");
+      svg.selectAll(`[data-label="${item}"]`).attr("opacity", 1);
     });
     if (highlightItems.length === 0) {
       d3.select("#tooltip").style("visibility", "hidden");
@@ -426,14 +439,13 @@ const LineChart: React.FC<LineChartProps> = ({
         .on("mouseout", () => {
           tooltip.style.visibility = "hidden";
           tooltip.style.opacity = "0";
-          tooltip.style.pointerEvents = "none";
           tooltip.innerHTML = "";
           hoverLinesGroup.style("display", "none");
           if (hoverLine) {
             hoverLine.style("display", "none");
           }
         })
-        .on("mousemove", function (event) {
+        .on("mouseenter", function (event) {
           const [x, y] = d3.pointer(event.nativeEvent, svgRef.current);
           const xValue = xScale.invert(x);
 
@@ -484,7 +496,10 @@ const LineChart: React.FC<LineChartProps> = ({
           event.preventDefault();
           event.stopPropagation();
           setHighlightItems([]);
-          d3.select("#tooltip").style("visibility", "hidden");
+
+          if (tooltipRef?.current) {
+            tooltipRef.current.style.visibility = "hidden";
+          }
         }}
       >
         {children}
@@ -493,14 +508,14 @@ const LineChart: React.FC<LineChartProps> = ({
         </Title>
         {dataSet.length > 0 && (
           <>
-            <HorizontalAxisLinear
+            <XaxisLinear
               xScale={xScale}
               height={height}
               margin={margin}
               xAxisFormat={xAxisFormat}
               xAxisDataType={xAxisDataType}
             />
-            <VerticalAxisLinear
+            <YaxisLinear
               yScale={yScale}
               width={width}
               height={height}
@@ -513,10 +528,12 @@ const LineChart: React.FC<LineChartProps> = ({
       </svg>
       <div
         ref={tooltipRef}
+        className="tooltip"
         style={{
           position: "absolute",
           transition: "visibility 0.1s ease-out,opacity 0.1s ease-out",
           transform: "translateZ(0)",
+          zIndex: 1,
         }}
       />
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}

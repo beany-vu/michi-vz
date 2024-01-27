@@ -1,8 +1,8 @@
 import React, { useMemo, useRef } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
-import HorizontalAxisBand from "./shared/HorizontalAxisBand";
-import VerticalAxisLinear from "./shared/VerticalAxisLinear";
+import XaxisBand from "./shared/XaxisBand";
+import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
 
@@ -189,7 +189,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
   const stackedRectData = useMemo(
     () => prepareStackedData(dataSet),
-    [dataSet, width, height, margin, colorsMapping],
+    [dataSet, width, height, margin, colorsMapping, disabledItems],
   );
   const generateTooltipContent = (
     key: string,
@@ -265,13 +265,13 @@ const VerticalStackBarChart: React.FC<Props> = ({
         <Title x={width / 2} y={MARGIN.top / 2}>
           {title}
         </Title>
-        <HorizontalAxisBand
+        <XaxisBand
           xScale={xScale}
           height={height}
           margin={margin}
           xAxisFormat={xAxisFormat}
         />
-        <VerticalAxisLinear
+        <YaxisLinear
           yScale={yScale}
           width={width}
           height={height}
@@ -295,6 +295,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                           fill={d.fill ?? "transparent"}
                           rx={2}
                           stroke={"#fff"}
+                          className={`bar`}
                           opacity={
                             highlightItems.length === 0 ||
                             highlightItems.includes(key)
@@ -353,16 +354,18 @@ const VerticalStackBarChart: React.FC<Props> = ({
                             }
                           }}
                         />
-                        <text
-                          x={d.x + d.width / 2}
-                          y={height - margin.bottom + 15}
-                          textAnchor="middle"
-                          fontSize="12"
-                          fill="#000"
-                          className={"x-axis-label"}
-                        >
-                          {d.seriesKeyAbbreviation}
-                        </text>
+                        {d.seriesKeyAbbreviation && (
+                          <text
+                            x={d.x + d.width / 2}
+                            y={height - margin.bottom + 15}
+                            textAnchor="middle"
+                            fontSize="12"
+                            fill="#000"
+                            className={"x-axis-label"}
+                          >
+                            {d.seriesKeyAbbreviation}
+                          </text>
+                        )}
                       </React.Fragment>
                     );
                   })}

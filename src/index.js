@@ -3,3 +3,4 @@ export { default as LineChart } from "./components/LineChart";
 export { default as VerticalStackBarChart } from "./components/VerticalStackBarChart";
 export { default as RibbonChart } from "./components/RibbonChart";
 export { default as AreaChart } from "./components/AreaChart";
+export { default as RadarChart } from "./components/RadarChart";

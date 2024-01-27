@@ -1,4 +1,5 @@
-import React, { useRef, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import * as d3 from "d3";
 import styled from "styled-components";
 import range from "lodash/range";
@@ -32,6 +33,7 @@ const Tooltip = styled.div`
   z-index: 1000;
   transition: opacity 0.3s;
   font-size: 12px;
+  background: rgba(255, 255, 255, 0.9);
 `;
 
 interface DataPoint {
@@ -42,10 +44,12 @@ interface DataPoint {
     date: string;
   }[];
 }
+
 export interface RadarChartProps {
   width: number;
   height: number;
   tooltipFormatter?: (data: { date: string; value: number }) => React.ReactNode;
+  radialLabelFormatter?: (data: { date: string; value: number }) => string;
   series: DataPoint[];
   // The poles within the radar chart to present data in circular form
   poles?: {
@@ -65,6 +69,7 @@ export const RadarChart = ({
   series,
   poles: poles,
   tooltipFormatter,
+  radialLabelFormatter,
   children,
   isLoading = false,
   isLoadingComponent,
@@ -91,7 +96,7 @@ export const RadarChart = ({
           .map((d: DataPoint) => d.value),
       ),
     ];
-  }, []);
+  }, [series, disabledItems]);
 
   const yScale = useMemo(() => {
     return d3
@@ -100,11 +105,22 @@ export const RadarChart = ({
       .range([0, height / 2 - 30]);
   }, [poles, height]);
 
+  const anglesDateMapping = useMemo(
+    () =>
+      poles.labels.reduce(
+        (res: { [x: string]: number }, cur: string, i: number) => {
+          res[cur] = (i / poles.labels.length) * 2 * Math.PI;
+          return res;
+        },
+        {},
+      ),
+    [poles],
+  );
+
   const genPolygonPoints = (
     data: { value: number; date: string }[],
     scale: (n: number) => number,
   ) => {
-    const step = (Math.PI * 2) / data.length;
     const points: { x: number; y: number; date: string; value: number }[] =
       new Array(data.length).fill({
         x: null,
@@ -112,6 +128,7 @@ export const RadarChart = ({
         date: null,
         value: null,
       });
+
     const pointString: string = data.reduce((res, cur, i) => {
       if (i > data.length) return res;
 
@@ -120,11 +137,12 @@ export const RadarChart = ({
       }
 
       // Adjusting starting angle by subtracting Math.PI / 2
-      const angle = i * step - Math.PI / 2;
-
+      const angle = anglesDateMapping[cur.date];
       // Now include the center of the radar chart in your calculations.
       const xVal = Math.round(width / 2 + scale(cur.value) * Math.sin(angle));
-      const yVal = Math.round(height / 2 + scale(cur.value) * Math.cos(angle));
+      const yVal = Math.round(
+        height / 2 + scale(cur.value) * Math.cos(angle) * -1,
+      );
 
       points[i] = { x: xVal, y: yVal, date: cur.date, value: cur.value };
       res += `${xVal},${yVal} `;
@@ -134,7 +152,7 @@ export const RadarChart = ({
     return { points, pointString };
   };
 
-  const processedseries = series
+  const processedSeries = series
     // sort disabled items first
     .filter((d: DataPoint) => !disabledItems.includes(d.label))
     .map((item: DataPoint) => ({
@@ -144,6 +162,11 @@ export const RadarChart = ({
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
+
+    svg.selectAll(".radial-label").remove();
+    svg.selectAll(".radial-circle").remove();
+    svg.selectAll(".pole-label").remove();
+
     // Drawing radial lines
     const numRadialTicks = 12;
     for (let i = 0; i < numRadialTicks; i++) {
@@ -170,21 +193,44 @@ export const RadarChart = ({
       (value) => (height / 2) * (value / numCircleTicks),
     );
 
-    circleRadii.forEach((radius) => {
+    circleRadii.forEach((radius, i) => {
+      const tickValue = yScale.invert(radius - 30);
+      const currentRadiusForLbl = radius - 30;
+      const labelY = height / 2 - currentRadiusForLbl;
+
       svg
         .append("circle")
+        .attr("class", "radial-circle")
         .attr("cx", width / 2)
         .attr("cy", height / 2)
         .attr("r", radius - 30)
         .attr("fill", "transparent")
         .attr("stroke", "#c1c1c1")
         .attr("stroke-width", 1)
-        .attr("stroke-dasharray", "2,2")
-        .lower();
+        .style("pointer-events", "none")
+        .attr("stroke-dasharray", "2,2");
+
+      // Add tick label
+      svg
+        .append("text")
+        .attr("class", "radial-label")
+        .attr("x", width / 2)
+        .attr("y", labelY) // Adjust vertical alignment as needed
+        .attr("text-anchor", "end")
+        .style("pointer-events", "none")
+        .each(function () {
+          const textElement = d3.select(this);
+          if (radialLabelFormatter) {
+            textElement.text(radialLabelFormatter(tickValue));
+          } else {
+            textElement.text(i === 0 ? i : tickValue.toFixed(1));
+          }
+        })
+        .raise();
     });
 
     // Drawing labels
-    const labelRadius = height / 2 - 15; // Adjust this as needed
+    const labelRadius = height / 2 - 5; // Adjust this as needed
 
     poles.labels.forEach((label: string, i: number) => {
       const angle = (i / poles.labels.length) * 2 * Math.PI;
@@ -193,6 +239,7 @@ export const RadarChart = ({
       svg
         .append("text")
         .attr("class", "pole-label")
+        .style("pointer-events", "none")
         .attr("x", lx)
         .attr("y", ly)
         .attr("dy", ".35em") // Adjust vertical alignment here
@@ -212,15 +259,14 @@ export const RadarChart = ({
       .selectAll(".series")
       .attr("opacity", highlightItems.length === 0 ? 1 : 0.3);
     svg.selectAll(".data-point").attr("opacity", 0);
+
     highlightItems.forEach((item: string) => {
+      svg.selectAll(`.series[data-label="${item}"]`).attr("opacity", 1).raise();
       svg
-        .selectAll(`.series-${item.replaceAll(" ", "-")}`)
+        .selectAll(`.data-point[data-label="${item}"]`)
         .attr("opacity", 1)
         .raise();
-      svg
-        .selectAll(`.data-point-${item.replaceAll(" ", "-")}`)
-        .attr("opacity", 1)
-        .raise();
+      svg.selectAll(".radial-label").raise();
     });
   }, [highlightItems]);
 
@@ -255,22 +301,16 @@ export const RadarChart = ({
         }}
       >
         {children}
-        {processedseries.map(
+        {processedSeries.map(
           ({ label, pointString, points, color }, i: number) => (
-            <g
-              key={`series-${i}`}
-              className={`series series-${i} series-${label.replaceAll(
-                " ",
-                "-",
-              )}`}
-            >
+            <g key={`series-${i}`} data-label={label} className={`series`}>
               <Polygon
                 points={pointString}
                 fill={"transparent"}
                 data-label={colorsMapping[label]}
                 stroke={colorsMapping[label] ?? color}
                 strokeWidth={5}
-                onMouseMove={(event) => {
+                onMouseEnter={(event) => {
                   event.preventDefault();
                   setHighlightItems([label]);
                 }}
@@ -293,26 +333,32 @@ export const RadarChart = ({
                     <g key={`data-point-${j}`}>
                       {point.x !== null && point.y !== null && (
                         <DataPointStyled
-                          className={`data-point data-point-${i} data-point-${label.replaceAll(
-                            " ",
-                            "-",
-                          )}`}
+                          className={`data-point data-point-${i}`}
+                          data-label={label}
                           r={6}
                           cx={point.x}
                           cy={point.y}
                           stroke="#fff"
                           strokeWidth={3}
                           fill={colorsMapping[label] ?? color}
-                          onMouseOver={(e) => {
-                            const [x, y] = d3.pointer(e, svgRef.current);
+                          onMouseEnter={(e) => {
                             setHighlightItems([label]);
                             setTooltipData({
                               date: point.date,
                               value: point.value,
                             });
                             if (tooltipRef.current) {
-                              tooltipRef.current.style.top = `${x}px`;
-                              tooltipRef.current.style.left = `${y + 10}px`;
+                              const rect =
+                                svgRef.current.getBoundingClientRect();
+                              const offsetX =
+                                e.pageX - rect.left - window.scrollX;
+                              const offsetY =
+                                e.pageY - rect.top - window.scrollY;
+
+                              tooltipRef.current.style.top = `${offsetY}px`;
+                              tooltipRef.current.style.left = `${
+                                offsetX + 10
+                              }px`;
                               tooltipRef.current.style.display = "block";
                             }
                           }}
@@ -340,3 +386,5 @@ export const RadarChart = ({
     </div>
   );
 };
+
+export default RadarChart;

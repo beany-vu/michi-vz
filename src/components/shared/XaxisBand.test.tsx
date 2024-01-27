@@ -1,7 +1,7 @@
 import React from "react";
 import { render, waitFor } from "@testing-library/react";
 import * as d3 from "d3";
-import HorizontalAxisBand from "./HorizontalAxisBand"; // adjust path as necessary
+import XaxisBand from "./XaxisBand"; // adjust path as necessary
 
 jest.mock("d3", () => {
   const realD3 = jest.requireActual("d3");
@@ -23,7 +23,7 @@ describe("<HorizontalAxisBand />", () => {
     // Render the component within an SVG
     const { container } = render(
       <svg>
-        <HorizontalAxisBand
+        <XaxisBand
           xScale={mockXScale}
           height={mockHeight}
           margin={mockMargin}
@@ -44,7 +44,7 @@ describe("<HorizontalAxisBand />", () => {
   it("applies the correct transformation", async () => {
     const { container } = render(
       <svg>
-        <HorizontalAxisBand
+        <XaxisBand
           xScale={mockXScale}
           height={mockHeight}
           margin={mockMargin}
@@ -68,7 +68,7 @@ describe("<HorizontalAxisBand />", () => {
   it("removes .domain", () => {
     const { container } = render(
       <svg>
-        <HorizontalAxisBand
+        <XaxisBand
           xScale={mockXScale}
           height={mockHeight}
           margin={mockMargin}
@@ -83,7 +83,7 @@ describe("<HorizontalAxisBand />", () => {
   it("removes tick lines", () => {
     const { container } = render(
       <svg>
-        <HorizontalAxisBand
+        <XaxisBand
           xScale={mockXScale}
           height={mockHeight}
           margin={mockMargin}

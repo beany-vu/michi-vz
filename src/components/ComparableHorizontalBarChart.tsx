@@ -1,8 +1,8 @@
 import * as d3 from "d3";
 import React, { useEffect, useMemo, useRef } from "react";
 import Title from "../components/shared/Title";
-import HorizontalAxisLinear from "../components/shared/HorizontalAxisLinear";
-import VerticalAxisBand from "../components/shared/VerticalAxisBand";
+import XaxisLinear from "./shared/XaxisLinear";
+import YaxisBand from "./shared/YaxisBand";
 import { useChartContext } from "../components/MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
 
@@ -24,6 +24,8 @@ interface LineChartProps {
   margin: { top: number; right: number; bottom: number; left: number };
   xAxisFormat?: (d: number | { valueOf(): number }) => string;
   yAxisFormat?: (d: number | string) => string;
+  xAxisPredefinedDomain?: number[];
+  xAxisDataType: "number" | "date_annual" | "date_monthly";
   title?: string;
   tooltipFormatter?: (
     d: DataPoint | undefined,
@@ -47,6 +49,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   margin = MARGIN,
   yAxisFormat,
   xAxisFormat,
+  xAxisPredefinedDomain = [],
+  xAxisDataType = "number",
   tooltipFormatter,
   children,
   isLoading = false,
@@ -69,32 +73,59 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   const yAxisDomain = useMemo(
     () =>
       dataSet
-        .filter((d) => !disabledItems.includes(d.label))
-        .map((d) => d.label),
-    [dataSet],
+        ?.filter((d) => !disabledItems.includes(d.label))
+        ?.map((d) => d.label),
+    [dataSet, disabledItems],
   );
-  const xAxisDomain = useMemo(
-    () => [
-      dataSet
-        .filter((d) => !disabledItems.includes(d.label))
-        .map((d) => [d.valueBased, d.valueCompared])
-        .flat()
-        .reduce((a, b) => Math.max(a, b)),
-      0,
-    ],
-    [dataSet],
-  );
+
+  const xAxisRange = useMemo(() => {
+    if (dataSet.length > 0) {
+      return dataSet
+        ?.filter((d) => !disabledItems.includes(d.label))
+        ?.map((d) => [d.valueBased, d.valueCompared])
+        ?.flat();
+    }
+    return [];
+  }, [dataSet, disabledItems]);
+
+  const xAxisDomain = useMemo(() => {
+    const range =
+      xAxisPredefinedDomain.length > 0 ? xAxisPredefinedDomain : xAxisRange;
+    if (xAxisDataType === "number") {
+      const min = Math.min(...range);
+      const max = Math.max(...range);
+      return [max, min];
+    }
+    if (xAxisDataType === "date_annual") {
+      return [
+        new Date(Math.max(...range), 1, 1),
+        new Date(Math.min(...range), 1, 1),
+      ];
+    }
+    if (xAxisRange.length >= 2) {
+      const minDate = new Date(Math.min(...range));
+      const maxDate = new Date(Math.max(...range));
+      return [maxDate, minDate] as [Date, Date];
+    }
+  }, [xAxisRange, xAxisPredefinedDomain, disabledItems]);
+
   const yAxisScale = d3
     .scaleBand()
     .domain(yAxisDomain)
     .range([margin.top, height - margin.bottom]);
 
-  const xAxisScale = d3
-    .scaleLinear()
-    .domain(xAxisDomain)
-    .range([width - margin.left, margin.right])
-    .clamp(true)
-    .nice(1);
+  const xAxisScale =
+    xAxisDataType === "number"
+      ? d3
+          .scaleLinear()
+          .domain(xAxisDomain)
+          .range([width - margin.left, margin.right])
+          .clamp(true)
+          .nice()
+      : d3
+          .scaleTime()
+          .domain(xAxisDomain)
+          .range([width - margin.left, margin.right]);
 
   const handleMouseOver = (
     d: DataPoint,
@@ -119,7 +150,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     d3.select(svgRef.current).select(".bar").attr("opacity", 0.3);
     highlightItems.forEach((item) => {
       d3.select(svgRef.current)
-        .select(`.bar-${item.replaceAll(" ", "-")}`)
+        .selectAll(`.bar-[data-label="${item}"]`)
         .attr("opacity", 1);
     });
   }, [highlightItems]);
@@ -141,13 +172,14 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         <Title x={width / 2} y={margin.top / 2}>
           {title}
         </Title>
-        <HorizontalAxisLinear
+        <XaxisLinear
           xScale={xAxisScale}
           height={height}
           margin={margin}
           xAxisFormat={xAxisFormat}
+          xAxisDataType={xAxisDataType}
         />
-        <VerticalAxisBand
+        <YaxisBand
           yScale={yAxisScale}
           width={width}
           margin={margin}
@@ -156,13 +188,24 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         {dataSet
           .filter((d) => !disabledItems.includes(d.label))
           .map((d, i) => {
-            const x1 = xAxisScale(d.valueBased);
-            const x2 = xAxisScale(d.valueCompared);
+            const x1 =
+              margin.left + xAxisScale(Math.min(0, d.valueBased)) - margin.left;
+            const x2 =
+              margin.left +
+              xAxisScale(Math.min(0, d.valueCompared)) -
+              margin.left;
+            const width1 = Math.abs(xAxisScale(d.valueBased) - xAxisScale(0));
+            const width2 = Math.abs(
+              xAxisScale(d.valueCompared) - xAxisScale(0),
+            );
+
             const y = yAxisScale(d.label) || 0;
             const standardHeight = yAxisScale.bandwidth();
+
             return (
               <g
-                className={`bar bar-${d.label.replaceAll(" ", "-")}`}
+                className={"bar"}
+                data-label={d.label}
                 key={i}
                 style={{
                   opacity:
@@ -174,70 +217,88 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                 onMouseOver={() => setHighlightItems([d.label])}
                 onMouseOut={() => setHighlightItems([])}
               >
-                <rect
-                  className="value-based"
-                  x={margin.left}
-                  // y should be aligned to the center of the bandwidth's unit with height = 30
-                  y={y + (standardHeight - 30) / 2}
-                  width={x1}
-                  height={30}
-                  fill={colorsBasedMapping[d.label]}
-                  rx={5}
-                  ry={5}
-                  onMouseOver={(event) => handleMouseOver(d, event)}
-                  onMouseOut={handleMouseOut}
-                />
-                <rect
-                  className="value-compared"
-                  x={margin.left}
-                  y={y + (standardHeight - 30) / 2}
-                  width={x2}
-                  height={30}
-                  fill={colorsMapping[d.label]}
-                  opacity={0.8}
-                  rx={5}
-                  ry={5}
-                  onMouseOver={(event) => handleMouseOver(d, event)}
-                  onMouseOut={handleMouseOut}
-                />
-                {!d.valueBased && !d.valueCompared && (
+                {/* Conditionally render based on width comparison */}
+                {width1 < width2 ? (
                   <>
                     <rect
-                      x={margin.left}
-                      // y should be aligned to the center of the bandwidth's unit with height = 30
+                      className="value-compared"
+                      x={x2}
                       y={y + (standardHeight - 30) / 2}
-                      width={10}
+                      width={width2}
                       height={30}
-                      fill={colorsBasedMapping[d.label]}
+                      fill={colorsMapping[d.label] ?? d.color}
+                      opacity={0.9}
                       rx={5}
                       ry={5}
                       onMouseOver={(event) => handleMouseOver(d, event)}
                       onMouseOut={handleMouseOut}
+                      stroke="#fff"
+                      strokeWidth={1}
                     />
-                    <text
-                      x={margin.left + 15}
-                      y={y + (standardHeight - 30) / 2 + 20}
-                      fill="black"
-                      fontSize="12px"
-                      fontWeight="bold"
-                    >
-                      N/A
-                    </text>
+                    <rect
+                      className="value-based"
+                      x={x1}
+                      y={y + (standardHeight - 30) / 2}
+                      width={width1}
+                      height={30}
+                      fill={colorsBasedMapping[d.label] ?? d?.color}
+                      rx={5}
+                      ry={5}
+                      onMouseOver={(event) => handleMouseOver(d, event)}
+                      onMouseOut={handleMouseOut}
+                      opacity={0.9}
+                      stroke="#fff"
+                      strokeWidth={1}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <rect
+                      className="value-based"
+                      x={x1}
+                      y={y + (standardHeight - 30) / 2}
+                      width={width1}
+                      height={30}
+                      fill={colorsBasedMapping[d.label] ?? d?.color}
+                      rx={5}
+                      ry={5}
+                      onMouseOver={(event) => handleMouseOver(d, event)}
+                      onMouseOut={handleMouseOut}
+                      opacity={0.9}
+                      stroke="#fff"
+                      strokeWidth={1}
+                    />
+                    <rect
+                      className="value-compared"
+                      x={x2}
+                      y={y + (standardHeight - 30) / 2}
+                      width={width2}
+                      height={30}
+                      fill={colorsMapping[d.label] ?? d.color}
+                      opacity={0.9}
+                      rx={5}
+                      ry={5}
+                      onMouseOver={(event) => handleMouseOver(d, event)}
+                      onMouseOut={handleMouseOut}
+                      stroke="#fff"
+                      strokeWidth={1}
+                    />
                   </>
                 )}
+                {/* Rest of your code */}
               </g>
             );
           })}
       </svg>
       {tooltip && (
         <div
+          className="tooltip"
           style={{
             position: "absolute",
             left: `${tooltip?.x}px`,
             top: `${tooltip?.y}px`,
             background: "white",
             padding: "5px",
-            border: "1px solid black",
             pointerEvents: "none",
           }}
         >
@@ -252,6 +313,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
       )}
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
+
       {!isLoading && dataSet.length === 0 && isNodataComponent && (
         <>{isNodataComponent}</>
       )}
