@@ -5,6 +5,15 @@ export type DataPoint = {
   certainty: boolean;
 };
 
+export type DataPointRangeChart = {
+  date: number;
+  valueMedium?: number;
+  label?: string;
+  certainty: boolean;
+  valueMax: number;
+  valueMin: number;
+};
+
 export interface Margin {
   bottom?: number;
   left?: number;

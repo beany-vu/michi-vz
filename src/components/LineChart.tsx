@@ -250,10 +250,7 @@ const LineChart: React.FC<LineChartProps> = ({
         const path = svg
           .append("path")
           .datum(data.series)
-          .attr(
-            "class",
-            `line line-${i} data-group data-group-${i} data-group-${data.label} line-group-${data.label}`,
-          )
+          .attr("class", `line line-${i} data-group data-group-${i}`)
           .attr("data-label", data.label)
           .attr("d", (d: DataPoint[]) => line(d)) // Explicitly specify the type and use line function
           .attr("stroke", colorsMapping[data.label] ?? data.color)

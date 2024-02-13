@@ -1,5 +1,5 @@
 import React from "react";
-import ScatterPlot from "../src/components/ScatterPlotChart.tsx.bak"; // Import your ScatterPlot component
+import ScatterPlot from "../src/components/ScatterPlotChart.tsx"; // Import your ScatterPlot component
 import { Meta } from "@storybook/react";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
 
@@ -29,9 +29,11 @@ export const Primary = {
       bottom: 50,
       left: 50
     },
+    xAxisFormat: (d) => `${d}%`,
+    xAxisDataType: "number",
     yAxisFormat: (d) => `${d}%`,
     title: "My Scatter Plot", // Change the title as needed
-    series: [
+    dataSet: [
       {
         "year": "202009",
         "sector": "10",

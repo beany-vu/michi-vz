@@ -119,7 +119,10 @@ const VerticalStackBarChart: React.FC<Props> = ({
         0,
       ),
     );
-    return [Math.min(...totalValuePerYear), Math.max(...totalValuePerYear)];
+    const minValue =
+      Math.min(...totalValuePerYear) < 0 ? Math.min(...totalValuePerYear) : 0;
+    const maxValue = Math.max(...totalValuePerYear);
+    return [minValue, maxValue];
   }, [flattenedDataSet, keys]);
 
   const yScale = useMemo(
@@ -154,7 +157,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
         let y0 = 0;
         keys
           .filter((key) => !disabledItems.includes(key))
-          .sort()
+          .reverse()
           .forEach((key) => {
             const y1 =
               parseFloat(String(y0)) +

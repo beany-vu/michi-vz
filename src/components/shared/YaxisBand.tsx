@@ -7,9 +7,16 @@ interface Props {
   width: number;
   margin: { top: number; right: number; bottom: number; left: number };
   yAxisFormat?: (d: number | string) => string;
+  showGrid?: boolean;
 }
 
-const YaxisBand: FC<Props> = ({ yScale, width, margin, yAxisFormat }) => {
+const YaxisBand: FC<Props> = ({
+  yScale,
+  width,
+  margin,
+  yAxisFormat,
+  showGrid,
+}) => {
   const ref = useRef<SVGGElement>(null);
 
   useEffect(() => {
@@ -37,7 +44,7 @@ const YaxisBand: FC<Props> = ({ yScale, width, margin, yAxisFormat }) => {
       .attr("y1", 0)
       .attr("y2", 0)
       .style("stroke-dasharray", "1.5") // Set dash pattern
-      .style("stroke", "transparent"); // Color of the dashed line
+      .style("stroke", showGrid ? "lightgray" : "transparent"); // Color of the dashed line
 
     // Add circles at each tick
     g.selectAll(".tick")

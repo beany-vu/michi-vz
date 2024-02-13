@@ -133,7 +133,7 @@ const RibbonChart: React.FC<Props> = ({
   const stackedRectData = useMemo(
     // remove keys from object that are disabled
     () => prepareStackedData(series),
-    [series, width, height, margin],
+    [series, width, height, margin, disabledItems],
   );
   const generateTooltipContent = (data: DataPoint) => {
     // Process your data and generate HTML string as per requirements

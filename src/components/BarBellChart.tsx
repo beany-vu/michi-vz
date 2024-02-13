@@ -1,0 +1,185 @@
+import React, { useEffect, useRef } from "react";
+import Title from "./shared/Title";
+import defaultConf from "./hooks/useDefaultConfig";
+import * as d3 from "d3";
+import YaxisBand from "./shared/YaxisBand";
+import XaxisLinear from "./shared/XaxisLinear";
+import { scaleBand, scaleLinear } from "d3";
+import { useChartContext } from "./MichiVzProvider";
+
+interface DataPoint {
+  [key: string]: number | undefined;
+}
+
+interface BarBellChartProps {
+  dataSet: DataPoint[];
+  keys: string[];
+  width: number;
+  height: number;
+  margin: { top: number; right: number; bottom: number; left: number };
+  title: string;
+  isLoading?: boolean;
+  isLoadingComponent?: React.ReactNode;
+  isNodataComponent?: React.ReactNode;
+  xAxisFormat?: (d: number | string) => string;
+  yAxisFormat?: (d: number | string) => string;
+  xAxisDataType?: "number" | "date_annual" | "date_monthly";
+  tooltipFormat?: (d: never) => string;
+  showGrid?: { x: boolean; y: boolean };
+  children?: React.ReactNode;
+}
+
+const BarBellChart: React.FC<BarBellChartProps> = ({
+  dataSet = [],
+  keys = [],
+  width = defaultConf.WIDTH,
+  height = defaultConf.HEIGHT,
+  margin = defaultConf.MARGIN,
+  title,
+  children,
+  isLoading,
+  isLoadingComponent,
+  isNodataComponent,
+  xAxisDataType,
+  yAxisFormat,
+  xAxisFormat,
+  tooltipFormat,
+  showGrid = defaultConf.SHOW_GRID,
+}) => {
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
+    useChartContext();
+  const ref = useRef<SVGSVGElement>(null);
+  const yValues = dataSet
+    .map((d) => d.date)
+    .map((date) =>
+      typeof date === "number" ? date : new Date(date).getTime(),
+    );
+
+  const yScale = scaleBand()
+    .domain(yValues.map((value, index) => `Category ${index}`))
+    .range([margin.top, height - margin.bottom])
+
+    .padding(0.1);
+
+  // xValues is the sum of all values which their key is not "date"
+  const xValues = dataSet.map((d) => {
+    let sum = 0;
+    for (const key in d) {
+      if (key !== "date") {
+        sum += d[key] || 0;
+      }
+    }
+    return sum;
+  });
+
+  const xScale = scaleLinear()
+    .domain([0, Math.max(...xValues) + Math.max(...xValues) / 3])
+    .clamp(true)
+    .range([margin.left, width - margin.right]);
+
+  useEffect(() => {
+    const svg = d3.select(ref.current);
+    if (highlightItems.length > 0) {
+      svg.selectAll(".bar-data").style("opacity", 0.3);
+      highlightItems.forEach((item) => {
+        svg.selectAll(`[data-label="${item}"]`).style("opacity", 0.9);
+      });
+    } else {
+      svg.selectAll(".bar-data").style("opacity", 0.9);
+    }
+  }, [highlightItems]);
+
+  return (
+    <div style={{ position: "relative" }}>
+      {isLoading && isLoadingComponent}
+      {!isLoading && !dataSet.length && isNodataComponent}
+      <svg ref={ref} height={height} width={width}>
+        {children}
+        <Title x={width / 2} y={margin.top / 2}>
+          {title}
+        </Title>
+        <YaxisBand
+          yScale={yScale}
+          width={width}
+          margin={margin}
+          yAxisFormat={yAxisFormat}
+          showGrid={showGrid?.y || false}
+        />
+        <XaxisLinear
+          xScale={xScale}
+          height={height}
+          margin={margin}
+          xAxisFormat={xAxisFormat}
+          xAxisDataType={xAxisDataType}
+          showGrid={showGrid?.x || false}
+          position={"top"}
+          ticks={12}
+        />
+        {dataSet.map((d, i) => {
+          let cumulativeX = margin.left; // Initialize cumulativeX for each row
+
+          return keys
+            .filter((key) => !disabledItems.includes(key))
+            .map((key) => {
+              const value = d[key] || 0;
+              const x = cumulativeX; // Use cumulativeX as the starting point for each rectangle
+              const width = xScale(value); // Adjust width based on value
+
+              cumulativeX += width; // Update cumulativeX for the next rectangle
+
+              return (
+                <React.Fragment key={`${key}-${i}`}>
+                  <rect
+                    className="bar-data"
+                    data-label={key}
+                    key={`${key}-${i}`}
+                    x={x}
+                    y={
+                      yScale(`Category ${i}`) + yScale.bandwidth() / 2 - 1 || 0
+                    }
+                    height={2}
+                    width={width}
+                    fill={colorsMapping?.[key]}
+                    style={{
+                      transition: "all 0.1s ease-out",
+                      opacity: 0.9,
+                    }}
+                    onMouseEnter={() => {
+                      setHighlightItems([key]);
+                    }}
+                    onMouseLeave={() => {
+                      setHighlightItems([]);
+                    }}
+                    data-tip={JSON.stringify(d)}
+                  />
+                  <circle
+                    className="bar-data"
+                    data-label={key}
+                    cx={x + 3}
+                    cy={yScale(`Category ${i}`) + yScale.bandwidth() / 2}
+                    r={5}
+                    style={{
+                      transition: "all 0.1s ease-out",
+                      opacity: 0.9,
+                    }}
+                    fill={colorsMapping?.[key]}
+                    onMouseEnter={() => {
+                      setHighlightItems([key]);
+                      if (tooltipFormat) {
+                        // console.log(tooltipFormat(d));
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      setHighlightItems([]);
+                    }}
+                  />
+                </React.Fragment>
+              );
+            });
+        })}
+      </svg>
+    </div>
+  );
+};
+
+export default BarBellChart;

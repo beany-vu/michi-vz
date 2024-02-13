@@ -4,3 +4,6 @@ export { default as VerticalStackBarChart } from "./components/VerticalStackBarC
 export { default as RibbonChart } from "./components/RibbonChart";
 export { default as AreaChart } from "./components/AreaChart";
 export { default as RadarChart } from "./components/RadarChart";
+export { default as RangeChart } from "./components/RangeChart";
+export { default as ScatterPlotChart } from "./components/ScatterPlotChart";
+export { default as BarBellChart } from "./components/BarBellChart";
