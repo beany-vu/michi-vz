@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import ReactDOM from "react-dom";
 import * as d3 from "d3";
 import styled from "styled-components";
 import range from "lodash/range";
@@ -43,13 +42,14 @@ interface DataPoint {
     value: number;
     date: string;
   }[];
+  color?: string;
 }
 
 export interface RadarChartProps {
   width: number;
   height: number;
   tooltipFormatter?: (data: { date: string; value: number }) => React.ReactNode;
-  radialLabelFormatter?: (data: { date: string; value: number }) => string;
+  radialLabelFormatter?: (data: number) => string;
   series: DataPoint[];
   // The poles within the radar chart to present data in circular form
   poles?: {
@@ -63,11 +63,11 @@ export interface RadarChartProps {
   isNodataComponent?: React.ReactNode;
 }
 
-export const RadarChart = ({
+export const RadarChart: React.FC<RadarChartProps> = ({
   width,
   height,
   series,
-  poles: poles,
+  poles,
   tooltipFormatter,
   radialLabelFormatter,
   children,
@@ -93,7 +93,10 @@ export const RadarChart = ({
           .filter((d: DataPoint) => !disabledItems.includes(d.label))
           .map((d: DataPoint) => d.data)
           .flat()
-          .map((d: DataPoint) => d.value),
+          .map((d) => {
+            const parsedValue = parseFloat(String(d.value));
+            return isNaN(parsedValue) ? 0 : parsedValue;
+          }),
       ),
     ];
   }, [series, disabledItems]);
@@ -107,14 +110,14 @@ export const RadarChart = ({
 
   const anglesDateMapping = useMemo(
     () =>
-      poles.labels.reduce(
+      poles?.labels?.reduce(
         (res: { [x: string]: number }, cur: string, i: number) => {
           res[cur] = (i / poles.labels.length) * 2 * Math.PI;
           return res;
         },
         {},
       ),
-    [poles],
+    [poles?.labels],
   );
 
   const genPolygonPoints = (
@@ -232,7 +235,7 @@ export const RadarChart = ({
     // Drawing labels
     const labelRadius = height / 2 - 5; // Adjust this as needed
 
-    poles.labels.forEach((label: string, i: number) => {
+    poles?.labels?.forEach((label: string, i: number) => {
       const angle = (i / poles.labels.length) * 2 * Math.PI;
       const lx = width / 2 + Math.sin(angle) * labelRadius;
       const ly = height / 2 - Math.cos(angle) * labelRadius;
@@ -380,9 +383,7 @@ export const RadarChart = ({
       </svg>
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
-      {!isLoading && series.length === 0 && isNodataComponent && (
-        <>{isNodataComponent}</>
-      )}
+      {!isLoading && series.length === 0 && <>{isNodataComponent}</>}
     </div>
   );
 };

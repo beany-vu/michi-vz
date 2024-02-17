@@ -299,21 +299,6 @@ export default {
     title: 'Charts/Radar Chart',
     components: RadarChart,
     tags: ['autodocs'],
-    decorators: [
-        (Story) => (
-            <MichiVzProvider initialColorsMapping={{
-                "China": "purple",
-                "USA": "blue",
-                "Germany": "green",
-                "France": "#17BECF",
-                "UAE": "#D62728",
-            }}
-                             initialDisabledItems={["China"]}
-                             initialHighlightItems={["France"]}>
-                <Story/>
-            </MichiVzProvider>
-        )
-    ],
 } as Meta;
 
 const Template: Story<RadarChartProps> = (args) => <RadarChart {...args} />;
@@ -326,7 +311,6 @@ Primary.args = {
     series: mockData3,
     tooltipFormatter: (item) => (
         <>
-            {console.log(item)}
             {JSON.stringify(item)}
         </>),
     radialLabelFormatter: (item) => `${item}`,
@@ -336,51 +320,6 @@ Primary.args = {
         // labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
         labels: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"],
     },
-    conf: {
-        padding: 30,
-        radialScale: {
-            range: [0, Math.PI * 3],
-            domain: [360, 0],
-        },
-
-        gridAngle: {
-            style: {
-                stroke: '#c1c1c1',
-                strokeWidth: 1,
-            },
-            numTicks: 12,
-        },
-        gridRadial: {
-            style: {
-                stroke: '#c1c1c1',
-                strokeWidth: 0,
-                numTicks: 5,
-                fill: 'transparent',
-                fillOpacity: 0,
-                strokeDasharray: '2,2',
-            },
-            label: {
-                style: {
-                    color: '#ccc',
-                    fontWeight: 'bold',
-                },
-            },
-        },
-        axes: {
-            topVertical: {
-                style: {
-                    fontSize: 12,
-                    dx: 15,
-                    dy: 3,
-                    textAnchor: 'end',
-                    stroke: 'red',
-                    strokeWidth: 0.5,
-                },
-                formatter: (value) => value,
-            },
-        },
-        series: [
-            // line:
-        ],
-    },
+    isLoading: false,
+    isNodataComponent: <>ddd</>
 };

@@ -15,7 +15,7 @@ interface DataPoint {
   meta?: never;
 }
 
-interface ScatterPlotChartProps {
+interface ScatterPlotChartProps<T extends number | string> {
   dataSet: DataPoint[];
   width: number;
   height: number;
@@ -30,9 +30,11 @@ interface ScatterPlotChartProps {
   xAxisDataType?: "number" | "date_annual" | "date_monthly";
   tooltipFormatter?: (d: DataPoint) => string;
   showGrid?: { x: boolean; y: boolean };
+  xAxisDomain?: [T, T];
+  yAxisDomain?: [T, T];
 }
 
-const ScatterPlotChart: React.FC<ScatterPlotChartProps> = ({
+const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   dataSet = [],
   width = defaultConf.WIDTH,
   height = defaultConf.HEIGHT,
@@ -47,6 +49,8 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps> = ({
   xAxisDataType = "number",
   tooltipFormatter,
   showGrid = defaultConf.SHOW_GRID,
+  xAxisDomain,
+  yAxisDomain,
 }) => {
   const ref = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -67,7 +71,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps> = ({
     if (xAxisDataType === "number") {
       return d3
         .scaleLinear()
-        .domain(xDomain)
+        .domain((xAxisDomain as [number, number]) ?? xDomain)
         .range([margin.left, width - margin.right])
         .nice()
         .clamp(true);
@@ -86,7 +90,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps> = ({
     () =>
       d3
         .scaleLinear()
-        .domain(yDomain)
+        .domain((yAxisDomain as [number, number]) ?? yDomain)
         .range([height - margin.bottom, margin.top])
         .nice()
         .clamp(true),
@@ -185,6 +189,13 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps> = ({
               }}
             />
           ))}
+        {/*<g className="michi-vz-legend">*/}
+        {/*  <path d="M 780 120 A 40 40 0 0 1 780 40" fill="none" stroke="#ccc" />*/}
+        {/*  <path d="M 780 120 A 20 20 0 0 1 780 80" fill="none" stroke="#ccc" />*/}
+        {/*  <circle cx="780" cy="112" r="8" fill="none" stroke="#ccc" />*/}
+        {/*  <text>{dDomain}</text>*/}
+        {/*  {console.log({ dDomain: dScale.invert(60) })}*/}
+        {/*</g>*/}
       </svg>
       <div
         ref={tooltipRef}
