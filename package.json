@@ -1,6 +1,6 @@
 {
   "name": "michi-vz",
-  "version": "0.1.183",
+  "version": "0.1.185",
   "description": "a visualization library based on d3 and react",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,6 +22,7 @@
     "react": "^17.0.2",
     "react-d3-library": "^1.1.8",
     "react-dom": "^17.0.2",
+    "snapsvg": "^0.5.1",
     "styled-components": "^6.0.7"
   },
   "devDependencies": {
@@ -45,6 +46,7 @@
     "@types/d3": "^7.4.0",
     "@types/jest": "^29.5.4",
     "@types/react-dom": "^18.2.7",
+    "@types/snapsvg": "^0.5.8",
     "@types/testing-library__jest-dom": "^6.0.0",
     "@typescript-eslint/eslint-plugin": "^6.5.0",
     "@typescript-eslint/parser": "^6.5.0",

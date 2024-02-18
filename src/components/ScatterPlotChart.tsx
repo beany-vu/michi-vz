@@ -5,6 +5,7 @@ import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
+import { drawHalfLeftCircle } from "../components/shared/helpers";
 
 interface DataPoint {
   x: number;
@@ -32,6 +33,14 @@ interface ScatterPlotChartProps<T extends number | string> {
   showGrid?: { x: boolean; y: boolean };
   xAxisDomain?: [T, T];
   yAxisDomain?: [T, T];
+  dScaleLegend?: {
+    title?: string;
+    valueFormatter?: (d: number) => string;
+  };
+  dScaleLegendFormatter?: (
+    domain: number[],
+    dScale: d3.ScaleLinear<number, number>,
+  ) => string;
 }
 
 const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
@@ -51,6 +60,8 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   showGrid = defaultConf.SHOW_GRID,
   xAxisDomain,
   yAxisDomain,
+  dScaleLegend,
+  dScaleLegendFormatter,
 }) => {
   const ref = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -105,6 +116,11 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     () => d3.scaleLinear().domain(dDomain).range([16, 80]),
     [dDomain, height, width, margin],
   );
+
+  const dLegendPosition = {
+    x: width - 100,
+    y: height / 3,
+  };
 
   useEffect(() => {
     const svg = d3.select(ref.current);
@@ -189,13 +205,60 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
               }}
             />
           ))}
-        {/*<g className="michi-vz-legend">*/}
-        {/*  <path d="M 780 120 A 40 40 0 0 1 780 40" fill="none" stroke="#ccc" />*/}
-        {/*  <path d="M 780 120 A 20 20 0 0 1 780 80" fill="none" stroke="#ccc" />*/}
-        {/*  <circle cx="780" cy="112" r="8" fill="none" stroke="#ccc" />*/}
-        {/*  <text>{dDomain}</text>*/}
-        {/*  {console.log({ dDomain: dScale.invert(60) })}*/}
-        {/*</g>*/}
+        {!isLoading && dataSet.length && (
+          <g className="michi-vz-legend">
+            {dScaleLegendFormatter && dScaleLegendFormatter(dDomain, dScale)}
+            {dScaleLegend?.title && (
+              <text
+                x={dLegendPosition.x}
+                y={dLegendPosition.y - 120 ?? 0}
+                textAnchor={"middle"}
+              >
+                {dScaleLegend?.title}
+              </text>
+            )}
+            <path
+              d={drawHalfLeftCircle(
+                dLegendPosition.x,
+                dLegendPosition.y,
+                40,
+                40,
+              )}
+              fill={"none"}
+              stroke={"#ccc"}
+            />
+            <path
+              d={drawHalfLeftCircle(
+                dLegendPosition.x,
+                dLegendPosition.y,
+                20,
+                20,
+              )}
+              fill={"none"}
+              stroke={"#ccc"}
+            />
+            <path
+              d={drawHalfLeftCircle(dLegendPosition.x, dLegendPosition.y, 8, 8)}
+              fill={"none"}
+              stroke={"#ccc"}
+            />
+            <text x={dLegendPosition.x} y={dLegendPosition.y}>
+              {dScaleLegend?.valueFormatter
+                ? dScaleLegend.valueFormatter(dScale.invert(16))
+                : dScale.invert(16)}
+            </text>
+            <text x={dLegendPosition.x} y={dLegendPosition.y - 40}>
+              {dScaleLegend?.valueFormatter
+                ? dScaleLegend.valueFormatter(dScale.invert(40))
+                : dScale.invert(40)}
+            </text>
+            <text x={dLegendPosition.x} y={dLegendPosition.y - 80}>
+              {dScaleLegend?.valueFormatter
+                ? dScaleLegend.valueFormatter(dScale.invert(80))
+                : dScale.invert(80)}
+            </text>
+          </g>
+        )}
       </svg>
       <div
         ref={tooltipRef}

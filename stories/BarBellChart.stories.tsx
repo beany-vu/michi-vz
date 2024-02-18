@@ -105,7 +105,7 @@ export const Primary = {
     title: "BarBell Chart",
     xAxisFormat: (value: any) => value, // You may need to adjust this based on your actual xAxisFormat function
     yAxisFormat: (value: any) => `${new Date(value).getFullYear()} - ${new Date(value).getMonth() + 1}`, // You may need to adjust this based on your actual yAxisFormat function
-    tooltipFormat: ({ item, series }) => `<div>${JSON.stringify(item)}</div>`,
+    // tooltipFormat: ({ item, series }) => `<div>${JSON.stringify(item)}</div>`,
     showGrid: {
       x: true,
       y: false,

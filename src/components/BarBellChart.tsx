@@ -24,7 +24,11 @@ interface BarBellChartProps {
   xAxisFormat?: (d: number | string) => string;
   yAxisFormat?: (d: number | string) => string;
   xAxisDataType?: "number" | "date_annual" | "date_monthly";
-  tooltipFormat?: (d: never) => string;
+  tooltipFormat?: (
+    d: DataPoint,
+    currentKey: string,
+    currentValue: string | number,
+  ) => string;
   showGrid?: { x: boolean; y: boolean };
   children?: React.ReactNode;
 }
@@ -43,12 +47,45 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   xAxisDataType,
   yAxisFormat,
   xAxisFormat,
-  tooltipFormat,
+  tooltipFormat = null,
   showGrid = defaultConf.SHOW_GRID,
 }) => {
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
   const ref = useRef<SVGSVGElement>(null);
+  const refTooltip = useRef<HTMLDivElement>(null);
+
+  const generateTooltip = (
+    d: DataPoint,
+    currentKey: string,
+    currentValue: string | number,
+    event: React.MouseEvent<SVGRectElement | SVGCircleElement>,
+  ) => {
+    let content: string;
+    if (tooltipFormat) {
+      content = tooltipFormat(d, currentKey, currentValue);
+    } else {
+      content = `${d?.date}: ${currentKey} - ${currentValue}`;
+    }
+    const tooltip = refTooltip.current;
+
+    if (tooltip) {
+      tooltip.style.top = `${event.clientY}px`;
+      tooltip.style.left = `${event.clientX}px`;
+      tooltip.style.opacity = "1";
+      tooltip.style.visibility = "visible";
+      tooltip.innerHTML = content;
+    }
+  };
+
+  const hideTooltip = () => {
+    const tooltip = refTooltip.current;
+    if (tooltip) {
+      tooltip.style.opacity = "0";
+      tooltip.style.visibility = "hidden";
+    }
+  };
+
   const yValues = dataSet
     .map((d) => d.date)
     .map((date) =>
@@ -56,7 +93,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     );
 
   const yScale = scaleBand()
-    .domain(yValues.map((value, index) => `Category ${index}`))
+    .domain(yValues.map((_, index) => `Category ${index}`))
     .range([margin.top, height - margin.bottom])
 
     .padding(0.1);
@@ -144,11 +181,13 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                       transition: "all 0.1s ease-out",
                       opacity: 0.9,
                     }}
-                    onMouseEnter={() => {
+                    onMouseEnter={(event) => {
                       setHighlightItems([key]);
+                      generateTooltip(d, key, value, event);
                     }}
                     onMouseLeave={() => {
                       setHighlightItems([]);
+                      hideTooltip();
                     }}
                     data-tip={JSON.stringify(d)}
                   />
@@ -163,14 +202,13 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                       opacity: 0.9,
                     }}
                     fill={colorsMapping?.[key]}
-                    onMouseEnter={() => {
+                    onMouseEnter={(event) => {
                       setHighlightItems([key]);
-                      if (tooltipFormat) {
-                        // console.log(tooltipFormat(d));
-                      }
+                      generateTooltip(d, key, value, event);
                     }}
                     onMouseLeave={() => {
                       setHighlightItems([]);
+                      hideTooltip();
                     }}
                   />
                 </React.Fragment>
@@ -178,6 +216,19 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
             });
         })}
       </svg>
+      <div
+        className="tooltip"
+        ref={refTooltip}
+        style={{
+          position: "absolute",
+          opacity: 0,
+          visibility: "hidden",
+          padding: "10px",
+          backgroundColor: "rgba(0, 0, 0, 0.6)",
+          color: "white",
+          borderRadius: "5px",
+        }}
+      />
     </div>
   );
 };
