@@ -1,6 +1,27 @@
 import React, { FC, useEffect, useRef } from "react";
 import { ScaleTime, ScaleLinear } from "d3-scale";
 import * as d3 from "d3";
+import range from "lodash/range";
+
+// Function to get dates with equal distance
+function getDatesWithEqualDistance(
+  startDate: string | number | Date,
+  endDate: string | number | Date,
+  numDates: number,
+) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diff = end.getTime() - start.getTime();
+  const interval = diff / (numDates - 1);
+  return range(0, numDates).map(i => new Date(start.getTime() + i * interval));
+}
+
+// Example usage
+const startDate = new Date(2001, 11); // December 2001 (months are zero-based)
+const endDate = new Date(2022, 0); // January 2022
+const numDates = 6;
+const dates = getDatesWithEqualDistance(startDate, endDate, numDates);
+console.log(dates);
 
 interface Props {
   xScale: ScaleTime<number, number> | ScaleLinear<number, number>;
@@ -121,9 +142,17 @@ const XaxisLinear: FC<Props> = ({
         break;
       case "date_monthly":
         if (counts > 20) {
+          console.log({tickValues})
           axisBottom = d3
             .axisBottom(xScale)
-            .tickSize(20)
+            // .tickSize(20)
+            .tickValues(
+              getDatesWithEqualDistance(
+                tickValues[0],
+                tickValues[tickValues.length - 1],
+                5,
+              ),
+            )
             .tickFormat((domainValue: number | Date) =>
               xAxisFormat
                 ? xAxisFormat(domainValue)

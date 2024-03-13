@@ -32,32 +32,37 @@ export const Primary = {
             {
               "year": 2018,
               "date": "2018",
-              "valueMin": 0,
-              "valueMax": 0.1162
+              "valueMin": 1,
+              "valueMax": 12,
+              "valueMedium": 6,
             },
             {
               "year": 2019,
               "date": "2019",
               "valueMin": 0,
-              "valueMax": 0.1162
+              "valueMax": 0.1162,
+              "valueMedium": 0.1162,
             },
             {
               "year": 2020,
               "date": "2020",
-              "valueMin": 0,
-              "valueMax": 0.1162
+              "valueMin": 2,
+              "valueMax": 14.1162,
+              "valueMedium": 14.1162,
             },
             {
               "year": 2021,
               "date": "2021",
-              "valueMin": 0,
-              "valueMax": 0.1162
+              "valueMin": 12,
+              "valueMax": 12,
+              "valueMedium": 12,
             },
             {
               "year": 2022,
               "date": "2022",
               "valueMin": 0,
-              "valueMax": 0.1199
+              "valueMax": 0.1199,
+              "valueMedium": 0.1199,
             }
           ]
         },

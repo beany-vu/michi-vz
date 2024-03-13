@@ -61,6 +61,9 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     currentValue: string | number,
     event: React.MouseEvent<SVGRectElement | SVGCircleElement>,
   ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const [x, y] = d3.pointer(event, ref.current);
     let content: string;
     if (tooltipFormat) {
       content = tooltipFormat(d, currentKey, currentValue);
@@ -70,8 +73,8 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     const tooltip = refTooltip.current;
 
     if (tooltip) {
-      tooltip.style.top = `${event.clientY}px`;
-      tooltip.style.left = `${event.clientX}px`;
+      tooltip.style.top = `${y}px`;
+      tooltip.style.left = `${x}px`;
       tooltip.style.opacity = "1";
       tooltip.style.visibility = "visible";
       tooltip.innerHTML = content;
@@ -86,14 +89,14 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     }
   };
 
-  const yValues = dataSet
-    .map((d) => d.date)
-    .map((date) =>
-      typeof date === "number" ? date : new Date(date).getTime(),
-    );
+  const yValues = dataSet.map((d) => d.date).map((date) => date);
 
   const yScale = scaleBand()
-    .domain(yValues.map((_, index) => `Category ${index}`))
+    .domain(
+      yValues.map((value) => {
+        return `${value}`;
+      }),
+    )
     .range([margin.top, height - margin.bottom])
 
     .padding(0.1);
@@ -112,6 +115,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   const xScale = scaleLinear()
     .domain([0, Math.max(...xValues) + Math.max(...xValues) / 3])
     .clamp(true)
+    .nice()
     .range([margin.left, width - margin.right]);
 
   useEffect(() => {
@@ -171,10 +175,8 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                     data-label={key}
                     key={`${key}-${i}`}
                     x={x}
-                    y={
-                      yScale(`Category ${i}`) + yScale.bandwidth() / 2 - 1 || 0
-                    }
-                    height={2}
+                    y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 || 0}
+                    height={4}
                     width={width}
                     fill={colorsMapping?.[key]}
                     style={{
@@ -195,8 +197,8 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                     className="bar-data"
                     data-label={key}
                     cx={x + 3}
-                    cy={yScale(`Category ${i}`) + yScale.bandwidth() / 2}
-                    r={5}
+                    cy={yScale(`${d?.date}`) + yScale.bandwidth() / 2}
+                    r={6}
                     style={{
                       transition: "all 0.1s ease-out",
                       opacity: 0.9,
