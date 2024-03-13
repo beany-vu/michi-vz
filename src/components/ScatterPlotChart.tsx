@@ -6,6 +6,7 @@ import XaxisLinear from "./shared/XaxisLinear";
 import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import { drawHalfLeftCircle } from "../components/shared/helpers";
+import { useDisplayIsNodata } from "src/components/hooks/useDisplayIsNodata";
 
 interface DataPoint {
   x: number;
@@ -26,6 +27,7 @@ interface ScatterPlotChartProps<T extends number | string> {
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
+  isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
   xAxisFormat?: (d: number | string) => string;
   yAxisFormat?: (d: number | string) => string;
   xAxisDataType?: "number" | "date_annual" | "date_monthly";
@@ -53,6 +55,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   isLoading,
   isLoadingComponent,
   isNodataComponent,
+  isNodata,
   xAxisFormat,
   yAxisFormat,
   xAxisDataType = "number",
@@ -136,10 +139,17 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     });
   }, [highlightItems]);
 
+  const displayIsNodata = useDisplayIsNodata({
+    dataSet: dataSet,
+    isLoading: isLoading,
+    isNodataComponent: isNodataComponent,
+    isNodata: isNodata,
+  });
+
   return (
     <div style={{ position: "relative" }}>
       {isLoading && isLoadingComponent}
-      {!isLoading && !dataSet.length && isNodataComponent}
+      {displayIsNodata && isNodataComponent}
       <svg width={width} height={height} ref={ref}>
         <Title x={width / 2} y={margin.top / 2}>
           {title}

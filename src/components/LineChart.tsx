@@ -9,6 +9,7 @@ import { ScaleTime } from "d3";
 import { ScaleLinear } from "d3-scale";
 import { debounce } from "lodash";
 import LoadingIndicator from "./shared/LoadingIndicator";
+import { useDisplayIsNodata } from "src/components/hooks/useDisplayIsNodata";
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
@@ -44,6 +45,15 @@ interface LineChartProps {
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
+  isNodata?:
+    | boolean
+    | ((
+        dataSet: {
+          label: string;
+          color: string;
+          series: DataPoint[];
+        }[],
+      ) => boolean);
 }
 
 const LineChart: React.FC<LineChartProps> = ({
@@ -63,6 +73,7 @@ const LineChart: React.FC<LineChartProps> = ({
   isLoading = false,
   isLoadingComponent,
   isNodataComponent,
+  isNodata,
 }) => {
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
@@ -483,6 +494,13 @@ const LineChart: React.FC<LineChartProps> = ({
     }
   }, [showCombined]);
 
+  const displayIsNodata = useDisplayIsNodata({
+    dataSet: dataSet,
+    isLoading: isLoading,
+    isNodataComponent: isNodataComponent,
+    isNodata: isNodata,
+  });
+
   return (
     <div style={{ position: "relative", width: width, height: height }}>
       <svg
@@ -535,9 +553,7 @@ const LineChart: React.FC<LineChartProps> = ({
       />
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
-      {!isLoading && dataSet.length === 0 && isNodataComponent && (
-        <>{isNodataComponent}</>
-      )}
+      {displayIsNodata && <>{isNodataComponent}</>}
     </div>
   );
 };
