@@ -9,7 +9,7 @@ import { ScaleTime } from "d3";
 import { ScaleLinear } from "d3-scale";
 import { debounce } from "lodash";
 import LoadingIndicator from "./shared/LoadingIndicator";
-import { useDisplayIsNodata } from "src/components/hooks/useDisplayIsNodata";
+import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;

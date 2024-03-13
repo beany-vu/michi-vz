@@ -6,7 +6,7 @@ import XaxisLinear from "./shared/XaxisLinear";
 import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import { drawHalfLeftCircle } from "../components/shared/helpers";
-import { useDisplayIsNodata } from "src/components/hooks/useDisplayIsNodata";
+import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 
 interface DataPoint {
   x: number;
