@@ -5,6 +5,7 @@ import XaxisBand from "./shared/XaxisBand";
 import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
+import { useDisplayIsNodata } from "src/components/hooks/useDisplayIsNodata";
 
 interface DataPoint {
   date: number;
@@ -23,6 +24,7 @@ interface Props {
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
+  isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
 }
 
 interface RectData {
@@ -51,6 +53,7 @@ const RibbonChart: React.FC<Props> = ({
   isLoading = false,
   isLoadingComponent,
   isNodataComponent,
+  isNodata,
 }) => {
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
@@ -151,6 +154,13 @@ const RibbonChart: React.FC<Props> = ({
         .join("")}
     </div>`;
   };
+
+  const displayIsNodata = useDisplayIsNodata({
+    dataSet: series,
+    isLoading: isLoading,
+    isNodataComponent: isNodataComponent,
+    isNodata: isNodata,
+  });
 
   return (
     <div style={{ position: "relative" }}>
@@ -315,9 +325,7 @@ const RibbonChart: React.FC<Props> = ({
       </svg>
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
-      {!isLoading && series.length === 0 && isNodataComponent && (
-        <>{isNodataComponent}</>
-      )}
+      {displayIsNodata && <>{isNodataComponent}</>}
     </div>
   );
 };

@@ -6,6 +6,7 @@ import YaxisBand from "./shared/YaxisBand";
 import XaxisLinear from "./shared/XaxisLinear";
 import { scaleBand, scaleLinear } from "d3";
 import { useChartContext } from "./MichiVzProvider";
+import { useDisplayIsNodata } from "src/components/hooks/useDisplayIsNodata";
 
 interface DataPoint {
   [key: string]: number | undefined;
@@ -21,6 +22,7 @@ interface BarBellChartProps {
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
+  isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
   xAxisFormat?: (d: number | string) => string;
   yAxisFormat?: (d: number | string) => string;
   xAxisDataType?: "number" | "date_annual" | "date_monthly";
@@ -44,6 +46,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   isLoading,
   isLoadingComponent,
   isNodataComponent,
+  isNodata,
   xAxisDataType,
   yAxisFormat,
   xAxisFormat,
@@ -130,10 +133,17 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     }
   }, [highlightItems]);
 
+  const displayIsNodata = useDisplayIsNodata({
+    dataSet: dataSet,
+    isLoading: isLoading,
+    isNodataComponent: isNodataComponent,
+    isNodata: isNodata,
+  });
+
   return (
     <div style={{ position: "relative" }}>
       {isLoading && isLoadingComponent}
-      {!isLoading && !dataSet.length && isNodataComponent}
+      {displayIsNodata && isNodataComponent}
       <svg ref={ref} height={height} width={width}>
         {children}
         <Title x={width / 2} y={margin.top / 2}>

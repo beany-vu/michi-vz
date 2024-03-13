@@ -5,6 +5,7 @@ import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
 import { useChartContext } from "../components/MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
+import { useDisplayIsNodata } from "src/components/hooks/useDisplayIsNodata";
 
 interface DataPoint {
   label: string;
@@ -39,6 +40,7 @@ interface LineChartProps {
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
+  isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
 }
 
 const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
@@ -56,6 +58,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   isLoading = false,
   isLoadingComponent,
   isNodataComponent,
+  isNodata,
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
@@ -154,6 +157,13 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         .attr("opacity", 1);
     });
   }, [highlightItems]);
+
+  const displayIsNodata = useDisplayIsNodata({
+    dataSet: dataSet,
+    isLoading: isLoading,
+    isNodataComponent: isNodataComponent,
+    isNodata: isNodata,
+  });
 
   return (
     <div style={{ position: "relative" }}>
@@ -314,9 +324,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
 
-      {!isLoading && dataSet.length === 0 && isNodataComponent && (
-        <>{isNodataComponent}</>
-      )}
+      {displayIsNodata && <>{isNodataComponent}</>}
     </div>
   );
 };

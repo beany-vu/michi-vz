@@ -6,6 +6,7 @@ import { useChartContext } from "./MichiVzProvider";
 import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisLinear from "./shared/YaxisLinear";
+import { useDisplayIsNodata } from "src/components/hooks/useDisplayIsNodata";
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
@@ -39,6 +40,15 @@ interface RangeChartProps {
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
+  isNodata?:
+    | boolean
+    | ((
+        dataSet: {
+          label: string;
+          color: string;
+          series: DataPointRangeChart[];
+        }[],
+      ) => boolean);
 }
 
 const RangeChart: React.FC<RangeChartProps> = ({
@@ -58,6 +68,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
   isLoading = false,
   isLoadingComponent,
   isNodataComponent,
+  isNodata,
 }) => {
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
@@ -330,10 +341,17 @@ const RangeChart: React.FC<RangeChartProps> = ({
     // ... (existing code)
   }, [showCombined]);
 
+  const displayIsNodata = useDisplayIsNodata({
+    dataSet: dataSet,
+    isLoading: isLoading,
+    isNodataComponent: isNodataComponent,
+    isNodata: isNodata,
+  });
+
   return (
     <div className="chart-container" style={{ position: "relative" }}>
       {isLoading && isLoadingComponent}
-      {!isLoading && dataSet.length === 0 && isNodataComponent}
+      {displayIsNodata && isNodataComponent}
       {!isLoading && dataSet.length > 0 && (
         <svg
           className="chart"

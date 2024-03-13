@@ -4,6 +4,7 @@ import styled from "styled-components";
 import range from "lodash/range";
 import { useChartContext } from "../components/MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
+import { useDisplayIsNodata } from "src/components/hooks/useDisplayIsNodata";
 
 const Polygon = styled.polygon`
   stroke-linejoin: round;
@@ -61,6 +62,7 @@ export interface RadarChartProps {
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
+  isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
 }
 
 export const RadarChart: React.FC<RadarChartProps> = ({
@@ -74,6 +76,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   isLoading = false,
   isLoadingComponent,
   isNodataComponent,
+  isNodata,
 }) => {
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
@@ -273,6 +276,13 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     });
   }, [highlightItems]);
 
+  const displayIsNodata = useDisplayIsNodata({
+    dataSet: series,
+    isLoading: isLoading,
+    isNodataComponent: isNodataComponent,
+    isNodata: isNodata,
+  });
+
   return (
     <div style={{ position: "relative" }}>
       <Tooltip ref={tooltipRef} style={{ display: "none" }} className="tooltip">
@@ -383,7 +393,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
       </svg>
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
-      {!isLoading && series.length === 0 && <>{isNodataComponent}</>}
+      {displayIsNodata && <>{isNodataComponent}</>}
     </div>
   );
 };
