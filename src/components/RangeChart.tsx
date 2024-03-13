@@ -6,7 +6,7 @@ import { useChartContext } from "./MichiVzProvider";
 import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisLinear from "./shared/YaxisLinear";
-import { useDisplayIsNodata } from "src/components/hooks/useDisplayIsNodata";
+import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;

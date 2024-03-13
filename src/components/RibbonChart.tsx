@@ -5,7 +5,7 @@ import XaxisBand from "./shared/XaxisBand";
 import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
-import { useDisplayIsNodata } from "src/components/hooks/useDisplayIsNodata";
+import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 
 interface DataPoint {
   date: number;

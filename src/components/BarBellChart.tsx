@@ -6,7 +6,7 @@ import YaxisBand from "./shared/YaxisBand";
 import XaxisLinear from "./shared/XaxisLinear";
 import { scaleBand, scaleLinear } from "d3";
 import { useChartContext } from "./MichiVzProvider";
-import { useDisplayIsNodata } from "src/components/hooks/useDisplayIsNodata";
+import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 
 interface DataPoint {
   [key: string]: number | undefined;

@@ -4,7 +4,7 @@ import styled from "styled-components";
 import range from "lodash/range";
 import { useChartContext } from "../components/MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
-import { useDisplayIsNodata } from "src/components/hooks/useDisplayIsNodata";
+import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 
 const Polygon = styled.polygon`
   stroke-linejoin: round;
