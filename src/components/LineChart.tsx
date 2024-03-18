@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
+import { ScaleTime } from "d3";
 import { DataPoint } from "../types/data";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
 import XaxisLinear from "./shared/XaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
-import { ScaleTime } from "d3";
 import { ScaleLinear } from "d3-scale";
 import { debounce } from "lodash";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
+import styled from "styled-components";
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
@@ -17,10 +18,20 @@ const HEIGHT = 480 - MARGIN.top - MARGIN.bottom;
 const DASH_LENGTH = 4;
 const DASH_SEPARATOR_LENGTH = 4;
 
+const Styled = styled.div`
+  .shape {
+    transform: translate(-5px, -5px);
+  }
+  .shape-circle {
+    rx: 50%;
+  }
+`;
+
 interface LineChartProps {
   dataSet: {
     label: string;
     color: string;
+    shape?: "circle" | "square";
     series: DataPoint[];
   }[];
   width: number;
@@ -37,6 +48,7 @@ interface LineChartProps {
     dataSet: {
       label: string;
       color: string;
+      shape?: "circle" | "square";
       series: DataPoint[];
     }[],
   ) => string;
@@ -317,10 +329,10 @@ const LineChart: React.FC<LineChartProps> = ({
           .selectAll(`.circle-data-${i}`)
           .data(data.series)
           .enter()
-          .append("circle")
+          .append("rect")
           .attr(
             "class",
-            `circle-data circle-data-${i} data-group data-group-${i} data-group-${data.label}`,
+            `circle-data circle-data-${i} data-group data-group-${i} data-group-${data.label} shape shape-${data.shape === "square" ? "square" : "circle"}`,
           )
           .attr(
             "fill",
@@ -328,10 +340,12 @@ const LineChart: React.FC<LineChartProps> = ({
           )
           .attr("data-label", data.label)
           .attr("r", 6)
-          .attr("stroke-width", 5)
+          .attr("stroke-width", 3)
           .attr("stroke", "#fff")
-          .attr("cx", (d: DataPoint) => xScale(new Date(d.date)))
-          .attr("cy", (d: DataPoint) => yScale(d.value))
+          .attr("x", (d: DataPoint) => xScale(new Date(d.date)))
+          .attr("y", (d: DataPoint) => yScale(d.value))
+          .attr("width", 10)
+          .attr("height", 10)
           .attr("transition", "all 0.1s ease-out")
           .attr("cursor", "crosshair")
           .on(
@@ -502,59 +516,62 @@ const LineChart: React.FC<LineChartProps> = ({
   });
 
   return (
-    <div style={{ position: "relative", width: width, height: height }}>
-      <svg
-        ref={svgRef}
-        width={width}
-        height={height}
-        onMouseOut={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          setHighlightItems([]);
+    <Styled>
+      <div style={{ position: "relative", width: width, height: height }}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          ref={svgRef}
+          width={width}
+          height={height}
+          onMouseOut={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setHighlightItems([]);
 
-          if (tooltipRef?.current) {
-            tooltipRef.current.style.visibility = "hidden";
-          }
-        }}
-      >
-        {children}
-        <Title x={width / 2} y={margin.top / 2}>
-          {title}
-        </Title>
-        {dataSet.length > 0 && (
-          <>
-            <XaxisLinear
-              xScale={xScale}
-              height={height}
-              margin={margin}
-              xAxisFormat={xAxisFormat}
-              xAxisDataType={xAxisDataType}
-            />
-            <YaxisLinear
-              yScale={yScale}
-              width={width}
-              height={height}
-              margin={margin}
-              highlightZeroLine={true}
-              yAxisFormat={yAxisFormat}
-            />
-          </>
-        )}
-      </svg>
-      <div
-        ref={tooltipRef}
-        className="tooltip"
-        style={{
-          position: "absolute",
-          transition: "visibility 0.1s ease-out,opacity 0.1s ease-out",
-          transform: "translateZ(0)",
-          zIndex: 1,
-        }}
-      />
-      {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
-      {isLoading && !isLoadingComponent && <LoadingIndicator />}
-      {displayIsNodata && <>{isNodataComponent}</>}
-    </div>
+            if (tooltipRef?.current) {
+              tooltipRef.current.style.visibility = "hidden";
+            }
+          }}
+        >
+          {children}
+          <Title x={width / 2} y={margin.top / 2}>
+            {title}
+          </Title>
+          {dataSet.length > 0 && (
+            <>
+              <XaxisLinear
+                xScale={xScale}
+                height={height}
+                margin={margin}
+                xAxisFormat={xAxisFormat}
+                xAxisDataType={xAxisDataType}
+              />
+              <YaxisLinear
+                yScale={yScale}
+                width={width}
+                height={height}
+                margin={margin}
+                highlightZeroLine={true}
+                yAxisFormat={yAxisFormat}
+              />
+            </>
+          )}
+        </svg>
+        <div
+          ref={tooltipRef}
+          className="tooltip"
+          style={{
+            position: "absolute",
+            transition: "visibility 0.1s ease-out,opacity 0.1s ease-out",
+            transform: "translateZ(0)",
+            zIndex: 1,
+          }}
+        />
+        {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
+        {isLoading && !isLoadingComponent && <LoadingIndicator />}
+        {displayIsNodata && <>{isNodataComponent}</>}
+      </div>
+    </Styled>
   );
 };
 

@@ -1,71 +1,73 @@
 // RangeChart.stories.tsx
-import React from 'react';
+import React from "react";
 import RangeChartComponent from "../src/components/RangeChart";
-import {Meta} from "@storybook/react";
-import {MichiVzProvider} from "../src/components/MichiVzProvider";
+import { Meta } from "@storybook/react";
+import { MichiVzProvider } from "../src/components/MichiVzProvider";
 
 export default {
-  title: 'Charts/Range Chart',
+  title: "Charts/Range Chart",
   component: RangeChartComponent,
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   decorators: [
     (Story) => (
-      <MichiVzProvider initialColorsMapping={{
-        "Egypt": "red",
-        "Euro": "purple",
-        "Rest of the World": "orange",
-        "Africa": "purple",
-      }}
-                       initialHighlightItems={["Africa"]}>
-        <Story/>
+      <MichiVzProvider
+        initialColorsMapping={{
+          Egypt: "red",
+          Euro: "purple",
+          "Rest of the World": "orange",
+          Africa: "purple",
+        }}
+        initialHighlightItems={["Africa"]}
+      >
+        <Story />
       </MichiVzProvider>
-    )
+    ),
   ],
 } as Meta;
 
 export const Primary = {
   args: {
     dataSet: [
-        {
-          "label": "Africa",
-          "series": [
-            {
-              "year": 2018,
-              "date": "2018",
-              "valueMin": 1,
-              "valueMax": 12,
-              "valueMedium": 6,
-            },
-            {
-              "year": 2019,
-              "date": "2019",
-              "valueMin": 0,
-              "valueMax": 0.1162,
-              "valueMedium": 0.1162,
-            },
-            {
-              "year": 2020,
-              "date": "2020",
-              "valueMin": 2,
-              "valueMax": 14.1162,
-              "valueMedium": 14.1162,
-            },
-            {
-              "year": 2021,
-              "date": "2021",
-              "valueMin": 12,
-              "valueMax": 12,
-              "valueMedium": 12,
-            },
-            {
-              "year": 2022,
-              "date": "2022",
-              "valueMin": 0,
-              "valueMax": 0.1199,
-              "valueMedium": 0.1199,
-            }
-          ]
-        },
+      {
+        label: "Africa",
+        series: [
+          {
+            year: 2018,
+            date: "2018",
+            valueMin: 1,
+            valueMax: 12,
+            valueMedium: 6,
+          },
+          {
+            year: 2019,
+            date: "2019",
+            valueMin: 0,
+            valueMax: 0.1162,
+            valueMedium: 0.1162,
+          },
+          {
+            year: 2020,
+            date: "2020",
+            valueMin: 2,
+            valueMax: 14.1162,
+            valueMedium: 14.1162,
+          },
+          {
+            year: 2021,
+            date: "2021",
+            valueMin: 12,
+            valueMax: 12,
+            valueMedium: 12,
+          },
+          {
+            year: 2022,
+            date: "2022",
+            valueMin: 0,
+            valueMax: 0.1199,
+            valueMedium: 0.1199,
+          },
+        ],
+      },
       // {
       //   "label": "Africa",
       //   "color": "green",
@@ -135,7 +137,6 @@ export const Primary = {
       //     },
       //   ]
       // }
-
     ],
     width: 900,
     height: 400,
@@ -149,7 +150,7 @@ export const Primary = {
     // yAxisFormat: (d) => `${d}%`, // Example: format values as percentages
     xAxisDataType: "date_annual",
 
-    title: 'My Range Chart',
+    title: "My Range Chart",
     tooltipFormatter: (dataSet, d) => {
       return JSON.stringify(d);
     },

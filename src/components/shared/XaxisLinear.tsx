@@ -13,7 +13,9 @@ function getDatesWithEqualDistance(
   const end = new Date(endDate);
   const diff = end.getTime() - start.getTime();
   const interval = diff / (numDates - 1);
-  return range(0, numDates).map(i => new Date(start.getTime() + i * interval));
+  return range(0, numDates).map(
+    (i) => new Date(start.getTime() + i * interval),
+  );
 }
 
 // Example usage
@@ -142,7 +144,7 @@ const XaxisLinear: FC<Props> = ({
         break;
       case "date_monthly":
         if (counts > 20) {
-          console.log({tickValues})
+          console.log({ tickValues });
           axisBottom = d3
             .axisBottom(xScale)
             // .tickSize(20)

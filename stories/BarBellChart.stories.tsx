@@ -16,7 +16,7 @@ const mockData = [
     step2: 2000,
     step3: 1000,
   },
-{
+  {
     date: "2020-03",
     step1: 2000,
     step2: 1500,
@@ -83,11 +83,13 @@ export default {
   component: BarBellChart,
   decorators: [
     (Story) => (
-      <MichiVzProvider initialColorsMapping={{step1: "red", step2: "blue", step3: "pink"}}>
+      <MichiVzProvider
+        initialColorsMapping={{ step1: "red", step2: "blue", step3: "pink" }}
+      >
         <Story />
       </MichiVzProvider>
-    )
-  ]
+    ),
+  ],
 } as Meta;
 
 export const Primary = {
@@ -104,7 +106,8 @@ export const Primary = {
     },
     title: "BarBell Chart",
     xAxisFormat: (value: any) => value, // You may need to adjust this based on your actual xAxisFormat function
-    yAxisFormat: (value: any) => `${new Date((value)).getFullYear()} - ${new Date((value)).getMonth() + 1}`,
+    yAxisFormat: (value: any) =>
+      `${new Date(value).getFullYear()} - ${new Date(value).getMonth() + 1}`,
     // You may need to adjust this based on your actual yAxisFormat function
     // tooltipFormat: ({ item, series }) => `<div>${JSON.stringify(item)}</div>`,
     showGrid: {
@@ -112,6 +115,5 @@ export const Primary = {
       y: false,
     },
     children: null,
-  }
+  },
 };
-
