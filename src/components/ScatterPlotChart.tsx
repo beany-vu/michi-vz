@@ -15,6 +15,7 @@ interface DataPoint {
   color?: string;
   d: number;
   meta?: never;
+  shape?: "square" | "circle";
 }
 
 interface ScatterPlotChartProps<T extends number | string> {
@@ -129,13 +130,13 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     const svg = d3.select(ref.current);
 
     if (highlightItems.length === 0) {
-      svg.selectAll("circle").style("opacity", 0.9);
+      svg.selectAll("rect").style("opacity", 0.9);
       return;
     }
     // set opacity for all circles to 0.1, except for the highlighted ones (detect by data-label attribute)
-    svg.selectAll("circle[data-label]").style("opacity", 0.1);
+    svg.selectAll("rect[data-label]").style("opacity", 0.1);
     highlightItems.forEach((label) => {
-      svg.selectAll(`circle[data-label="${label}"]`).style("opacity", 1);
+      svg.selectAll(`rect[data-label="${label}"]`).style("opacity", 1);
     });
   }, [highlightItems]);
 
@@ -173,17 +174,21 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
         {dataSet
           .filter((d) => !disabledItems.includes(d.label))
           .map((d, i) => (
-            <circle
+            <rect
               data-label={d.label}
               opacity={0.9}
               key={i}
-              cx={xScale(d.x)}
-              cy={yScale(d.y)}
-              r={dScale(d.d) / 2}
+              className={`shape-${d.shape === "square" ? "square" : "circle"}`}
+              x={xScale(d.x)}
+              y={yScale(d.y)}
+              width={dScale(d.d)}
+              height={dScale(d.d)}
               fill={colorsMapping?.[d.label] || d.color || "transparent"}
               style={{
                 transition: "r 0.1s ease-out, opacity 0.1s ease-out",
+                transform: `translate(-${dScale(d.d) / 2}px, -${dScale(d.d) / 2}px)`,
               }}
+              rx={d.shape === "square" ? 0 : dScale(d.d) / 2}
               onMouseEnter={(event) => {
                 const [x, y] = d3.pointer(event);
 
