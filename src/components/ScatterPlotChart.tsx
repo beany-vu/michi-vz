@@ -3,6 +3,7 @@ import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
+import XaxisBand from "./shared/XaxisBand";
 import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import { drawHalfLeftCircle } from "../components/shared/helpers";
@@ -31,7 +32,7 @@ interface ScatterPlotChartProps<T extends number | string> {
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
   xAxisFormat?: (d: number | string) => string;
   yAxisFormat?: (d: number | string) => string;
-  xAxisDataType?: "number" | "date_annual" | "date_monthly";
+  xAxisDataType?: "number" | "date_annual" | "date_monthly" | "band";
   tooltipFormatter?: (d: DataPoint) => string;
   showGrid?: { x: boolean; y: boolean };
   xAxisDomain?: [T, T];
@@ -82,7 +83,10 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   // const radiusDomain = [16, d3.max(dataSet, (d) => d.d) || 0];
   // radiusDomain wil·be the range from [16 to 50 px]
 
-  const xScale = useMemo(() => {
+  const xScale:
+    | d3.ScaleLinear<number, number>
+    | d3.ScaleTime<number, number>
+    | d3.ScaleBand<string> = useMemo(() => {
     if (xAxisDataType === "number") {
       return d3
         .scaleLinear()
@@ -98,6 +102,13 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
         .range([margin.left, width - margin.right])
         .nice()
         .clamp(true);
+    }
+    if (xAxisDataType === "band") {
+      return d3
+        .scaleBand<string>()
+        .domain(dataSet.map((d) => d.label)) // Assuming dataSet has labels for bands
+        .range([margin.left, width - margin.right])
+        .padding(0.1); // Adjust padding as needed
     }
   }, [xDomain, width, margin]);
 
@@ -124,6 +135,13 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   const dLegendPosition = {
     x: width - 100,
     y: height / 3,
+  };
+
+  const getXValue = (d: DataPoint) => {
+    const offSet = "bandwidth" in xScale ? xScale?.bandwidth() / 2 : 0;
+    return xAxisDataType === "band"
+      ? xScale(d.label as never) + offSet
+      : xScale(d.x as never);
   };
 
   useEffect(() => {
@@ -156,14 +174,30 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
           {title}
         </Title>
         {children}
-        <XaxisLinear
-          xScale={xScale}
-          height={height}
-          margin={margin}
-          xAxisFormat={xAxisFormat}
-          ticks={5}
-          showGrid={showGrid?.x || false}
-        />
+        {xAxisDataType === "number" ||
+        xAxisDataType === "date_annual" ||
+        xAxisDataType === "date_monthly" ? (
+          <XaxisLinear
+            xScale={
+              xScale as
+                | d3.ScaleLinear<number, number>
+                | d3.ScaleTime<number, number>
+            }
+            height={height}
+            margin={margin}
+            xAxisFormat={xAxisFormat}
+            xAxisDataType={xAxisDataType}
+            ticks={5}
+            showGrid={showGrid?.x || false}
+          />
+        ) : (
+          <XaxisBand
+            xScale={xScale as d3.ScaleBand<string>}
+            height={height}
+            margin={margin}
+            xAxisFormat={xAxisFormat}
+          />
+        )}
         <YaxisLinear
           yScale={yScale}
           width={width}
@@ -179,14 +213,15 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
               opacity={0.9}
               key={i}
               className={`shape-${d.shape === "square" ? "square" : "circle"}`}
-              x={xScale(d.x)}
+              x={getXValue(d)}
               y={yScale(d.y)}
-              width={dScale(d.d)}
-              height={dScale(d.d)}
+              width={xAxisDataType === "band" ? d.d / 2 : dScale(d.d)}
+              height={xAxisDataType === "band" ? d.d / 2 : dScale(d.d)}
               fill={colorsMapping?.[d.label] || d.color || "transparent"}
+              data-log-fill={JSON.stringify(colorsMapping?.[d.label] || d.color || "transparent")}
               style={{
                 transition: "r 0.1s ease-out, opacity 0.1s ease-out",
-                transform: `translate(-${dScale(d.d) / 2}px, -${dScale(d.d) / 2}px)`,
+                transform: `translate(-${xAxisDataType === "band" ? d.d / 4 : dScale(d.d) / 2}px, -${xAxisDataType === "band" ? d.d / 4 : dScale(d.d) / 2}px)`,
               }}
               rx={d.shape === "square" ? 0 : dScale(d.d) / 2}
               onMouseEnter={(event) => {
@@ -204,12 +239,12 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                   }
 
                   tooltipRef.current.innerHTML = `
-                    <div>
-                      <div>${d.label}</div>
-                      <div>${xAxisFormat ? xAxisFormat(d.x) : d.x}</div>
-                      <div>${yAxisFormat ? yAxisFormat(d.y) : d.y}</div>
-                    </div>
-                  `;
+                  <div>
+                    <div>${d.label}</div>
+                    <div>${xAxisFormat ? xAxisFormat(d.x) : d.x}</div>
+                    <div>${yAxisFormat ? yAxisFormat(d.y) : d.y}</div>
+                  </div>
+                `;
                 }
               }}
               onMouseLeave={() => {

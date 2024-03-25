@@ -18,7 +18,8 @@
       "src/*": ["./src/*"]
     },
     "target": "ES2019",              // Set your desired target version
-    "downlevelIteration": true       // Enable downlevel iteration
+    "downlevelIteration": true,       // Enable downlevel iteration
+    "allowJs": true,
   },
   "include": [
     "src/**/*",

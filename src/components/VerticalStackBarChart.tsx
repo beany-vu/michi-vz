@@ -376,7 +376,9 @@ const VerticalStackBarChart: React.FC<Props> = ({
                             fill="#000"
                             className={"x-axis-label"}
                           >
-                            {d.seriesKeyAbbreviation}
+                            <tspan>
+                              {d.seriesKeyAbbreviation}
+                            </tspan>
                           </text>
                         )}
                       </React.Fragment>
