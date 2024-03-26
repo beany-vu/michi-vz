@@ -34,6 +34,8 @@ interface Props {
   title?: string;
   xAxisFormat?: (d: number) => string;
   yAxisFormat?: (d: number) => string;
+  xAxisDomain?: [string, string];
+  yAxisDomain?: [number, number];
   tooltipFormatter?: (tooltipData: TooltipData) => string;
   showCombined?: boolean;
   children?: React.ReactNode;
@@ -70,6 +72,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
   keys,
   xAxisFormat,
   yAxisFormat,
+  xAxisDomain,
+  yAxisDomain,
   tooltipFormatter,
   showCombined = false,
   children,
@@ -108,7 +112,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
     () =>
       d3
         .scaleBand()
-        .domain(dates)
+        .domain(xAxisDomain ?? dates)
         .range([margin.left, width - margin.right])
         .padding(0.1),
     [flattenedDataSet, width, height, margin, disabledItems],
@@ -116,6 +120,10 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
   // yScale
   const yScaleDomain = useMemo(() => {
+    if (yAxisDomain) {
+      return yAxisDomain;
+    }
+
     const totalValuePerYear: number[] = flattenedDataSet.map((yearData) =>
       keys.reduce(
         (acc, key) => acc + (yearData[key] ? parseFloat(yearData[key]) : 0),
@@ -376,9 +384,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                             fill="#000"
                             className={"x-axis-label"}
                           >
-                            <tspan>
-                              {d.seriesKeyAbbreviation}
-                            </tspan>
+                            <tspan>{d.seriesKeyAbbreviation}</tspan>
                           </text>
                         )}
                       </React.Fragment>

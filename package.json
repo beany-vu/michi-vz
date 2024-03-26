@@ -1,6 +1,6 @@
 {
   "name": "michi-vz",
-  "version": "0.1.195",
+  "version": "0.1.198",
   "description": "a visualization library based on d3 and react",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
