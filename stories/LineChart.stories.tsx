@@ -31,7 +31,8 @@ export const Primary = {
     dataSet: [
       {
         label: "Africa",
-        shape: "square",
+        shape: "triangle",
+        curve: "curveLinear",
         series: [
           {
             year: 2016,
@@ -54,7 +55,7 @@ export const Primary = {
           {
             year: 2019,
             date: "2019",
-            value: 7.6499999999999995,
+            value: 117.6499999999999995,
             certainty: true,
           },
           {
