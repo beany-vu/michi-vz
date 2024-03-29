@@ -43,7 +43,7 @@ interface Props {
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataSet[]) => boolean);
-  colorCallbackFn?: (key: string) => string;
+  colorCallbackFn?: (key: string, d: RectData) => string;
 }
 
 export interface RectData {
@@ -84,27 +84,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
   isNodata,
   colorCallbackFn,
 }) => {
-  const {
-    colorsMapping: defaultColorsMapping,
-    highlightItems,
-    setHighlightItems,
-    disabledItems,
-  } = useChartContext();
-  const overrideColorsMapping = useMemo(() => {
-    if (colorCallbackFn) {
-      return keys.reduce(
-        (acc, key) => {
-          acc[key] = colorCallbackFn(key);
-          return acc;
-        },
-        {} as { [key: string]: string },
-      );
-    }
-    return null;
-  }, [colorCallbackFn]);
-  const colorsMapping = useMemo(() => {
-    return overrideColorsMapping ?? defaultColorsMapping;
-  }, []);
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
+    useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const flattenedDataSet = useMemo(() => {
     return dataSet
@@ -334,7 +315,9 @@ const VerticalStackBarChart: React.FC<Props> = ({
                           y={d.y}
                           width={d.width}
                           height={d.height}
-                          fill={d.fill ?? "transparent"}
+                          fill={
+                            colorCallbackFn?.(key, d) ?? d.fill ?? "transparent"
+                          }
                           rx={2}
                           stroke={"#fff"}
                           className={`bar`}
