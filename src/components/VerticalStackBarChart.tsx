@@ -43,6 +43,7 @@ interface Props {
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataSet[]) => boolean);
+  overrideColorsMapping?: { [key: string]: string };
 }
 
 interface RectData {
@@ -81,9 +82,17 @@ const VerticalStackBarChart: React.FC<Props> = ({
   isLoadingComponent,
   isNodataComponent,
   isNodata,
+  overrideColorsMapping,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
-    useChartContext();
+  const {
+    colorsMapping: defaultColorsMapping,
+    highlightItems,
+    setHighlightItems,
+    disabledItems,
+  } = useChartContext();
+  const colorsMapping = useMemo(() => {
+    return overrideColorsMapping ?? defaultColorsMapping;
+  }, []);
   const ref = useRef<SVGSVGElement>(null);
   const flattenedDataSet = useMemo(() => {
     return dataSet
