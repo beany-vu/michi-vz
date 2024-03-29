@@ -43,10 +43,10 @@ interface Props {
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataSet[]) => boolean);
-  overrideColorsMapping?: { [key: string]: string };
+  colorCallbackFn?: (key: string) => string;
 }
 
-interface RectData {
+export interface RectData {
   key: string;
   height: number;
   width: number;
@@ -82,7 +82,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   isLoadingComponent,
   isNodataComponent,
   isNodata,
-  overrideColorsMapping,
+  colorCallbackFn,
 }) => {
   const {
     colorsMapping: defaultColorsMapping,
@@ -90,6 +90,18 @@ const VerticalStackBarChart: React.FC<Props> = ({
     setHighlightItems,
     disabledItems,
   } = useChartContext();
+  const overrideColorsMapping = useMemo(() => {
+    if (colorCallbackFn) {
+      return keys.reduce(
+        (acc, key) => {
+          acc[key] = colorCallbackFn(key);
+          return acc;
+        },
+        {} as { [key: string]: string },
+      );
+    }
+    return null;
+  }, [colorCallbackFn]);
   const colorsMapping = useMemo(() => {
     return overrideColorsMapping ?? defaultColorsMapping;
   }, []);
