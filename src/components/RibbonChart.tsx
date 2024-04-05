@@ -20,6 +20,7 @@ interface Props {
   margin: { top: number; right: number; bottom: number; left: number };
   title?: string;
   yAxisFormat?: (d: number) => string;
+  xAxisFormat?: (d: string | number) => string;
   children?: React.ReactNode;
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
@@ -48,6 +49,7 @@ const RibbonChart: React.FC<Props> = ({
   margin = MARGIN,
   title,
   yAxisFormat,
+  xAxisFormat,
   keys,
   children,
   isLoading = false,
@@ -142,7 +144,7 @@ const RibbonChart: React.FC<Props> = ({
     // Process your data and generate HTML string as per requirements
     return `
     <div style="background: #fff; padding: 5px">
-      <p>${data.date}</p>
+      <p>${xAxisFormat?.(String(data.date)) ?? data.date}</p>
       ${Object.keys(data)
         .filter((key) => key !== "date")
         .map(
@@ -193,7 +195,12 @@ const RibbonChart: React.FC<Props> = ({
         <Title x={width / 2} y={MARGIN.top / 2}>
           {title}
         </Title>
-        <XaxisBand xScale={xScale} height={height} margin={margin} />
+        <XaxisBand
+          xScale={xScale}
+          height={height}
+          margin={margin}
+          xAxisFormat={xAxisFormat}
+        />
         <YaxisLinear
           yScale={yScale}
           width={width}
