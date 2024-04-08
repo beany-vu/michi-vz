@@ -18,58 +18,59 @@ const HEIGHT = 480 - MARGIN.top - MARGIN.bottom;
 const DASH_LENGTH = 4;
 const DASH_SEPARATOR_LENGTH = 4;
 
-const Styled = styled.div`
-    foreignObject {
-        box-sizing: border-box;
-        overflow: visible;
-        .shape {
-            transform: translate(-5px, -5px);
-            box-sizing: border-box;
-            width: 10px;
-            height: 10px;
-            background: var(--background-color);
-        }
+const Styled = styled.div` 
+  foreignObject {
+    box-sizing: border-box;
+    overflow: visible;
 
-        .shape-circle {
-            border-radius: 50%;
-            border: 2px solid #fff;
-        }
-        
-        .shape-square {
-            border: 2px solid #fff;
-        }
-
-        .shape-triangle {
-            position: relative;
-            background: transparent!important;
-           
-            z-index: 0;
-            &:before {
-                content: '';
-                position: absolute;
-                width: 0!important;
-                height: 0!important;
-                border-style: solid;
-                border-width: 0 7px 14px 7px;
-                border-color: transparent transparent #fff transparent;
-                top: -3px;
-                left: -2px;
-                z-index: -1;
-            }
-            &:after {
-                content: '';
-                position: absolute;
-                border-style: solid;
-                border-width: 0 5px 10px 5px;
-                border-color: transparent transparent var(--background-color) transparent;
-                background: transparent!important;
-                z-index: 0;
-               
-            }
-
-        }  
+    .shape {
+      transform: translate(-5px, -5px);
+      box-sizing: border-box;
+      width: 10px;
+      height: 10px;
+      background: var(--background-color);
     }
-  
+
+    .shape-circle {
+      border-radius: 50%;
+      border: 2px solid #fff;
+    }
+
+    .shape-square {
+      border: 2px solid #fff;
+    }
+
+    .shape-triangle {
+      position: relative;
+      background: transparent !important;
+
+      z-index: 0;
+
+      &:before {
+        content: "";
+        position: absolute;
+        width: 0 !important;
+        height: 0 !important;
+        border-style: solid;
+        border-width: 0 7px 14px 7px;
+        border-color: transparent transparent #fff transparent;
+        top: -3px;
+        left: -2px;
+        z-index: -1;
+      }
+
+      &:after {
+        content: "";
+        position: absolute;
+        border-style: solid;
+        border-width: 0 5px 10px 5px;
+        border-color: transparent transparent var(--background-color);
+          transparent;
+        background: transparent !important;
+        z-index: 0;
+      }
+    }
+  }
 `;
 
 interface LineChartProps {
@@ -96,7 +97,7 @@ interface LineChartProps {
       color: string;
       shape?: "circle" | "square" | "triangle";
       series: DataPoint[];
-    }[]
+    }[],
   ) => string;
   showCombined?: boolean;
   children?: React.ReactNode;
@@ -106,33 +107,33 @@ interface LineChartProps {
   isNodata?:
     | boolean
     | ((
-    dataSet: {
-      label: string;
-      color: string;
-      series: DataPoint[];
-    }[]
-  ) => boolean);
+        dataSet: {
+          label: string;
+          color: string;
+          series: DataPoint[];
+        }[],
+      ) => boolean);
 }
 
 const LineChart: React.FC<LineChartProps> = ({
-                                               dataSet,
-                                               title,
-                                               width = WIDTH,
-                                               height = HEIGHT,
-                                               margin = MARGIN,
-                                               yAxisDomain,
-                                               yAxisFormat,
-                                               xAxisDataType = "number",
-                                               xAxisFormat,
-                                               tooltipFormatter = (d: DataPoint) =>
-                                                 `<div>${d.label} - ${d.date}: ${d.value}</div>`,
-                                               showCombined = false,
-                                               children,
-                                               isLoading = false,
-                                               isLoadingComponent,
-                                               isNodataComponent,
-                                               isNodata
-                                             }) => {
+  dataSet,
+  title,
+  width = WIDTH,
+  height = HEIGHT,
+  margin = MARGIN,
+  yAxisDomain,
+  yAxisFormat,
+  xAxisDataType = "number",
+  xAxisFormat,
+  tooltipFormatter = (d: DataPoint) =>
+    `<div>${d.label} - ${d.date}: ${d.value}</div>`,
+  showCombined = false,
+  children,
+  isLoading = false,
+  isLoadingComponent,
+  isNodataComponent,
+  isNodata,
+}) => {
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -146,28 +147,28 @@ const LineChart: React.FC<LineChartProps> = ({
           yAxisDomain
             ? yAxisDomain
             : [
-              d3.min(
-                dataSet
-                  .filter((d) => !disabledItems.includes(d.label))
-                  .flatMap(({ series }) =>
-                    series.filter((dd) => dd.value !== null)
-                  ),
-                (d) => d.value
-              ) || 0,
-              d3.max(
-                dataSet
-                  .filter((d) => !disabledItems.includes(d.label))
-                  .flatMap(({ series }) =>
-                    series.filter((dd) => dd.value !== null)
-                  ),
-                (d) => d.value
-              ) || 1
-            ]
+                d3.min(
+                  dataSet
+                    .filter((d) => !disabledItems.includes(d.label))
+                    .flatMap(({ series }) =>
+                      series.filter((dd) => dd.value !== null),
+                    ),
+                  (d) => d.value,
+                ) || 0,
+                d3.max(
+                  dataSet
+                    .filter((d) => !disabledItems.includes(d.label))
+                    .flatMap(({ series }) =>
+                      series.filter((dd) => dd.value !== null),
+                    ),
+                  (d) => d.value,
+                ) || 1,
+              ],
         )
         .range([height - margin.bottom, margin.top])
         .clamp(true)
         .nice(),
-    [dataSet, width, height, disabledItems, yAxisDomain]
+    [dataSet, width, height, disabledItems, yAxisDomain],
   );
 
   const xScale = useMemo(() => {
@@ -178,13 +179,13 @@ const LineChart: React.FC<LineChartProps> = ({
           d3.min(
             dataSet
               .filter((d) => !disabledItems.includes(d.label))
-              .flatMap((item) => item.series.map((d) => d.date as number))
+              .flatMap((item) => item.series.map((d) => d.date as number)),
           ) || 0,
           d3.max(
             dataSet
               .filter((d) => !disabledItems.includes(d.label))
-              .flatMap((item) => item.series.map((d) => d.date as number))
-          ) || 1
+              .flatMap((item) => item.series.map((d) => d.date as number)),
+          ) || 1,
         ])
         .range([margin.left, width - margin.right])
         .clamp(true)
@@ -195,13 +196,13 @@ const LineChart: React.FC<LineChartProps> = ({
       // sometimes the first tick is missing, so do a hack here
       const minDate = d3.min(
         dataSet.flatMap((item) =>
-          item.series.map((d) => new Date(`${d.date}-01-01`))
-        )
+          item.series.map((d) => new Date(`${d.date}-01-01`)),
+        ),
       );
       const maxDate = d3.max(
         dataSet.flatMap((item) =>
-          item.series.map((d) => new Date(`${d.date}`))
-        )
+          item.series.map((d) => new Date(`${d.date}`)),
+        ),
       );
 
       return d3
@@ -211,10 +212,10 @@ const LineChart: React.FC<LineChartProps> = ({
     }
 
     const minDate = d3.min(
-      dataSet.flatMap((item) => item.series.map((d) => new Date(d.date)))
+      dataSet.flatMap((item) => item.series.map((d) => new Date(d.date))),
     );
     const maxDate = d3.max(
-      dataSet.flatMap((item) => item.series.map((d) => new Date(d.date)))
+      dataSet.flatMap((item) => item.series.map((d) => new Date(d.date))),
     );
 
     return d3
@@ -225,11 +226,11 @@ const LineChart: React.FC<LineChartProps> = ({
 
   function getYValueAtX(
     series: DataPoint[],
-    x: number | Date
+    x: number | Date,
   ): number | undefined {
     if (x instanceof Date) {
       const dataPoint = series.find(
-        (d) => new Date(d.date).getTime() === x.getTime()
+        (d) => new Date(d.date).getTime() === x.getTime(),
       );
       return dataPoint ? dataPoint.value : undefined;
     }
@@ -254,11 +255,11 @@ const LineChart: React.FC<LineChartProps> = ({
     return (
       series: DataPoint[],
       pathNode: SVGPathElement,
-      xScale: ScaleLinear<number, number> | ScaleTime<number, number>
+      xScale: ScaleLinear<number, number> | ScaleTime<number, number>,
     ) => {
       const totalLength = pathNode.getTotalLength();
       const lengths = series.map((d) =>
-        getPathLengthAtX(pathNode, xScale(new Date(d.date)))
+        getPathLengthAtX(pathNode, xScale(new Date(d.date))),
       );
 
       const dashArray = [];
@@ -271,11 +272,11 @@ const LineChart: React.FC<LineChartProps> = ({
 
         if (!series[i]?.certainty ?? true) {
           const dashes = Math.floor(
-            segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH)
+            segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH),
           );
           const remainder =
             Math.ceil(
-              segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH)
+              segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH),
             ) + 5;
 
           for (let j = 0; j < dashes; j++) {
@@ -306,9 +307,9 @@ const LineChart: React.FC<LineChartProps> = ({
     svg.selectAll(".line-overlay").remove();
     svg.selectAll(".data-group").remove();
 
-
-    const line = ({ d, curve }: { d: Iterable<DataPoint>, curve: string }) => {
-      return d3.line<DataPoint>()
+    const line = ({ d, curve }: { d: Iterable<DataPoint>; curve: string }) => {
+      return d3
+        .line<DataPoint>()
         .x((d) => xScale(new Date(d.date)))
         .y((d) => yScale(d.value))
         .curve(d3?.[curve] ?? d3.curveBumpX)(d);
@@ -323,17 +324,19 @@ const LineChart: React.FC<LineChartProps> = ({
           .datum(data.series)
           .attr("class", `line line-${i} data-group data-group-${i}`)
           .attr("data-label", data.label)
-          .attr("d", (d: DataPoint[]) => line({
-            d: d,
-            curve: data?.curve
-          })) // Explicitly specify the type and use line function
+          .attr("d", (d: DataPoint[]) =>
+            line({
+              d: d,
+              curve: data?.curve,
+            }),
+          ) // Explicitly specify the type and use line function
           .attr("stroke", colorsMapping[data.label] ?? data.color)
           .attr("stroke-width", 2)
           .attr("fill", "none")
           .attr("pointer-events", "none");
 
         if (data.series) {
-          path.attr("stroke-dasharray", function() {
+          path.attr("stroke-dasharray", function () {
             return getDashArrayMemoized(data.series, this, xScale);
           });
         }
@@ -348,12 +351,14 @@ const LineChart: React.FC<LineChartProps> = ({
           .datum(data.series)
           .attr(
             "class",
-            `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${data.label} line-group-overlay-${data.label}`
+            `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${data.label} line-group-overlay-${data.label}`,
           )
-          .attr("d", (d: DataPoint[]) => line({
-            d: d,
-            curve: data?.curve
-          })) // Explicitly specify the type and use line function
+          .attr("d", (d: DataPoint[]) =>
+            line({
+              d: d,
+              curve: data?.curve,
+            }),
+          ) // Explicitly specify the type and use line function
           .attr("stroke", colorsMapping[data.label] ?? data.color)
           .attr("stroke-width", 5)
           .attr("fill", "none")
@@ -384,10 +389,7 @@ const LineChart: React.FC<LineChartProps> = ({
           .data(data.series)
           .enter()
           .append("foreignObject")
-          .attr(
-            "class",
-            `data-group data-group-${i} data-group-${data.label}`,
-          )
+          .attr("class", `data-group data-group-${i} data-group-${data.label}`)
 
           .attr("data-label", data.label)
           .attr("x", (d: DataPoint) => xScale(new Date(d.date)))
@@ -400,9 +402,12 @@ const LineChart: React.FC<LineChartProps> = ({
           .attr("class", `shape shape-${data?.shape ?? "circle"}`) // Optionally, set class for styling
           .style("width", "100%") // Set the width of the div
           .style("height", "100%") // Set the height of the div
-          .each(function() {
+          .each(function () {
             const el = this as HTMLDivElement;
-            el.style.setProperty('--background-color', colorsMapping[data.label] ?? data.color ?? "transparent")
+            el.style.setProperty(
+              "--background-color",
+              colorsMapping[data.label] ?? data.color ?? "transparent",
+            );
           })
           .on(
             "mouseenter",
@@ -416,10 +421,10 @@ const LineChart: React.FC<LineChartProps> = ({
               const htmlContent = tooltipFormatter(
                 {
                   ...d,
-                  label: data.label
+                  label: data.label,
                 } as DataPoint,
                 data.series,
-                dataSet
+                dataSet,
               );
 
               // Position the tooltip near the circle
@@ -432,7 +437,7 @@ const LineChart: React.FC<LineChartProps> = ({
                 tooltipRef.current.style.padding = "5px";
                 tooltipRef.current.innerHTML = htmlContent;
               }
-            }, 5)
+            }, 5),
           )
           .on("mouseout", (event) => {
             event.preventDefault();
@@ -466,7 +471,7 @@ const LineChart: React.FC<LineChartProps> = ({
     margin,
     disabledItems,
     xAxisDataType,
-    getDashArrayMemoized
+    getDashArrayMemoized,
   ]);
 
   useEffect(() => {
@@ -519,7 +524,7 @@ const LineChart: React.FC<LineChartProps> = ({
             hoverLine.style("display", "none");
           }
         })
-        .on("mouseenter", function(event) {
+        .on("mouseenter", function (event) {
           const [x, y] = d3.pointer(event.nativeEvent, svgRef.current);
           const xValue = xScale.invert(x);
 
@@ -564,7 +569,7 @@ const LineChart: React.FC<LineChartProps> = ({
     dataSet: dataSet,
     isLoading: isLoading,
     isNodataComponent: isNodataComponent,
-    isNodata: isNodata
+    isNodata: isNodata,
   });
 
   return (
@@ -616,7 +621,7 @@ const LineChart: React.FC<LineChartProps> = ({
             position: "absolute",
             transition: "visibility 0.1s ease-out,opacity 0.1s ease-out",
             transform: "translateZ(0)",
-            zIndex: 1
+            zIndex: 1,
           }}
         />
         {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}

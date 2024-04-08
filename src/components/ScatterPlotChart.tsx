@@ -8,6 +8,32 @@ import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import { drawHalfLeftCircle } from "../components/shared/helpers";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
+import styled from "styled-components";
+
+const Styled = styled.div`
+  .shape {
+    width: 100%;
+    height: 100%;
+    background-color: var(--data-background);
+  }
+  .shape-circle {
+    border-radius: 50%;
+  }
+
+  .shape-square {
+    border-radius: 0;
+  }
+
+  .shape-triangle {
+    width: 0;
+    height: 0;
+    border-width: 0 calc(var(--data-size) / 2) var(--data-size)
+      calc(var(--data-size) / 2);
+    border-color: transparent transparent var(--data-background) transparent;
+    border-style: solid;
+    background: transparent !important;
+  }
+`;
 
 interface DataPoint {
   x: number;
@@ -16,7 +42,7 @@ interface DataPoint {
   color?: string;
   d: number;
   meta?: never;
-  shape?: "square" | "circle";
+  shape?: "square" | "circle" | "triangle";
 }
 
 interface ScatterPlotChartProps<T extends number | string> {
@@ -148,13 +174,13 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     const svg = d3.select(ref.current);
 
     if (highlightItems.length === 0) {
-      svg.selectAll("rect").style("opacity", 0.9);
+      svg.selectAll("foreignObject").style("opacity", 0.9);
       return;
     }
     // set opacity for all circles to 0.1, except for the highlighted ones (detect by data-label attribute)
-    svg.selectAll("rect[data-label]").style("opacity", 0.1);
+    svg.selectAll("foreignObject[data-label]").style("opacity", 0.1);
     highlightItems.forEach((label) => {
-      svg.selectAll(`rect[data-label="${label}"]`).style("opacity", 1);
+      svg.selectAll(`foreignObject[data-label="${label}"]`).style("opacity", 1);
     });
   }, [highlightItems]);
 
@@ -166,7 +192,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   });
 
   return (
-    <div style={{ position: "relative" }}>
+    <Styled style={{ position: "relative" }}>
       {isLoading && isLoadingComponent}
       {displayIsNodata && isNodataComponent}
       <svg width={width} height={height} ref={ref}>
@@ -208,22 +234,18 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
         {dataSet
           .filter((d) => !disabledItems.includes(d.label))
           .map((d, i) => (
-            <rect
+            <foreignObject
               data-label={d.label}
               opacity={0.9}
               key={i}
-              className={`shape-${d.shape === "square" ? "square" : "circle"}`}
               x={getXValue(d)}
               y={yScale(d.y)}
               width={xAxisDataType === "band" ? d.d / 2 : dScale(d.d)}
               height={xAxisDataType === "band" ? d.d / 2 : dScale(d.d)}
-              fill={colorsMapping?.[d.label] || d.color || "transparent"}
-              data-log-fill={JSON.stringify(colorsMapping?.[d.label] || d.color || "transparent")}
               style={{
                 transition: "r 0.1s ease-out, opacity 0.1s ease-out",
                 transform: `translate(-${xAxisDataType === "band" ? d.d / 4 : dScale(d.d) / 2}px, -${xAxisDataType === "band" ? d.d / 4 : dScale(d.d) / 2}px)`,
               }}
-              rx={d.shape === "square" ? 0 : dScale(d.d) / 2}
               onMouseEnter={(event) => {
                 const [x, y] = d3.pointer(event);
 
@@ -253,7 +275,18 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                   tooltipRef.current.style.display = "none";
                 }
               }}
-            />
+            >
+              <div
+                style={
+                  {
+                    "--data-size": `${xAxisDataType === "band" ? d.d / 2 : dScale(d.d)}px`,
+                    "--data-background":
+                      colorsMapping?.[d.label] || d.color || "transparent",
+                  } as React.CSSProperties
+                }
+                className={`shape shape-${d?.shape ? d.shape : "circle"}`}
+              ></div>
+            </foreignObject>
           ))}
         {!isLoading && dataSet.length && (
           <g className="michi-vz-legend">
@@ -324,7 +357,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
           zIndex: 1000,
         }}
       />
-    </div>
+    </Styled>
   );
 };
 
