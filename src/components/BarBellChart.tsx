@@ -121,7 +121,8 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   useEffect(() => {
     const svg = d3.select(ref.current);
     if (highlightItems.length > 0) {
-      svg.selectAll(".bar-data").style("opacity", 0.3);
+      svg.selectAll(".bar-data").style("opacity", 0.1);
+      svg.selectAll(".bar-data-point-shape").style("opacity", 0.1);
       highlightItems.forEach((item) => {
         svg.selectAll(`[data-label="${item}"]`).style("opacity", 0.9);
       });
@@ -213,6 +214,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                     className={"bar-data-point"}
                   >
                     <div
+                      data-label={key}
                       data-value={value}
                       className={"bar-data-point-shape"}
                       style={{
