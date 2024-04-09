@@ -129,7 +129,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     } else {
       svg.selectAll(".bar-data").style("opacity", 0.9);
     }
-  }, [highlightItems]);
+  }, [highlightItems, disabledItems]);
 
   useEffect(() => {
     const svg = d3.select(ref.current);
