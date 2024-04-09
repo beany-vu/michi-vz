@@ -62,7 +62,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     d: DataPoint,
     currentKey: string,
     currentValue: string | number,
-    event: React.MouseEvent<SVGRectElement | SVGCircleElement>,
+    event: React.MouseEvent<SVGRectElement | SVGCircleElement | HTMLDivElement>,
   ) => {
     event.preventDefault();
     event.stopPropagation();
@@ -100,9 +100,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
         return `${value}`;
       }),
     )
-    .range([margin.top, height - margin.bottom])
-
-    .padding(0.1);
+    .range([margin.top, height - margin.bottom]);
 
   // xValues is the sum of all values which their key is not "date"
   const xValues = dataSet.map((d) => {
@@ -116,10 +114,9 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   });
 
   const xScale = scaleLinear()
-    .domain([0, Math.max(...xValues) + Math.max(...xValues) / 3])
-    .clamp(true)
-    .nice()
-    .range([margin.left, width - margin.right]);
+    .domain([0, Math.max(...xValues)])
+    .range([0, width - margin.left - margin.right])
+    .clamp(true);
 
   useEffect(() => {
     const svg = d3.select(ref.current);
@@ -132,6 +129,11 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
       svg.selectAll(".bar-data").style("opacity", 0.9);
     }
   }, [highlightItems]);
+
+  useEffect(() => {
+    const svg = d3.select(ref.current);
+    svg.selectAll(".bar-data-point").raise();
+  }, [dataSet, xValues]);
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet: dataSet,
@@ -201,28 +203,36 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                       setHighlightItems([]);
                       hideTooltip();
                     }}
-                    data-tip={JSON.stringify(d)}
+                    data-tooltip={JSON.stringify(d)}
                   />
-                  <circle
-                    className="bar-data"
-                    data-label={key}
-                    cx={x + 3}
-                    cy={yScale(`${d?.date}`) + yScale.bandwidth() / 2}
-                    r={6}
-                    style={{
-                      transition: "all 0.1s ease-out",
-                      opacity: 0.9,
-                    }}
-                    fill={colorsMapping?.[key]}
-                    onMouseEnter={(event) => {
-                      setHighlightItems([key]);
-                      generateTooltip(d, key, value, event);
-                    }}
-                    onMouseLeave={() => {
-                      setHighlightItems([]);
-                      hideTooltip();
-                    }}
-                  />
+                  <foreignObject
+                    x={x - 6}
+                    y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 6}
+                    width="12"
+                    height="12"
+                    className={"bar-data-point"}
+                  >
+                    <div
+                      data-value={value}
+                      className={"bar-data-point-shape"}
+                      style={{
+                        transition: "all 0.1s ease-out",
+                        opacity: 0.9,
+                        background: colorsMapping?.[key],
+                        borderRadius: "50%",
+                        width: "12px",
+                        height: "12px",
+                      }}
+                      onMouseEnter={(event) => {
+                        setHighlightItems([key]);
+                        generateTooltip(d, key, value, event);
+                      }}
+                      onMouseLeave={() => {
+                        setHighlightItems([]);
+                        hideTooltip();
+                      }}
+                    ></div>
+                  </foreignObject>
                 </React.Fragment>
               );
             });

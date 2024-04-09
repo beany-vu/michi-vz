@@ -67,14 +67,14 @@ const mockData = [
   {
     date: "2020-11",
     step1: 6000,
-    step2: 100,
+    step2: 1,
     step3: 10000,
   },
   {
     date: "2020-12",
-    step1: 500,
+    step1: 1,
     step2: 0,
-    step3: 1000,
+    step3: 2,
   },
 ];
 

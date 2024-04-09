@@ -186,9 +186,9 @@ const XaxisLinear: FC<Props> = ({
 
     g.attr("class", "x-axis x-axis-linear")
       .attr(
-        "transform",
+        "style",
         position === "top"
-          ? "translate(0," + (margin.top - 15) + ")"
+          ? `transform:translate(${margin.left}px, ${margin.top - 15}px)`
           : "translate(0," + (height - margin.bottom + 15) + ")",
       )
       .call(
@@ -237,7 +237,7 @@ const XaxisLinear: FC<Props> = ({
       .attr("fill", "lightgray");
   }, [xScale, height, margin, isTimeScale, xAxisFormat, xAxisDataType]);
 
-  return <g ref={ref} />;
+  return <g className={"zzz"} ref={ref} />;
 };
 
 export default XaxisLinear;

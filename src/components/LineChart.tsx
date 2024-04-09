@@ -414,7 +414,6 @@ const LineChart: React.FC<LineChartProps> = ({
             debounce((event, d) => {
               event.preventDefault();
               event.stopPropagation();
-              // event.nativeEvent.stopImmediatePropagation();
 
               setHighlightItems([data.label]);
               const [x, y] = d3.pointer(event, svgRef.current);
@@ -441,7 +440,6 @@ const LineChart: React.FC<LineChartProps> = ({
           )
           .on("mouseout", (event) => {
             event.preventDefault();
-            // event.stopPropagation();
 
             // Check if the mouse is still over the line below the circle
             const relatedTarget = event.relatedTarget;
