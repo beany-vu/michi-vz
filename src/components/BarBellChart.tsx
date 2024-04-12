@@ -106,16 +106,19 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   const xValues = dataSet.map((d) => {
     let sum = 0;
     for (const key in d) {
-      if (key !== "date") {
+      if (key !== "date" && disabledItems.includes(key) === false) {
         sum += d[key] || 0;
       }
     }
     return sum;
   });
 
+  const maxValueX = Math.max(...xValues) === 0 ? 1 : Math.max(...xValues);
+
   const xScale = scaleLinear()
-    .domain([0, Math.max(...xValues)])
+    .domain([0, maxValueX])
     .range([0, width - margin.left - margin.right])
+    .nice()
     .clamp(true);
 
   useEffect(() => {
@@ -128,6 +131,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
       });
     } else {
       svg.selectAll(".bar-data").style("opacity", 0.9);
+      svg.selectAll(".bar-data-point-shape").style("opacity", 0.9);
     }
   }, [highlightItems, disabledItems]);
 
@@ -179,8 +183,17 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
               const x = cumulativeX; // Use cumulativeX as the starting point for each rectangle
               const width = xScale(value); // Adjust width based on value
 
-              cumulativeX += width; // Update cumulativeX for the next rectangle
+              const shapeStyle = {
+                "--data-color": colorsMapping?.[key],
+                transition: "all 0.1s ease-out",
+                opacity: disabledItems.includes(key) ? 0.1 : 0.9,
+                background: colorsMapping?.[key],
+                borderRadius: "50%",
+                width: "12px",
+                height: "12px",
+              } as React.CSSProperties;
 
+              cumulativeX += width; // Update cumulativeX for the next rectangle
               return (
                 <React.Fragment key={`${key}-${i}`}>
                   <rect
@@ -194,7 +207,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                     fill={colorsMapping?.[key]}
                     style={{
                       transition: "all 0.1s ease-out",
-                      opacity: 0.9,
+                      opacity: disabledItems.includes(key) ? 0.1 : 0.9,
                     }}
                     onMouseEnter={(event) => {
                       setHighlightItems([key]);
@@ -216,15 +229,9 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                     <div
                       data-label={key}
                       data-value={value}
-                      className={"bar-data-point-shape"}
-                      style={{
-                        transition: "all 0.1s ease-out",
-                        opacity: 0.9,
-                        background: colorsMapping?.[key],
-                        borderRadius: "50%",
-                        width: "12px",
-                        height: "12px",
-                      }}
+                      data-color={colorsMapping?.[key]}
+                      className={`bar-data-point-shape ${value === 0 ? "data-value-zero" : ""}`}
+                      style={shapeStyle}
                       onMouseEnter={(event) => {
                         setHighlightItems([key]);
                         generateTooltip(d, key, value, event);
