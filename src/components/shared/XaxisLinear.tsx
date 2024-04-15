@@ -189,7 +189,7 @@ const XaxisLinear: FC<Props> = ({
         "style",
         position === "top"
           ? `transform:translate(${margin.left}px, ${margin.top - 15}px)`
-          : "translate(0," + (height - margin.bottom + 15) + ")",
+          : `transform:translate(0,${height - margin.bottom + 15}px)`,
       )
       .call(
         d3
