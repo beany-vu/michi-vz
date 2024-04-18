@@ -14,6 +14,10 @@ interface ChartContextProps {
   setColorsBasedMapping: React.Dispatch<
     React.SetStateAction<{ [key: string]: string }>
   >;
+  categoryMetadata: { [key: string]: { color: string; label: string } };
+  setCategoryMetadata: React.Dispatch<
+    React.SetStateAction<{ [key: string]: { color: string; label: string } }>
+  >;
 }
 
 // 2. Provide default values for the context
@@ -26,6 +30,8 @@ const defaultChartContext: ChartContextProps = {
   setColorsMapping: () => {},
   colorsBasedMapping: {},
   setColorsBasedMapping: () => {},
+  categoryMetadata: {},
+  setCategoryMetadata: () => {},
 };
 
 const MichiVzContext = createContext<ChartContextProps>(defaultChartContext);
@@ -37,6 +43,7 @@ interface MichiVzProps {
   initialHighlightItems?: string[];
   initialColorsMapping?: { [key: string]: string };
   initialColorsBasedMapping?: { [key: string]: string };
+  initialCategoryMetadata?: { [key: string]: { color: string; label: string } };
 }
 
 export const MichiVzProvider: React.FC<MichiVzProps> = ({
@@ -45,6 +52,7 @@ export const MichiVzProvider: React.FC<MichiVzProps> = ({
   initialHighlightItems = [],
   initialColorsMapping = {},
   initialColorsBasedMapping = {},
+  initialCategoryMetadata = {},
 }) => {
   const [disabledItems, setDisabledItems] =
     useState<string[]>(initialDisabledItems);
@@ -57,6 +65,11 @@ export const MichiVzProvider: React.FC<MichiVzProps> = ({
   const [colorsBasedMapping, setColorsBasedMapping] = useState<{
     [key: string]: string;
   }>(initialColorsBasedMapping);
+
+  const [categoryMetadata, setCategoryMetadata] = useState<{
+    [key: string]: { color: string; label: string };
+  }>(initialCategoryMetadata);
+
   return (
     <MichiVzContext.Provider
       value={{
@@ -68,6 +81,8 @@ export const MichiVzProvider: React.FC<MichiVzProps> = ({
         setColorsMapping,
         colorsBasedMapping,
         setColorsBasedMapping,
+        categoryMetadata,
+        setCategoryMetadata,
       }}
     >
       {children}
