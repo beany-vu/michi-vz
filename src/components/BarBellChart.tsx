@@ -176,75 +176,81 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
         {dataSet.map((d, i) => {
           let cumulativeX = margin.left; // Initialize cumulativeX for each row
 
-          return keys
-            .filter((key) => !disabledItems.includes(key))
-            .map((key) => {
-              const value = d[key] || 0;
-              const x = cumulativeX; // Use cumulativeX as the starting point for each rectangle
-              const width = xScale(value); // Adjust width based on value
+          return (
+            <g key={`group-line-${i}`}>
+              {keys
+                .filter((key) => !disabledItems.includes(key))
+                .map((key) => {
+                  const value = d[key] || 0;
+                  const x = cumulativeX; // Use cumulativeX as the starting point for each rectangle
+                  const width = xScale(value); // Adjust width based on value
 
-              const shapeStyle = {
-                "--data-color": colorsMapping?.[key],
-                transition: "all 0.1s ease-out",
-                opacity: disabledItems.includes(key) ? 0.1 : 0.9,
-                background: colorsMapping?.[key],
-                borderRadius: "50%",
-                width: "12px",
-                height: "12px",
-              } as React.CSSProperties;
+                  const shapeStyle = {
+                    "--data-color": colorsMapping?.[key],
+                    transition: "all 0.1s ease-out",
+                    opacity: disabledItems.includes(key) ? 0.1 : 0.9,
+                    background: colorsMapping?.[key],
+                    borderRadius: "50%",
+                    width: "12px",
+                    height: "12px",
+                  } as React.CSSProperties;
 
-              cumulativeX += width; // Update cumulativeX for the next rectangle
-              return (
-                <React.Fragment key={`${key}-${i}`}>
-                  <rect
-                    className="bar-data"
-                    data-label={key}
-                    key={`${key}-${i}`}
-                    x={x}
-                    y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 || 0}
-                    height={4}
-                    width={width}
-                    fill={colorsMapping?.[key]}
-                    style={{
-                      transition: "all 0.1s ease-out",
-                      opacity: disabledItems.includes(key) ? 0.1 : 0.9,
-                    }}
-                    onMouseEnter={(event) => {
-                      setHighlightItems([key]);
-                      generateTooltip(d, key, value, event);
-                    }}
-                    onMouseLeave={() => {
-                      setHighlightItems([]);
-                      hideTooltip();
-                    }}
-                    data-tooltip={JSON.stringify(d)}
-                  />
-                  <foreignObject
-                    x={x - 6}
-                    y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 6}
-                    width="12"
-                    height="12"
-                    className={"bar-data-point"}
-                  >
-                    <div
-                      data-label={key}
-                      data-value={value}
-                      data-color={colorsMapping?.[key]}
-                      className={`bar-data-point-shape ${value === 0 ? "data-value-zero" : ""}`}
-                      style={shapeStyle}
-                      onMouseEnter={(event) => {
-                        setHighlightItems([key]);
-                        generateTooltip(d, key, value, event);
-                      }}
-                      onMouseLeave={() => {
-                        setHighlightItems([]);
-                        hideTooltip();
-                      }}
-                    ></div>
-                  </foreignObject>
-                </React.Fragment>
-              );
-            });
+                  cumulativeX += width; // Update cumulativeX for the next rectangle
+                  return (
+                    <React.Fragment key={`${key}-${i}`}>
+                      <rect
+                        className="bar-data"
+                        data-label={key}
+                        key={`${key}-${i}`}
+                        x={x}
+                        y={
+                          yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 || 0
+                        }
+                        height={4}
+                        width={width}
+                        fill={colorsMapping?.[key]}
+                        style={{
+                          transition: "all 0.1s ease-out",
+                          opacity: disabledItems.includes(key) ? 0.1 : 0.9,
+                        }}
+                        onMouseEnter={(event) => {
+                          setHighlightItems([key]);
+                          generateTooltip(d, key, value, event);
+                        }}
+                        onMouseLeave={() => {
+                          setHighlightItems([]);
+                          hideTooltip();
+                        }}
+                        data-tooltip={JSON.stringify(d)}
+                      />
+                      <foreignObject
+                        x={x - 6}
+                        y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 6}
+                        width="12"
+                        height="12"
+                        className={`bar-data-point ${value === 0 ? "has-value-zero" : ""}`}
+                      >
+                        <div
+                          data-label={key}
+                          data-value={value}
+                          data-color={colorsMapping?.[key]}
+                          className={`bar-data-point-shape ${value === 0 ? "data-value-zero" : ""}`}
+                          style={shapeStyle}
+                          onMouseEnter={(event) => {
+                            setHighlightItems([key]);
+                            generateTooltip(d, key, value, event);
+                          }}
+                          onMouseLeave={() => {
+                            setHighlightItems([]);
+                            hideTooltip();
+                          }}
+                        ></div>
+                      </foreignObject>
+                    </React.Fragment>
+                  );
+                })}
+            </g>
+          );
         })}
       </svg>
       <div
