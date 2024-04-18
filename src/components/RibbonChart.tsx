@@ -26,6 +26,7 @@ interface Props {
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
+  tooltipContent?: (data: DataPoint) => string;
 }
 
 interface RectData {
@@ -56,6 +57,7 @@ const RibbonChart: React.FC<Props> = ({
   isLoadingComponent,
   isNodataComponent,
   isNodata,
+  tooltipContent,
 }) => {
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
@@ -290,7 +292,10 @@ const RibbonChart: React.FC<Props> = ({
                                     setHighlightItems([d.key]);
                                     d3.select(".tooltip")
                                       .style("visibility", "visible")
-                                      .html(generateTooltipContent(d.data)); // you can define this function or inline its logic
+                                      .html(
+                                        tooltipContent?.(d.data) ||
+                                          generateTooltipContent(d.data),
+                                      ); // you can define this function or inline its logic
                                   })
                                   .on("mousemove", function (event) {
                                     const [x, y] = d3.pointer(event);
