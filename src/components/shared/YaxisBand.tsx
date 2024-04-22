@@ -28,12 +28,28 @@ const YaxisBand: FC<Props> = ({
       .call(
         d3
           .axisLeft(yScale)
-          .tickFormat((d) => (yAxisFormat ? yAxisFormat(d) : d)),
+          .tickFormat((d) => (yAxisFormat ? yAxisFormat(d) : d))
+          .tickSize(0), // Hide the ticks for foreignObject
       );
 
     // Remove existing domain line and tick lines
     g.select(".domain").remove();
-    g.selectAll(".tick line").remove();
+
+    // Remove existing text labels
+    g.selectAll(".tick *").remove();
+
+    // Append foreignObject for HTML content
+    g.selectAll(".tick")
+      .append("foreignObject")
+      .attr("class", "tick-html")
+      .attr("x", -100) // Adjust as needed
+      .attr("y", -10) // Adjust as needed
+      .attr("width", 100) // Adjust as needed
+      .attr("height", 20) // Adjust as needed
+      .html(
+        (d) =>
+          `<div style="display:flex;align-items:center;height:100%" title="${d}"><span>${d}</span>></div>`,
+      ); // HTML content for each tick
 
     // Add dashed lines on each tick
     g.selectAll(".tick")
@@ -45,16 +61,7 @@ const YaxisBand: FC<Props> = ({
       .attr("y2", 0)
       .style("stroke-dasharray", "1.5") // Set dash pattern
       .style("stroke", showGrid ? "lightgray" : "transparent"); // Color of the dashed line
-
-    // Add circles at each tick
-    g.selectAll(".tick")
-      .append("circle")
-      .attr("class", "tickValueDot")
-      .attr("cx", 0)
-      .attr("cy", 0) // 10 units above the x-axis. Adjust as needed.
-      .attr("r", 2) // Radius of the circle
-      .attr("fill", "lightgray"); // Color of the circle
-  }, [yScale, width, margin]);
+  }, [yScale, width, margin, yAxisFormat, showGrid]);
 
   return <g ref={ref} />;
 };
