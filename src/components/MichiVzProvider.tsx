@@ -14,9 +14,9 @@ interface ChartContextProps {
   setColorsBasedMapping: React.Dispatch<
     React.SetStateAction<{ [key: string]: string }>
   >;
-  categoryMetadata: { [key: string]: { color: string; label: string } };
+  categoryMetadata: { [key: string]: { color?: string; label?: string } };
   setCategoryMetadata: React.Dispatch<
-    React.SetStateAction<{ [key: string]: { color: string; label: string } }>
+    React.SetStateAction<{ [key: string]: { color?: string; label?: string } }>
   >;
 }
 
