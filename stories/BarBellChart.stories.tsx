@@ -117,7 +117,7 @@ const mockData2 = [
   },
   {
     date: "2020-03 | Egypt",
-    step1: 4000,
+    step1: 0,
     step2: 0,
     step3: 6000,
   },

@@ -177,7 +177,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
           let cumulativeX = margin.left; // Initialize cumulativeX for each row
 
           return (
-            <g key={`group-line-${i}`}>
+            <g key={`group-line-${i}`} className={`group-line group-line-${i}`}>
               {keys
                 .filter((key) => !disabledItems.includes(key))
                 .map((key, j) => {
@@ -198,31 +198,34 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                   cumulativeX += width; // Update cumulativeX for the next rectangle
                   return (
                     <React.Fragment key={`${key}-${i}`}>
-                      <rect
-                        className="bar-data"
-                        data-label={key}
-                        key={`${key}-${i}`}
-                        x={x}
-                        y={
-                          yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 || 0
-                        }
-                        height={4}
-                        width={width}
-                        fill={colorsMapping?.[key]}
-                        style={{
-                          transition: "all 0.1s ease-out",
-                          opacity: disabledItems.includes(key) ? 0.1 : 0.9,
-                        }}
-                        onMouseEnter={(event) => {
-                          setHighlightItems([key]);
-                          generateTooltip(d, key, value, event);
-                        }}
-                        onMouseLeave={() => {
-                          setHighlightItems([]);
-                          hideTooltip();
-                        }}
-                        data-tooltip={JSON.stringify(d)}
-                      />
+                      {value !== 0 && (
+                        <rect
+                          className="bar-data"
+                          data-label={key}
+                          key={`${key}-${i}`}
+                          x={x}
+                          y={
+                            yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 ||
+                            0
+                          }
+                          height={4}
+                          width={width}
+                          fill={colorsMapping?.[key]}
+                          style={{
+                            transition: "all 0.1s ease-out",
+                            opacity: disabledItems.includes(key) ? 0.1 : 0.9,
+                          }}
+                          onMouseEnter={(event) => {
+                            setHighlightItems([key]);
+                            generateTooltip(d, key, value, event);
+                          }}
+                          onMouseLeave={() => {
+                            setHighlightItems([]);
+                            hideTooltip();
+                          }}
+                          data-tooltip={JSON.stringify(d)}
+                        />
+                      )}
                       <foreignObject
                         x={x - 6}
                         y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 6}
@@ -234,6 +237,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                           data-label={key}
                           data-value={value}
                           data-index={j}
+                          data-order={j + 1}
                           data-color={colorsMapping?.[key]}
                           className={`bar-data-point-shape ${value === 0 ? "data-value-zero" : ""}`}
                           style={shapeStyle}
