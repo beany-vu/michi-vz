@@ -100,7 +100,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
         return `${value}`;
       }),
     )
-    .range([margin.top, height - margin.bottom]);
+    .range([margin.top + 20, height - margin.bottom]);
 
   // xValues is the sum of all values which their key is not "date"
   const xValues = dataSet.map((d) => {
@@ -180,7 +180,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
             <g key={`group-line-${i}`}>
               {keys
                 .filter((key) => !disabledItems.includes(key))
-                .map((key) => {
+                .map((key, j) => {
                   const value = d[key] || 0;
                   const x = cumulativeX; // Use cumulativeX as the starting point for each rectangle
                   const width = xScale(value); // Adjust width based on value
@@ -233,6 +233,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                         <div
                           data-label={key}
                           data-value={value}
+                          data-index={j}
                           data-color={colorsMapping?.[key]}
                           className={`bar-data-point-shape ${value === 0 ? "data-value-zero" : ""}`}
                           style={shapeStyle}

@@ -48,7 +48,7 @@ const YaxisBand: FC<Props> = ({
       .attr("height", 20) // Adjust as needed
       .html(
         (d) =>
-          `<div style="display:flex;align-items:center;height:100%" title="${d}"><span>${d}</span>></div>`,
+          `<div style="display:flex;align-items:center;height:100%" title="${d}"><span>${d}</span></div>`,
       ); // HTML content for each tick
 
     // Add dashed lines on each tick
