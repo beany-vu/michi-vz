@@ -89,7 +89,7 @@ const RibbonChart: React.FC<Props> = ({
     );
 
     return [0, max];
-  }, [series, keys]);
+  }, [series, keys, disabledItems]);
 
   const yScale = useMemo(
     () =>
