@@ -227,7 +227,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                         />
                       )}
                       <foreignObject
-                        x={x - 6}
+                        x={x + width - 6}
                         y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 6}
                         width="12"
                         height="12"
