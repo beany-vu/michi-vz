@@ -237,7 +237,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                           data-label={key}
                           data-value={value}
                           data-index={j}
-                          data-order={j + 1}
+                          data-order={keys.indexOf(key) + 1}
                           data-color={colorsMapping?.[key]}
                           className={`bar-data-point-shape ${value === 0 ? "data-value-zero" : ""}`}
                           style={shapeStyle}
