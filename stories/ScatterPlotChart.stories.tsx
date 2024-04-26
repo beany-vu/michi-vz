@@ -29,6 +29,7 @@ export const Primary = {
       bottom: 50,
       left: 50,
     },
+    yAxisDomain: [0, 25],
     xAxisFormat: (d) => `${d}%`,
     // xAxisDataType: "number",
     xAxisDataType: "band",
@@ -165,7 +166,7 @@ export const Primary = {
         d: 60,
         label: "Ferrous metals",
         color: "#FF7F0E",
-      }
+      },
     ],
   },
 };

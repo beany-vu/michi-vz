@@ -58,6 +58,7 @@ interface ScatterPlotChartProps<T extends number | string> {
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
   xAxisFormat?: (d: number | string) => string;
   yAxisFormat?: (d: number | string) => string;
+  yTicksQty?: number;
   xAxisDataType?: "number" | "date_annual" | "date_monthly" | "band";
   tooltipFormatter?: (d: DataPoint) => string;
   showGrid?: { x: boolean; y: boolean };
@@ -86,6 +87,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   isNodata,
   xAxisFormat,
   yAxisFormat,
+  yTicksQty,
   xAxisDataType = "number",
   tooltipFormatter,
   showGrid = defaultConf.SHOW_GRID,
@@ -143,9 +145,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
       d3
         .scaleLinear()
         .domain((yAxisDomain as [number, number]) ?? yDomain)
-        .range([height - margin.bottom, margin.top])
-        .nice()
-        .clamp(true),
+        .range([height - margin.bottom, margin.top]),
     [yDomain, height, margin],
   );
 
@@ -230,6 +230,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
           height={height}
           margin={margin}
           yAxisFormat={yAxisFormat}
+          yTicksQty={yTicksQty}
         />
         {dataSet
           .filter((d) => !disabledItems.includes(d.label))

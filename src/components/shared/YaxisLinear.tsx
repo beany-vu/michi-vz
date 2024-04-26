@@ -9,6 +9,7 @@ interface Props {
   highlightZeroLine?: boolean;
   margin: { top: number; right: number; bottom: number; left: number };
   yAxisFormat?: (d: number) => string;
+  yTicksQty?: number;
 }
 
 const YaxisLinear: FC<Props> = ({
@@ -17,13 +18,18 @@ const YaxisLinear: FC<Props> = ({
   height,
   highlightZeroLine = true,
   margin,
+  yTicksQty,
   yAxisFormat,
 }) => {
   const ref = useRef<SVGGElement>(null);
   useEffect(() => {
     const g = d3.select(ref.current);
 
-    const yAxis = d3.axisLeft(yScale).tickSize(0).tickPadding(10);
+    const yAxis = d3
+      .axisLeft(yScale)
+      .tickSize(0)
+      .tickPadding(10)
+      .ticks(yTicksQty || 10);
 
     // Apply the formatter if provided
     if (yAxisFormat) {
