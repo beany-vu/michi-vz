@@ -50,6 +50,7 @@ export interface RadarChartProps {
   width: number;
   height: number;
   tooltipFormatter?: (data: { date: string; value: number }) => React.ReactNode;
+  poleLabelFormatter?: (data: string) => string;
   radialLabelFormatter?: (data: number) => string;
   series: DataPoint[];
   // The poles within the radar chart to present data in circular form
@@ -71,6 +72,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   series,
   poles,
   tooltipFormatter,
+  poleLabelFormatter,
   radialLabelFormatter,
   children,
   isLoading = false,
@@ -255,7 +257,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           else if (lx > width / 2) return "start";
           return "middle";
         })
-        .text(label);
+        .text(poleLabelFormatter ? poleLabelFormatter(label) : label);
     });
   }, [width, height, series, poles]);
 
@@ -322,7 +324,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                 fill={"transparent"}
                 data-label={colorsMapping[label]}
                 stroke={colorsMapping[label] ?? color}
-                strokeWidth={5}
+                strokeWidth={2}
                 onMouseEnter={(event) => {
                   event.preventDefault();
                   setHighlightItems([label]);
@@ -348,11 +350,11 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                         <DataPointStyled
                           className={`data-point data-point-${i}`}
                           data-label={label}
-                          r={6}
+                          r={5}
                           cx={point.x}
                           cy={point.y}
                           stroke="#fff"
-                          strokeWidth={3}
+                          strokeWidth={2}
                           fill={colorsMapping[label] ?? color}
                           onMouseEnter={(e) => {
                             setHighlightItems([label]);
