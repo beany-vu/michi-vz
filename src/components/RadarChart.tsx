@@ -49,7 +49,11 @@ interface DataPoint {
 export interface RadarChartProps {
   width: number;
   height: number;
-  tooltipFormatter?: (data: { date: string; value: number }) => React.ReactNode;
+  tooltipFormatter?: (data: {
+    date: string;
+    value: number;
+    series: never[];
+  }) => React.ReactNode;
   poleLabelFormatter?: (data: string) => string;
   radialLabelFormatter?: (data: number) => string;
   series: DataPoint[];
@@ -86,6 +90,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   const [tooltipData, setTooltipData] = useState<{
     date: string;
     value: number;
+    series: never[];
   } | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
 
@@ -291,7 +296,11 @@ export const RadarChart: React.FC<RadarChartProps> = ({
         {tooltipData && (
           <>
             {tooltipFormatter ? (
-              tooltipFormatter(tooltipData)
+              tooltipFormatter({
+                date: tooltipData.date,
+                value: tooltipData.value,
+                series: tooltipData.series,
+              })
             ) : (
               <>
                 <strong>Date:</strong> {tooltipData.date}
@@ -361,6 +370,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                             setTooltipData({
                               date: point.date,
                               value: point.value,
+                              series: points as never[],
                             });
                             if (tooltipRef.current) {
                               const rect =

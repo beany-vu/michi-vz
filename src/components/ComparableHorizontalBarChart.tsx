@@ -76,15 +76,15 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   const yAxisDomain = useMemo(
     () =>
       dataSet
-        ?.filter((d) => !disabledItems.includes(d.label))
-        ?.map((d) => d.label),
+        ?.filter((d) => !disabledItems.includes(d?.label))
+        ?.map((d) => d?.label),
     [dataSet, disabledItems],
   );
 
   const xAxisRange = useMemo(() => {
     if (dataSet.length > 0) {
       return dataSet
-        ?.filter((d) => !disabledItems.includes(d.label))
+        ?.filter((d) => !disabledItems.includes(d?.label))
         ?.map((d) => [d.valueBased, d.valueCompared])
         ?.flat();
     }
@@ -196,7 +196,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           yAxisFormat={yAxisFormat}
         />
         {dataSet
-          .filter((d) => !disabledItems.includes(d.label))
+          .filter((d) => !disabledItems.includes(d?.label))
           .map((d, i) => {
             const x1 =
               margin.left + xAxisScale(Math.min(0, d.valueBased)) - margin.left;
@@ -209,22 +209,22 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
               xAxisScale(d.valueCompared) - xAxisScale(0),
             );
 
-            const y = yAxisScale(d.label) || 0;
+            const y = yAxisScale(d?.label) || 0;
             const standardHeight = yAxisScale.bandwidth();
 
             return (
               <g
                 className={"bar"}
-                data-label={d.label}
+                data-label={d?.label}
                 key={i}
                 style={{
                   opacity:
-                    highlightItems.includes(d.label) ||
+                    highlightItems.includes(d?.label) ||
                     highlightItems.length === 0
                       ? 1
                       : 0.3,
                 }}
-                onMouseOver={() => setHighlightItems([d.label])}
+                onMouseOver={() => setHighlightItems([d?.label])}
                 onMouseOut={() => setHighlightItems([])}
               >
                 {/* Conditionally render based on width comparison */}
@@ -236,7 +236,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                       y={y + (standardHeight - 30) / 2}
                       width={width2}
                       height={30}
-                      fill={colorsMapping[d.label] ?? d.color}
+                      fill={colorsMapping[d?.label] ?? d.color}
                       opacity={0.9}
                       rx={5}
                       ry={5}
@@ -251,7 +251,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                       y={y + (standardHeight - 30) / 2}
                       width={width1}
                       height={30}
-                      fill={colorsBasedMapping[d.label] ?? d?.color}
+                      fill={colorsBasedMapping[d?.label] ?? d?.color}
                       rx={5}
                       ry={5}
                       onMouseOver={(event) => handleMouseOver(d, event)}
@@ -269,7 +269,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                       y={y + (standardHeight - 30) / 2}
                       width={width1}
                       height={30}
-                      fill={colorsBasedMapping[d.label] ?? d?.color}
+                      fill={colorsBasedMapping[d?.label] ?? d?.color}
                       rx={5}
                       ry={5}
                       onMouseOver={(event) => handleMouseOver(d, event)}
@@ -284,7 +284,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                       y={y + (standardHeight - 30) / 2}
                       width={width2}
                       height={30}
-                      fill={colorsMapping[d.label] ?? d.color}
+                      fill={colorsMapping[d?.label] ?? d.color}
                       opacity={0.9}
                       rx={5}
                       ry={5}

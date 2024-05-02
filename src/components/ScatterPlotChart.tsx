@@ -149,8 +149,9 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     [yDomain, height, margin],
   );
 
-  // min value is 16 and max value is the max value of the dataSet
-  const dDomain = [16, d3.max(dataSet, (d) => d.d) || 16];
+  const dValues = dataSet.map((d) => d.d);
+  console.log({dValues})
+  const dDomain = [Math.min(...dValues), Math.max(...dValues)];
 
   // dScale is scaleQuantile
   const dScale = useMemo(
@@ -200,38 +201,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
           {title}
         </Title>
         {children}
-        {xAxisDataType === "number" ||
-        xAxisDataType === "date_annual" ||
-        xAxisDataType === "date_monthly" ? (
-          <XaxisLinear
-            xScale={
-              xScale as
-                | d3.ScaleLinear<number, number>
-                | d3.ScaleTime<number, number>
-            }
-            height={height}
-            margin={margin}
-            xAxisFormat={xAxisFormat}
-            xAxisDataType={xAxisDataType}
-            ticks={5}
-            showGrid={showGrid?.x || false}
-          />
-        ) : (
-          <XaxisBand
-            xScale={xScale as d3.ScaleBand<string>}
-            height={height}
-            margin={margin}
-            xAxisFormat={xAxisFormat}
-          />
-        )}
-        <YaxisLinear
-          yScale={yScale}
-          width={width}
-          height={height}
-          margin={margin}
-          yAxisFormat={yAxisFormat}
-          yTicksQty={yTicksQty}
-        />
+
         {dataSet
           .filter((d) => !disabledItems.includes(d.label))
           .map((d, i) => (
@@ -343,6 +313,38 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
             </text>
           </g>
         )}
+        {xAxisDataType === "number" ||
+        xAxisDataType === "date_annual" ||
+        xAxisDataType === "date_monthly" ? (
+          <XaxisLinear
+            xScale={
+              xScale as
+                | d3.ScaleLinear<number, number>
+                | d3.ScaleTime<number, number>
+            }
+            height={height}
+            margin={margin}
+            xAxisFormat={xAxisFormat}
+            xAxisDataType={xAxisDataType}
+            ticks={5}
+            showGrid={showGrid?.x || false}
+          />
+        ) : (
+          <XaxisBand
+            xScale={xScale as d3.ScaleBand<string>}
+            height={height}
+            margin={margin}
+            xAxisFormat={xAxisFormat}
+          />
+        )}
+        <YaxisLinear
+          yScale={yScale}
+          width={width}
+          height={height}
+          margin={margin}
+          yAxisFormat={yAxisFormat}
+          yTicksQty={yTicksQty}
+        />
       </svg>
       <div
         ref={tooltipRef}
