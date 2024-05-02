@@ -150,8 +150,9 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   );
 
   const dValues = dataSet.map((d) => d.d);
-  console.log({dValues})
-  const dDomain = [Math.min(...dValues), Math.max(...dValues)];
+  const dMax = Math.max(...dValues);
+  const dMin = Math.min(...dValues);
+  const dDomain = dMax === dMin ? [0, dMax] : [dMin, dMax];
 
   // dScale is scaleQuantile
   const dScale = useMemo(
