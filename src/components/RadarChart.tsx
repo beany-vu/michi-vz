@@ -270,7 +270,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     const svg = d3.select(svgRef.current);
     svg
       .selectAll(".series")
-      .attr("opacity", highlightItems.length === 0 ? 1 : 0.3);
+      .attr("opacity", highlightItems.length === 0 ? 1 : 0.5);
     svg.selectAll(".data-point").attr("opacity", 0);
 
     highlightItems.forEach((item: string) => {

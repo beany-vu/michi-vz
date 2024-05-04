@@ -149,7 +149,6 @@ const mockData2 = [
     date: "2020-04 | Morocco",
     step1: 1,
     step2: 0,
-    step3: 2,
   },
 ];
 
