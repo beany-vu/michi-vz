@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { Fragment, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
@@ -223,7 +223,7 @@ const AreaChart: React.FC<Props> = ({
         />
         <g>
           {prepareAreaData().map((areaData) => (
-            <>
+            <Fragment key={areaData.key}>
               <path
                 d={areaGenerator(areaData.values)}
                 fill={areaData.fill}
@@ -297,7 +297,7 @@ const AreaChart: React.FC<Props> = ({
                   pointerEvents="none"
                 />
               )}
-            </>
+            </Fragment>
           ))}
         </g>
         {/*<g className="hover-overlays" style={{pointerEvents: "none"}}>*/}
