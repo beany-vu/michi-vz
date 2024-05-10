@@ -144,7 +144,6 @@ const XaxisLinear: FC<Props> = ({
         break;
       case "date_monthly":
         if (counts > 20) {
-          console.log({ tickValues });
           axisBottom = d3
             .axisBottom(xScale)
             // .tickSize(20)

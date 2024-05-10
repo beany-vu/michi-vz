@@ -15,14 +15,32 @@ const XaxisBand: FC<Props> = ({ xScale, height, margin, xAxisFormat }) => {
   useEffect(() => {
     const g = d3.select(ref.current);
     if (g) {
+      // Define default formatter
+      const defaultFormatter = (d: string | number) => String(d);
+
+      // Calculate tick values
+      const domain = xScale.domain();
+
+      // If there are fewer than or equal to 15 ticks, show all ticks
+      // Otherwise, show 5 ticks with the first and last always visible
+      const tickValues =
+        domain.length <= 15
+          ? domain
+          : [
+              domain[0],
+              domain[Math.floor(domain.length / 2)],
+              domain[domain.length - 1],
+            ];
+
       // Add the x-axis with ticks
-      g.attr(
-        "transform",
-        "translate(0," + (height - margin.bottom + 25) + ")",
-      ).call(
+      g.attr("transform", `translate(0,${height - margin.bottom + 25})`).call(
         d3
           .axisBottom(xScale)
-          .tickFormat((d) => (xAxisFormat ? xAxisFormat(d) : String(d))),
+          // 4 equal distance ticks
+          .tickValues(tickValues)
+          .tickFormat((d) =>
+            xAxisFormat ? xAxisFormat(d) : defaultFormatter(d),
+          ),
       );
 
       // Remove existing domain line and tick lines
