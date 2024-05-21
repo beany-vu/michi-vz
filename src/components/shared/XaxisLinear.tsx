@@ -18,13 +18,6 @@ function getDatesWithEqualDistance(
   );
 }
 
-// Example usage
-const startDate = new Date(2001, 11); // December 2001 (months are zero-based)
-const endDate = new Date(2022, 0); // January 2022
-const numDates = 6;
-const dates = getDatesWithEqualDistance(startDate, endDate, numDates);
-console.log(dates);
-
 interface Props {
   xScale: ScaleTime<number, number> | ScaleLinear<number, number>;
   height: number;

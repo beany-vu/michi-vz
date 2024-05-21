@@ -23,12 +23,15 @@ const XaxisBand: FC<Props> = ({ xScale, height, margin, xAxisFormat }) => {
 
       // If there are fewer than or equal to 15 ticks, show all ticks
       // Otherwise, show 5 ticks with the first and last always visible
+
       const tickValues =
         domain.length <= 15
           ? domain
           : [
               domain[0],
+              domain[Math.floor(domain.length / 4)],
               domain[Math.floor(domain.length / 2)],
+              domain[Math.floor((domain.length / 4) * 3)],
               domain[domain.length - 1],
             ];
 
