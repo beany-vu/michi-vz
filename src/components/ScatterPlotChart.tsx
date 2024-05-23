@@ -9,6 +9,7 @@ import { useChartContext } from "./MichiVzProvider";
 import { drawHalfLeftCircle } from "../components/shared/helpers";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
+import { orderBy } from "lodash";
 
 const Styled = styled.div`
   .shape {
@@ -16,6 +17,7 @@ const Styled = styled.div`
     height: 100%;
     background-color: var(--data-background);
   }
+
   .shape-circle {
     border-radius: 50%;
   }
@@ -203,7 +205,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
         </Title>
         {children}
 
-        {dataSet
+        {orderBy(dataSet, ["d"], ["desc"])
           .filter((d) => !disabledItems.includes(d.label))
           .map((d, i) => (
             <foreignObject
