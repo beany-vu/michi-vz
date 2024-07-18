@@ -30,11 +30,7 @@ interface LineChartProps {
   title?: string;
   tooltipFormatter?: (
     d: DataPoint | undefined,
-    dataSet?: {
-      label: string;
-      color: string;
-      series: DataPoint[];
-    }[],
+    dataSet?: DataPoint[],
   ) => string;
   children?: React.ReactNode;
   isLoading?: boolean;
@@ -42,6 +38,13 @@ interface LineChartProps {
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
 }
+
+export const VALUE_TYPE = {
+  BASED: "based",
+  COMPARED: "compared",
+} as const;
+
+export type TValueType = (typeof VALUE_TYPE)[keyof typeof VALUE_TYPE];
 
 const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   dataSet,
@@ -64,6 +67,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     x: number;
     y: number;
     data: DataPoint;
+    type: "based" | "compared";
   } | null>(null);
   const {
     colorsMapping,
@@ -133,6 +137,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   const handleMouseOver = (
     d: DataPoint,
     event: React.MouseEvent<SVGRectElement, MouseEvent>,
+    type: "based" | "compared",
   ) => {
     if (svgRef.current) {
       const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
@@ -141,6 +146,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         x: mousePoint[0],
         y: mousePoint[1],
         data: d,
+        type,
       }));
     }
   };
@@ -240,7 +246,9 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                       opacity={0.9}
                       rx={5}
                       ry={5}
-                      onMouseOver={(event) => handleMouseOver(d, event)}
+                      onMouseOver={(event) =>
+                        handleMouseOver(d, event, "compared")
+                      }
                       onMouseOut={handleMouseOut}
                       stroke="#fff"
                       strokeWidth={1}
@@ -254,7 +262,9 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                       fill={colorsBasedMapping[d?.label] ?? d?.color}
                       rx={5}
                       ry={5}
-                      onMouseOver={(event) => handleMouseOver(d, event)}
+                      onMouseOver={(event) =>
+                        handleMouseOver(d, event, "based")
+                      }
                       onMouseOut={handleMouseOut}
                       opacity={0.9}
                       stroke="#fff"
@@ -272,7 +282,9 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                       fill={colorsBasedMapping[d?.label] ?? d?.color}
                       rx={5}
                       ry={5}
-                      onMouseOver={(event) => handleMouseOver(d, event)}
+                      onMouseOver={(event) =>
+                        handleMouseOver(d, event, "based")
+                      }
                       onMouseOut={handleMouseOut}
                       opacity={0.9}
                       stroke="#fff"
@@ -288,7 +300,9 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                       opacity={0.9}
                       rx={5}
                       ry={5}
-                      onMouseOver={(event) => handleMouseOver(d, event)}
+                      onMouseOver={(event) =>
+                        handleMouseOver(d, event, "compared")
+                      }
                       onMouseOut={handleMouseOut}
                       stroke="#fff"
                       strokeWidth={1}
@@ -318,7 +332,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
               {tooltip?.data?.valueCompared}
             </div>
           )}
-          {tooltipFormatter && tooltipFormatter(tooltip?.data)}
+          {tooltipFormatter && tooltipFormatter(tooltip?.data, dataSet)}
         </div>
       )}
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
