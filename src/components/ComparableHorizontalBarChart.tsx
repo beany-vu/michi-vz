@@ -18,6 +18,13 @@ const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
 const HEIGHT = 480 - MARGIN.top - MARGIN.bottom;
 
+export const VALUE_TYPE = {
+  BASED: "based",
+  COMPARED: "compared",
+} as const;
+
+export type TValueType = (typeof VALUE_TYPE)[keyof typeof VALUE_TYPE];
+
 interface LineChartProps {
   dataSet: DataPoint[];
   width: number;
@@ -31,6 +38,7 @@ interface LineChartProps {
   tooltipFormatter?: (
     d: DataPoint | undefined,
     dataSet?: DataPoint[],
+    type?: TValueType,
   ) => string;
   children?: React.ReactNode;
   isLoading?: boolean;
@@ -38,13 +46,6 @@ interface LineChartProps {
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
 }
-
-export const VALUE_TYPE = {
-  BASED: "based",
-  COMPARED: "compared",
-} as const;
-
-export type TValueType = (typeof VALUE_TYPE)[keyof typeof VALUE_TYPE];
 
 const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   dataSet,
@@ -67,7 +68,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     x: number;
     y: number;
     data: DataPoint;
-    type: "based" | "compared";
+    type: TValueType;
   } | null>(null);
   const {
     colorsMapping,
@@ -137,7 +138,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   const handleMouseOver = (
     d: DataPoint,
     event: React.MouseEvent<SVGRectElement, MouseEvent>,
-    type: "based" | "compared",
+    type: TValueType,
   ) => {
     if (svgRef.current) {
       const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
@@ -332,7 +333,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
               {tooltip?.data?.valueCompared}
             </div>
           )}
-          {tooltipFormatter && tooltipFormatter(tooltip?.data, dataSet)}
+          {tooltipFormatter &&
+            tooltipFormatter(tooltip?.data, dataSet, tooltip?.type)}
         </div>
       )}
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
