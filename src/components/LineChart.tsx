@@ -270,7 +270,7 @@ const LineChart: React.FC<LineChartProps> = ({
             ? totalLength - lengths[i - 1]
             : lengths[i] - lengths[i - 1];
 
-        if (!series[i]?.certainty ?? true) {
+        if (series[i]?.certainty ?? true) {
           const dashes = Math.floor(
             segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH),
           );

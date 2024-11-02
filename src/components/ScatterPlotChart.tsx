@@ -268,7 +268,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
             {dScaleLegend?.title && (
               <text
                 x={dLegendPosition.x}
-                y={dLegendPosition.y - 120 ?? 0}
+                y={dLegendPosition.y ? dLegendPosition.y - 120 : 0}
                 textAnchor={"middle"}
               >
                 {dScaleLegend?.title}
