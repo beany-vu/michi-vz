@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useRef } from "react";
+import React, { FC, useEffect, useRef, useCallback } from "react";
 import { ScaleBand } from "d3-scale";
 import * as d3 from "d3";
 
@@ -8,6 +8,7 @@ interface Props {
   margin: { top: number; right: number; bottom: number; left: number };
   yAxisFormat?: (d: number | string) => string;
   showGrid?: boolean;
+  isLoading?: boolean;
 }
 
 const YaxisBand: FC<Props> = ({
@@ -16,10 +17,11 @@ const YaxisBand: FC<Props> = ({
   margin,
   yAxisFormat,
   showGrid,
+  isLoading = false,
 }) => {
   const ref = useRef<SVGGElement>(null);
 
-  useEffect(() => {
+  const drawAxis = useCallback(() => {
     const g = d3.select(ref.current);
 
     // Add the y-axis with ticks
@@ -63,7 +65,14 @@ const YaxisBand: FC<Props> = ({
       .style("stroke", showGrid ? "lightgray" : "transparent"); // Color of the dashed line
   }, [yScale, width, margin, yAxisFormat, showGrid]);
 
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+    drawAxis();
+  }, [drawAxis]);
+
   return <g ref={ref} />;
 };
 
-export default YaxisBand;
+export default React.memo(YaxisBand);

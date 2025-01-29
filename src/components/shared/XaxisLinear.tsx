@@ -1,4 +1,11 @@
-import React, { FC, useEffect, useRef } from "react";
+import React, {
+  FC,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  Suspense,
+} from "react";
 import { ScaleTime, ScaleLinear } from "d3-scale";
 import * as d3 from "d3";
 import range from "lodash/range";
@@ -27,6 +34,8 @@ interface Props {
   ticks?: number;
   showGrid?: boolean;
   position?: "top" | "bottom";
+  tickSize?: number;
+  isLoading?: boolean;
 }
 
 const checkIsTimeScale = (
@@ -55,18 +64,69 @@ const checkIsTimeScale = (
 const XaxisLinear: FC<Props> = ({
   xScale = d3.scaleLinear().domain([0, 100]),
   height,
-  margin,
+  margin = { top: 0, right: 0, bottom: 0, left: 0 }, // Add default margin values
   xAxisFormat,
   xAxisDataType = "number",
   ticks = 5,
   showGrid = false,
   position = "bottom",
+  tickSize = 6, // Add default tick size
+  isLoading = false,
 }) => {
   const ref = useRef<SVGGElement>(null);
 
-  const isTimeScale = checkIsTimeScale(xScale, xAxisDataType);
+  const isTimeScale = useMemo(
+    () => checkIsTimeScale(xScale, xAxisDataType),
+    [xScale, xAxisDataType],
+  );
 
-  useEffect(() => {
+  const minTick = useMemo(() => {
+    return xAxisDataType === "date_annual"
+      ? d3.timeYear.floor(xScale.domain()[0] as Date)
+      : xAxisDataType === "date_monthly"
+        ? d3.timeMonth.floor(xScale.domain()[0] as Date)
+        : xScale.domain()[0];
+  }, [xScale, xAxisDataType]);
+
+  const maxTick = useMemo(() => {
+    return xAxisDataType === "date_annual"
+      ? d3.timeYear.ceil(xScale.domain()[1] as Date)
+      : xAxisDataType === "date_monthly"
+        ? d3.timeMonth.ceil(xScale.domain()[1] as Date)
+        : xScale.domain()[1];
+  }, [xScale, xAxisDataType]);
+
+  const counts = useMemo(() => {
+    return d3.timeMonth.range(minTick as Date, maxTick as Date, 1).length;
+  }, [minTick, maxTick]);
+
+  const tickValues = useMemo(() => {
+    let values: number[];
+    switch (xAxisDataType) {
+      case "date_annual":
+        values = d3.timeYear
+          .range(minTick as Date, maxTick as Date, 1)
+          .map((d) => d.valueOf());
+        break;
+      case "date_monthly":
+        values = d3.timeMonth
+          .range(minTick as Date, maxTick as Date, null)
+          .map((d) => d.valueOf());
+        break;
+      default:
+        values = d3.ticks(minTick as number, maxTick as number, 1);
+        break;
+    }
+
+    // Include zero as a tick if minTick is zero
+    if (minTick === 0) {
+      values = [0, ...(values as number[]), maxTick as number];
+    }
+
+    return values;
+  }, [xAxisDataType, minTick, maxTick]);
+
+  const drawAxis = useCallback(() => {
     const defaultFormatter = (d: number | Date) => {
       if (isTimeScale) {
         const dateObj = new Date(d);
@@ -80,52 +140,11 @@ const XaxisLinear: FC<Props> = ({
 
     const g = d3.select(ref.current);
 
-    const minTick =
-      xAxisDataType === "date_annual"
-        ? d3.timeYear.floor(xScale.domain()[0] as Date)
-        : xAxisDataType === "date_monthly"
-          ? d3.timeMonth.floor(xScale.domain()[0] as Date)
-          : xScale.domain()[0];
-
-    const maxTick =
-      xAxisDataType === "date_annual"
-        ? d3.timeYear.ceil(xScale.domain()[1] as Date)
-        : xAxisDataType === "date_monthly"
-          ? d3.timeMonth.ceil(xScale.domain()[1] as Date)
-          : xScale.domain()[1];
-
-    const counts = d3.timeMonth.range(
-      minTick as Date,
-      maxTick as Date,
-      1,
-    ).length;
-
-    let tickValues: number[];
-    switch (xAxisDataType) {
-      case "date_annual":
-        tickValues = d3.timeYear
-          .range(minTick as Date, maxTick as Date, 1)
-          .map((d) => d.valueOf());
-        break;
-      case "date_monthly":
-        tickValues = d3.timeMonth
-          .range(minTick as Date, maxTick as Date, null)
-          .map((d) => d.valueOf());
-        break;
-      default:
-        tickValues = d3.ticks(minTick as number, maxTick as number, 1);
-        break;
-    }
-
-    // Include zero as a tick if minTick is zero
-    if (minTick === 0) {
-      tickValues = [0, ...(tickValues as number[]), maxTick as number];
-    }
-
     let axisBottom: d3.Axis<d3.NumberValue>;
 
     switch (xAxisDataType) {
       case "date_annual":
+      case "date_monthly":
         axisBottom = d3
           .axisBottom(xScale)
           .tickValues(tickValues)
@@ -134,35 +153,6 @@ const XaxisLinear: FC<Props> = ({
               ? xAxisFormat(domainValue)
               : defaultFormatter(domainValue),
           );
-        break;
-      case "date_monthly":
-        if (counts > 20) {
-          axisBottom = d3
-            .axisBottom(xScale)
-            // .tickSize(20)
-            .tickValues(
-              getDatesWithEqualDistance(
-                tickValues[0],
-                tickValues[tickValues.length - 1],
-                5,
-              ),
-            )
-            .tickFormat((domainValue: number | Date) =>
-              xAxisFormat
-                ? xAxisFormat(domainValue)
-                : defaultFormatter(domainValue),
-            );
-        } else {
-          axisBottom = d3
-            .axisBottom(xScale)
-            .tickValues(tickValues)
-            .tickFormat((domainValue: number | Date) =>
-              xAxisFormat
-                ? xAxisFormat(domainValue)
-                : defaultFormatter(domainValue),
-            );
-        }
-
         break;
       default:
         axisBottom = d3
@@ -180,12 +170,13 @@ const XaxisLinear: FC<Props> = ({
       .attr(
         "style",
         position === "top"
-          ? `transform:translate(${margin.left}px, ${margin.top - 15}px)`
+          ? `transform:translate(${margin?.left ?? 0}px, ${margin.top - 15}px)`
           : `transform:translate(0,${height - margin.bottom + 15}px)`,
       )
       .call(
         d3
           .axisBottom(xScale)
+          .tickSize(tickSize) // Use the new tickSize prop
           .tickValues(tickValues)
           .tickFormat((domainValue: number | Date) =>
             xAxisFormat
@@ -216,7 +207,6 @@ const XaxisLinear: FC<Props> = ({
           ? margin.top - 15
           : -height + margin.bottom + margin.top - 15,
       ) // Adjust as needed
-      // .attr("y2", -height + margin.bottom + margin.top - 500) // Adjust as needed
       .style("stroke-dasharray", "3,3") // Set dash pattern
       .style("stroke", showGrid ? "lightgray" : "transparent"); // Color of the dashed line
 
@@ -227,9 +217,32 @@ const XaxisLinear: FC<Props> = ({
       .attr("cy", 0)
       .attr("r", 2)
       .attr("fill", "lightgray");
-  }, [xScale, height, margin, isTimeScale, xAxisFormat, xAxisDataType]);
+  }, [
+    xScale,
+    height,
+    margin,
+    isTimeScale,
+    xAxisFormat,
+    xAxisDataType,
+    showGrid,
+    position,
+    tickValues,
+    counts,
+    tickSize,
+  ]);
 
-  return <g className={"zzz"} ref={ref} />;
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+    drawAxis();
+  }, [drawAxis, isLoading]);
+
+  return (
+    <Suspense fallback={null}>
+      <g className={"x-axis-linear"} ref={ref} />
+    </Suspense>
+  );
 };
 
-export default XaxisLinear;
+export default React.memo(XaxisLinear);

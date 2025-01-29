@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useDeferredValue } from "react";
 
 export function useDisplayIsNodata<T>({
   dataSet,
@@ -11,25 +11,27 @@ export function useDisplayIsNodata<T>({
   isNodataComponent: React.ReactNode;
   isNodata?: boolean | ((dataSet: T | null | undefined) => boolean);
 }): boolean {
+  const deferredDataSet = useDeferredValue(dataSet);
+
   const displayIsNodata = useMemo(() => {
     if (!isLoading && isNodataComponent) {
       if (typeof isNodata === "function") {
-        return isNodata(dataSet);
+        return isNodata(deferredDataSet);
       }
 
       if (typeof isNodata === "boolean") {
         return isNodata;
       }
 
-      if (Array.isArray(dataSet)) {
-        return dataSet.length === 0;
+      if (Array.isArray(deferredDataSet)) {
+        return deferredDataSet.length === 0;
       }
 
       return false;
     }
 
     return false;
-  }, [isLoading, isNodataComponent, dataSet]);
+  }, [isLoading, isNodataComponent, deferredDataSet]);
 
   return displayIsNodata;
 }

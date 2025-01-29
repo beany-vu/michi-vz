@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import * as d3 from "d3";
 import styled from "styled-components";
 import range from "lodash/range";
@@ -130,40 +130,40 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     [poles?.labels],
   );
 
-  const genPolygonPoints = (
-    data: { value: number; date: string }[],
-    scale: (n: number) => number,
-  ) => {
-    const points: { x: number; y: number; date: string; value: number }[] =
-      new Array(data.length).fill({
-        x: null,
-        y: null,
-        date: null,
-        value: null,
-      });
+  const genPolygonPoints = useCallback(
+    (data: { value: number; date: string }[], scale: (n: number) => number) => {
+      const points: { x: number; y: number; date: string; value: number }[] =
+        new Array(data.length).fill({
+          x: null,
+          y: null,
+          date: null,
+          value: null,
+        });
 
-    const pointString: string = data.reduce((res, cur, i) => {
-      if (i > data.length) return res;
+      const pointString: string = data.reduce((res, cur, i) => {
+        if (i > data.length) return res;
 
-      if (!cur?.value) {
+        if (!cur?.value) {
+          return res;
+        }
+
+        // Adjusting starting angle by subtracting Math.PI / 2
+        const angle = anglesDateMapping[cur.date];
+        // Now include the center of the radar chart in your calculations.
+        const xVal = Math.round(width / 2 + scale(cur.value) * Math.sin(angle));
+        const yVal = Math.round(
+          height / 2 + scale(cur.value) * Math.cos(angle) * -1,
+        );
+
+        points[i] = { x: xVal, y: yVal, date: cur.date, value: cur.value };
+        res += `${xVal},${yVal} `;
         return res;
-      }
+      }, "");
 
-      // Adjusting starting angle by subtracting Math.PI / 2
-      const angle = anglesDateMapping[cur.date];
-      // Now include the center of the radar chart in your calculations.
-      const xVal = Math.round(width / 2 + scale(cur.value) * Math.sin(angle));
-      const yVal = Math.round(
-        height / 2 + scale(cur.value) * Math.cos(angle) * -1,
-      );
-
-      points[i] = { x: xVal, y: yVal, date: cur.date, value: cur.value };
-      res += `${xVal},${yVal} `;
-      return res;
-    }, "");
-
-    return { points, pointString };
-  };
+      return { points, pointString };
+    },
+    [anglesDateMapping, width, height],
+  );
 
   const processedSeries = series
     // sort disabled items first

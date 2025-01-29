@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  Suspense,
+} from "react";
 import * as d3 from "d3";
 import { ScaleTime } from "d3";
 import { DataPoint } from "../types/data";
@@ -224,22 +230,22 @@ const LineChart: React.FC<LineChartProps> = ({
       .range([margin.left, width - margin.right]);
   }, [dataSet, width, height, disabledItems, xAxisDataType]);
 
-  function getYValueAtX(
-    series: DataPoint[],
-    x: number | Date,
-  ): number | undefined {
-    if (x instanceof Date) {
-      const dataPoint = series.find(
-        (d) => new Date(d.date).getTime() === x.getTime(),
-      );
+  const getYValueAtX = useCallback(
+    (series: DataPoint[], x: number | Date): number | undefined => {
+      if (x instanceof Date) {
+        const dataPoint = series.find(
+          (d) => new Date(d.date).getTime() === x.getTime(),
+        );
+        return dataPoint ? dataPoint.value : undefined;
+      }
+
+      const dataPoint = series.find((d) => Number(d.date) === x);
       return dataPoint ? dataPoint.value : undefined;
-    }
+    },
+    [],
+  );
 
-    const dataPoint = series.find((d) => Number(d.date) === x);
-    return dataPoint ? dataPoint.value : undefined;
-  }
-
-  function getPathLengthAtX(path: SVGPathElement, x: number) {
+  const getPathLengthAtX = useCallback((path: SVGPathElement, x: number) => {
     const l = path.getTotalLength();
     const precision = 90;
     if (!path || path.getTotalLength() === 0) {
@@ -249,7 +255,7 @@ const LineChart: React.FC<LineChartProps> = ({
       const pos = path.getPointAtLength((l * i) / precision);
       if (pos.x >= x) return (l * i) / precision;
     }
-  }
+  }, []);
 
   const getDashArrayMemoized = useMemo(() => {
     return (
@@ -470,6 +476,11 @@ const LineChart: React.FC<LineChartProps> = ({
     disabledItems,
     xAxisDataType,
     getDashArrayMemoized,
+    xScale,
+    yScale,
+    setHighlightItems,
+    tooltipFormatter,
+    colorsMapping,
   ]);
 
   useEffect(() => {
@@ -573,58 +584,62 @@ const LineChart: React.FC<LineChartProps> = ({
   return (
     <Styled>
       <div style={{ position: "relative", width: width, height: height }}>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          ref={svgRef}
-          width={width}
-          height={height}
-          onMouseOut={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            setHighlightItems([]);
+        <Suspense fallback={null}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            ref={svgRef}
+            width={width}
+            height={height}
+            onMouseOut={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setHighlightItems([]);
 
-            if (tooltipRef?.current) {
-              tooltipRef.current.style.visibility = "hidden";
-            }
-          }}
-        >
-          {children}
-          <Title x={width / 2} y={margin.top / 2}>
-            {title}
-          </Title>
-          {dataSet.length > 0 && (
-            <>
-              <XaxisLinear
-                xScale={xScale}
-                height={height}
-                margin={margin}
-                xAxisFormat={xAxisFormat}
-                xAxisDataType={xAxisDataType}
-              />
-              <YaxisLinear
-                yScale={yScale}
-                width={width}
-                height={height}
-                margin={margin}
-                highlightZeroLine={true}
-                yAxisFormat={yAxisFormat}
-              />
-            </>
-          )}
-        </svg>
-        <div
-          ref={tooltipRef}
-          className="tooltip"
-          style={{
-            position: "absolute",
-            transition: "visibility 0.1s ease-out,opacity 0.1s ease-out",
-            transform: "translateZ(0)",
-            zIndex: 1,
-          }}
-        />
-        {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
-        {isLoading && !isLoadingComponent && <LoadingIndicator />}
-        {displayIsNodata && <>{isNodataComponent}</>}
+              if (tooltipRef?.current) {
+                tooltipRef.current.style.visibility = "hidden";
+              }
+            }}
+          >
+            {children}
+            <Title x={width / 2} y={margin.top / 2}>
+              {title}
+            </Title>
+            {dataSet.length > 0 && (
+              <>
+                <XaxisLinear
+                  xScale={xScale}
+                  height={height}
+                  margin={margin}
+                  xAxisFormat={xAxisFormat}
+                  xAxisDataType={xAxisDataType}
+                  isLoading={isLoading}
+                />
+                <YaxisLinear
+                  yScale={yScale}
+                  width={width}
+                  height={height}
+                  margin={margin}
+                  highlightZeroLine={true}
+                  yAxisFormat={yAxisFormat}
+                  isLoading={isLoading}
+                />
+              </>
+            )}
+          </svg>
+          <div
+            ref={tooltipRef}
+            className="tooltip"
+            style={{
+              position: "absolute",
+              transition: "visibility 0.1s ease-out,opacity 0.1s ease-out",
+              transform: "translateZ(0)",
+              zIndex: 1,
+            }}
+          />
+          {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
+          {isLoading && !isLoadingComponent && <LoadingIndicator />}
+          {displayIsNodata && <>{isNodataComponent}</>}
+        </Suspense>
       </div>
     </Styled>
   );

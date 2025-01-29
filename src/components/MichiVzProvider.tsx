@@ -1,4 +1,10 @@
-import React, { createContext, useState, useContext, ReactNode } from "react";
+import React, {
+  createContext,
+  useState,
+  useContext,
+  ReactNode,
+  useCallback,
+} from "react";
 
 // 1. Define the types for our context
 interface ChartContextProps {
@@ -54,21 +60,42 @@ export const MichiVzProvider: React.FC<MichiVzProps> = ({
   initialColorsBasedMapping = {},
   initialCategoryMetadata = {},
 }) => {
-  const [disabledItems, setDisabledItems] =
+  const [disabledItems, setDisabledItemsState] =
     useState<string[]>(initialDisabledItems);
-  const [highlightItems, setHighlightItems] = useState<string[]>(
+  const [highlightItems, setHighlightItemsState] = useState<string[]>(
     initialHighlightItems,
   );
-  const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>(
-    initialColorsMapping,
-  );
-  const [colorsBasedMapping, setColorsBasedMapping] = useState<{
+  const [colorsMapping, setColorsMappingState] = useState<{
+    [key: string]: string;
+  }>(initialColorsMapping);
+  const [colorsBasedMapping, setColorsBasedMappingState] = useState<{
     [key: string]: string;
   }>(initialColorsBasedMapping);
-
-  const [categoryMetadata, setCategoryMetadata] = useState<{
+  const [categoryMetadata, setCategoryMetadataState] = useState<{
     [key: string]: { color: string; label: string };
   }>(initialCategoryMetadata);
+
+  const setDisabledItems = useCallback(
+    (items: string[]) => setDisabledItemsState(items),
+    [],
+  );
+  const setHighlightItems = useCallback(
+    (items: string[]) => setHighlightItemsState(items),
+    [],
+  );
+  const setColorsMapping = useCallback(
+    (mapping: { [key: string]: string }) => setColorsMappingState(mapping),
+    [],
+  );
+  const setColorsBasedMapping = useCallback(
+    (mapping: { [key: string]: string }) => setColorsBasedMappingState(mapping),
+    [],
+  );
+  const setCategoryMetadata = useCallback(
+    (metadata: { [key: string]: { color: string; label: string } }) =>
+      setCategoryMetadataState(metadata),
+    [],
+  );
 
   return (
     <MichiVzContext.Provider

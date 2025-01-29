@@ -175,6 +175,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
           margin={margin}
           xAxisFormat={xAxisFormat}
           xAxisDataType={xAxisDataType}
+          isLoading={isLoading}
         />
         <XaxisLinear
           xScale={xAxis2Scale}
@@ -182,12 +183,14 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
           margin={margin}
           xAxisFormat={xAxisFormat}
           xAxisDataType={xAxisDataType}
+          isLoading={isLoading}
         />
         <YaxisBand
           yScale={yAxisScale}
           width={width}
           margin={margin}
           yAxisFormat={yAxisFormat}
+          isLoading={isLoading}
         />
         {dataSet
           .filter((d) => !disabledItems.includes(d.label))
