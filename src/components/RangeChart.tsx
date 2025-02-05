@@ -1,5 +1,5 @@
 // RangeChart.tsx
-import React, { useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import * as d3 from "d3";
 import { DataPointRangeChart } from "../types/data";
 import { useChartContext } from "./MichiVzProvider";
@@ -194,7 +194,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
 
   const showLine = (d: DataPointRangeChart) => d.valueMin === d.valueMax;
 
-  const showTooltip = useCallback((event: MouseEvent, content: string) => {
+  const showTooltip = (event: MouseEvent, content: string) => {
     const tooltip = tooltipRef.current;
     const [x, y] = d3.pointer(event, svgRef.current);
     if (tooltip) {
@@ -203,14 +203,14 @@ const RangeChart: React.FC<RangeChartProps> = ({
       tooltip.style.left = x + 10 + "px"; // Offset by 10 pixels to the right
       tooltip.style.top = y - window.scrollY - 10 + "px"; // Offset by 10 pixels to the top, considering scroll position
     }
-  }, []);
+  };
 
-  const hideTooltip = useCallback(() => {
+  const hideTooltip = () => {
     const tooltip = tooltipRef.current;
     if (tooltip) {
       tooltip.style.opacity = "0";
     }
-  }, []);
+  };
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -313,17 +313,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
       });
 
     // ... (existing code for axis, title, and other elements)
-  }, [
-    yScale,
-    xScale,
-    width,
-    height,
-    margin,
-    disabledItems,
-    xAxisDataType,
-    showTooltip,
-    hideTooltip,
-  ]);
+  }, [yScale, xScale, width, height, margin, disabledItems, xAxisDataType]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -331,6 +321,10 @@ const RangeChart: React.FC<RangeChartProps> = ({
 
     // ... (existing code for axis, title, and other elements)
   }, [dataSet, width, height, margin, xAxisDataType, yAxisFormat]);
+
+  useEffect(() => {
+    // ... (existing code)
+  }, [colorsMapping]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -342,6 +336,10 @@ const RangeChart: React.FC<RangeChartProps> = ({
       svg.selectAll(`.rect-hover[data-label="${item}"]`).attr("opacity", 0.8);
     });
   }, [highlightItems]);
+
+  useEffect(() => {
+    // ... (existing code)
+  }, [showCombined]);
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet: dataSet,
@@ -384,7 +382,6 @@ const RangeChart: React.FC<RangeChartProps> = ({
                 margin={margin}
                 xAxisFormat={xAxisFormat}
                 xAxisDataType={xAxisDataType}
-                isLoading={isLoading}
               />
               <YaxisLinear
                 yScale={yScale}
@@ -393,7 +390,6 @@ const RangeChart: React.FC<RangeChartProps> = ({
                 margin={margin}
                 highlightZeroLine={true}
                 yAxisFormat={yAxisFormat}
-                isLoading={isLoading}
               />
             </>
           )}

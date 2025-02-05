@@ -1,10 +1,4 @@
-import React, {
-  useMemo,
-  useRef,
-  useEffect,
-  useCallback,
-  Suspense,
-} from "react";
+import React, { useMemo, useRef, useEffect } from "react";
 import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
 import Title from "./shared/Title";
@@ -108,26 +102,16 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
-
-  const xValues = useMemo(
-    () =>
-      dataSet
-        .filter((d) => !disabledItems.includes(d.label))
-        .map((d) => d.x || 0),
-    [dataSet, disabledItems]
-  );
-
-  const yValues = useMemo(
-    () =>
-      dataSet
-        .filter((d) => !disabledItems.includes(d.label))
-        .map((d) => d.y || 0),
-    [dataSet, disabledItems]
-  );
-
-  const xDomain = useMemo(() => [0, Math.max(...xValues) || 0], [xValues]);
-
-  const yDomain = useMemo(() => [0, Math.max(...yValues) || 0], [yValues]);
+  const xValues = dataSet
+    .filter((d) => !disabledItems.includes(d.label))
+    .map((d) => d.x || 0);
+  const yValues = dataSet
+    .filter((d) => !disabledItems.includes(d.label))
+    .map((d) => d.y || 0);
+  const xDomain = [0, Math.max(...xValues) || 0];
+  const yDomain = [0, Math.max(...yValues) || 0];
+  // const radiusDomain = [16, d3.max(dataSet, (d) => d.d) || 0];
+  // radiusDomain wil·be the range from [16 to 50 px]
 
   const xScale:
     | d3.ScaleLinear<number, number>
@@ -167,16 +151,10 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     [yDomain, height, margin],
   );
 
-  const dValues = useMemo(() => dataSet.map((d) => d.d), [dataSet]);
-
-  const dMax = useMemo(() => Math.max(...dValues), [dValues]);
-  const dMin = useMemo(() => Math.min(...dValues), [dValues]);
-  // const dDomain = dMax === dMin ? [0, dMax] : [dMin, dMax];
-
-  const dDomain = useMemo(
-    () => (dMax === dMin ? [0, dMax] : [dMin, dMax]),
-    [dMin, dMax],
-  );
+  const dValues = dataSet.map((d) => d.d);
+  const dMax = Math.max(...dValues);
+  const dMin = Math.min(...dValues);
+  const dDomain = dMax === dMin ? [0, dMax] : [dMin, dMax];
 
   // dScale is scaleQuantile
   const dScale = useMemo(
@@ -184,23 +162,17 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     [dDomain, height, width, margin],
   );
 
-  const dLegendPosition = useMemo(
-    () => ({
-      x: width - 100,
-      y: height / 3,
-    }),
-    [width, height],
-  );
+  const dLegendPosition = {
+    x: width - 100,
+    y: height / 3,
+  };
 
-  const getXValue = useCallback(
-    (d: DataPoint) => {
-      const offSet = "bandwidth" in xScale ? xScale?.bandwidth() / 2 : 0;
-      return xAxisDataType === "band"
-        ? xScale(d.label as never) + offSet
-        : xScale(d.x as never);
-    },
-    [xScale, xAxisDataType],
-  );
+  const getXValue = (d: DataPoint) => {
+    const offSet = "bandwidth" in xScale ? xScale?.bandwidth() / 2 : 0;
+    return xAxisDataType === "band"
+      ? xScale(d.label as never) + offSet
+      : xScale(d.x as never);
+  };
 
   useEffect(() => {
     const svg = d3.select(ref.current);
@@ -216,40 +188,6 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     });
   }, [highlightItems]);
 
-  const handleMouseEnter = useCallback(
-    (event, d) => {
-      const [x, y] = d3.pointer(event);
-
-      setHighlightItems([d.label]);
-      if (tooltipRef.current) {
-        tooltipRef.current.style.display = "block";
-        tooltipRef.current.style.left = `${x}px`;
-        tooltipRef.current.style.top = `${y}px`;
-
-        if (tooltipFormatter) {
-          tooltipRef.current.innerHTML = tooltipFormatter(d);
-          return;
-        }
-
-        tooltipRef.current.innerHTML = `
-          <div>
-            <div>${d.label}</div>
-            <div>${xAxisFormat ? xAxisFormat(d.x) : d.x}</div>
-            <div>${yAxisFormat ? yAxisFormat(d.y) : d.y}</div>
-          </div>
-        `;
-      }
-    },
-    [setHighlightItems, tooltipFormatter, xAxisFormat, yAxisFormat],
-  );
-
-  const handleMouseLeave = useCallback(() => {
-    setHighlightItems([]);
-    if (tooltipRef.current) {
-      tooltipRef.current.style.display = "none";
-    }
-  }, [setHighlightItems]);
-
   const displayIsNodata = useDisplayIsNodata({
     dataSet: dataSet,
     isLoading: isLoading,
@@ -261,154 +199,170 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     <Styled style={{ position: "relative" }}>
       {isLoading && isLoadingComponent}
       {displayIsNodata && isNodataComponent}
-      <Suspense fallback={null}>
-        <svg width={width} height={height} ref={ref}>
-          <Title x={width / 2} y={margin.top / 2}>
-            {title}
-          </Title>
-          {children}
+      <svg width={width} height={height} ref={ref}>
+        <Title x={width / 2} y={margin.top / 2}>
+          {title}
+        </Title>
+        {children}
 
-          {orderBy(dataSet, ["d"], ["desc"])
-            .filter((d) => !disabledItems.includes(d.label))
-            .map((d, i) => (
-              <foreignObject
-                data-label={d.label}
-                opacity={0.9}
-                key={i}
-                x={getXValue(d)}
-                y={yScale(d.y)}
-                width={xAxisDataType === "band" ? d.d / 2 : dScale(d.d)}
-                height={xAxisDataType === "band" ? d.d / 2 : dScale(d.d)}
-                style={{
-                  transition: "r 0.1s ease-out, opacity 0.1s ease-out",
-                  transform: `translate(-${xAxisDataType === "band" ? d.d / 4 : dScale(d.d) / 2}px, -${xAxisDataType === "band" ? d.d / 4 : dScale(d.d) / 2}px)`,
-                }}
-                onMouseEnter={(event) => handleMouseEnter(event, d)}
-                onMouseLeave={handleMouseLeave}
-              >
-                <div
-                  style={
-                    {
-                      "--data-size": `${xAxisDataType === "band" ? d.d / 2 : dScale(d.d)}px`,
-                      "--data-background":
-                        colorsMapping?.[d.label] || d.color || "transparent",
-                    } as React.CSSProperties
+        {orderBy(dataSet, ["d"], ["desc"])
+          .filter((d) => !disabledItems.includes(d.label))
+          .map((d, i) => (
+            <foreignObject
+              data-label={d.label}
+              opacity={0.9}
+              key={i}
+              x={getXValue(d)}
+              y={yScale(d.y)}
+              width={xAxisDataType === "band" ? d.d / 2 : dScale(d.d)}
+              height={xAxisDataType === "band" ? d.d / 2 : dScale(d.d)}
+              style={{
+                transition: "r 0.1s ease-out, opacity 0.1s ease-out",
+                transform: `translate(-${xAxisDataType === "band" ? d.d / 4 : dScale(d.d) / 2}px, -${xAxisDataType === "band" ? d.d / 4 : dScale(d.d) / 2}px)`,
+              }}
+              onMouseEnter={(event) => {
+                const [x, y] = d3.pointer(event);
+
+                setHighlightItems([d.label]);
+                if (tooltipRef.current) {
+                  tooltipRef.current.style.display = "block";
+                  tooltipRef.current.style.left = `${x}px`;
+                  tooltipRef.current.style.top = `${y}px`;
+
+                  if (tooltipFormatter) {
+                    tooltipRef.current.innerHTML = tooltipFormatter(d);
+                    return;
                   }
-                  className={`shape shape-${d?.shape ? d.shape : "circle"}`}
-                ></div>
-              </foreignObject>
-            ))}
-          {!isLoading && dataSet.length && (
-            <g className="michi-vz-legend">
-              {dScaleLegendFormatter && dScaleLegendFormatter(dDomain, dScale)}
-              {dScaleLegend?.title && (
-                <text
-                  x={dLegendPosition.x}
-                  y={dLegendPosition.y - 120 ?? 0}
-                  textAnchor={"middle"}
-                >
-                  {dScaleLegend?.title}
-                </text>
+
+                  tooltipRef.current.innerHTML = `
+                  <div>
+                    <div>${d.label}</div>
+                    <div>${xAxisFormat ? xAxisFormat(d.x) : d.x}</div>
+                    <div>${yAxisFormat ? yAxisFormat(d.y) : d.y}</div>
+                  </div>
+                `;
+                }
+              }}
+              onMouseLeave={() => {
+                setHighlightItems([]);
+                if (tooltipRef.current) {
+                  tooltipRef.current.style.display = "none";
+                }
+              }}
+            >
+              <div
+                style={
+                  {
+                    "--data-size": `${xAxisDataType === "band" ? d.d / 2 : dScale(d.d)}px`,
+                    "--data-background":
+                      colorsMapping?.[d.label] || d.color || "transparent",
+                  } as React.CSSProperties
+                }
+                className={`shape shape-${d?.shape ? d.shape : "circle"}`}
+              ></div>
+            </foreignObject>
+          ))}
+        {!isLoading && dataSet.length && (
+          <g className="michi-vz-legend">
+            {dScaleLegendFormatter && dScaleLegendFormatter(dDomain, dScale)}
+            {dScaleLegend?.title && (
+              <text
+                x={dLegendPosition.x}
+                y={dLegendPosition.y - 120 ?? 0}
+                textAnchor={"middle"}
+              >
+                {dScaleLegend?.title}
+              </text>
+            )}
+            <path
+              d={drawHalfLeftCircle(
+                dLegendPosition.x,
+                dLegendPosition.y,
+                40,
+                40,
               )}
-              <path
-                d={drawHalfLeftCircle(
-                  dLegendPosition.x,
-                  dLegendPosition.y,
-                  40,
-                  40,
-                )}
-                fill={"none"}
-                stroke={"#ccc"}
-              />
-              <path
-                d={drawHalfLeftCircle(
-                  dLegendPosition.x,
-                  dLegendPosition.y,
-                  20,
-                  20,
-                )}
-                fill={"none"}
-                stroke={"#ccc"}
-              />
-              <path
-                d={drawHalfLeftCircle(
-                  dLegendPosition.x,
-                  dLegendPosition.y,
-                  8,
-                  8,
-                )}
-                fill={"none"}
-                stroke={"#ccc"}
-              />
-              <text x={dLegendPosition.x} y={dLegendPosition.y}>
-                {dScaleLegend?.valueFormatter
-                  ? dScaleLegend.valueFormatter(dScale.invert(16))
-                  : dScale.invert(16)}
-              </text>
-              <text x={dLegendPosition.x} y={dLegendPosition.y - 40}>
-                {dScaleLegend?.valueFormatter
-                  ? dScaleLegend.valueFormatter(dScale.invert(40))
-                  : dScale.invert(40)}
-              </text>
-              <text x={dLegendPosition.x} y={dLegendPosition.y - 80}>
-                {dScaleLegend?.valueFormatter
-                  ? dScaleLegend.valueFormatter(dScale.invert(80))
-                  : dScale.invert(80)}
-              </text>
-            </g>
-          )}
-          {xAxisDataType === "number" ||
-          xAxisDataType === "date_annual" ||
-          xAxisDataType === "date_monthly" ? (
-            <XaxisLinear
-              xScale={
-                xScale as
-                  | d3.ScaleLinear<number, number>
-                  | d3.ScaleTime<number, number>
-              }
-              height={height}
-              margin={margin}
-              xAxisFormat={xAxisFormat}
-              xAxisDataType={xAxisDataType}
-              ticks={5}
-              showGrid={showGrid?.x || false}
-              isLoading={isLoading}
+              fill={"none"}
+              stroke={"#ccc"}
             />
-          ) : (
-            <XaxisBand
-              xScale={xScale as d3.ScaleBand<string>}
-              height={height}
-              margin={margin}
-              xAxisFormat={xAxisFormat}
-              isLoading={isLoading} 
+            <path
+              d={drawHalfLeftCircle(
+                dLegendPosition.x,
+                dLegendPosition.y,
+                20,
+                20,
+              )}
+              fill={"none"}
+              stroke={"#ccc"}
             />
-          )}
-          <YaxisLinear
-            yScale={yScale}
-            width={width}
+            <path
+              d={drawHalfLeftCircle(dLegendPosition.x, dLegendPosition.y, 8, 8)}
+              fill={"none"}
+              stroke={"#ccc"}
+            />
+            <text x={dLegendPosition.x} y={dLegendPosition.y}>
+              {dScaleLegend?.valueFormatter
+                ? dScaleLegend.valueFormatter(dScale.invert(16))
+                : dScale.invert(16)}
+            </text>
+            <text x={dLegendPosition.x} y={dLegendPosition.y - 40}>
+              {dScaleLegend?.valueFormatter
+                ? dScaleLegend.valueFormatter(dScale.invert(40))
+                : dScale.invert(40)}
+            </text>
+            <text x={dLegendPosition.x} y={dLegendPosition.y - 80}>
+              {dScaleLegend?.valueFormatter
+                ? dScaleLegend.valueFormatter(dScale.invert(80))
+                : dScale.invert(80)}
+            </text>
+          </g>
+        )}
+        {xAxisDataType === "number" ||
+        xAxisDataType === "date_annual" ||
+        xAxisDataType === "date_monthly" ? (
+          <XaxisLinear
+            xScale={
+              xScale as
+                | d3.ScaleLinear<number, number>
+                | d3.ScaleTime<number, number>
+            }
             height={height}
             margin={margin}
-            yAxisFormat={yAxisFormat}
-            yTicksQty={yTicksQty}
-            isLoading={isLoading}
+            xAxisFormat={xAxisFormat}
+            xAxisDataType={xAxisDataType}
+            ticks={5}
+            showGrid={showGrid?.x || false}
           />
-        </svg>
-
-        <div
-          ref={tooltipRef}
-          className="tooltip"
-          style={{
-            position: "absolute",
-            display: "none",
-            padding: "10px",
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
-            color: "white",
-            borderRadius: "5px",
-            pointerEvents: "none",
-            zIndex: 1000,
-          }}
+        ) : (
+          <XaxisBand
+            xScale={xScale as d3.ScaleBand<string>}
+            height={height}
+            margin={margin}
+            xAxisFormat={xAxisFormat}
+          />
+        )}
+        <YaxisLinear
+          yScale={yScale}
+          width={width}
+          height={height}
+          margin={margin}
+          yAxisFormat={yAxisFormat}
+          yTicksQty={yTicksQty}
         />
-      </Suspense>
+      </svg>
+      <div
+        ref={tooltipRef}
+        className="tooltip"
+        style={{
+          position: "absolute",
+          display: "none",
+          padding: "10px",
+          backgroundColor: "rgba(0, 0, 0, 0.6)",
+          color: "white",
+          borderRadius: "5px",
+          pointerEvents: "none",
+          zIndex: 1000,
+        }}
+      />
     </Styled>
   );
 };

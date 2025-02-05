@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, Suspense } from "react";
+import React, { useMemo, useRef } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import XaxisBand from "./shared/XaxisBand";
@@ -259,155 +259,146 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
   return (
     <div style={{ position: "relative" }}>
-      <Suspense fallback={null}>
-        <div
-          className={"tooltip"}
-          style={{
-            position: "absolute",
-            background: "white",
-            padding: "5px",
-            pointerEvents: "none",
-            zIndex: 1000,
-            visibility: "hidden",
-          }}
-        />
+      <div
+        className={"tooltip"}
+        style={{
+          position: "absolute",
+          background: "white",
+          padding: "5px",
+          pointerEvents: "none",
+          zIndex: 1000,
+          visibility: "hidden",
+        }}
+      />
 
-        <svg
-          className={"chart"}
-          ref={ref}
+      <svg
+        className={"chart"}
+        ref={ref}
+        width={width}
+        height={height}
+        style={{ overflow: "visible" }}
+        onMouseOut={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setHighlightItems([]);
+          d3.select(".tooltip").style("visibility", "hidden");
+        }}
+      >
+        {children}
+        <Title x={width / 2} y={MARGIN.top / 2}>
+          {title}
+        </Title>
+        <XaxisBand
+          xScale={xScale}
+          height={height}
+          margin={margin}
+          xAxisFormat={xAxisFormat}
+        />
+        <YaxisLinear
+          yScale={yScale}
           width={width}
           height={height}
-          style={{ overflow: "visible" }}
-          onMouseOut={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            setHighlightItems([]);
-            d3.select(".tooltip").style("visibility", "hidden");
-          }}
-        >
-          {children}
-          <Title x={width / 2} y={MARGIN.top / 2}>
-            {title}
-          </Title>
-          <XaxisBand
-            xScale={xScale}
-            height={height}
-            margin={margin}
-            xAxisFormat={xAxisFormat}
-            isLoading={isLoading}
-          />
-          <YaxisLinear
-            yScale={yScale}
-            width={width}
-            height={height}
-            margin={margin}
-            highlightZeroLine={true}
-            yAxisFormat={yAxisFormat}
-            isLoading={isLoading}
-          />
-          <g>
-            {keys.map((key) => {
-              return (
-                <g key={key}>
-                  {stackedRectData[key] &&
-                    stackedRectData[key].map((d: RectData, i: number) => {
-                      return (
-                        <React.Fragment key={`item-${i}`}>
-                          <rect
-                            x={d.x}
-                            y={d.y}
-                            width={d.width}
-                            height={d.height}
-                            fill={
-                              colorCallbackFn?.(key, d) ??
-                              d.fill ??
-                              "transparent"
-                            }
-                            rx={2}
-                            stroke={"#fff"}
-                            className={`bar`}
-                            opacity={
-                              highlightItems.length === 0 ||
-                              highlightItems.includes(key)
-                                ? 1
-                                : 0.2
-                            }
-                            ref={(node) => {
-                              if (node) {
-                                d3.select(node)
-                                  .on("mouseover", function () {
-                                    setHighlightItems([key]);
-                                    d3.select(".tooltip")
-                                      .style("visibility", "visible")
-                                      .html(
-                                        generateTooltipContent(
-                                          d.key,
-                                          d.seriesKey,
-                                          d.data,
-                                          stackedRectData[key]
-                                            .filter(
-                                              (item) =>
-                                                item.seriesKey === d.seriesKey,
-                                            )
-                                            .map((item) => ({
-                                              label: item.key,
-                                              value: item.value ?? null,
-                                              date: item.date,
-                                            })) as unknown as DataPoint[],
-                                        ),
-                                      ); // you can define this function or inline its logic
-                                  })
-                                  .on("mousemove", function (event) {
-                                    const [x, y] = d3.pointer(event);
-                                    const tooltip = d3
-                                      .select(".tooltip")
-                                      .node() as HTMLElement;
-                                    const tooltipWidth =
-                                      tooltip.getBoundingClientRect().width;
-                                    const tooltipHeight =
-                                      tooltip.getBoundingClientRect().height;
+          margin={margin}
+          highlightZeroLine={true}
+          yAxisFormat={yAxisFormat}
+        />
+        <g>
+          {keys.map((key) => {
+            return (
+              <g key={key}>
+                {stackedRectData[key] &&
+                  stackedRectData[key].map((d: RectData, i: number) => {
+                    return (
+                      <React.Fragment key={`item-${i}`}>
+                        <rect
+                          x={d.x}
+                          y={d.y}
+                          width={d.width}
+                          height={d.height}
+                          fill={
+                            colorCallbackFn?.(key, d) ?? d.fill ?? "transparent"
+                          }
+                          rx={2}
+                          stroke={"#fff"}
+                          className={`bar`}
+                          opacity={
+                            highlightItems.length === 0 ||
+                            highlightItems.includes(key)
+                              ? 1
+                              : 0.2
+                          }
+                          ref={(node) => {
+                            if (node) {
+                              d3.select(node)
+                                .on("mouseover", function () {
+                                  setHighlightItems([key]);
+                                  d3.select(".tooltip")
+                                    .style("visibility", "visible")
+                                    .html(
+                                      generateTooltipContent(
+                                        d.key,
+                                        d.seriesKey,
+                                        d.data,
+                                        stackedRectData[key]
+                                          .filter(
+                                            (item) =>
+                                              item.seriesKey === d.seriesKey,
+                                          )
+                                          .map((item) => ({
+                                            label: item.key,
+                                            value: item.value ?? null,
+                                            date: item.date,
+                                          })) as unknown as DataPoint[],
+                                      ),
+                                    ); // you can define this function or inline its logic
+                                })
+                                .on("mousemove", function (event) {
+                                  const [x, y] = d3.pointer(event);
+                                  const tooltip = d3
+                                    .select(".tooltip")
+                                    .node() as HTMLElement;
+                                  const tooltipWidth =
+                                    tooltip.getBoundingClientRect().width;
+                                  const tooltipHeight =
+                                    tooltip.getBoundingClientRect().height;
 
-                                    d3.select(".tooltip")
-                                      .style(
-                                        "left",
-                                        x - tooltipWidth / 2 + "px",
-                                      )
-                                      .style(
-                                        "top",
-                                        y - tooltipHeight - 10 + "px",
-                                      );
-                                  })
-                                  .on("mouseout", function () {
-                                    setHighlightItems([]);
-                                    d3.select(".tooltip").style(
-                                      "visibility",
-                                      "hidden",
+                                  d3.select(".tooltip")
+                                    .style("left", x - tooltipWidth / 2 + "px")
+                                    .style(
+                                      "top",
+                                      y - tooltipHeight - 10 + "px",
                                     );
-                                  });
-                              }
-                            }}
-                          />
-                          {d.seriesKeyAbbreviation && (
-                            <text
-                              x={d.x + d.width / 2}
-                              y={height - margin.bottom + 15}
-                              textAnchor="middle"
-                              fontSize="12"
-                              fill="#000"
-                              className={"x-axis-label"}
-                            >
-                              <tspan>{d.seriesKeyAbbreviation}</tspan>
-                            </text>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                </g>
-              );
-            })}
-          </g>
-        </svg>
-      </Suspense>
+                                })
+                                .on("mouseout", function () {
+                                  setHighlightItems([]);
+                                  d3.select(".tooltip").style(
+                                    "visibility",
+                                    "hidden",
+                                  );
+                                });
+                            }
+                          }}
+                        />
+                        {d.seriesKeyAbbreviation && (
+                          <text
+                            x={d.x + d.width / 2}
+                            y={height - margin.bottom + 15}
+                            textAnchor="middle"
+                            fontSize="12"
+                            fill="#000"
+                            className={"x-axis-label"}
+                          >
+                            <tspan>{d.seriesKeyAbbreviation}</tspan>
+                          </text>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+              </g>
+            );
+          })}
+        </g>
+      </svg>
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
       {displayIsNodata && <>{isNodataComponent}</>}

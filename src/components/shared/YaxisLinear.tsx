@@ -10,7 +10,6 @@ interface Props {
   margin: { top: number; right: number; bottom: number; left: number };
   yAxisFormat?: (d: number) => string;
   yTicksQty?: number;
-  isLoading?: boolean;
 }
 
 const YaxisLinear: FC<Props> = ({
@@ -21,15 +20,9 @@ const YaxisLinear: FC<Props> = ({
   margin,
   yTicksQty,
   yAxisFormat,
-  isLoading = false,
 }) => {
   const ref = useRef<SVGGElement>(null);
-
   useEffect(() => {
-    if (isLoading) {
-      return;
-    }
-
     const g = d3.select(ref.current);
 
     const yAxis = d3
@@ -66,7 +59,7 @@ const YaxisLinear: FC<Props> = ({
             }
           }),
       );
-  }, [yScale, width, height, margin, highlightZeroLine, isLoading]);
+  }, [yScale, width, height, margin, highlightZeroLine]);
 
   return <g ref={ref}></g>;
 };

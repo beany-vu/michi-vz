@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useRef, useCallback } from "react";
+import React, { FC, useEffect, useRef } from "react";
 import { ScaleBand } from "d3-scale";
 import * as d3 from "d3";
 
@@ -7,19 +7,12 @@ interface Props {
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
   xAxisFormat?: (d: string | number) => string;
-  isLoading?: boolean;
 }
 
-const XaxisBand: FC<Props> = ({
-  xScale,
-  height,
-  margin,
-  xAxisFormat,
-  isLoading = false,
-}) => {
+const XaxisBand: FC<Props> = ({ xScale, height, margin, xAxisFormat }) => {
   const ref = useRef<SVGGElement>(null);
 
-  const drawAxis = useCallback(() => {
+  useEffect(() => {
     const g = d3.select(ref.current);
     if (g) {
       // Define default formatter
@@ -79,14 +72,7 @@ const XaxisBand: FC<Props> = ({
     }
   }, [xScale, height, margin, xAxisFormat]);
 
-  useEffect(() => {
-    if (isLoading) {
-      return;
-    }
-    drawAxis();
-  }, [drawAxis]);
-
   return <g ref={ref} className={"x-axis x-axis-band"} />;
 };
 
-export default React.memo(XaxisBand);
+export default XaxisBand;

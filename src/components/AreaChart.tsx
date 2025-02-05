@@ -1,11 +1,4 @@
-import React, {
-  Fragment,
-  useMemo,
-  useRef,
-  useState,
-  useCallback,
-  Suspense,
-} from "react";
+import React, { Fragment, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
@@ -163,22 +156,19 @@ const AreaChart: React.FC<Props> = ({
     .y1((d) => yScale(d[1]))
     .curve(d3.curveMonotoneX);
 
-  const handleAreaSegmentHover = useCallback(
-    (dataPoint: DataPoint, key: string) => {
-      if (tooltipFormatter) {
-        return tooltipFormatter(dataPoint, series, key);
-      }
+  const handleAreaSegmentHover = (dataPoint: DataPoint, key: string) => {
+    if (tooltipFormatter) {
+      return tooltipFormatter(dataPoint, series, key);
+    }
 
-      return `
+    return `
         <div style="background: #fff; padding: 5px">
             <p>${dataPoint.date}</p>
             <p style="color:${colorsMapping[key]}">${key}: ${
               dataPoint[key] ?? "N/A"
             }</p>
         </div>`;
-    },
-    [tooltipFormatter, series, colorsMapping],
-  );
+  };
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet: series,
@@ -189,169 +179,162 @@ const AreaChart: React.FC<Props> = ({
 
   return (
     <div style={{ position: "relative" }}>
-      <Suspense fallback={null}>
-        <div
-          className={"tooltip"}
-          style={{
-            position: "absolute",
-            background: "white",
-            padding: "5px",
-            pointerEvents: "none",
-            zIndex: 1000,
-            visibility: "hidden", // Initially hidden
-          }}
-        />
+      <div
+        className={"tooltip"}
+        style={{
+          position: "absolute",
+          background: "white",
+          padding: "5px",
+          pointerEvents: "none",
+          zIndex: 1000,
+          visibility: "hidden", // Initially hidden
+        }}
+      />
 
-        <svg
-          className={"chart"}
-          ref={ref}
+      <svg
+        className={"chart"}
+        ref={ref}
+        width={width}
+        height={height}
+        style={{ overflow: "visible" }}
+        onMouseOut={() => {
+          d3.select(".tooltip").style("visibility", "hidden");
+          setHighlightItems([]);
+        }}
+      >
+        {children}
+        <Title x={width / 2} y={MARGIN.top / 2}>
+          {title}
+        </Title>
+        <XaxisLinear
+          xScale={xScale}
+          height={height}
+          margin={margin}
+          xAxisFormat={xAxisFormat}
+          xAxisDataType={xAxisDataType}
+        />
+        <YaxisLinear
+          yScale={yScale}
           width={width}
           height={height}
-          style={{ overflow: "visible" }}
-          onMouseOut={() => {
-            d3.select(".tooltip").style("visibility", "hidden");
-            setHighlightItems([]);
-          }}
-        >
-          {children}
-          <Title x={width / 2} y={MARGIN.top / 2}>
-            {title}
-          </Title>
-          <XaxisLinear
-            xScale={xScale}
-            height={height}
-            margin={margin}
-            xAxisFormat={xAxisFormat}
-            xAxisDataType={xAxisDataType}
-            isLoading={isLoading}
-          />
-          <YaxisLinear
-            yScale={yScale}
-            width={width}
-            height={height}
-            margin={margin}
-            highlightZeroLine={true}
-            yAxisFormat={yAxisFormat}
-            isLoading={isLoading}
-          />
-          <g>
-            {prepareAreaData().map((areaData) => (
-              <Fragment key={areaData.key}>
-                <path
-                  d={areaGenerator(areaData.values)}
-                  fill={areaData.fill}
-                  stroke={"#fff"}
-                  strokeWidth={1}
-                  opacity={
-                    highlightItems.length === 0 ||
-                    highlightItems.includes(areaData.key)
-                      ? 1
-                      : 0.2
+          margin={margin}
+          highlightZeroLine={true}
+          yAxisFormat={yAxisFormat}
+        />
+        <g>
+          {prepareAreaData().map((areaData) => (
+            <Fragment key={areaData.key}>
+              <path
+                d={areaGenerator(areaData.values)}
+                fill={areaData.fill}
+                stroke={"#fff"}
+                strokeWidth={1}
+                opacity={
+                  highlightItems.length === 0 ||
+                  highlightItems.includes(areaData.key)
+                    ? 1
+                    : 0.2
+                }
+                style={{ transition: "opacity 0.1s ease-out" }}
+                onMouseMove={() => {
+                  setHighlightItems([areaData.key]);
+                }}
+                onMouseOut={() => {
+                  setHighlightItems([]);
+                }}
+              />
+              {/* Here's the addition*/}
+              {areaData.values.map((dataPoint) => (
+                <rect
+                  key={`${areaData.key}-${dataPoint.data.date}`}
+                  x={
+                    xScale(
+                      xAxisDataType === "number"
+                        ? dataPoint.data.date
+                        : new Date(dataPoint.data.date),
+                    ) - 2
                   }
-                  style={{ transition: "opacity 0.1s ease-out" }}
-                  onMouseMove={() => {
+                  y={yScale(dataPoint[1])} // Start from top of the area segment
+                  width={4}
+                  strokeWidth={1}
+                  rx={3}
+                  ry={3}
+                  stroke={"#ccc"}
+                  height={yScale(dataPoint[0]) - yScale(dataPoint[1])} // Height of the area segment
+                  fill="#fff"
+                  opacity={highlightItems.includes(areaData.key) ? 0.5 : 0}
+                  onMouseEnter={(event) => {
                     setHighlightItems([areaData.key]);
+                    d3.select(".tooltip")
+                      .style("visibility", "visible")
+                      .html(
+                        handleAreaSegmentHover(dataPoint.data, areaData.key),
+                      );
+
+                    const [x, y] = d3.pointer(event);
+                    const tooltip = d3.select(".tooltip").node() as HTMLElement;
+                    const tooltipWidth = tooltip.getBoundingClientRect().width;
+                    const tooltipHeight =
+                      tooltip.getBoundingClientRect().height;
+                    d3.select(".tooltip")
+                      .style("left", x - tooltipWidth / 2 + "px")
+                      .style("top", y - tooltipHeight - 10 + "px");
                   }}
                   onMouseOut={() => {
-                    setHighlightItems([]);
+                    d3.select(".tooltip").style("visibility", "hidden");
                   }}
                 />
-                {/* Here's the addition*/}
-                {areaData.values.map((dataPoint) => (
-                  <rect
-                    key={`${areaData.key}-${dataPoint.data.date}`}
-                    x={
-                      xScale(
-                        xAxisDataType === "number"
-                          ? dataPoint.data.date
-                          : new Date(dataPoint.data.date),
-                      ) - 2
-                    }
-                    y={yScale(dataPoint[1])} // Start from top of the area segment
-                    width={4}
-                    strokeWidth={1}
-                    rx={3}
-                    ry={3}
-                    stroke={"#ccc"}
-                    height={yScale(dataPoint[0]) - yScale(dataPoint[1])} // Height of the area segment
-                    fill="#fff"
-                    opacity={highlightItems.includes(areaData.key) ? 0.5 : 0}
-                    onMouseEnter={(event) => {
-                      setHighlightItems([areaData.key]);
-                      d3.select(".tooltip")
-                        .style("visibility", "visible")
-                        .html(
-                          handleAreaSegmentHover(dataPoint.data, areaData.key),
-                        );
+              ))}
+              {hoveredDate !== null && (
+                <line
+                  className={"hover-line"}
+                  x1={xScale(hoveredDate)}
+                  x2={xScale(hoveredDate)}
+                  y1={margin.top}
+                  y2={height - margin.bottom}
+                  stroke={"#666"}
+                  strokeWidth={1}
+                  pointerEvents="none"
+                />
+              )}
+            </Fragment>
+          ))}
+        </g>
+        {/*<g className="hover-overlays" style={{pointerEvents: "none"}}>*/}
+        {/*    {series.map((dataPoint, i) => (*/}
+        {/*        <rect*/}
+        {/*            key={i}*/}
+        {/*            x={xScale(dataPoint.date) - rectWidth / 2}*/}
+        {/*            y={margin.top}*/}
+        {/*            width={rectWidth}*/}
+        {/*            height={height - margin.bottom - margin.top}*/}
+        {/*            fill="transparent"*/}
+        {/*            pointerEvents="all"*/}
+        {/*            onMouseOver={() => {*/}
+        {/*                const hoveredDate = dataPoint.date;*/}
+        {/*                setHoveredDate(hoveredDate);*/}
 
-                      const [x, y] = d3.pointer(event);
-                      const tooltip = d3
-                        .select(".tooltip")
-                        .node() as HTMLElement;
-                      const tooltipWidth =
-                        tooltip.getBoundingClientRect().width;
-                      const tooltipHeight =
-                        tooltip.getBoundingClientRect().height;
-                      d3.select(".tooltip")
-                        .style("left", x - tooltipWidth / 2 + "px")
-                        .style("top", y - tooltipHeight - 10 + "px");
-                    }}
-                    onMouseOut={() => {
-                      d3.select(".tooltip").style("visibility", "hidden");
-                    }}
-                  />
-                ))}
-                {hoveredDate !== null && (
-                  <line
-                    className={"hover-line"}
-                    x1={xScale(hoveredDate)}
-                    x2={xScale(hoveredDate)}
-                    y1={margin.top}
-                    y2={height - margin.bottom}
-                    stroke={"#666"}
-                    strokeWidth={1}
-                    pointerEvents="none"
-                  />
-                )}
-              </Fragment>
-            ))}
-          </g>
-          {/*<g className="hover-overlays" style={{pointerEvents: "none"}}>*/}
-          {/*    {series.map((dataPoint, i) => (*/}
-          {/*        <rect*/}
-          {/*            key={i}*/}
-          {/*            x={xScale(dataPoint.date) - rectWidth / 2}*/}
-          {/*            y={margin.top}*/}
-          {/*            width={rectWidth}*/}
-          {/*            height={height - margin.bottom - margin.top}*/}
-          {/*            fill="transparent"*/}
-          {/*            pointerEvents="all"*/}
-          {/*            onMouseOver={() => {*/}
-          {/*                const hoveredDate = dataPoint.date;*/}
-          {/*                setHoveredDate(hoveredDate);*/}
-
-          {/*                d3.select(".tooltip")*/}
-          {/*                    .style("visibility", "visible")*/}
-          {/*                    .html(generateTooltipContentForYear(Number(hoveredDate)));*/}
-          {/*            }}*/}
-          {/*            onMouseMove={(event) => {*/}
-          {/*                const [x, y] = d3.pointer(event);*/}
-          {/*                const tooltip = d3.select(".tooltip").node() as HTMLElement;*/}
-          {/*                const tooltipWidth = tooltip.getBoundingClientRect().width;*/}
-          {/*                const tooltipHeight = tooltip.getBoundingClientRect().height;*/}
-          {/*                d3.select(".tooltip")*/}
-          {/*                    .style("left", (x - tooltipWidth / 2) + "px")*/}
-          {/*                    .style("top", (y - tooltipHeight - 10) + "px");*/}
-          {/*            }}*/}
-          {/*            onMouseOut={() => {*/}
-          {/*                setHoveredDate(null);*/}
-          {/*                d3.select(".tooltip").style("visibility", "hidden");*/}
-          {/*            }}*/}
-          {/*        />*/}
-          {/*    ))}*/}
-          {/*</g>*/}
-        </svg>
-      </Suspense>
+        {/*                d3.select(".tooltip")*/}
+        {/*                    .style("visibility", "visible")*/}
+        {/*                    .html(generateTooltipContentForYear(Number(hoveredDate)));*/}
+        {/*            }}*/}
+        {/*            onMouseMove={(event) => {*/}
+        {/*                const [x, y] = d3.pointer(event);*/}
+        {/*                const tooltip = d3.select(".tooltip").node() as HTMLElement;*/}
+        {/*                const tooltipWidth = tooltip.getBoundingClientRect().width;*/}
+        {/*                const tooltipHeight = tooltip.getBoundingClientRect().height;*/}
+        {/*                d3.select(".tooltip")*/}
+        {/*                    .style("left", (x - tooltipWidth / 2) + "px")*/}
+        {/*                    .style("top", (y - tooltipHeight - 10) + "px");*/}
+        {/*            }}*/}
+        {/*            onMouseOut={() => {*/}
+        {/*                setHoveredDate(null);*/}
+        {/*                d3.select(".tooltip").style("visibility", "hidden");*/}
+        {/*            }}*/}
+        {/*        />*/}
+        {/*    ))}*/}
+        {/*</g>*/}
+      </svg>
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
       {displayIsNodata && <>{isNodataComponent}</>}

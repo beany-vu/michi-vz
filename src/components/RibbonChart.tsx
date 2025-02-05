@@ -202,7 +202,6 @@ const RibbonChart: React.FC<Props> = ({
           height={height}
           margin={margin}
           xAxisFormat={xAxisFormat}
-          isLoading={isLoading}
         />
         <YaxisLinear
           yScale={yScale}
@@ -211,7 +210,6 @@ const RibbonChart: React.FC<Props> = ({
           margin={margin}
           highlightZeroLine={true}
           yAxisFormat={yAxisFormat}
-          isLoading={isLoading}
         />
         <g>
           {keys
