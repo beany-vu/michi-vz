@@ -29,7 +29,7 @@ interface BarBellChartProps {
   tooltipFormat?: (
     d: DataPoint,
     currentKey: string,
-    currentValue: string | number,
+    currentValue: string | number
   ) => string;
   showGrid?: { x: boolean; y: boolean };
   children?: React.ReactNode;
@@ -62,7 +62,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     d: DataPoint,
     currentKey: string,
     currentValue: string | number,
-    event: React.MouseEvent<SVGRectElement | SVGCircleElement | HTMLDivElement>,
+    event: React.MouseEvent<SVGRectElement | SVGCircleElement | HTMLDivElement>
   ) => {
     event.preventDefault();
     event.stopPropagation();
@@ -92,18 +92,18 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     }
   };
 
-  const yValues = dataSet.map((d) => d.date).map((date) => date);
+  const yValues = dataSet.map(d => d.date).map(date => date);
 
   const yScale = scaleBand()
     .domain(
-      yValues.map((value) => {
+      yValues.map(value => {
         return `${value}`;
-      }),
+      })
     )
     .range([margin.top + 20, height - margin.bottom]);
 
   // xValues is the sum of all values which their key is not "date"
-  const xValues = dataSet.map((d) => {
+  const xValues = dataSet.map(d => {
     let sum = 0;
     for (const key in d) {
       if (key !== "date" && disabledItems.includes(key) === false) {
@@ -126,7 +126,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     if (highlightItems.length > 0) {
       svg.selectAll(".bar-data").style("opacity", 0.1);
       svg.selectAll(".bar-data-point-shape").style("opacity", 0.1);
-      highlightItems.forEach((item) => {
+      highlightItems.forEach(item => {
         svg.selectAll(`[data-label="${item}"]`).style("opacity", 0.9);
       });
     } else {
@@ -179,7 +179,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
           return (
             <g key={`group-line-${i}`} className={`group-line group-line-${i}`}>
               {keys
-                .filter((key) => !disabledItems.includes(key))
+                .filter(key => !disabledItems.includes(key))
                 .map((key, j) => {
                   const value = d[key];
                   const x = cumulativeX; // Use cumulativeX as the starting point for each rectangle
@@ -215,7 +215,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                             transition: "all 0.1s ease-out",
                             opacity: disabledItems.includes(key) ? 0.1 : 0.9,
                           }}
-                          onMouseEnter={(event) => {
+                          onMouseEnter={event => {
                             setHighlightItems([key]);
                             generateTooltip(d, key, value, event);
                           }}
@@ -242,7 +242,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                             data-color={colorsMapping?.[key]}
                             className={`bar-data-point-shape ${value === 0 ? "data-value-zero" : ""}`}
                             style={shapeStyle}
-                            onMouseEnter={(event) => {
+                            onMouseEnter={event => {
                               setHighlightItems([key]);
                               generateTooltip(d, key, value, event);
                             }}

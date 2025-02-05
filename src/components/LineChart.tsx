@@ -97,7 +97,7 @@ interface LineChartProps {
       color: string;
       shape?: "circle" | "square" | "triangle";
       series: DataPoint[];
-    }[],
+    }[]
   ) => string;
   showCombined?: boolean;
   children?: React.ReactNode;
@@ -111,7 +111,7 @@ interface LineChartProps {
           label: string;
           color: string;
           series: DataPoint[];
-        }[],
+        }[]
       ) => boolean);
 }
 
@@ -149,26 +149,26 @@ const LineChart: React.FC<LineChartProps> = ({
             : [
                 d3.min(
                   dataSet
-                    .filter((d) => !disabledItems.includes(d.label))
+                    .filter(d => !disabledItems.includes(d.label))
                     .flatMap(({ series }) =>
-                      series.filter((dd) => dd.value !== null),
+                      series.filter(dd => dd.value !== null)
                     ),
-                  (d) => d.value,
+                  d => d.value
                 ) || 0,
                 d3.max(
                   dataSet
-                    .filter((d) => !disabledItems.includes(d.label))
+                    .filter(d => !disabledItems.includes(d.label))
                     .flatMap(({ series }) =>
-                      series.filter((dd) => dd.value !== null),
+                      series.filter(dd => dd.value !== null)
                     ),
-                  (d) => d.value,
+                  d => d.value
                 ) || 1,
-              ],
+              ]
         )
         .range([height - margin.bottom, margin.top])
         .clamp(true)
         .nice(),
-    [dataSet, width, height, disabledItems, yAxisDomain],
+    [dataSet, width, height, disabledItems, yAxisDomain]
   );
 
   const xScale = useMemo(() => {
@@ -178,13 +178,13 @@ const LineChart: React.FC<LineChartProps> = ({
         .domain([
           d3.min(
             dataSet
-              .filter((d) => !disabledItems.includes(d.label))
-              .flatMap((item) => item.series.map((d) => d.date as number)),
+              .filter(d => !disabledItems.includes(d.label))
+              .flatMap(item => item.series.map(d => d.date as number))
           ) || 0,
           d3.max(
             dataSet
-              .filter((d) => !disabledItems.includes(d.label))
-              .flatMap((item) => item.series.map((d) => d.date as number)),
+              .filter(d => !disabledItems.includes(d.label))
+              .flatMap(item => item.series.map(d => d.date as number))
           ) || 1,
         ])
         .range([margin.left, width - margin.right])
@@ -195,14 +195,12 @@ const LineChart: React.FC<LineChartProps> = ({
     if (xAxisDataType === "date_annual") {
       // sometimes the first tick is missing, so do a hack here
       const minDate = d3.min(
-        dataSet.flatMap((item) =>
-          item.series.map((d) => new Date(`${d.date}-01-01`)),
-        ),
+        dataSet.flatMap(item =>
+          item.series.map(d => new Date(`${d.date}-01-01`))
+        )
       );
       const maxDate = d3.max(
-        dataSet.flatMap((item) =>
-          item.series.map((d) => new Date(`${d.date}`)),
-        ),
+        dataSet.flatMap(item => item.series.map(d => new Date(`${d.date}`)))
       );
 
       return d3
@@ -212,10 +210,10 @@ const LineChart: React.FC<LineChartProps> = ({
     }
 
     const minDate = d3.min(
-      dataSet.flatMap((item) => item.series.map((d) => new Date(d.date))),
+      dataSet.flatMap(item => item.series.map(d => new Date(d.date)))
     );
     const maxDate = d3.max(
-      dataSet.flatMap((item) => item.series.map((d) => new Date(d.date))),
+      dataSet.flatMap(item => item.series.map(d => new Date(d.date)))
     );
 
     return d3
@@ -226,16 +224,16 @@ const LineChart: React.FC<LineChartProps> = ({
 
   function getYValueAtX(
     series: DataPoint[],
-    x: number | Date,
+    x: number | Date
   ): number | undefined {
     if (x instanceof Date) {
       const dataPoint = series.find(
-        (d) => new Date(d.date).getTime() === x.getTime(),
+        d => new Date(d.date).getTime() === x.getTime()
       );
       return dataPoint ? dataPoint.value : undefined;
     }
 
-    const dataPoint = series.find((d) => Number(d.date) === x);
+    const dataPoint = series.find(d => Number(d.date) === x);
     return dataPoint ? dataPoint.value : undefined;
   }
 
@@ -255,11 +253,11 @@ const LineChart: React.FC<LineChartProps> = ({
     return (
       series: DataPoint[],
       pathNode: SVGPathElement,
-      xScale: ScaleLinear<number, number> | ScaleTime<number, number>,
+      xScale: ScaleLinear<number, number> | ScaleTime<number, number>
     ) => {
       const totalLength = pathNode.getTotalLength();
-      const lengths = series.map((d) =>
-        getPathLengthAtX(pathNode, xScale(new Date(d.date))),
+      const lengths = series.map(d =>
+        getPathLengthAtX(pathNode, xScale(new Date(d.date)))
       );
 
       const dashArray = [];
@@ -270,13 +268,13 @@ const LineChart: React.FC<LineChartProps> = ({
             ? totalLength - lengths[i - 1]
             : lengths[i] - lengths[i - 1];
 
-        if (!series[i]?.certainty ?? true) {
+        if (!series[i]?.certainty) {
           const dashes = Math.floor(
-            segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH),
+            segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH)
           );
           const remainder =
             Math.ceil(
-              segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH),
+              segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH)
             ) + 5;
 
           for (let j = 0; j < dashes; j++) {
@@ -310,14 +308,14 @@ const LineChart: React.FC<LineChartProps> = ({
     const line = ({ d, curve }: { d: Iterable<DataPoint>; curve: string }) => {
       return d3
         .line<DataPoint>()
-        .x((d) => xScale(new Date(d.date)))
-        .y((d) => yScale(d.value))
+        .x(d => xScale(new Date(d.date)))
+        .y(d => yScale(d.value))
         .curve(d3?.[curve] ?? d3.curveBumpX)(d);
     };
 
     // draw lines
     dataSet
-      .filter((d) => !disabledItems.includes(d.label))
+      .filter(d => !disabledItems.includes(d.label))
       .forEach((data, i) => {
         const path = svg
           .append("path")
@@ -328,7 +326,7 @@ const LineChart: React.FC<LineChartProps> = ({
             line({
               d: d,
               curve: data?.curve,
-            }),
+            })
           ) // Explicitly specify the type and use line function
           .attr("stroke", colorsMapping[data.label] ?? data.color)
           .attr("stroke-width", 2)
@@ -344,33 +342,33 @@ const LineChart: React.FC<LineChartProps> = ({
 
     // draw lines one more time to fix the side effect of line losing focused on mouseover the dash array
     dataSet
-      .filter((d) => !disabledItems.includes(d.label))
+      .filter(d => !disabledItems.includes(d.label))
       .forEach((data, i) => {
         svg
           .append("path")
           .datum(data.series)
           .attr(
             "class",
-            `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${data.label} line-group-overlay-${data.label}`,
+            `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${data.label} line-group-overlay-${data.label}`
           )
           .attr("d", (d: DataPoint[]) =>
             line({
               d: d,
               curve: data?.curve,
-            }),
+            })
           ) // Explicitly specify the type and use line function
           .attr("stroke", colorsMapping[data.label] ?? data.color)
           .attr("stroke-width", 5)
           .attr("fill", "none")
           .attr("pointer-events", "stroke")
           .attr("opacity", 0.1)
-          .on("mouseenter", (event) => {
+          .on("mouseenter", event => {
             event.preventDefault();
             event.stopPropagation();
             setHighlightItems([data.label]);
           })
 
-          .on("mouseout", (event) => {
+          .on("mouseout", event => {
             event.preventDefault();
             event.stopPropagation();
             setHighlightItems([]);
@@ -382,7 +380,7 @@ const LineChart: React.FC<LineChartProps> = ({
 
     // draw circles on the line to indicate data points
     dataSet
-      .filter((d) => !disabledItems.includes(d.label))
+      .filter(d => !disabledItems.includes(d.label))
       .forEach((data, i) => {
         svg
           .selectAll(`.circle-data-${i}`)
@@ -406,7 +404,7 @@ const LineChart: React.FC<LineChartProps> = ({
             const el = this as HTMLDivElement;
             el.style.setProperty(
               "--background-color",
-              colorsMapping[data.label] ?? data.color ?? "transparent",
+              colorsMapping[data.label] ?? data.color ?? "transparent"
             );
           })
           .on(
@@ -423,7 +421,7 @@ const LineChart: React.FC<LineChartProps> = ({
                   label: data.label,
                 } as DataPoint,
                 data.series,
-                dataSet,
+                dataSet
               );
 
               // Position the tooltip near the circle
@@ -436,9 +434,9 @@ const LineChart: React.FC<LineChartProps> = ({
                 tooltipRef.current.style.padding = "5px";
                 tooltipRef.current.innerHTML = htmlContent;
               }
-            }, 5),
+            }, 5)
           )
-          .on("mouseout", (event) => {
+          .on("mouseout", event => {
             event.preventDefault();
 
             // Check if the mouse is still over the line below the circle
@@ -474,7 +472,7 @@ const LineChart: React.FC<LineChartProps> = ({
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
-    Object.keys(colorsMapping).forEach((key) => {
+    Object.keys(colorsMapping).forEach(key => {
       svg
         .selectAll(`circle[data-label="${key}"]`)
         .attr("stroke", "#fff")
@@ -489,7 +487,7 @@ const LineChart: React.FC<LineChartProps> = ({
     svg
       .selectAll(".data-group")
       .attr("opacity", highlightItems.length === 0 ? 1 : 0.2);
-    highlightItems.forEach((item) => {
+    highlightItems.forEach(item => {
       svg.selectAll(`[data-label="${item}"]`).attr("opacity", 1);
     });
     if (highlightItems.length === 0) {
@@ -528,7 +526,7 @@ const LineChart: React.FC<LineChartProps> = ({
 
           const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
           const tooltipContent = dataSet
-            .map((data) => {
+            .map(data => {
               const yValue = getYValueAtX(data.series, xValue);
               return `<div>${data.label}: ${yValue ?? "N/A"}</div>`;
             })
@@ -578,7 +576,7 @@ const LineChart: React.FC<LineChartProps> = ({
           ref={svgRef}
           width={width}
           height={height}
-          onMouseOut={(event) => {
+          onMouseOut={event => {
             event.preventDefault();
             event.stopPropagation();
             setHighlightItems([]);

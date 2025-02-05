@@ -10,7 +10,7 @@ describe("<Title />", () => {
         <Title x={0} y={0}>
           Test Title
         </Title>
-      </svg>,
+      </svg>
     );
   });
 
@@ -20,7 +20,7 @@ describe("<Title />", () => {
         <Title x={100} y={50}>
           Test Title
         </Title>
-      </svg>,
+      </svg>
     );
 
     const title = getByText("Test Title");
@@ -37,7 +37,7 @@ describe("<Title />", () => {
         <Title x={0} y={0}>
           Another Test Title
         </Title>
-      </svg>,
+      </svg>
     );
     expect(getByText("Another Test Title")).toBeInTheDocument();
   });

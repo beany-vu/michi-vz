@@ -57,10 +57,10 @@ export const MichiVzProvider: React.FC<MichiVzProps> = ({
   const [disabledItems, setDisabledItems] =
     useState<string[]>(initialDisabledItems);
   const [highlightItems, setHighlightItems] = useState<string[]>(
-    initialHighlightItems,
+    initialHighlightItems
   );
   const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>(
-    initialColorsMapping,
+    initialColorsMapping
   );
   const [colorsBasedMapping, setColorsBasedMapping] = useState<{
     [key: string]: string;

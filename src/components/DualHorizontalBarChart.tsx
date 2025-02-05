@@ -33,7 +33,7 @@ interface LineChartProps {
       label: string;
       color: string;
       series: DataPoint[];
-    }[],
+    }[]
   ) => string;
   children?: React.ReactNode;
   isLoading?: boolean;
@@ -73,15 +73,13 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
   const svgRef = useRef<SVGSVGElement | null>(null);
   const yAxisDomain = useMemo(
     () =>
-      dataSet
-        .filter((d) => !disabledItems.includes(d.label))
-        .map((d) => d.label),
-    [dataSet],
+      dataSet.filter(d => !disabledItems.includes(d.label)).map(d => d.label),
+    [dataSet]
   );
   const xAxisDomain = useMemo(() => {
     const flattenedValues = dataSet
-      .filter((d) => !disabledItems.includes(d.label))
-      .map((d) => [d.value1, d.value2])
+      .filter(d => !disabledItems.includes(d.label))
+      .map(d => [d.value1, d.value2])
       .flat();
 
     if (xAxisDataType === "number") {
@@ -119,7 +117,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
 
   const handleMouseOver = (
     d: DataPoint,
-    event: React.MouseEvent<SVGRectElement, MouseEvent>,
+    event: React.MouseEvent<SVGRectElement, MouseEvent>
   ) => {
     if (svgRef.current) {
       const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
@@ -138,7 +136,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
 
   useEffect(() => {
     d3.select(svgRef.current).select(".bar").attr("opacity", 0.3);
-    highlightItems.forEach((item) => {
+    highlightItems.forEach(item => {
       d3.select(svgRef.current)
         .select(`.bar-${item.replaceAll(" ", "-").replaceAll(",", "")}`)
         .attr("opacity", 1);
@@ -159,7 +157,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
         height={height}
         ref={svgRef}
         style={{ overflow: "visible" }}
-        onMouseOut={(event) => {
+        onMouseOut={event => {
           event.stopPropagation();
           event.preventDefault();
           setHighlightItems([]);
@@ -190,7 +188,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
           yAxisFormat={yAxisFormat}
         />
         {dataSet
-          .filter((d) => !disabledItems.includes(d.label))
+          .filter(d => !disabledItems.includes(d.label))
           .map((d, i) => {
             const x1 = xAxis1Scale(d.value1) - width / 2; // Corrected width calculation
             const x2 = xAxis2Scale(0) - xAxis2Scale(d.value2); // Corrected width calculation
@@ -221,7 +219,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
                   fill={colorsBasedMapping[d.label]}
                   rx={5}
                   ry={5}
-                  onMouseOver={(event) => handleMouseOver(d, event)}
+                  onMouseOver={event => handleMouseOver(d, event)}
                   onMouseOut={handleMouseOut}
                   stroke={"#fff"}
                 />
@@ -234,7 +232,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
                   opacity={0.8}
                   rx={3}
                   ry={3}
-                  onMouseOver={(event) => handleMouseOver(d, event)}
+                  onMouseOver={event => handleMouseOver(d, event)}
                   onMouseOut={handleMouseOut}
                   stroke={"#fff"}
                 />
@@ -249,7 +247,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
                       fill={colorsBasedMapping[d.label]}
                       rx={3}
                       ry={3}
-                      onMouseOver={(event) => handleMouseOver(d, event)}
+                      onMouseOver={event => handleMouseOver(d, event)}
                       onMouseOut={handleMouseOut}
                     />
                     <text

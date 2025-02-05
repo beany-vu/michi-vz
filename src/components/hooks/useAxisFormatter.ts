@@ -2,7 +2,7 @@
   xAxisDataType: "number" | "date_annual" | "date_monthly";
  */
 export default (
-  xAxisDataType: "number" | "date_annual" | "date_monthly",
+  xAxisDataType: "number" | "date_annual" | "date_monthly"
 ): ((value: string | number | { valueOf(): number }) => string) => {
   console.log({ xAxisDataType });
   switch (xAxisDataType) {

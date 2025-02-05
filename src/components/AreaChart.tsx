@@ -31,7 +31,7 @@ interface Props {
   tooltipFormatter?: (
     d: DataPoint,
     series: DataPoint[],
-    key: string,
+    key: string
   ) => string | null;
   children?: React.ReactNode;
   xAxisDataType: "number" | "date_annual" | "date_monthly";
@@ -73,8 +73,8 @@ const AreaChart: React.FC<Props> = ({
       return d3
         .scaleLinear()
         .domain([
-          d3.min(series, (d) => d.date || 0),
-          d3.max(series, (d) => d.date || 1),
+          d3.min(series, d => d.date || 0),
+          d3.max(series, d => d.date || 1),
         ])
         .range([margin.left, width - margin.right])
         .clamp(true)
@@ -83,13 +83,11 @@ const AreaChart: React.FC<Props> = ({
 
     const minDate = d3.min(
       series.map(
-        (d) =>
-          new Date(
-            xAxisDataType === "date_annual" ? `${d.date} 01 01` : d.date,
-          ),
-      ),
+        d =>
+          new Date(xAxisDataType === "date_annual" ? `${d.date} 01 01` : d.date)
+      )
     );
-    const maxDate = d3.max(series.map((d) => new Date(d.date)));
+    const maxDate = d3.max(series.map(d => new Date(d.date)));
 
     return d3
       .scaleTime()
@@ -106,12 +104,12 @@ const AreaChart: React.FC<Props> = ({
     // return the max value of the sum of all the keys, don't count the date
     const max = d3.max(
       series,
-      (d) =>
+      d =>
         d3.sum(
           Object.keys(d)
-            .filter((key) => !disabledItems.includes(key))
-            .map((key) => (key === "date" ? 0 : d[key] || 0)),
-        ) || 0,
+            .filter(key => !disabledItems.includes(key))
+            .map(key => (key === "date" ? 0 : d[key] || 0))
+        ) || 0
     );
 
     return [0, max];
@@ -125,7 +123,7 @@ const AreaChart: React.FC<Props> = ({
         .range([height - margin.bottom, margin.top])
         .clamp(true)
         .nice(),
-    [series, width, height, margin],
+    [series, width, height, margin]
   );
 
   const stackedData = useMemo(() => {
@@ -144,16 +142,16 @@ const AreaChart: React.FC<Props> = ({
 
   const areaGenerator = d3
     .area<AreaDataPoint>()
-    .defined((d) => d[0] !== null && d[1] !== null)
-    .x((d) => {
+    .defined(d => d[0] !== null && d[1] !== null)
+    .x(d => {
       if (xAxisDataType === "number") {
         return xScale(d.data.date);
       } else {
         return xScale(new Date(d.data.date).getTime()); // Assuming d.data.date is a JavaScript Date object
       }
     })
-    .y0((d) => yScale(d[0]))
-    .y1((d) => yScale(d[1]))
+    .y0(d => yScale(d[0]))
+    .y1(d => yScale(d[1]))
     .curve(d3.curveMonotoneX);
 
   const handleAreaSegmentHover = (dataPoint: DataPoint, key: string) => {
@@ -222,7 +220,7 @@ const AreaChart: React.FC<Props> = ({
           yAxisFormat={yAxisFormat}
         />
         <g>
-          {prepareAreaData().map((areaData) => (
+          {prepareAreaData().map(areaData => (
             <Fragment key={areaData.key}>
               <path
                 d={areaGenerator(areaData.values)}
@@ -244,14 +242,14 @@ const AreaChart: React.FC<Props> = ({
                 }}
               />
               {/* Here's the addition*/}
-              {areaData.values.map((dataPoint) => (
+              {areaData.values.map(dataPoint => (
                 <rect
                   key={`${areaData.key}-${dataPoint.data.date}`}
                   x={
                     xScale(
                       xAxisDataType === "number"
                         ? dataPoint.data.date
-                        : new Date(dataPoint.data.date),
+                        : new Date(dataPoint.data.date)
                     ) - 2
                   }
                   y={yScale(dataPoint[1])} // Start from top of the area segment
@@ -263,12 +261,12 @@ const AreaChart: React.FC<Props> = ({
                   height={yScale(dataPoint[0]) - yScale(dataPoint[1])} // Height of the area segment
                   fill="#fff"
                   opacity={highlightItems.includes(areaData.key) ? 0.5 : 0}
-                  onMouseEnter={(event) => {
+                  onMouseEnter={event => {
                     setHighlightItems([areaData.key]);
                     d3.select(".tooltip")
                       .style("visibility", "visible")
                       .html(
-                        handleAreaSegmentHover(dataPoint.data, areaData.key),
+                        handleAreaSegmentHover(dataPoint.data, areaData.key)
                       );
 
                     const [x, y] = d3.pointer(event);

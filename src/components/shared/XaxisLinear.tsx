@@ -7,15 +7,13 @@ import range from "lodash/range";
 function getDatesWithEqualDistance(
   startDate: string | number | Date,
   endDate: string | number | Date,
-  numDates: number,
+  numDates: number
 ) {
   const start = new Date(startDate);
   const end = new Date(endDate);
   const diff = end.getTime() - start.getTime();
   const interval = diff / (numDates - 1);
-  return range(0, numDates).map(
-    (i) => new Date(start.getTime() + i * interval),
-  );
+  return range(0, numDates).map(i => new Date(start.getTime() + i * interval));
 }
 
 interface Props {
@@ -31,7 +29,7 @@ interface Props {
 
 const checkIsTimeScale = (
   scale: ScaleTime<number, number> | ScaleLinear<number, number>,
-  xAxisDataType?: "number" | "date_annual" | "date_monthly",
+  xAxisDataType?: "number" | "date_annual" | "date_monthly"
 ): scale is ScaleTime<number, number> => {
   if (xAxisDataType === "date_annual" || xAxisDataType === "date_monthly") {
     return true;
@@ -97,7 +95,7 @@ const XaxisLinear: FC<Props> = ({
     const counts = d3.timeMonth.range(
       minTick as Date,
       maxTick as Date,
-      1,
+      1
     ).length;
 
     let tickValues: number[];
@@ -105,12 +103,12 @@ const XaxisLinear: FC<Props> = ({
       case "date_annual":
         tickValues = d3.timeYear
           .range(minTick as Date, maxTick as Date, 1)
-          .map((d) => d.valueOf());
+          .map(d => d.valueOf());
         break;
       case "date_monthly":
         tickValues = d3.timeMonth
           .range(minTick as Date, maxTick as Date, null)
-          .map((d) => d.valueOf());
+          .map(d => d.valueOf());
         break;
       default:
         tickValues = d3.ticks(minTick as number, maxTick as number, 1);
@@ -132,7 +130,7 @@ const XaxisLinear: FC<Props> = ({
           .tickFormat((domainValue: number | Date) =>
             xAxisFormat
               ? xAxisFormat(domainValue)
-              : defaultFormatter(domainValue),
+              : defaultFormatter(domainValue)
           );
         break;
       case "date_monthly":
@@ -144,13 +142,13 @@ const XaxisLinear: FC<Props> = ({
               getDatesWithEqualDistance(
                 tickValues[0],
                 tickValues[tickValues.length - 1],
-                5,
-              ),
+                5
+              )
             )
             .tickFormat((domainValue: number | Date) =>
               xAxisFormat
                 ? xAxisFormat(domainValue)
-                : defaultFormatter(domainValue),
+                : defaultFormatter(domainValue)
             );
         } else {
           axisBottom = d3
@@ -159,7 +157,7 @@ const XaxisLinear: FC<Props> = ({
             .tickFormat((domainValue: number | Date) =>
               xAxisFormat
                 ? xAxisFormat(domainValue)
-                : defaultFormatter(domainValue),
+                : defaultFormatter(domainValue)
             );
         }
 
@@ -171,7 +169,7 @@ const XaxisLinear: FC<Props> = ({
           .tickFormat((domainValue: number | Date) =>
             xAxisFormat
               ? xAxisFormat(domainValue)
-              : defaultFormatter(domainValue),
+              : defaultFormatter(domainValue)
           );
         break;
     }
@@ -181,7 +179,7 @@ const XaxisLinear: FC<Props> = ({
         "style",
         position === "top"
           ? `transform:translate(${margin.left}px, ${margin.top - 15}px)`
-          : `transform:translate(0,${height - margin.bottom + 15}px)`,
+          : `transform:translate(0,${height - margin.bottom + 15}px)`
       )
       .call(
         d3
@@ -190,15 +188,15 @@ const XaxisLinear: FC<Props> = ({
           .tickFormat((domainValue: number | Date) =>
             xAxisFormat
               ? xAxisFormat(domainValue)
-              : defaultFormatter(domainValue),
-          ),
+              : defaultFormatter(domainValue)
+          )
       )
       .call(axisBottom)
-      .call((g) => g.select(".domain").attr("stroke-opacity", 1))
-      .call((g) => g.select(".domain").remove())
-      .call((g) => g.selectAll("line").remove())
-      .call((g) => g.selectAll(".tick-line").remove())
-      .call((g) => g.selectAll(".tickValueDot").remove());
+      .call(g => g.select(".domain").attr("stroke-opacity", 1))
+      .call(g => g.select(".domain").remove())
+      .call(g => g.selectAll("line").remove())
+      .call(g => g.selectAll(".tick-line").remove())
+      .call(g => g.selectAll(".tickValueDot").remove());
 
     // Add vertical dashed lines for each tick
     g.selectAll(".tick")
@@ -207,14 +205,14 @@ const XaxisLinear: FC<Props> = ({
       .attr("x1", 0)
       .attr(
         "y1",
-        position === "top" ? height - margin.bottom - margin.top : -15,
+        position === "top" ? height - margin.bottom - margin.top : -15
       ) // Adjust as needed
       .attr("x2", 0)
       .attr(
         "y2",
         position === "top"
           ? margin.top - 15
-          : -height + margin.bottom + margin.top - 15,
+          : -height + margin.bottom + margin.top - 15
       ) // Adjust as needed
       // .attr("y2", -height + margin.bottom + margin.top - 500) // Adjust as needed
       .style("stroke-dasharray", "3,3") // Set dash pattern

@@ -103,10 +103,10 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           .filter((d: DataPoint) => !disabledItems.includes(d.label))
           .map((d: DataPoint) => d.data)
           .flat()
-          .map((d) => {
+          .map(d => {
             const parsedValue = parseFloat(String(d.value));
             return isNaN(parsedValue) ? 0 : parsedValue;
-          }),
+          })
       ),
     ];
   }, [series, disabledItems]);
@@ -125,14 +125,14 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           res[cur] = (i / poles.labels.length) * 2 * Math.PI;
           return res;
         },
-        {},
+        {}
       ),
-    [poles?.labels],
+    [poles?.labels]
   );
 
   const genPolygonPoints = (
     data: { value: number; date: string }[],
-    scale: (n: number) => number,
+    scale: (n: number) => number
   ) => {
     const points: { x: number; y: number; date: string; value: number }[] =
       new Array(data.length).fill({
@@ -154,7 +154,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
       // Now include the center of the radar chart in your calculations.
       const xVal = Math.round(width / 2 + scale(cur.value) * Math.sin(angle));
       const yVal = Math.round(
-        height / 2 + scale(cur.value) * Math.cos(angle) * -1,
+        height / 2 + scale(cur.value) * Math.cos(angle) * -1
       );
 
       points[i] = { x: xVal, y: yVal, date: cur.date, value: cur.value };
@@ -203,7 +203,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     // Drawing radial circles
     const numCircleTicks = 6; // Or any other desired number.
     const circleRadii = range(1, numCircleTicks + 1).map(
-      (value) => (height / 2) * (value / numCircleTicks),
+      value => (height / 2) * (value / numCircleTicks)
     );
 
     circleRadii.forEach((radius, i) => {
@@ -317,7 +317,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
         height={height}
         style={{ overflow: "visible" }}
         ref={svgRef}
-        onMouseOut={(event) => {
+        onMouseOut={event => {
           event.preventDefault();
           event.stopPropagation();
           setHighlightItems([]);
@@ -334,11 +334,11 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                 data-label={colorsMapping[label]}
                 stroke={colorsMapping[label] ?? color}
                 strokeWidth={2}
-                onMouseEnter={(event) => {
+                onMouseEnter={event => {
                   event.preventDefault();
                   setHighlightItems([label]);
                 }}
-                onMouseOut={(event) => {
+                onMouseOut={event => {
                   event.preventDefault();
                   setHighlightItems([]);
                 }}
@@ -352,7 +352,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                       date: string;
                       value: number;
                     },
-                    j: number,
+                    j: number
                   ) => (
                     <g key={`data-point-${j}`}>
                       {point.x !== null && point.y !== null && (
@@ -365,7 +365,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                           stroke="#fff"
                           strokeWidth={2}
                           fill={colorsMapping[label] ?? color}
-                          onMouseEnter={(e) => {
+                          onMouseEnter={e => {
                             setHighlightItems([label]);
                             setTooltipData({
                               date: point.date,
@@ -396,11 +396,11 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                         />
                       )}
                     </g>
-                  ),
+                  )
                 )}
               </DataPoints>
             </g>
-          ),
+          )
         )}
       </svg>
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}

@@ -34,7 +34,7 @@ interface LineChartProps {
       label: string;
       color: string;
       series: DataPoint[];
-    }[],
+    }[]
   ) => string;
   children?: React.ReactNode;
   isLoading?: boolean;
@@ -76,16 +76,16 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   const yAxisDomain = useMemo(
     () =>
       dataSet
-        ?.filter((d) => !disabledItems.includes(d?.label))
-        ?.map((d) => d?.label),
-    [dataSet, disabledItems],
+        ?.filter(d => !disabledItems.includes(d?.label))
+        ?.map(d => d?.label),
+    [dataSet, disabledItems]
   );
 
   const xAxisRange = useMemo(() => {
     if (dataSet.length > 0) {
       return dataSet
-        ?.filter((d) => !disabledItems.includes(d?.label))
-        ?.map((d) => [d.valueBased, d.valueCompared])
+        ?.filter(d => !disabledItems.includes(d?.label))
+        ?.map(d => [d.valueBased, d.valueCompared])
         ?.flat();
     }
     return [];
@@ -132,7 +132,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
 
   const handleMouseOver = (
     d: DataPoint,
-    event: React.MouseEvent<SVGRectElement, MouseEvent>,
+    event: React.MouseEvent<SVGRectElement, MouseEvent>
   ) => {
     if (svgRef.current) {
       const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
@@ -151,7 +151,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
 
   useEffect(() => {
     d3.select(svgRef.current).select(".bar").attr("opacity", 0.3);
-    highlightItems.forEach((item) => {
+    highlightItems.forEach(item => {
       d3.select(svgRef.current)
         .selectAll(`.bar-[data-label="${item}"]`)
         .attr("opacity", 1);
@@ -172,7 +172,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         height={height}
         ref={svgRef}
         style={{ overflow: "visible" }}
-        onMouseOut={(event) => {
+        onMouseOut={event => {
           event.stopPropagation();
           event.preventDefault();
           setHighlightItems([]);
@@ -196,7 +196,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           yAxisFormat={yAxisFormat}
         />
         {dataSet
-          .filter((d) => !disabledItems.includes(d?.label))
+          .filter(d => !disabledItems.includes(d?.label))
           .map((d, i) => {
             const x1 =
               margin.left + xAxisScale(Math.min(0, d.valueBased)) - margin.left;
@@ -206,7 +206,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
               margin.left;
             const width1 = Math.abs(xAxisScale(d.valueBased) - xAxisScale(0));
             const width2 = Math.abs(
-              xAxisScale(d.valueCompared) - xAxisScale(0),
+              xAxisScale(d.valueCompared) - xAxisScale(0)
             );
 
             const y = yAxisScale(d?.label) || 0;
@@ -240,7 +240,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                       opacity={0.9}
                       rx={5}
                       ry={5}
-                      onMouseOver={(event) => handleMouseOver(d, event)}
+                      onMouseOver={event => handleMouseOver(d, event)}
                       onMouseOut={handleMouseOut}
                       stroke="#fff"
                       strokeWidth={1}
@@ -254,7 +254,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                       fill={colorsBasedMapping[d?.label] ?? d?.color}
                       rx={5}
                       ry={5}
-                      onMouseOver={(event) => handleMouseOver(d, event)}
+                      onMouseOver={event => handleMouseOver(d, event)}
                       onMouseOut={handleMouseOut}
                       opacity={0.9}
                       stroke="#fff"
@@ -272,7 +272,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                       fill={colorsBasedMapping[d?.label] ?? d?.color}
                       rx={5}
                       ry={5}
-                      onMouseOver={(event) => handleMouseOver(d, event)}
+                      onMouseOver={event => handleMouseOver(d, event)}
                       onMouseOut={handleMouseOut}
                       opacity={0.9}
                       stroke="#fff"
@@ -288,7 +288,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                       opacity={0.9}
                       rx={5}
                       ry={5}
-                      onMouseOver={(event) => handleMouseOver(d, event)}
+                      onMouseOver={event => handleMouseOver(d, event)}
                       onMouseOut={handleMouseOut}
                       stroke="#fff"
                       strokeWidth={1}

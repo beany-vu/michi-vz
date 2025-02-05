@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
 import Title from "./shared/Title";
@@ -72,7 +72,7 @@ interface ScatterPlotChartProps<T extends number | string> {
   };
   dScaleLegendFormatter?: (
     domain: number[],
-    dScale: d3.ScaleLinear<number, number>,
+    dScale: d3.ScaleLinear<number, number>
   ) => string;
 }
 
@@ -103,11 +103,11 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
     useChartContext();
   const xValues = dataSet
-    .filter((d) => !disabledItems.includes(d.label))
-    .map((d) => d.x || 0);
+    .filter(d => !disabledItems.includes(d.label))
+    .map(d => d.x || 0);
   const yValues = dataSet
-    .filter((d) => !disabledItems.includes(d.label))
-    .map((d) => d.y || 0);
+    .filter(d => !disabledItems.includes(d.label))
+    .map(d => d.y || 0);
   const xDomain = [0, Math.max(...xValues) || 0];
   const yDomain = [0, Math.max(...yValues) || 0];
   // const radiusDomain = [16, d3.max(dataSet, (d) => d.d) || 0];
@@ -136,7 +136,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     if (xAxisDataType === "band") {
       return d3
         .scaleBand<string>()
-        .domain(dataSet.map((d) => d.label)) // Assuming dataSet has labels for bands
+        .domain(dataSet.map(d => d.label)) // Assuming dataSet has labels for bands
         .range([margin.left, width - margin.right])
         .padding(0.1); // Adjust padding as needed
     }
@@ -148,10 +148,10 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
         .scaleLinear()
         .domain((yAxisDomain as [number, number]) ?? yDomain)
         .range([height - margin.bottom, margin.top]),
-    [yDomain, height, margin],
+    [yDomain, height, margin]
   );
 
-  const dValues = dataSet.map((d) => d.d);
+  const dValues = dataSet.map(d => d.d);
   const dMax = Math.max(...dValues);
   const dMin = Math.min(...dValues);
   const dDomain = dMax === dMin ? [0, dMax] : [dMin, dMax];
@@ -159,7 +159,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   // dScale is scaleQuantile
   const dScale = useMemo(
     () => d3.scaleLinear().domain(dDomain).range([16, 80]),
-    [dDomain, height, width, margin],
+    [dDomain, height, width, margin]
   );
 
   const dLegendPosition = {
@@ -183,7 +183,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     }
     // set opacity for all circles to 0.1, except for the highlighted ones (detect by data-label attribute)
     svg.selectAll("foreignObject[data-label]").style("opacity", 0.1);
-    highlightItems.forEach((label) => {
+    highlightItems.forEach(label => {
       svg.selectAll(`foreignObject[data-label="${label}"]`).style("opacity", 1);
     });
   }, [highlightItems]);
@@ -206,7 +206,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
         {children}
 
         {orderBy(dataSet, ["d"], ["desc"])
-          .filter((d) => !disabledItems.includes(d.label))
+          .filter(d => !disabledItems.includes(d.label))
           .map((d, i) => (
             <foreignObject
               data-label={d.label}
@@ -220,7 +220,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                 transition: "r 0.1s ease-out, opacity 0.1s ease-out",
                 transform: `translate(-${xAxisDataType === "band" ? d.d / 4 : dScale(d.d) / 2}px, -${xAxisDataType === "band" ? d.d / 4 : dScale(d.d) / 2}px)`,
               }}
-              onMouseEnter={(event) => {
+              onMouseEnter={event => {
                 const [x, y] = d3.pointer(event);
 
                 setHighlightItems([d.label]);
@@ -268,7 +268,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
             {dScaleLegend?.title && (
               <text
                 x={dLegendPosition.x}
-                y={dLegendPosition.y - 120 ?? 0}
+                y={dLegendPosition.y - 120}
                 textAnchor={"middle"}
               >
                 {dScaleLegend?.title}
@@ -279,7 +279,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                 dLegendPosition.x,
                 dLegendPosition.y,
                 40,
-                40,
+                40
               )}
               fill={"none"}
               stroke={"#ccc"}
@@ -289,7 +289,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                 dLegendPosition.x,
                 dLegendPosition.y,
                 20,
-                20,
+                20
               )}
               fill={"none"}
               stroke={"#ccc"}

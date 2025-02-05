@@ -91,12 +91,12 @@ const VerticalStackBarChart: React.FC<Props> = ({
     return dataSet
       .map(({ series }) => series)
       .flat()
-      .map((dataPoint) => {
+      .map(dataPoint => {
         // Convert the DataPoint object to an array of [key, value] pairs.
         const entries = Object.entries(dataPoint);
         // Filter out the keys that are present in the disabledItems array.
         const filteredEntries = entries.filter(
-          ([key]) => !disabledItems.includes(key),
+          ([key]) => !disabledItems.includes(key)
         );
         // Convert the filtered [key, value] pairs back to an object.
         return Object.fromEntries(filteredEntries);
@@ -107,7 +107,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   const extractDates = (data: DataPoint): string => String(data.date);
   const dates = useMemo(
     () => flattenedDataSet.map(extractDates),
-    [flattenedDataSet, disabledItems],
+    [flattenedDataSet, disabledItems]
   );
 
   const xScale = useMemo(
@@ -117,7 +117,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
         .domain(xAxisDomain ?? dates)
         .range([margin.left, width - margin.right])
         .padding(0.1),
-    [flattenedDataSet, width, height, margin, disabledItems],
+    [flattenedDataSet, width, height, margin, disabledItems]
   );
 
   // yScale
@@ -126,11 +126,11 @@ const VerticalStackBarChart: React.FC<Props> = ({
       return yAxisDomain;
     }
 
-    const totalValuePerYear: number[] = flattenedDataSet.map((yearData) =>
+    const totalValuePerYear: number[] = flattenedDataSet.map(yearData =>
       keys.reduce(
         (acc, key) => acc + (yearData[key] ? parseFloat(yearData[key]) : 0),
-        0,
-      ),
+        0
+      )
     );
     const minValue =
       Math.min(...totalValuePerYear) < 0 ? Math.min(...totalValuePerYear) : 0;
@@ -146,32 +146,32 @@ const VerticalStackBarChart: React.FC<Props> = ({
         .range([height - margin.bottom, margin.top])
         .clamp(true)
         .nice(),
-    [flattenedDataSet, width, height, margin, disabledItems],
+    [flattenedDataSet, width, height, margin, disabledItems]
   );
 
   const prepareStackedData = (
-    rawDataSet: DataSet[],
+    rawDataSet: DataSet[]
   ): { [p: string]: RectData[] } => {
     const stackedData = keys
-      .filter((key) => !disabledItems.includes(key))
+      .filter(key => !disabledItems.includes(key))
       .reduce(
         (acc, key) => {
           acc[key] = [];
           return acc;
         },
-        {} as { [key: string]: RectData[] },
+        {} as { [key: string]: RectData[] }
       );
 
     rawDataSet.forEach((dataItem, groupIndex) => {
       const series = dataItem.series;
       const groupWidth = xScale.bandwidth() / rawDataSet.length;
 
-      series.forEach((yearData) => {
+      series.forEach(yearData => {
         let y0 = 0;
         keys
-          .filter((key) => !disabledItems.includes(key))
+          .filter(key => !disabledItems.includes(key))
           .reverse()
-          .forEach((key) => {
+          .forEach(key => {
             const y1 =
               parseFloat(String(y0)) +
               parseFloat((yearData[key] || 0) as unknown as string);
@@ -205,13 +205,13 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
   const stackedRectData = useMemo(
     () => prepareStackedData(dataSet),
-    [dataSet, width, height, margin, colorsMapping, disabledItems],
+    [dataSet, width, height, margin, colorsMapping, disabledItems]
   );
   const generateTooltipContent = (
     key: string,
     seriesKey: string,
     data: DataPoint,
-    series: DataPoint[],
+    series: DataPoint[]
   ) => {
     if (tooltipFormatter) {
       return tooltipFormatter({
@@ -238,13 +238,13 @@ const VerticalStackBarChart: React.FC<Props> = ({
                 <div style="background: #fff; padding: 5px">
                     <p>${data.date} - ${seriesKey}</p>
                     ${Object.keys(data)
-                      .filter((key) => key !== "date")
+                      .filter(key => key !== "date")
                       .sort()
                       .map(
-                        (key) =>
+                        key =>
                           `<p style="color:${colorsMapping[key]}">${key}: ${
                             data[key] ?? "N/A"
-                          }</p>`,
+                          }</p>`
                       )
                       .join("")}
                 </div>`;
@@ -277,7 +277,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
         width={width}
         height={height}
         style={{ overflow: "visible" }}
-        onMouseOut={(event) => {
+        onMouseOut={event => {
           event.preventDefault();
           event.stopPropagation();
           setHighlightItems([]);
@@ -303,7 +303,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
           yAxisFormat={yAxisFormat}
         />
         <g>
-          {keys.map((key) => {
+          {keys.map(key => {
             return (
               <g key={key}>
                 {stackedRectData[key] &&
@@ -327,7 +327,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                               ? 1
                               : 0.2
                           }
-                          ref={(node) => {
+                          ref={node => {
                             if (node) {
                               d3.select(node)
                                 .on("mouseover", function () {
@@ -341,15 +341,15 @@ const VerticalStackBarChart: React.FC<Props> = ({
                                         d.data,
                                         stackedRectData[key]
                                           .filter(
-                                            (item) =>
-                                              item.seriesKey === d.seriesKey,
+                                            item =>
+                                              item.seriesKey === d.seriesKey
                                           )
-                                          .map((item) => ({
+                                          .map(item => ({
                                             label: item.key,
                                             value: item.value ?? null,
                                             date: item.date,
-                                          })) as unknown as DataPoint[],
-                                      ),
+                                          })) as unknown as DataPoint[]
+                                      )
                                     ); // you can define this function or inline its logic
                                 })
                                 .on("mousemove", function (event) {
@@ -366,14 +366,14 @@ const VerticalStackBarChart: React.FC<Props> = ({
                                     .style("left", x - tooltipWidth / 2 + "px")
                                     .style(
                                       "top",
-                                      y - tooltipHeight - 10 + "px",
+                                      y - tooltipHeight - 10 + "px"
                                     );
                                 })
                                 .on("mouseout", function () {
                                   setHighlightItems([]);
                                   d3.select(".tooltip").style(
                                     "visibility",
-                                    "hidden",
+                                    "hidden"
                                   );
                                 });
                             }
