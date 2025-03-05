@@ -41,7 +41,9 @@ const XaxisBand: FC<Props> = ({ xScale, height, margin, xAxisFormat }) => {
           .axisBottom(xScale)
           // 4 equal distance ticks
           .tickValues(tickValues)
-          .tickFormat(d => (xAxisFormat ? xAxisFormat(d) : defaultFormatter(d)))
+          .tickFormat((d) =>
+            xAxisFormat ? xAxisFormat(d) : defaultFormatter(d),
+          ),
       );
 
       // Remove existing domain line and tick lines

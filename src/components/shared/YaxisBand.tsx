@@ -28,8 +28,8 @@ const YaxisBand: FC<Props> = ({
       .call(
         d3
           .axisLeft(yScale)
-          .tickFormat(d => (yAxisFormat ? yAxisFormat(d) : d))
-          .tickSize(0) // Hide the ticks for foreignObject
+          .tickFormat((d) => (yAxisFormat ? yAxisFormat(d) : d))
+          .tickSize(0), // Hide the ticks for foreignObject
       );
 
     // Remove existing domain line and tick lines
@@ -47,8 +47,8 @@ const YaxisBand: FC<Props> = ({
       .attr("width", 100) // Adjust as needed
       .attr("height", 20) // Adjust as needed
       .html(
-        d =>
-          `<div style="display:flex;align-items:center;height:100%" title="${d}"><span>${d}</span></div>`
+        (d) =>
+          `<div style="display:flex;align-items:center;height:100%" title="${d}"><span>${d}</span></div>`,
       ); // HTML content for each tick
 
     // Add dashed lines on each tick

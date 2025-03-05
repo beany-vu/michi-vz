@@ -9,7 +9,7 @@ import { useChartContext } from "./MichiVzProvider";
 import { drawHalfLeftCircle } from "../components/shared/helpers";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
-import { orderBy } from "lodash";
+import orderBy from "lodash/orderBy";
 
 const Styled = styled.div`
   .shape {

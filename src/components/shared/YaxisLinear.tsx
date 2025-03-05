@@ -38,13 +38,13 @@ const YaxisLinear: FC<Props> = ({
 
     g.attr(
       "transform",
-      "translate(" + (margin.left > 0 ? margin.left : 0) + ",0)"
+      "translate(" + (margin.left > 0 ? margin.left : 0) + ",0)",
     )
       .call(yAxis)
-      .call(g => g.select(".domain").remove())
-      .call(g => g.selectAll(".tick line").attr("stroke-width", "1.5"))
+      .call((g) => g.select(".domain").remove())
+      .call((g) => g.selectAll(".tick line").attr("stroke-width", "1.5"))
 
-      .call(g =>
+      .call((g) =>
         g
           .selectAll(".tick line")
           .attr("stroke-width", "1")
@@ -57,7 +57,7 @@ const YaxisLinear: FC<Props> = ({
               // If so, add the "zero-line" class
               d3.select(this).classed("zero-line", true);
             }
-          })
+          }),
       );
   }, [yScale, width, height, margin, highlightZeroLine]);
 
