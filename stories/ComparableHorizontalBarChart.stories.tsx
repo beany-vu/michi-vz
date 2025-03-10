@@ -9,7 +9,7 @@ export default {
   component: ComparableHorizontalBarChart,
   tags: ["autodocs"],
   decorators: [
-    (Story) => (
+    Story => (
       <MichiVzProvider initialHighlightItems={["Euro"]}>
         <Story />
       </MichiVzProvider>
@@ -29,7 +29,7 @@ export const Primary = {
       },
       {
         label: "Congo, Democratic Republic of",
-        valueBased: 492140.3,
+        valueBased: 92140.3,
         valueCompared: 211002.26,
       },
       {
@@ -43,7 +43,6 @@ export const Primary = {
         valueCompared: 176016.4,
       },
     ],
-    // xAxisPredefinedDomain: [0, 6881171.69]
     width: 900,
     height: 400,
     margin: {
@@ -53,8 +52,8 @@ export const Primary = {
       left: 50,
     },
     showCombined: false,
-    xAisFormat: (d) => `${d}`, // Example: format values as percentages
-    yAxisFormat: (d) => `${d}`, // Example: format values as percentages
+    xAisFormat: d => `${d}`, // Example: format values as percentages
+    yAxisFormat: d => `${d}`, // Example: format values as percentages
     title: "My Comparable Vertical Bar Chart",
     tooltipFormatter: (d: any) => {
       return JSON.stringify(d);
@@ -72,5 +71,6 @@ export const Primary = {
         </linearGradient>
       </defs>
     ),
+    filter: { limit: 10, criteria: "valueBased", sortingDir: "desc" },
   },
 };

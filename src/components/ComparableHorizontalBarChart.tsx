@@ -41,10 +41,17 @@ interface LineChartProps {
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
+  // New: filter prop for sorting
+  filter?: {
+    limit: number;
+    criteria: "valueBased" | "valueCompared";
+    sortingDir: "asc" | "desc";
+  };
 }
 
 const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   dataSet,
+  filter,
   title,
   width = WIDTH,
   height = HEIGHT,
@@ -71,39 +78,85 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     highlightItems,
     setHighlightItems,
     disabledItems,
+    setHiddenItems,
+    hiddenItems,
+    setVisibleItems,
+    visibleItems,
+    setDisabledItems,
   } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
+
+  // NEW: compute filteredDataSet for sorting based on the filter prop.
+  const filteredDataSet = useMemo(() => {
+    if (!filter) return dataSet;
+    return dataSet
+      .slice() // avoid mutating original array
+      .sort((a, b) => {
+        const aVal = Number(a[filter.criteria]);
+        const bVal = Number(b[filter.criteria]);
+        return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
+      })
+      .slice(0, filter.limit);
+  }, [dataSet, filter]);
+
+  // New: update hiddenItems based on filteredDataSet
+  useEffect(() => {
+    if (filter) {
+      const newHidden = dataSet
+        .filter(item => !filteredDataSet.some(filtered => filtered.label === item.label))
+        .map(item => item.label);
+
+      if (JSON.stringify(newHidden) !== JSON.stringify(hiddenItems)) {
+        setHiddenItems(newHidden);
+      }
+    } else {
+      if (hiddenItems.length > 0) {
+        setHiddenItems([]);
+      }
+    }
+  }, [dataSet, filteredDataSet, filter, hiddenItems, setHiddenItems]);
+
+  // New: update visibleItems based on filteredDataSet
+  useEffect(() => {
+    if (filter) {
+      const newVisible = filteredDataSet.map(item => item.label);
+
+      if (JSON.stringify(newVisible) !== JSON.stringify(visibleItems)) {
+        setVisibleItems(newVisible);
+      }
+    } else {
+      const allLabels = dataSet.map(item => item.label);
+      if (JSON.stringify(allLabels) !== JSON.stringify(visibleItems)) {
+        setVisibleItems(allLabels);
+      }
+    }
+  }, [dataSet, filteredDataSet, filter, visibleItems, setVisibleItems]);
+
+  // Update yAxisDomain and xAxisRange to use filteredDataSet
   const yAxisDomain = useMemo(
-    () =>
-      dataSet
-        ?.filter(d => !disabledItems.includes(d?.label))
-        ?.map(d => d?.label),
-    [dataSet, disabledItems]
+    () => filteredDataSet.filter(d => !disabledItems.includes(d?.label))?.map(d => d?.label),
+    [filteredDataSet, disabledItems]
   );
 
   const xAxisRange = useMemo(() => {
-    if (dataSet.length > 0) {
-      return dataSet
+    if (filteredDataSet.length > 0) {
+      return filteredDataSet
         ?.filter(d => !disabledItems.includes(d?.label))
         ?.map(d => [d.valueBased, d.valueCompared])
         ?.flat();
     }
     return [];
-  }, [dataSet, disabledItems]);
+  }, [filteredDataSet, disabledItems]);
 
   const xAxisDomain = useMemo(() => {
-    const range =
-      xAxisPredefinedDomain.length > 0 ? xAxisPredefinedDomain : xAxisRange;
+    const range = xAxisPredefinedDomain.length > 0 ? xAxisPredefinedDomain : xAxisRange;
     if (xAxisDataType === "number") {
       const min = Math.min(...range);
       const max = Math.max(...range);
       return [max, min];
     }
     if (xAxisDataType === "date_annual") {
-      return [
-        new Date(Math.max(...range), 1, 1),
-        new Date(Math.min(...range), 1, 1),
-      ];
+      return [new Date(Math.max(...range), 1, 1), new Date(Math.min(...range), 1, 1)];
     }
     if (xAxisRange.length >= 2) {
       const minDate = new Date(Math.min(...range));
@@ -130,10 +183,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           .domain(xAxisDomain)
           .range([width - margin.left, margin.right]);
 
-  const handleMouseOver = (
-    d: DataPoint,
-    event: React.MouseEvent<SVGRectElement, MouseEvent>
-  ) => {
+  const handleMouseOver = (d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>) => {
     if (svgRef.current) {
       const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
 
@@ -152,9 +202,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   useEffect(() => {
     d3.select(svgRef.current).select(".bar").attr("opacity", 0.3);
     highlightItems.forEach(item => {
-      d3.select(svgRef.current)
-        .selectAll(`.bar-[data-label="${item}"]`)
-        .attr("opacity", 1);
+      d3.select(svgRef.current).selectAll(`.bar-[data-label="${item}"]`).attr("opacity", 1);
     });
   }, [highlightItems]);
 
@@ -189,25 +237,14 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           xAxisFormat={xAxisFormat}
           xAxisDataType={xAxisDataType}
         />
-        <YaxisBand
-          yScale={yAxisScale}
-          width={width}
-          margin={margin}
-          yAxisFormat={yAxisFormat}
-        />
-        {dataSet
-          .filter(d => !disabledItems.includes(d?.label))
+        <YaxisBand yScale={yAxisScale} width={width} margin={margin} yAxisFormat={yAxisFormat} />
+        {filteredDataSet
+          .filter(d => !disabledItems.includes(d?.label) && visibleItems.includes(d?.label))
           .map((d, i) => {
-            const x1 =
-              margin.left + xAxisScale(Math.min(0, d.valueBased)) - margin.left;
-            const x2 =
-              margin.left +
-              xAxisScale(Math.min(0, d.valueCompared)) -
-              margin.left;
+            const x1 = margin.left + xAxisScale(Math.min(0, d.valueBased)) - margin.left;
+            const x2 = margin.left + xAxisScale(Math.min(0, d.valueCompared)) - margin.left;
             const width1 = Math.abs(xAxisScale(d.valueBased) - xAxisScale(0));
-            const width2 = Math.abs(
-              xAxisScale(d.valueCompared) - xAxisScale(0)
-            );
+            const width2 = Math.abs(xAxisScale(d.valueCompared) - xAxisScale(0));
 
             const y = yAxisScale(d?.label) || 0;
             const standardHeight = yAxisScale.bandwidth();
@@ -218,11 +255,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                 data-label={d?.label}
                 key={i}
                 style={{
-                  opacity:
-                    highlightItems.includes(d?.label) ||
-                    highlightItems.length === 0
-                      ? 1
-                      : 0.3,
+                  opacity: highlightItems.includes(d?.label) || highlightItems.length === 0 ? 1 : 0.3,
                 }}
                 onMouseOver={() => setHighlightItems([d?.label])}
                 onMouseOut={() => setHighlightItems([])}
@@ -314,8 +347,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         >
           {!tooltipFormatter && (
             <div>
-              ${tooltip?.data?.label}: ${tooltip?.data?.valueBased} - $
-              {tooltip?.data?.valueCompared}
+              ${tooltip?.data?.label}: ${tooltip?.data?.valueBased} - ${tooltip?.data?.valueCompared}
             </div>
           )}
           {tooltipFormatter && tooltipFormatter(tooltip?.data)}

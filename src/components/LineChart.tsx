@@ -113,10 +113,18 @@ interface LineChartProps {
           series: DataPoint[];
         }[]
       ) => boolean);
+  filter?: {
+    limit: number; // renamed from "top" to "limit"
+    date: number | string;
+    criteria: string;
+    sortingDir: "asc" | "desc";
+  };
+  sandBoxMode?: boolean;
 }
 
 const LineChart: React.FC<LineChartProps> = ({
   dataSet,
+  filter,
   title,
   width = WIDTH,
   height = HEIGHT,
@@ -125,19 +133,71 @@ const LineChart: React.FC<LineChartProps> = ({
   yAxisFormat,
   xAxisDataType = "number",
   xAxisFormat,
-  tooltipFormatter = (d: DataPoint) =>
-    `<div>${d.label} - ${d.date}: ${d.value}</div>`,
+  tooltipFormatter = (d: DataPoint) => `<div>${d.label} - ${d.date}: ${d.value}</div>`,
   showCombined = false,
   children,
   isLoading = false,
   isLoadingComponent,
   isNodataComponent,
   isNodata,
+  sandBoxMode = false,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
-    useChartContext();
+  const {
+    colorsMapping,
+    highlightItems,
+    setHighlightItems,
+    disabledItems,
+    setHiddenItems,
+    hiddenItems,
+    setVisibleItems,
+    visibleItems,
+  } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
+
+  const filteredDataSet = useMemo(() => {
+    // If filter is undefined, show all items.
+    if (!filter) return dataSet;
+    return dataSet
+      .filter(item => {
+        const targetPoint = item.series.find(d => d.date.toString() === filter.date.toString());
+        return targetPoint !== undefined;
+      })
+      .sort((a, b) => {
+        const aPoint = a.series.find(d => d.date.toString() === filter.date.toString());
+        const bPoint = b.series.find(d => d.date.toString() === filter.date.toString());
+        const aVal = aPoint ? Number(aPoint[filter.criteria]) : 0;
+        const bVal = bPoint ? Number(bPoint[filter.criteria]) : 0;
+        return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
+      })
+      .slice(0, filter.limit); // use filter.limit instead of filter.top
+  }, [dataSet, filter]);
+
+  // New: update hiddenItems based on filter
+  useEffect(() => {
+    if (sandBoxMode) return;
+    if (filter != null) {
+      const newHidden = dataSet
+        .filter(item => !filteredDataSet.some(filtered => filtered.label === item.label))
+        .map(item => item.label);
+      if (JSON.stringify(newHidden) !== JSON.stringify(hiddenItems)) {
+        setHiddenItems(newHidden);
+      }
+    } else {
+      if (hiddenItems.length !== 0) {
+        setHiddenItems([]);
+      }
+    }
+  }, [dataSet, filter, filteredDataSet, hiddenItems, setHiddenItems]);
+
+  useEffect(() => {
+    if (sandBoxMode) return;
+    // New: update visibleItems based on filter
+    const newVisible = filteredDataSet.map(item => item.label);
+    if (JSON.stringify(newVisible) !== JSON.stringify(visibleItems)) {
+      setVisibleItems(newVisible);
+    }
+  }, [hiddenItems, visibleItems, setVisibleItems]);
 
   const yScale = useMemo(
     () =>
@@ -148,19 +208,15 @@ const LineChart: React.FC<LineChartProps> = ({
             ? yAxisDomain
             : [
                 d3.min(
-                  dataSet
+                  filteredDataSet
                     .filter(d => !disabledItems.includes(d.label))
-                    .flatMap(({ series }) =>
-                      series.filter(dd => dd.value !== null)
-                    ),
+                    .flatMap(({ series }) => series.filter(dd => dd.value !== null)),
                   d => d.value
                 ) || 0,
                 d3.max(
-                  dataSet
+                  filteredDataSet
                     .filter(d => !disabledItems.includes(d.label))
-                    .flatMap(({ series }) =>
-                      series.filter(dd => dd.value !== null)
-                    ),
+                    .flatMap(({ series }) => series.filter(dd => dd.value !== null)),
                   d => d.value
                 ) || 1,
               ]
@@ -168,7 +224,7 @@ const LineChart: React.FC<LineChartProps> = ({
         .range([height - margin.bottom, margin.top])
         .clamp(true)
         .nice(),
-    [dataSet, width, height, disabledItems, yAxisDomain]
+    [filteredDataSet, width, height, disabledItems, yAxisDomain]
   );
 
   const xScale = useMemo(() => {
@@ -177,12 +233,12 @@ const LineChart: React.FC<LineChartProps> = ({
         .scaleLinear()
         .domain([
           d3.min(
-            dataSet
+            filteredDataSet
               .filter(d => !disabledItems.includes(d.label))
               .flatMap(item => item.series.map(d => d.date as number))
           ) || 0,
           d3.max(
-            dataSet
+            filteredDataSet
               .filter(d => !disabledItems.includes(d.label))
               .flatMap(item => item.series.map(d => d.date as number))
           ) || 1,
@@ -195,13 +251,9 @@ const LineChart: React.FC<LineChartProps> = ({
     if (xAxisDataType === "date_annual") {
       // sometimes the first tick is missing, so do a hack here
       const minDate = d3.min(
-        dataSet.flatMap(item =>
-          item.series.map(d => new Date(`${d.date}-01-01`))
-        )
+        filteredDataSet.flatMap(item => item.series.map(d => new Date(`${d.date}-01-01`)))
       );
-      const maxDate = d3.max(
-        dataSet.flatMap(item => item.series.map(d => new Date(`${d.date}`)))
-      );
+      const maxDate = d3.max(filteredDataSet.flatMap(item => item.series.map(d => new Date(`${d.date}`))));
 
       return d3
         .scaleTime()
@@ -209,27 +261,18 @@ const LineChart: React.FC<LineChartProps> = ({
         .range([margin.left, width - margin.right]);
     }
 
-    const minDate = d3.min(
-      dataSet.flatMap(item => item.series.map(d => new Date(d.date)))
-    );
-    const maxDate = d3.max(
-      dataSet.flatMap(item => item.series.map(d => new Date(d.date)))
-    );
+    const minDate = d3.min(filteredDataSet.flatMap(item => item.series.map(d => new Date(d.date))));
+    const maxDate = d3.max(filteredDataSet.flatMap(item => item.series.map(d => new Date(d.date))));
 
     return d3
       .scaleTime()
       .domain([minDate || 0, maxDate || 1])
       .range([margin.left, width - margin.right]);
-  }, [dataSet, width, height, disabledItems, xAxisDataType]);
+  }, [filteredDataSet, width, height, disabledItems, xAxisDataType]);
 
-  function getYValueAtX(
-    series: DataPoint[],
-    x: number | Date
-  ): number | undefined {
+  function getYValueAtX(series: DataPoint[], x: number | Date): number | undefined {
     if (x instanceof Date) {
-      const dataPoint = series.find(
-        d => new Date(d.date).getTime() === x.getTime()
-      );
+      const dataPoint = series.find(d => new Date(d.date).getTime() === x.getTime());
       return dataPoint ? dataPoint.value : undefined;
     }
 
@@ -256,26 +299,17 @@ const LineChart: React.FC<LineChartProps> = ({
       xScale: ScaleLinear<number, number> | ScaleTime<number, number>
     ) => {
       const totalLength = pathNode.getTotalLength();
-      const lengths = series.map(d =>
-        getPathLengthAtX(pathNode, xScale(new Date(d.date)))
-      );
+      const lengths = series.map(d => getPathLengthAtX(pathNode, xScale(new Date(d.date))));
 
       const dashArray = [];
 
       for (let i = 1; i <= series.length; i++) {
         const segmentLength =
-          i === series.length - 1
-            ? totalLength - lengths[i - 1]
-            : lengths[i] - lengths[i - 1];
+          i === series.length - 1 ? totalLength - lengths[i - 1] : lengths[i] - lengths[i - 1];
 
         if (!series[i]?.certainty) {
-          const dashes = Math.floor(
-            segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH)
-          );
-          const remainder =
-            Math.ceil(
-              segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH)
-            ) + 5;
+          const dashes = Math.floor(segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH));
+          const remainder = Math.ceil(segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH)) + 5;
 
           for (let j = 0; j < dashes; j++) {
             dashArray.push(DASH_LENGTH);
@@ -314,7 +348,7 @@ const LineChart: React.FC<LineChartProps> = ({
     };
 
     // draw lines
-    dataSet
+    filteredDataSet
       .filter(d => !disabledItems.includes(d.label))
       .forEach((data, i) => {
         const path = svg
@@ -341,7 +375,7 @@ const LineChart: React.FC<LineChartProps> = ({
       });
 
     // draw lines one more time to fix the side effect of line losing focused on mouseover the dash array
-    dataSet
+    filteredDataSet
       .filter(d => !disabledItems.includes(d.label))
       .forEach((data, i) => {
         svg
@@ -379,7 +413,7 @@ const LineChart: React.FC<LineChartProps> = ({
       });
 
     // draw circles on the line to indicate data points
-    dataSet
+    filteredDataSet
       .filter(d => !disabledItems.includes(d.label))
       .forEach((data, i) => {
         svg
@@ -421,7 +455,7 @@ const LineChart: React.FC<LineChartProps> = ({
                   label: data.label,
                 } as DataPoint,
                 data.series,
-                dataSet
+                filteredDataSet
               );
 
               // Position the tooltip near the circle
@@ -443,8 +477,7 @@ const LineChart: React.FC<LineChartProps> = ({
             const relatedTarget = event.relatedTarget;
             const isMouseOverLine =
               relatedTarget &&
-              (relatedTarget.classList.contains("line") ||
-                relatedTarget.classList.contains("line-overlay"));
+              (relatedTarget.classList.contains("line") || relatedTarget.classList.contains("line-overlay"));
 
             if (!isMouseOverLine) {
               setHighlightItems([]);
@@ -460,15 +493,7 @@ const LineChart: React.FC<LineChartProps> = ({
             }
           });
       });
-  }, [
-    dataSet,
-    width,
-    height,
-    margin,
-    disabledItems,
-    xAxisDataType,
-    getDashArrayMemoized,
-  ]);
+  }, [filteredDataSet, width, height, margin, disabledItems, xAxisDataType, getDashArrayMemoized]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -484,9 +509,7 @@ const LineChart: React.FC<LineChartProps> = ({
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
-    svg
-      .selectAll(".data-group")
-      .attr("opacity", highlightItems.length === 0 ? 1 : 0.2);
+    svg.selectAll(".data-group").attr("opacity", highlightItems.length === 0 ? 1 : 0.2);
     highlightItems.forEach(item => {
       svg.selectAll(`[data-label="${item}"]`).attr("opacity", 1);
     });
@@ -525,7 +548,7 @@ const LineChart: React.FC<LineChartProps> = ({
           const xValue = xScale.invert(x);
 
           const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
-          const tooltipContent = dataSet
+          const tooltipContent = filteredDataSet
             .map(data => {
               const yValue = getYValueAtX(data.series, xValue);
               return `<div>${data.label}: ${yValue ?? "N/A"}</div>`;
@@ -554,9 +577,7 @@ const LineChart: React.FC<LineChartProps> = ({
             .attr("y2", HEIGHT - MARGIN.bottom + 20)
             .style("display", "block");
 
-          hoverLinesGroup
-            .selectAll(".hover-line")
-            .filter((_, index) => index !== Math.round(xPosition));
+          hoverLinesGroup.selectAll(".hover-line").filter((_, index) => index !== Math.round(xPosition));
         });
     }
   }, [showCombined]);
@@ -590,7 +611,7 @@ const LineChart: React.FC<LineChartProps> = ({
           <Title x={width / 2} y={margin.top / 2}>
             {title}
           </Title>
-          {dataSet.length > 0 && (
+          {filteredDataSet.length > 0 && (
             <>
               <XaxisLinear
                 xScale={xScale}

@@ -1,11 +1,11 @@
 import * as d3 from "d3";
 import React, { useEffect, useMemo, useRef } from "react";
+import { useChartContext } from "../components/MichiVzProvider";
 import Title from "../components/shared/Title";
+import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
+import LoadingIndicator from "./shared/LoadingIndicator";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
-import { useChartContext } from "../components/MichiVzProvider";
-import LoadingIndicator from "./shared/LoadingIndicator";
-import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 
 interface DataPoint {
   label: string;
@@ -40,10 +40,16 @@ interface LineChartProps {
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
+  filter?: {
+    limit: number; // new; replaces top
+    criteria: "valueBased" | "valueCompared"; // sorting criteria
+    sortingDir: "asc" | "desc";
+  };
 }
 
 const DualHorizontalBarChart: React.FC<LineChartProps> = ({
   dataSet,
+  filter,
   title,
   width = WIDTH,
   height = HEIGHT,
@@ -69,15 +75,64 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     highlightItems,
     setHighlightItems,
     disabledItems,
+    setHiddenItems,
+    hiddenItems,
+    setVisibleItems,
+    visibleItems,
   } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
+
+  // New: compute filteredDataSet
+  const filteredDataSet = useMemo(() => {
+    if (!filter) return dataSet;
+    return dataSet
+      .slice() // copy array to avoid mutating original during sort
+      .sort((a, b) => {
+        const aVal = a[filter.criteria] ?? 0;
+        const bVal = b[filter.criteria] ?? 0;
+        return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
+      })
+      .slice(0, filter.limit);
+  }, [dataSet, filter]);
+
+  // New: update hiddenItems based on filter
+  useEffect(() => {
+    if (filter != null) {
+      const newHidden = dataSet
+        .filter(item => !filteredDataSet.some(filtered => filtered.label === item.label))
+        .map(item => item.label);
+      if (JSON.stringify(newHidden) !== JSON.stringify(hiddenItems)) {
+        setHiddenItems(newHidden);
+      }
+    } else {
+      if (hiddenItems.length !== 0) {
+        setHiddenItems([]);
+      }
+    }
+  }, [dataSet, filter, filteredDataSet, hiddenItems, setHiddenItems]);
+
+  // New: update visibleItems based on filter
+  useEffect(() => {
+    if (filter != null) {
+      const newVisible = dataSet
+        .filter(item => filteredDataSet.some(filtered => filtered.label === item.label))
+        .map(item => item.label);
+      if (JSON.stringify(newVisible) !== JSON.stringify(visibleItems)) {
+        setVisibleItems(newVisible);
+      }
+    } else {
+      if (visibleItems.length !== 0) {
+        setVisibleItems([]);
+      }
+    }
+  }, [dataSet, filter, filteredDataSet, visibleItems, setVisibleItems]);
+
   const yAxisDomain = useMemo(
-    () =>
-      dataSet.filter(d => !disabledItems.includes(d.label)).map(d => d.label),
-    [dataSet]
+    () => filteredDataSet.filter(d => !disabledItems.includes(d.label)).map(d => d.label),
+    [filteredDataSet]
   );
   const xAxisDomain = useMemo(() => {
-    const flattenedValues = dataSet
+    const flattenedValues = filteredDataSet
       .filter(d => !disabledItems.includes(d.label))
       .map(d => [d.value1, d.value2])
       .flat();
@@ -94,7 +149,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     }
 
     return [];
-  }, [dataSet, disabledItems, xAxisDataType]);
+  }, [filteredDataSet, disabledItems, xAxisDataType]);
 
   const yAxisScale = d3
     .scaleBand()
@@ -115,10 +170,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     .clamp(true)
     .nice(1);
 
-  const handleMouseOver = (
-    d: DataPoint,
-    event: React.MouseEvent<SVGRectElement, MouseEvent>
-  ) => {
+  const handleMouseOver = (d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>) => {
     if (svgRef.current) {
       const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
 
@@ -181,13 +233,8 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
           xAxisFormat={xAxisFormat}
           xAxisDataType={xAxisDataType}
         />
-        <YaxisBand
-          yScale={yAxisScale}
-          width={width}
-          margin={margin}
-          yAxisFormat={yAxisFormat}
-        />
-        {dataSet
+        <YaxisBand yScale={yAxisScale} width={width} margin={margin} yAxisFormat={yAxisFormat} />
+        {filteredDataSet
           .filter(d => !disabledItems.includes(d.label))
           .map((d, i) => {
             const x1 = xAxis1Scale(d.value1) - width / 2; // Corrected width calculation
@@ -196,16 +243,10 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
             const standardHeight = yAxisScale.bandwidth();
             return (
               <g
-                className={`bar bar-${d.label
-                  .replaceAll(" ", "-")
-                  .replaceAll(",", "")}`}
+                className={`bar bar-${d.label.replaceAll(" ", "-").replaceAll(",", "")}`}
                 key={i}
                 style={{
-                  opacity:
-                    highlightItems.includes(d.label) ||
-                    highlightItems.length === 0
-                      ? 1
-                      : 0.3,
+                  opacity: highlightItems.includes(d.label) || highlightItems.length === 0 ? 1 : 0.3,
                 }}
                 onMouseOver={() => setHighlightItems([d.label])}
                 onMouseOut={() => setHighlightItems([])}
@@ -278,8 +319,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
         >
           {!tooltipFormatter && (
             <div>
-              ${tooltip?.data?.label}: ${tooltip?.data?.value1} - $
-              {tooltip?.data?.value2}
+              ${tooltip?.data?.label}: ${tooltip?.data?.value1} - ${tooltip?.data?.value2}
             </div>
           )}
           {tooltipFormatter && tooltipFormatter(tooltip?.data)}
