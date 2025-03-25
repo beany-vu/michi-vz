@@ -7,6 +7,7 @@ import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisLinear from "./shared/YaxisLinear";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
+import LoadingIndicator from "./shared/LoadingIndicator";
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
@@ -230,7 +231,6 @@ const RangeChart: React.FC<RangeChartProps> = ({
       .append("path")
       .attr("class", (_, i) => `area area-${i} area-group`)
       .attr("d", d => {
-
         if (showLine(d.series[0])) {
           const linePath = getLineGenerator(d.series);
           return linePath;
@@ -239,12 +239,8 @@ const RangeChart: React.FC<RangeChartProps> = ({
           return areaPath;
         }
       })
-      .attr("fill", d =>
-        showLine(d.series[0]) ? "none" : colorsMapping[d.label] || d.color
-      )
-      .attr("stroke", d =>
-        showLine(d.series[0]) ? colorsMapping[d.label] || d.color : "none"
-      )
+      .attr("fill", d => (showLine(d.series[0]) ? "none" : colorsMapping[d.label] || d.color))
+      .attr("stroke", d => (showLine(d.series[0]) ? colorsMapping[d.label] || d.color : "none"))
       .attr("data-label", d => d.label)
       .attr("transition", "all 0.1s ease-out")
       .on("mouseenter", function (event) {
@@ -261,10 +257,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
       })
       .on("mouseout", event => {
         // mouse is on .react-hover then do nothing
-        if (
-          event.relatedTarget &&
-          event.relatedTarget.classList.contains("rect-hover")
-        ) {
+        if (event.relatedTarget && event.relatedTarget.classList.contains("rect-hover")) {
           return;
         }
         event.preventDefault();
@@ -345,23 +338,13 @@ const RangeChart: React.FC<RangeChartProps> = ({
 
   return (
     <div className="chart-container" style={{ position: "relative" }}>
-      {isLoading && isLoadingComponent}
-      {displayIsNodata && isNodataComponent}
-      {!isLoading && dataSet.length > 0 && (
-        <svg
-          className="chart"
-          width={width}
-          height={height}
-          ref={svgRef}
-          style={{ overflow: "visible" }}
-        >
+      {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
+      {isLoading && !isLoadingComponent && <LoadingIndicator />}
+      {displayIsNodata && <>{isNodataComponent}</>}
+      {!isLoading && !displayIsNodata && dataSet.length > 0 && (
+        <svg className="chart" width={width} height={height} ref={svgRef} style={{ overflow: "visible" }}>
           {title && (
-            <text
-              x={width / 2}
-              y={margin.top / 2}
-              textAnchor="middle"
-              className="chart-title"
-            >
+            <text x={width / 2} y={margin.top / 2} textAnchor="middle" className="chart-title">
               {title}
             </text>
           )}

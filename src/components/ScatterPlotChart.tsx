@@ -9,7 +9,7 @@ import { useChartContext } from "./MichiVzProvider";
 import { drawHalfLeftCircle } from "../components/shared/helpers";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
-import { orderBy } from "lodash";
+import LoadingIndicator from "./shared/LoadingIndicator";
 
 const Styled = styled.div`
   .shape {
@@ -328,8 +328,9 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
 
   return (
     <Styled style={{ position: "relative" }}>
-      {isLoading && isLoadingComponent}
-      {displayIsNodata && isNodataComponent}
+      {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
+      {isLoading && !isLoadingComponent && <LoadingIndicator />}
+      {displayIsNodata && <>{isNodataComponent}</>}
       <Suspense fallback={null}>
         <svg
           width={width}

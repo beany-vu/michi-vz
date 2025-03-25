@@ -7,6 +7,7 @@ import YaxisBand from "./shared/YaxisBand";
 import XaxisLinear from "./shared/XaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
+import LoadingIndicator from "./shared/LoadingIndicator";
 
 interface DataPoint {
   [key: string]: number | undefined;
@@ -149,8 +150,9 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
 
   return (
     <div style={{ position: "relative" }}>
-      {isLoading && isLoadingComponent}
-      {displayIsNodata && isNodataComponent}
+      {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
+      {isLoading && !isLoadingComponent && <LoadingIndicator />}
+      {displayIsNodata && <>{isNodataComponent}</>}
       <svg ref={ref} height={height} width={width}>
         {children}
         <Title x={width / 2} y={margin.top / 2}>
@@ -204,10 +206,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                           data-label={key}
                           key={`${key}-${i}`}
                           x={x}
-                          y={
-                            yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 ||
-                            0
-                          }
+                          y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 || 0}
                           height={4}
                           width={width}
                           fill={colorsMapping?.[key]}
