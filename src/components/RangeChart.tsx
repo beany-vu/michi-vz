@@ -230,15 +230,12 @@ const RangeChart: React.FC<RangeChartProps> = ({
       .append("path")
       .attr("class", (_, i) => `area area-${i} area-group`)
       .attr("d", d => {
-        console.log(111, d.series);
 
         if (showLine(d.series[0])) {
           const linePath = getLineGenerator(d.series);
-          console.log("Line Shape:", linePath);
           return linePath;
         } else {
           const areaPath = getAreaGenerator(d.series);
-          console.log("Area Shape:", areaPath);
           return areaPath;
         }
       })

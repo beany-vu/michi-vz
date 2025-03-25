@@ -109,7 +109,6 @@ describe("<HorizontalAxisBand />", () => {
   //   await waitFor(
   //     () => {
   //       const tickCircles = container.querySelectorAll(".tick .tickValueDot");
-  //       console.log("tickCircles", tickCircles.length);
   //       expect(tickCircles.length).toBeGreaterThan(0); // Assuming there will be at least one circle for your domain
   //
   //       // Test the first circle's attributes as a sample:

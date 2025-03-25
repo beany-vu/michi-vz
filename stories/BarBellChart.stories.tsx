@@ -152,15 +152,12 @@ const mockData2 = [
   },
 ];
 
-
 export default {
   title: "Charts/BarBellChart",
   component: BarBellChart,
   decorators: [
-    (Story) => (
-      <MichiVzProvider
-        initialColorsMapping={{ step1: "red", step2: "blue", step3: "pink" }}
-      >
+    Story => (
+      <MichiVzProvider initialColorsMapping={{ step1: "red", step2: "blue", step3: "pink" }}>
         <Story />
       </MichiVzProvider>
     ),
@@ -182,9 +179,8 @@ export const Primary = {
     title: "BarBell Chart",
     xAxisFormat: (value: any) => value, // You may need to adjust this based on your actual xAxisFormat function
     yAxisFormat: (value: any) => {
-      console.log({ value })
       return value;
-      return `${new Date(value).getFullYear()} - ${new Date(value).getMonth() + 1}`;
+      // return `${new Date(value).getFullYear()} - ${new Date(value).getMonth() + 1}`;
     },
     // You may need to adjust this based on your actual yAxisFormat function
     // tooltipFormat: ({ item, series }) => `<div>${JSON.stringify(item)}</div>`,
