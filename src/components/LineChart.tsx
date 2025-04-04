@@ -17,58 +17,12 @@ const HEIGHT = 480 - MARGIN.top - MARGIN.bottom;
 const DASH_LENGTH = 4;
 const DASH_SEPARATOR_LENGTH = 4;
 
-const Styled = styled.div` 
-  foreignObject {
-    box-sizing: border-box;
-    overflow: visible;
-
-    .shape {
-      transform: translate(-5px, -5px);
-      box-sizing: border-box;
-      width: 10px;
-      height: 10px;
-      background: var(--background-color);
-    }
-
-    .shape-circle {
-      border-radius: 50%;
-      border: 2px solid #fff;
-    }
-
-    .shape-square {
-      border: 2px solid #fff;
-    }
-
-    .shape-triangle {
-      position: relative;
-      background: transparent !important;
-
-      z-index: 0;
-
-      &:before {
-        content: "";
-        position: absolute;
-        width: 0 !important;
-        height: 0 !important;
-        border-style: solid;
-        border-width: 0 7px 14px 7px;
-        border-color: transparent transparent #fff transparent;
-        top: -3px;
-        left: -2px;
-        z-index: -1;
-      }
-
-      &:after {
-        content: "";
-        position: absolute;
-        border-style: solid;
-        border-width: 0 5px 10px 5px;
-        border-color: transparent transparent var(--background-color);
-          transparent;
-        background: transparent !important;
-        z-index: 0;
-      }
-    }
+const Styled = styled.div`
+  path,
+  circle {
+    transition: opacity 0.1s ease-out;
+    will-change: opacity;
+    transition-delay: 0.1s;
   }
 `;
 
@@ -350,7 +304,7 @@ const LineChart: React.FC<LineChartProps> = ({
     filteredDataSet
       .filter(d => !disabledItems.includes(d.label))
       .forEach((data, i) => {
-        const path = svg
+        svg
           .append("path")
           .datum(data.series)
           .attr("class", `line line-${i} data-group data-group-${i}`)
@@ -360,55 +314,36 @@ const LineChart: React.FC<LineChartProps> = ({
               d: d,
               curve: data?.curve,
             })
-          ) // Explicitly specify the type and use line function
+          )
           .attr("stroke", colorsMapping[data.label] ?? data.color)
           .attr("stroke-width", 2)
           .attr("fill", "none")
-          .attr("pointer-events", "none");
+          .attr("pointer-events", "none")
+          .on("mouseenter", event => handleMouseEnter(event, data))
+          .on("mouseout", handleMouseOut);
 
         if (data.series) {
-          path.attr("stroke-dasharray", function () {
-            return getDashArrayMemoized(data.series, this, xScale);
-          });
+          svg
+            .append("path")
+            .datum(data.series)
+            .attr(
+              "class",
+              `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${data.label} line-group-overlay-${data.label}`
+            )
+            .attr("d", (d: DataPoint[]) =>
+              line({
+                d: d,
+                curve: data?.curve,
+              })
+            )
+            .attr("stroke", colorsMapping[data.label] ?? data.color)
+            .attr("stroke-width", 5)
+            .attr("fill", "none")
+            .attr("pointer-events", "stroke")
+            .attr("opacity", 0.05)
+            .on("mouseenter", event => handleMouseEnter(event, data))
+            .on("mouseout", handleMouseOut);
         }
-      });
-
-    // draw lines one more time to fix the side effect of line losing focused on mouseover the dash array
-    filteredDataSet
-      .filter(d => !disabledItems.includes(d.label))
-      .forEach((data, i) => {
-        svg
-          .append("path")
-          .datum(data.series)
-          .attr(
-            "class",
-            `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${data.label} line-group-overlay-${data.label}`
-          )
-          .attr("d", (d: DataPoint[]) =>
-            line({
-              d: d,
-              curve: data?.curve,
-            })
-          ) // Explicitly specify the type and use line function
-          .attr("stroke", colorsMapping[data.label] ?? data.color)
-          .attr("stroke-width", 5)
-          .attr("fill", "none")
-          .attr("pointer-events", "stroke")
-          .attr("opacity", 0.1)
-          .on("mouseenter", event => {
-            event.preventDefault();
-            event.stopPropagation();
-            setHighlightItems([data.label]);
-          })
-
-          .on("mouseout", event => {
-            event.preventDefault();
-            event.stopPropagation();
-            setHighlightItems([]);
-            if (tooltipRef?.current) {
-              tooltipRef.current.style.visibility = "hidden";
-            }
-          });
       });
 
     // draw circles on the line to indicate data points
@@ -493,7 +428,7 @@ const LineChart: React.FC<LineChartProps> = ({
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
-    svg.selectAll(".data-group").attr("opacity", highlightItems.length === 0 ? 1 : 0.2);
+    svg.selectAll(".data-group").attr("opacity", highlightItems.length === 0 ? 1 : 0.05);
     highlightItems.forEach(item => {
       svg.selectAll(`[data-label="${item}"]`).attr("opacity", 1);
     });
@@ -501,6 +436,21 @@ const LineChart: React.FC<LineChartProps> = ({
       d3.select("#tooltip").style("visibility", "hidden");
     }
   }, [highlightItems]);
+
+  const handleMouseEnter = debounce((event, data) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setHighlightItems([data.label]);
+  }, 100);
+
+  const handleMouseOut = debounce(event => {
+    event.preventDefault();
+    event.stopPropagation();
+    setHighlightItems([]);
+    if (tooltipRef?.current) {
+      tooltipRef.current.style.visibility = "hidden";
+    }
+  }, 100);
 
   useEffect(() => {
     if (showCombined) {
@@ -573,6 +523,15 @@ const LineChart: React.FC<LineChartProps> = ({
     isNodata: isNodata,
   });
 
+  function debounce(func: Function, wait: number) {
+    let timeout: number;
+    return function (...args: any[]) {
+      const context = this;
+      clearTimeout(timeout);
+      timeout = window.setTimeout(() => func.apply(context, args), wait);
+    };
+  }
+
   return (
     <Styled>
       <div style={{ position: "relative", width: width, height: height }}>
@@ -622,6 +581,7 @@ const LineChart: React.FC<LineChartProps> = ({
             position: "fixed",
             visibility: "hidden",
             transition: "visibility 0.1s ease-out, opacity 0.1s ease-out",
+            willChange: "visibility, opacity, top, left",
             zIndex: 1000,
             pointerEvents: "none",
             background: "#fff",
