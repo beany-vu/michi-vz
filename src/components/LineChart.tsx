@@ -7,7 +7,6 @@ import YaxisLinear from "./shared/YaxisLinear";
 import XaxisLinear from "./shared/XaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import { ScaleLinear } from "d3-scale";
-import { debounce } from "lodash";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
@@ -431,39 +430,40 @@ const LineChart: React.FC<LineChartProps> = ({
           .attr("stroke-width", 2)
           .attr("transition", "all 0.1s ease-out")
           .attr("cursor", "crosshair")
-          .on(
-            "mouseenter",
-            debounce((event, d) => {
-              event.preventDefault();
-              event.stopPropagation();
+          .on("mouseenter", (event, d) => {
+            event.preventDefault();
+            event.stopPropagation();
 
-              setHighlightItems([data.label]);
-              const [x, y] = d3.pointer(event, svgRef.current);
-              const htmlContent = tooltipFormatter(
-                {
-                  ...d,
-                  label: data.label,
-                } as DataPoint,
-                data.series,
-                filteredDataSet
-              );
+            setHighlightItems([data.label]);
 
-              // Position the tooltip near the circle
-              if (tooltipRef?.current) {
-                tooltipRef.current.style.visibility = "hidden";
-                tooltipRef.current.style.left = x + 10 + "px";
-                tooltipRef.current.style.top = y - 25 + "px";
-                tooltipRef.current.style.visibility = "visible";
-                tooltipRef.current.style.background = "#fff";
-                tooltipRef.current.style.padding = "5px";
-                tooltipRef.current.innerHTML = htmlContent;
-              }
-            }, 5)
-          )
+            const tooltipContent = tooltipFormatter(
+              {
+                ...d,
+                label: data.label,
+              } as DataPoint,
+              data.series,
+              filteredDataSet
+            );
+
+            if (tooltipRef?.current && svgRef.current) {
+              const [mouseX, mouseY] = d3.pointer(event);
+              const svgRect = svgRef.current.getBoundingClientRect();
+              const tooltip = tooltipRef.current;
+
+              // Calculate position relative to SVG container
+              const xPosition = svgRect.left + mouseX + 10;
+              const yPosition = svgRect.top + mouseY - 25;
+
+              tooltip.style.left = `${xPosition}px`;
+              tooltip.style.top = `${yPosition}px`;
+              tooltip.style.visibility = "visible";
+              tooltip.innerHTML = tooltipContent;
+            }
+          })
           .on("mouseout", event => {
             event.preventDefault();
+            event.stopPropagation();
 
-            // Check if the mouse is still over the line below the circle
             const relatedTarget = event.relatedTarget;
             const isMouseOverLine =
               relatedTarget &&
@@ -473,13 +473,7 @@ const LineChart: React.FC<LineChartProps> = ({
               setHighlightItems([]);
               if (tooltipRef?.current) {
                 tooltipRef.current.style.visibility = "hidden";
-                tooltipRef.current.innerHTML = "";
               }
-            }
-
-            if (tooltipRef?.current) {
-              tooltipRef.current.style.visibility = "hidden";
-              tooltipRef.current.innerHTML = "";
             }
           });
       });
@@ -625,10 +619,17 @@ const LineChart: React.FC<LineChartProps> = ({
           ref={tooltipRef}
           className="tooltip"
           style={{
-            position: "absolute",
-            transition: "visibility 0.1s ease-out,opacity 0.1s ease-out",
-            transform: "translateZ(0)",
-            zIndex: 1,
+            position: "fixed",
+            visibility: "hidden",
+            transition: "visibility 0.1s ease-out, opacity 0.1s ease-out",
+            zIndex: 1000,
+            pointerEvents: "none",
+            background: "#fff",
+            padding: "5px",
+            borderRadius: "4px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            maxWidth: "200px",
+            whiteSpace: "nowrap",
           }}
         />
         {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
