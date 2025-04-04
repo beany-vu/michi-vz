@@ -114,7 +114,7 @@ interface LineChartProps {
         }[]
       ) => boolean);
   filter?: {
-    limit: number; // renamed from "top" to "limit"
+    limit: number;
     date: number | string;
     criteria: string;
     sortingDir: "asc" | "desc";
@@ -420,27 +420,17 @@ const LineChart: React.FC<LineChartProps> = ({
           .selectAll(`.circle-data-${i}`)
           .data(data.series)
           .enter()
-          .append("foreignObject")
+          .append("circle")
           .attr("class", `data-group data-group-${i} data-group-${data.label}`)
-
           .attr("data-label", data.label)
-          .attr("x", (d: DataPoint) => xScale(new Date(d.date)))
-          .attr("y", (d: DataPoint) => yScale(d.value))
-          .attr("width", 10)
-          .attr("height", 10)
+          .attr("cx", (d: DataPoint) => xScale(new Date(d.date)))
+          .attr("cy", (d: DataPoint) => yScale(d.value))
+          .attr("r", 5)
+          .attr("fill", colorsMapping[data.label] ?? data.color ?? "transparent")
+          .attr("stroke", "#fff")
+          .attr("stroke-width", 2)
           .attr("transition", "all 0.1s ease-out")
           .attr("cursor", "crosshair")
-          .append("xhtml:div") // Append a div inside the foreignObject
-          .attr("class", `shape shape-${data?.shape ?? "circle"}`) // Optionally, set class for styling
-          .style("width", "100%") // Set the width of the div
-          .style("height", "100%") // Set the height of the div
-          .each(function () {
-            const el = this as HTMLDivElement;
-            el.style.setProperty(
-              "--background-color",
-              colorsMapping[data.label] ?? data.color ?? "transparent"
-            );
-          })
           .on(
             "mouseenter",
             debounce((event, d) => {

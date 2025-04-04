@@ -259,46 +259,45 @@ const VerticalStackBarChart: React.FC<Props> = ({
       );
 
     // First filter rawDataSet to exclude any dataset where seriesKey is in hiddenItems
-    const visibleDataSets = rawDataSet.filter(
-      dataItem => !hiddenItems.includes(dataItem.seriesKey) && !disabledItems.includes(dataItem.seriesKey)
-    );
+    rawDataSet
+      .filter(
+        dataItem => !hiddenItems.includes(dataItem.seriesKey) && !disabledItems.includes(dataItem.seriesKey)
+      ) // Filter out datasets with hidden seriesKey
+      .forEach((dataItem, groupIndex) => {
+        const series = dataItem.series;
+        const groupWidth = xScale.bandwidth() / Object.keys(stackedData).length;
 
-    // Calculate the total number of visible series
-    const totalVisibleSeries = visibleDataSets.length || 1; // Ensure we don't divide by zero
-    const seriesWidth = xScale.bandwidth() / totalVisibleSeries;
-
-    visibleDataSets.forEach((dataItem, groupIndex) => {
-      const series = dataItem.series;
-
-      series.forEach(yearData => {
-        let y0 = 0;
-        effectiveKeys
-          .filter(key => !disabledItems.includes(key) && !hiddenItems.includes(key))
-          .reverse()
-          .forEach(key => {
-            const y1 = parseFloat(String(y0)) + parseFloat((yearData[key] || 0) as unknown as string);
-            const itemHeight = yScale(y0) - yScale(y1);
-            const rectData = {
-              key,
-              height: itemHeight,
-              width: seriesWidth - 4, // adjust the width here
-              y: yScale(y1),
-              x:
-                xScale(String(yearData.date)) +
-                seriesWidth * groupIndex + // Position based on series index
-                2, // Small padding
-              fill: colorsMapping[key],
-              data: yearData,
-              seriesKey: dataItem.seriesKey,
-              seriesKeyAbbreviation: dataItem.seriesKeyAbbreviation,
-              value: yearData[key],
-              date: yearData.date,
-            };
-            y0 = y1;
-            stackedData[key].push(rectData as unknown as RectData);
-          });
+        series.forEach(yearData => {
+          let y0 = 0;
+          effectiveKeys
+            .filter(key => !disabledItems.includes(key) && !hiddenItems.includes(key))
+            .reverse()
+            .forEach(key => {
+              const y1 = parseFloat(String(y0)) + parseFloat((yearData[key] || 0) as unknown as string);
+              const itemHeight = yScale(y0) - yScale(y1);
+              const rectData = {
+                key,
+                height: itemHeight,
+                width: groupWidth - 4, // adjust the width here
+                y: yScale(y1), // adjust the x position based on groupIndex
+                x:
+                  xScale(String(yearData.date)) +
+                  groupWidth * groupIndex +
+                  groupWidth / 2 -
+                  groupWidth / 2 +
+                  2,
+                fill: colorsMapping[key],
+                data: yearData,
+                seriesKey: dataItem.seriesKey,
+                seriesKeyAbbreviation: dataItem.seriesKeyAbbreviation,
+                value: yearData[key],
+                date: yearData.date,
+              };
+              y0 = y1;
+              stackedData[key].push(rectData as unknown as RectData);
+            });
+        });
       });
-    });
 
     return stackedData;
   };
