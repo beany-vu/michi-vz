@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, Suspense, useCallback } from "react";
 import * as d3 from "d3";
 import { ScaleTime } from "d3";
 import { DataPoint } from "../types/data";
@@ -23,6 +23,17 @@ const Styled = styled.div`
     transition: opacity 0.1s ease-out;
     will-change: opacity;
     transition-delay: 0.1s;
+    transition-behavior: allow-discrete;
+  }
+
+  .data-group {
+    opacity: 1;
+    &.dimmed {
+      opacity: 0.05;
+    }
+    &.highlighted {
+      opacity: 1;
+    }
   }
 `;
 
@@ -74,6 +85,15 @@ interface LineChartProps {
   };
   sandBoxMode?: boolean;
 }
+
+const debounce = (func: Function, wait: number) => {
+  let timeout: number;
+  return function (...args: any[]) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = window.setTimeout(() => func.apply(context, args), wait);
+  };
+};
 
 const LineChart: React.FC<LineChartProps> = ({
   dataSet,
@@ -223,7 +243,7 @@ const LineChart: React.FC<LineChartProps> = ({
       .range([margin.left, width - margin.right]);
   }, [filteredDataSet, width, height, disabledItems, xAxisDataType]);
 
-  function getYValueAtX(series: DataPoint[], x: number | Date): number | undefined {
+  const getYValueAtX = useCallback((series: DataPoint[], x: number | Date): number | undefined => {
     if (x instanceof Date) {
       const dataPoint = series.find(d => new Date(d.date).getTime() === x.getTime());
       return dataPoint ? dataPoint.value : undefined;
@@ -231,9 +251,9 @@ const LineChart: React.FC<LineChartProps> = ({
 
     const dataPoint = series.find(d => Number(d.date) === x);
     return dataPoint ? dataPoint.value : undefined;
-  }
+  }, []);
 
-  function getPathLengthAtX(path: SVGPathElement, x: number) {
+  const getPathLengthAtX = useCallback((path: SVGPathElement, x: number) => {
     const l = path.getTotalLength();
     const precision = 90;
     if (!path || path.getTotalLength() === 0) {
@@ -243,7 +263,7 @@ const LineChart: React.FC<LineChartProps> = ({
       const pos = path.getPointAtLength((l * i) / precision);
       if (pos.x >= x) return (l * i) / precision;
     }
-  }
+  }, []);
 
   const getDashArrayMemoized = useMemo(() => {
     return (
@@ -428,93 +448,128 @@ const LineChart: React.FC<LineChartProps> = ({
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
-    svg.selectAll(".data-group").attr("opacity", highlightItems.length === 0 ? 1 : 0.05);
-    highlightItems.forEach(item => {
-      svg.selectAll(`[data-label="${item}"]`).attr("opacity", 1);
-    });
+    svg
+      .selectAll(".data-group")
+      .classed("dimmed", highlightItems.length > 0)
+      .classed("highlighted", false);
+
+    if (highlightItems.length > 0) {
+      highlightItems.forEach(item => {
+        svg.selectAll(`[data-label="${item}"]`).classed("dimmed", false).classed("highlighted", true);
+      });
+    }
+
     if (highlightItems.length === 0) {
       d3.select("#tooltip").style("visibility", "hidden");
     }
   }, [highlightItems]);
 
-  const handleMouseEnter = debounce((event, data) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setHighlightItems([data.label]);
-  }, 100);
+  const handleMouseEnter = useCallback(
+    debounce((event, data) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setHighlightItems([data.label]);
+    }, 100),
+    [setHighlightItems]
+  );
 
-  const handleMouseOut = debounce(event => {
-    event.preventDefault();
-    event.stopPropagation();
-    setHighlightItems([]);
-    if (tooltipRef?.current) {
-      tooltipRef.current.style.visibility = "hidden";
-    }
-  }, 100);
+  const handleMouseOut = useCallback(
+    debounce(event => {
+      event.preventDefault();
+      event.stopPropagation();
+      setHighlightItems([]);
+      if (tooltipRef?.current) {
+        tooltipRef.current.style.visibility = "hidden";
+      }
+    }, 100),
+    [setHighlightItems]
+  );
+
+  const handleHover = useCallback(
+    (event: MouseEvent) => {
+      if (!svgRef.current || !tooltipRef.current) return;
+
+      const [x, y] = d3.pointer(event, svgRef.current);
+      const xValue = xScale.invert(x);
+
+      const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
+      const tooltipContent = filteredDataSet
+        .map(data => {
+          const yValue = getYValueAtX(data.series, xValue);
+          return `<div>${data.label}: ${yValue ?? "N/A"}</div>`;
+        })
+        .join("");
+
+      const tooltip = tooltipRef.current;
+      tooltip.innerHTML = `<div style="background: #fff; padding: 5px">${tooltipTitle}${tooltipContent}</div>`;
+      tooltip.style.left = x + "px";
+      tooltip.style.top = y + "px";
+      tooltip.style.opacity = "1";
+      tooltip.style.visibility = "visible";
+      tooltip.style.pointerEvents = "auto";
+
+      const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
+      const hoverLine = hoverLinesGroup.select(".hover-line");
+      const xPosition = xScale(xValue);
+
+      hoverLine
+        .attr("x1", xPosition)
+        .attr("x2", xPosition)
+        .attr("y1", MARGIN.top)
+        .attr("y2", HEIGHT - MARGIN.bottom + 20)
+        .style("display", "block");
+
+      hoverLinesGroup.style("display", "block");
+    },
+    [xScale, filteredDataSet, getYValueAtX]
+  );
+
+  const handleCombinedMouseOut = useCallback(() => {
+    if (!tooltipRef.current || !svgRef.current) return;
+
+    const tooltip = tooltipRef.current;
+    tooltip.style.visibility = "hidden";
+    tooltip.style.opacity = "0";
+    tooltip.innerHTML = "";
+
+    const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
+    const hoverLine = hoverLinesGroup.select(".hover-line");
+
+    hoverLinesGroup.style("display", "none");
+    hoverLine.style("display", "none");
+  }, []);
 
   useEffect(() => {
-    if (showCombined) {
-      // Create a transparent overlay rectangle for capturing hover events
-      const svg = d3.select(svgRef.current);
-      const tooltip = document.getElementById("tooltip");
-      let hoverLine: d3.Selection<SVGPathElement, unknown, null, undefined>;
-      const hoverLinesGroup = svg.append("g");
+    if (!showCombined || !svgRef.current) return;
 
-      hoverLinesGroup.attr("class", "hover-lines").style("display", "none");
-      svg
-        .append("rect")
-        .attr("class", "overlay")
-        .attr("width", width)
-        .attr("height", height)
-        .style("fill", "none")
-        .style("pointer-events", "all")
-        .on("mouseout", () => {
-          tooltip.style.visibility = "hidden";
-          tooltip.style.opacity = "0";
-          tooltip.innerHTML = "";
-          hoverLinesGroup.style("display", "none");
-          if (hoverLine) {
-            hoverLine.style("display", "none");
-          }
-        })
-        .on("mouseenter", function (event) {
-          const [x, y] = d3.pointer(event.nativeEvent, svgRef.current);
-          const xValue = xScale.invert(x);
+    const svg = d3.select(svgRef.current);
+    const hoverLinesGroup = svg.append("g").attr("class", "hover-lines").style("display", "none");
+    const hoverLine = hoverLinesGroup
+      .append("line")
+      .attr("class", "hover-line")
+      .attr("stroke", "lightgray")
+      .attr("stroke-width", 1)
+      .style("pointer-events", "none")
+      .style("display", "none");
 
-          const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
-          const tooltipContent = filteredDataSet
-            .map(data => {
-              const yValue = getYValueAtX(data.series, xValue);
-              return `<div>${data.label}: ${yValue ?? "N/A"}</div>`;
-            })
-            .join("");
-          tooltip.innerHTML = `<div style="background: #fff; padding: 5px">${tooltipTitle}${tooltipContent}</div>`;
+    const overlay = svg
+      .append("rect")
+      .attr("class", "overlay")
+      .attr("width", width)
+      .attr("height", height)
+      .style("fill", "none")
+      .style("pointer-events", "all");
 
-          tooltip.style.left = x + "px";
-          tooltip.style.top = y + "px";
-          tooltip.style.opacity = "1";
-          tooltip.style.pointerEvents = "auto";
+    overlay.on("mousemove", handleHover);
+    overlay.on("mouseout", handleCombinedMouseOut);
 
-          if (!hoverLine) {
-            hoverLine = hoverLinesGroup
-              .append("line")
-              .attr("class", "hover-line")
-              .attr("stroke", "lightgray")
-              .attr("stroke-width", 1)
-              .style("pointer-events", "stroke");
-          }
-          const xPosition = xScale(xValue);
-          hoverLine
-            .attr("x1", xPosition)
-            .attr("x2", xPosition)
-            .attr("y1", MARGIN.top)
-            .attr("y2", HEIGHT - MARGIN.bottom + 20)
-            .style("display", "block");
-
-          hoverLinesGroup.selectAll(".hover-line").filter((_, index) => index !== Math.round(xPosition));
-        });
-    }
-  }, [showCombined]);
+    return () => {
+      overlay.on("mousemove", null);
+      overlay.on("mouseout", null);
+      hoverLinesGroup.remove();
+      overlay.remove();
+    };
+  }, [showCombined, width, height, handleHover, handleCombinedMouseOut]);
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet: dataSet,
@@ -523,57 +578,50 @@ const LineChart: React.FC<LineChartProps> = ({
     isNodata: isNodata,
   });
 
-  function debounce(func: Function, wait: number) {
-    let timeout: number;
-    return function (...args: any[]) {
-      const context = this;
-      clearTimeout(timeout);
-      timeout = window.setTimeout(() => func.apply(context, args), wait);
-    };
-  }
-
   return (
     <Styled>
       <div style={{ position: "relative", width: width, height: height }}>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          ref={svgRef}
-          width={width}
-          height={height}
-          onMouseOut={event => {
-            event.preventDefault();
-            event.stopPropagation();
-            setHighlightItems([]);
+        <Suspense fallback={<LoadingIndicator />}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            ref={svgRef}
+            width={width}
+            height={height}
+            onMouseOut={event => {
+              event.preventDefault();
+              event.stopPropagation();
+              setHighlightItems([]);
 
-            if (tooltipRef?.current) {
-              tooltipRef.current.style.visibility = "hidden";
-            }
-          }}
-        >
-          {children}
-          <Title x={width / 2} y={margin.top / 2}>
-            {title}
-          </Title>
-          {filteredDataSet.length > 0 && (
-            <>
-              <XaxisLinear
-                xScale={xScale}
-                height={height}
-                margin={margin}
-                xAxisFormat={xAxisFormat}
-                xAxisDataType={xAxisDataType}
-              />
-              <YaxisLinear
-                yScale={yScale}
-                width={width}
-                height={height}
-                margin={margin}
-                highlightZeroLine={true}
-                yAxisFormat={yAxisFormat}
-              />
-            </>
-          )}
-        </svg>
+              if (tooltipRef?.current) {
+                tooltipRef.current.style.visibility = "hidden";
+              }
+            }}
+          >
+            {children}
+            <Title x={width / 2} y={margin.top / 2}>
+              {title}
+            </Title>
+            {filteredDataSet.length > 0 && (
+              <>
+                <XaxisLinear
+                  xScale={xScale}
+                  height={height}
+                  margin={margin}
+                  xAxisFormat={xAxisFormat}
+                  xAxisDataType={xAxisDataType}
+                />
+                <YaxisLinear
+                  yScale={yScale}
+                  width={width}
+                  height={height}
+                  margin={margin}
+                  highlightZeroLine={true}
+                  yAxisFormat={yAxisFormat}
+                />
+              </>
+            )}
+          </svg>
+        </Suspense>
         <div
           ref={tooltipRef}
           className="tooltip"
@@ -584,11 +632,8 @@ const LineChart: React.FC<LineChartProps> = ({
             willChange: "visibility, opacity, top, left",
             zIndex: 1000,
             pointerEvents: "none",
-            background: "#fff",
             padding: "5px",
             borderRadius: "4px",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-            maxWidth: "200px",
             whiteSpace: "nowrap",
           }}
         />
