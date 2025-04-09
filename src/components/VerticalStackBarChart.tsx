@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect } from "react";
+import React, { useMemo, useRef, useEffect, useCallback, useState } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import XaxisBand from "./shared/XaxisBand";
@@ -98,7 +98,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
     visibleItems,
     setVisibleItems,
   } = useChartContext();
-  const ref = useRef<SVGSVGElement>(null);
+  const chartRef = useRef<SVGSVGElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   // Compute all keys present in the dataset (excluding "date")
   const allKeys = useMemo(() => {
@@ -143,8 +144,6 @@ const VerticalStackBarChart: React.FC<Props> = ({
     );
     return sorted.slice(0, filter.limit);
   }, [dataSet, filter]);
-
-  // Add a new effect to update hiddenItems based on missing keys in filtered dataset
 
   // UPDATED: Recalculate hiddenItems without using disabledItems
   const keys = useMemo(() => {
@@ -247,84 +246,98 @@ const VerticalStackBarChart: React.FC<Props> = ({
     [flattenedDataSet, width, height, margin, disabledItems]
   );
 
-  const prepareStackedData = (rawDataSet: DataSet[]): { [p: string]: RectData[] } => {
-    const stackedData = effectiveKeys
-      .filter(key => !disabledItems.includes(key) && !hiddenItems.includes(key))
-      .reduce(
-        (acc, key) => {
-          acc[key] = [];
-          return acc;
-        },
-        {} as { [key: string]: RectData[] }
-      );
+  // Memoize the stacked data preparation
+  const prepareStackedData = useCallback(
+    (rawDataSet: DataSet[]): { [p: string]: RectData[] } => {
+      const stackedData = effectiveKeys
+        .filter(key => !disabledItems.includes(key) && !hiddenItems.includes(key))
+        .reduce(
+          (acc, key) => {
+            acc[key] = [];
+            return acc;
+          },
+          {} as { [key: string]: RectData[] }
+        );
 
-    // First filter rawDataSet to exclude any dataset where seriesKey is in hiddenItems
-    rawDataSet
-      .filter(
-        dataItem => !hiddenItems.includes(dataItem.seriesKey) && !disabledItems.includes(dataItem.seriesKey)
-      ) // Filter out datasets with hidden seriesKey
-      .forEach((dataItem, groupIndex) => {
-        const series = dataItem.series;
-        const groupWidth = xScale.bandwidth() / Object.keys(stackedData).length;
+      rawDataSet
+        .filter(
+          dataItem => !hiddenItems.includes(dataItem.seriesKey) && !disabledItems.includes(dataItem.seriesKey)
+        )
+        .forEach((dataItem, groupIndex) => {
+          const series = dataItem.series;
+          const groupWidth = xScale.bandwidth() / Object.keys(stackedData).length;
 
-        series.forEach(yearData => {
-          let y0 = 0;
-          effectiveKeys
-            .filter(key => !disabledItems.includes(key) && !hiddenItems.includes(key))
-            .reverse()
-            .forEach(key => {
-              const y1 = parseFloat(String(y0)) + parseFloat((yearData[key] || 0) as unknown as string);
-              const itemHeight = yScale(y0) - yScale(y1);
-              const rectData = {
-                key,
-                height: itemHeight,
-                width: groupWidth - 4, // adjust the width here
-                y: yScale(y1), // adjust the x position based on groupIndex
-                x:
-                  xScale(String(yearData.date)) +
-                  groupWidth * groupIndex +
-                  groupWidth / 2 -
-                  groupWidth / 2 +
-                  2,
-                fill: colorsMapping[key],
-                data: yearData,
-                seriesKey: dataItem.seriesKey,
-                seriesKeyAbbreviation: dataItem.seriesKeyAbbreviation,
-                value: yearData[key],
-                date: yearData.date,
-              };
-              y0 = y1;
-              stackedData[key].push(rectData as unknown as RectData);
-            });
+          series.forEach(yearData => {
+            let y0 = 0;
+            effectiveKeys
+              .filter(key => !disabledItems.includes(key) && !hiddenItems.includes(key))
+              .reverse()
+              .forEach(key => {
+                const value = yearData[key];
+                // Skip if value is undefined or null
+                if (value === undefined || value === null) {
+                  return;
+                }
+
+                const y1 = parseFloat(String(y0)) + parseFloat(String(value));
+                const rawHeight = yScale(y0) - yScale(y1);
+                // Only apply minimum height if the value exists (even if it's 0)
+                const itemHeight = value !== undefined && value !== null ? Math.max(3, rawHeight) : 0;
+                const rectData = {
+                  key,
+                  height: itemHeight,
+                  width: groupWidth - 4,
+                  y: yScale(y1),
+                  x:
+                    xScale(String(yearData.date)) +
+                    groupWidth * groupIndex +
+                    groupWidth / 2 -
+                    groupWidth / 2 +
+                    2,
+                  fill: colorsMapping[key],
+                  data: yearData,
+                  seriesKey: dataItem.seriesKey,
+                  seriesKeyAbbreviation: dataItem.seriesKeyAbbreviation,
+                  value: yearData[key],
+                  date: yearData.date,
+                };
+                y0 = y1;
+                stackedData[key].push(rectData as unknown as RectData);
+              });
+          });
         });
-      });
 
-    return stackedData;
-  };
+      return stackedData;
+    },
+    [effectiveKeys, disabledItems, hiddenItems, xScale, yScale, colorsMapping]
+  );
 
+  // Memoize the stacked rect data
   const stackedRectData = useMemo(
     () => prepareStackedData(filteredDataSet),
-    [filteredDataSet, width, height, margin, colorsMapping, disabledItems, effectiveKeys]
+    [prepareStackedData, filteredDataSet]
   );
-  const generateTooltipContent = (key: string, seriesKey: string, data: DataPoint, series: DataPoint[]) => {
-    if (tooltipFormatter) {
-      return tooltipFormatter({
-        item: data,
-        key: key,
-        seriesKey: seriesKey,
-        series: series,
-      });
-    }
 
-    if (!showCombined) {
-      return `
+  // Memoize the tooltip content generation
+  const generateTooltipContent = useCallback(
+    (key: string, seriesKey: string, data: DataPoint, series: DataPoint[]) => {
+      if (tooltipFormatter) {
+        return tooltipFormatter({
+          item: data,
+          key: key,
+          seriesKey: seriesKey,
+          series: series,
+        });
+      }
+
+      if (!showCombined) {
+        return `
                 <div style="background: #fff; padding: 5px">
                     <p>${data.date} - ${seriesKey}</p>
                     ${data[key] ? `<p style="color:${colorsMapping[key]}">${key}: ${data[key]}</p>` : "N/A"}
                 </div>`;
-    }
-    // Process your data and generate HTML string as per requirements
-    return `
+      }
+      return `
                 <div style="background: #fff; padding: 5px">
                     <p>${data.date} - ${seriesKey}</p>
                     ${Object.keys(data)
@@ -333,7 +346,51 @@ const VerticalStackBarChart: React.FC<Props> = ({
                       .map(key => `<p style="color:${colorsMapping[key]}">${key}: ${data[key] ?? "N/A"}</p>`)
                       .join("")}
                 </div>`;
-  };
+    },
+    [tooltipFormatter, showCombined, colorsMapping]
+  );
+
+  // Memoize the tooltip position update
+  const updateTooltipPosition = useCallback((event: React.MouseEvent) => {
+    if (!tooltipRef.current) return;
+    const [x, y] = d3.pointer(event);
+    const tooltip = tooltipRef.current;
+    const tooltipWidth = tooltip.getBoundingClientRect().width;
+    const tooltipHeight = tooltip.getBoundingClientRect().height;
+
+    tooltip.style.left = `${x - tooltipWidth / 2}px`;
+    tooltip.style.top = `${y - tooltipHeight - 10}px`;
+  }, []);
+
+  // Memoize the mouse event handlers
+  const handleMouseOver = useCallback(
+    (key: string, d: RectData) => {
+      setHighlightItems([key]);
+      if (tooltipRef.current) {
+        tooltipRef.current.style.visibility = "visible";
+        tooltipRef.current.innerHTML = generateTooltipContent(
+          d.key,
+          d.seriesKey,
+          d.data,
+          stackedRectData[key]
+            .filter(item => item.seriesKey === d.seriesKey)
+            .map(item => ({
+              label: item.key,
+              value: item.value ?? null,
+              date: item.date,
+            })) as unknown as DataPoint[]
+        );
+      }
+    },
+    [setHighlightItems, generateTooltipContent, stackedRectData]
+  );
+
+  const handleMouseOut = useCallback(() => {
+    setHighlightItems([]);
+    if (tooltipRef.current) {
+      tooltipRef.current.style.visibility = "hidden";
+    }
+  }, [setHighlightItems]);
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet: dataSet,
@@ -345,6 +402,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   return (
     <div style={{ position: "relative" }}>
       <div
+        ref={tooltipRef}
         className={"tooltip"}
         style={{
           position: "absolute",
@@ -353,21 +411,19 @@ const VerticalStackBarChart: React.FC<Props> = ({
           pointerEvents: "none",
           zIndex: 1000,
           visibility: "hidden",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          borderRadius: "4px",
+          border: "1px solid #ddd",
         }}
       />
 
       <svg
         className={"chart"}
-        ref={ref}
+        ref={chartRef}
         width={width}
         height={height}
         style={{ overflow: "visible" }}
-        onMouseOut={event => {
-          event.preventDefault();
-          event.stopPropagation();
-          setHighlightItems([]);
-          d3.select(".tooltip").style("visibility", "hidden");
-        }}
+        onMouseOut={handleMouseOut}
       >
         {children}
         <Title x={width / 2} y={MARGIN.top / 2}>
@@ -384,82 +440,43 @@ const VerticalStackBarChart: React.FC<Props> = ({
         />
         <g>
           {keys.map(key => {
-            // Skip rendering if the key is hidden
             if (hiddenItems.includes(key)) return null;
 
             return (
               <g key={key}>
                 {stackedRectData[key] &&
-                  // Filter out any rects where seriesKey is hidden
                   stackedRectData[key]
                     .filter(d => !hiddenItems.includes(d.seriesKey))
-                    .map((d: RectData, i: number) => {
-                      return (
-                        <React.Fragment key={`item-${i}`}>
-                          <rect
-                            x={d.x}
-                            y={d.y}
-                            width={d.width}
-                            height={d.height}
-                            fill={colorCallbackFn?.(key, d) ?? d.fill ?? "transparent"}
-                            rx={2}
-                            stroke={"#fff"}
-                            className={`bar`}
-                            opacity={highlightItems.length === 0 || highlightItems.includes(key) ? 1 : 0.2}
-                            ref={node => {
-                              if (node) {
-                                d3.select(node)
-                                  .on("mouseover", function () {
-                                    setHighlightItems([key]);
-                                    d3.select(".tooltip")
-                                      .style("visibility", "visible")
-                                      .html(
-                                        generateTooltipContent(
-                                          d.key,
-                                          d.seriesKey,
-                                          d.data,
-                                          stackedRectData[key]
-                                            .filter(item => item.seriesKey === d.seriesKey)
-                                            .map(item => ({
-                                              label: item.key,
-                                              value: item.value ?? null,
-                                              date: item.date,
-                                            })) as unknown as DataPoint[]
-                                        )
-                                      ); // you can define this function or inline its logic
-                                  })
-                                  .on("mousemove", function (event) {
-                                    const [x, y] = d3.pointer(event);
-                                    const tooltip = d3.select(".tooltip").node() as HTMLElement;
-                                    const tooltipWidth = tooltip.getBoundingClientRect().width;
-                                    const tooltipHeight = tooltip.getBoundingClientRect().height;
-
-                                    d3.select(".tooltip")
-                                      .style("left", x - tooltipWidth / 2 + "px")
-                                      .style("top", y - tooltipHeight - 10 + "px");
-                                  })
-                                  .on("mouseout", function () {
-                                    setHighlightItems([]);
-                                    d3.select(".tooltip").style("visibility", "hidden");
-                                  });
-                              }
-                            }}
-                          />
-                          {d.seriesKeyAbbreviation && (
-                            <text
-                              x={d.x + d.width / 2}
-                              y={height - margin.bottom + 15}
-                              textAnchor="middle"
-                              fontSize="12"
-                              fill="#000"
-                              className={"x-axis-label"}
-                            >
-                              <tspan>{d.seriesKeyAbbreviation}</tspan>
-                            </text>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
+                    .map((d: RectData, i: number) => (
+                      <React.Fragment key={`item-${i}`}>
+                        <rect
+                          x={d.x}
+                          y={d.y}
+                          width={d.width}
+                          height={d.height}
+                          fill={colorCallbackFn?.(key, d) ?? d.fill ?? "transparent"}
+                          rx={2}
+                          stroke={"#fff"}
+                          className={`bar`}
+                          opacity={highlightItems.length === 0 || highlightItems.includes(key) ? 1 : 0.2}
+                          onMouseOver={() => handleMouseOver(key, d)}
+                          onMouseMove={updateTooltipPosition}
+                          onMouseOut={handleMouseOut}
+                        />
+                        {d.seriesKeyAbbreviation && (
+                          <text
+                            x={d.x + d.width / 2}
+                            y={height - margin.bottom + 15}
+                            textAnchor="middle"
+                            fontSize="12"
+                            fill="#000"
+                            className={"x-axis-label"}
+                          >
+                            <tspan>{d.seriesKeyAbbreviation}</tspan>
+                          </text>
+                        )}
+                      </React.Fragment>
+                    ))}
               </g>
             );
           })}

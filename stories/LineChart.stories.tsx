@@ -12,7 +12,7 @@ export default {
     Story => (
       <MichiVzProvider
         initialColorsMapping={{
-          Algérie: "green",
+          "Country 1": "green",
           "Item 1": "red",
           "Item 2": "purple",
           "Item 3": "orange",
@@ -47,7 +47,7 @@ export const Primary = {
   args: {
     dataSet: [
       {
-        label: "Algérie",
+        label: "Country 1",
         color: "red",
         series: [
           {

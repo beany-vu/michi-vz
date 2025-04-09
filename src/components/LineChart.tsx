@@ -129,7 +129,6 @@ const LineChart: React.FC<LineChartProps> = ({
   const tooltipRef = useRef<HTMLDivElement | null>(null);
 
   const filteredDataSet = useMemo(() => {
-    // If filter is undefined, show all items.
     if (!filter) return dataSet;
     return dataSet
       .filter(item => {
@@ -143,34 +142,34 @@ const LineChart: React.FC<LineChartProps> = ({
         const bVal = bPoint ? Number(bPoint[filter.criteria]) : 0;
         return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
       })
-      .slice(0, filter.limit); // use filter.limit instead of filter.top
+      .slice(0, filter.limit);
   }, [dataSet, filter]);
 
-  // New: update hiddenItems based on filter
-  useEffect(() => {
-    if (sandBoxMode) return;
-    if (filter != null) {
-      const newHidden = dataSet
-        .filter(item => !filteredDataSet.some(filtered => filtered.label === item.label))
-        .map(item => item.label);
-      if (JSON.stringify(newHidden) !== JSON.stringify(hiddenItems)) {
-        setHiddenItems(newHidden);
-      }
-    } else {
-      if (hiddenItems.length !== 0) {
-        setHiddenItems([]);
-      }
-    }
-  }, [dataSet, filter, filteredDataSet, hiddenItems, setHiddenItems]);
+  const newHiddenItems = useMemo(() => {
+    if (sandBoxMode || !filter) return [];
+    return dataSet
+      .filter(item => !filteredDataSet.some(filtered => filtered.label === item.label))
+      .map(item => item.label);
+  }, [dataSet, filteredDataSet, filter, sandBoxMode]);
+
+  const newVisibleItems = useMemo(() => {
+    if (sandBoxMode) return [];
+    return filteredDataSet.map(item => item.label);
+  }, [filteredDataSet, sandBoxMode]);
 
   useEffect(() => {
     if (sandBoxMode) return;
-    // New: update visibleItems based on filter
-    const newVisible = filteredDataSet.map(item => item.label);
-    if (JSON.stringify(newVisible) !== JSON.stringify(visibleItems)) {
-      setVisibleItems(newVisible);
+    if (JSON.stringify(newHiddenItems) !== JSON.stringify(hiddenItems)) {
+      setHiddenItems(newHiddenItems);
     }
-  }, [hiddenItems, visibleItems, setVisibleItems]);
+  }, [newHiddenItems, hiddenItems, setHiddenItems, sandBoxMode]);
+
+  useEffect(() => {
+    if (sandBoxMode) return;
+    if (JSON.stringify(newVisibleItems) !== JSON.stringify(visibleItems)) {
+      setVisibleItems(newVisibleItems);
+    }
+  }, [newVisibleItems, visibleItems, setVisibleItems, sandBoxMode]);
 
   const yScale = useMemo(
     () =>
@@ -291,8 +290,6 @@ const LineChart: React.FC<LineChartProps> = ({
 
           if (remainder > 0) dashArray.push(remainder);
         } else {
-          // if dashArray.length is odd, then the coming up last segment is dash
-          // we will have to add a "0" as space before we add the segmentLength so that the new added segment is not dashed
           if (dashArray.length % 2 === 1) {
             dashArray.push(0);
             dashArray.push(segmentLength);
@@ -305,20 +302,23 @@ const LineChart: React.FC<LineChartProps> = ({
     };
   }, [DASH_LENGTH, DASH_SEPARATOR_LENGTH]);
 
+  const line = useCallback(
+    ({ d, curve }: { d: Iterable<DataPoint>; curve: string }) => {
+      return d3
+        .line<DataPoint>()
+        .x(d => xScale(new Date(d.date)))
+        .y(d => yScale(d.value))
+        .curve(d3?.[curve] ?? d3.curveBumpX)(d);
+    },
+    [xScale, yScale]
+  );
+
   useEffect(() => {
     const svg = d3.select(svgRef.current);
 
     svg.selectAll(".line").remove();
     svg.selectAll(".line-overlay").remove();
     svg.selectAll(".data-group").remove();
-
-    const line = ({ d, curve }: { d: Iterable<DataPoint>; curve: string }) => {
-      return d3
-        .line<DataPoint>()
-        .x(d => xScale(new Date(d.date)))
-        .y(d => yScale(d.value))
-        .curve(d3?.[curve] ?? d3.curveBumpX)(d);
-    };
 
     // draw lines
     filteredDataSet
@@ -581,47 +581,51 @@ const LineChart: React.FC<LineChartProps> = ({
   return (
     <Styled>
       <div style={{ position: "relative", width: width, height: height }}>
-        <Suspense fallback={<LoadingIndicator />}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            ref={svgRef}
-            width={width}
-            height={height}
-            onMouseOut={event => {
-              event.preventDefault();
-              event.stopPropagation();
-              setHighlightItems([]);
+        {isLoading ? (
+          <LoadingIndicator />
+        ) : (
+          <Suspense fallback={<LoadingIndicator />}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              ref={svgRef}
+              width={width}
+              height={height}
+              onMouseOut={event => {
+                event.preventDefault();
+                event.stopPropagation();
+                setHighlightItems([]);
 
-              if (tooltipRef?.current) {
-                tooltipRef.current.style.visibility = "hidden";
-              }
-            }}
-          >
-            {children}
-            <Title x={width / 2} y={margin.top / 2}>
-              {title}
-            </Title>
-            {filteredDataSet.length > 0 && (
-              <>
-                <XaxisLinear
-                  xScale={xScale}
-                  height={height}
-                  margin={margin}
-                  xAxisFormat={xAxisFormat}
-                  xAxisDataType={xAxisDataType}
-                />
-                <YaxisLinear
-                  yScale={yScale}
-                  width={width}
-                  height={height}
-                  margin={margin}
-                  highlightZeroLine={true}
-                  yAxisFormat={yAxisFormat}
-                />
-              </>
-            )}
-          </svg>
-        </Suspense>
+                if (tooltipRef?.current) {
+                  tooltipRef.current.style.visibility = "hidden";
+                }
+              }}
+            >
+              {children}
+              <Title x={width / 2} y={margin.top / 2}>
+                {title}
+              </Title>
+              {filteredDataSet.length > 0 && (
+                <>
+                  <XaxisLinear
+                    xScale={xScale}
+                    height={height}
+                    margin={margin}
+                    xAxisFormat={xAxisFormat}
+                    xAxisDataType={xAxisDataType}
+                  />
+                  <YaxisLinear
+                    yScale={yScale}
+                    width={width}
+                    height={height}
+                    margin={margin}
+                    highlightZeroLine={true}
+                    yAxisFormat={yAxisFormat}
+                  />
+                </>
+              )}
+            </svg>
+          </Suspense>
+        )}
         <div
           ref={tooltipRef}
           className="tooltip"
@@ -638,7 +642,6 @@ const LineChart: React.FC<LineChartProps> = ({
           }}
         />
         {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
-        {isLoading && !isLoadingComponent && <LoadingIndicator />}
         {displayIsNodata && <>{isNodataComponent}</>}
       </div>
     </Styled>

@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useRef } from "react";
+import React, { FC, useEffect, useRef, useMemo } from "react";
 import { ScaleLinear } from "d3-scale";
 import * as d3 from "d3";
 
@@ -22,46 +22,86 @@ const YaxisLinear: FC<Props> = ({
   yAxisFormat,
 }) => {
   const ref = useRef<SVGGElement>(null);
-  useEffect(() => {
-    const g = d3.select(ref.current);
 
-    const yAxis = d3
+  const yAxisConfig = useMemo(() => {
+    const axis = d3
       .axisLeft(yScale)
       .tickSize(0)
       .tickPadding(10)
       .ticks(yTicksQty || 10);
 
-    // Apply the formatter if provided
     if (yAxisFormat) {
-      yAxis.tickFormat(yAxisFormat);
+      axis.tickFormat(yAxisFormat);
     }
 
-    g.attr(
-      "transform",
-      "translate(" + (margin.left > 0 ? margin.left : 0) + ",0)",
-    )
-      .call(yAxis)
-      .call((g) => g.select(".domain").remove())
-      .call((g) => g.selectAll(".tick line").attr("stroke-width", "1.5"))
+    return axis;
+  }, [yScale, yTicksQty, yAxisFormat]);
 
-      .call((g) =>
-        g
-          .selectAll(".tick line")
-          .attr("stroke-width", "1")
-          .attr("stroke-dasharray", "2,2")
-          .attr("x2", width - margin.right - margin.left)
-          .attr("stroke", "lightgray")
-          .each(function (d) {
-            // Check if the datum for this tick is 0
-            if (d === 0) {
-              // If so, add the "zero-line" class
-              d3.select(this).classed("zero-line", true);
-            }
-          }),
-      );
-  }, [yScale, width, height, margin, highlightZeroLine]);
+  // Memoize the previous yScale domain to detect changes
+  const prevYScaleDomain = useRef(yScale.domain());
+
+  useEffect(() => {
+    const g = d3.select(ref.current);
+    const currentYScaleDomain = yScale.domain();
+    const yScaleChanged = JSON.stringify(currentYScaleDomain) !== JSON.stringify(prevYScaleDomain.current);
+    prevYScaleDomain.current = currentYScaleDomain;
+
+    // Initial render with transition
+    g.transition()
+      .duration(750)
+      .attr("transform", `translate(${margin.left > 0 ? margin.left : 0},0)`)
+      .call(yAxisConfig)
+      .call(g => g.select(".domain").attr("stroke-opacity", 0))
+      .call(g => g.select(".domain").remove())
+      .call(g => g.selectAll(".tick line").attr("stroke-opacity", 0))
+      .call(g => g.selectAll(".tick line").remove())
+      .call(g => g.selectAll(".tick-line").remove());
+
+    // Remove existing tick lines before updating
+    g.selectAll(".tick line").remove();
+
+    // Update transitions
+    g.selectAll(".tick text").transition().duration(750).style("opacity", 1);
+
+    // Only animate tick lines if y-scale changed
+    const tickLines = g
+      .selectAll(".tick")
+      .append("line")
+      .attr("class", "tick-line")
+      .attr("x1", 0)
+      .attr("x2", 0)
+      .attr("y1", 0)
+      .attr("y2", 0)
+      .style("stroke-dasharray", "2,2")
+      .style("stroke", "lightgray")
+      .style("opacity", 1);
+
+    if (yScaleChanged) {
+      tickLines
+        .transition()
+        .duration(750)
+        .attr("x2", width - margin.right - margin.left)
+        .each(function (d) {
+          if (d === 0) {
+            d3.select(this)
+              .classed("zero-line", true)
+              .attr("stroke", highlightZeroLine ? "#000" : "lightgray")
+              .attr("stroke-width", "1");
+          }
+        });
+    } else {
+      tickLines.attr("x2", width - margin.right - margin.left).each(function (d) {
+        if (d === 0) {
+          d3.select(this)
+            .classed("zero-line", true)
+            .attr("stroke", highlightZeroLine ? "#000" : "lightgray")
+            .attr("stroke-width", "1");
+        }
+      });
+    }
+  }, [yScale, width, height, margin, highlightZeroLine, yAxisConfig]);
 
   return <g ref={ref}></g>;
 };
 
-export default YaxisLinear;
+export default React.memo(YaxisLinear);
