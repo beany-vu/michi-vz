@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, Suspense, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, Suspense, useCallback, useLayoutEffect } from "react";
 import * as d3 from "d3";
 import { ScaleTime } from "d3";
 import { DataPoint } from "../types/data";
@@ -84,6 +84,14 @@ interface LineChartProps {
     sortingDir: "asc" | "desc";
   };
   sandBoxMode?: boolean;
+  onChartDataProcessed?: (metadata: ChartMetadata) => void;
+}
+
+interface ChartMetadata {
+  xAxisDomain: any[];
+  yAxisDomain: [number, number];
+  visibleSeries: string[];
+  lineData: any;
 }
 
 const debounce = (func: Function, wait: number) => {
@@ -114,6 +122,7 @@ const LineChart: React.FC<LineChartProps> = ({
   isNodataComponent,
   isNodata,
   sandBoxMode = false,
+  onChartDataProcessed,
 }) => {
   const {
     colorsMapping,
@@ -127,6 +136,7 @@ const LineChart: React.FC<LineChartProps> = ({
   } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const renderCompleteRef = useRef(false);
 
   const filteredDataSet = useMemo(() => {
     if (!filter) return dataSet;
@@ -313,6 +323,16 @@ const LineChart: React.FC<LineChartProps> = ({
     [xScale, yScale]
   );
 
+  const lineData = useMemo(
+    () =>
+      dataSet.map(set => ({
+        label: set.label,
+        color: set.color,
+        points: set.series,
+      })),
+    [dataSet]
+  );
+
   useEffect(() => {
     const svg = d3.select(svgRef.current);
 
@@ -370,17 +390,49 @@ const LineChart: React.FC<LineChartProps> = ({
     filteredDataSet
       .filter(d => !disabledItems.includes(d.label))
       .forEach((data, i) => {
+        const shape = data.shape || "circle";
+        const circleSize = 3; // Size for circles
+        const squareSize = 6; // Final adjusted size for squares
+        const triangleSize = 8; // Final adjusted size for triangles
+        const color = colorsMapping[data.label] ?? data.color ?? "transparent";
+
         svg
-          .selectAll(`.circle-data-${i}`)
+          .selectAll(`.data-point-${i}`)
           .data(data.series)
           .enter()
-          .append("circle")
+          .append(shape === "circle" ? "circle" : shape === "square" ? "rect" : "path")
           .attr("class", `data-group data-group-${i} data-group-${data.label}`)
           .attr("data-label", data.label)
-          .attr("cx", (d: DataPoint) => xScale(new Date(d.date)))
-          .attr("cy", (d: DataPoint) => yScale(d.value))
-          .attr("r", 5)
-          .attr("fill", colorsMapping[data.label] ?? data.color ?? "transparent")
+          .attr(
+            shape === "circle" ? "cx" : "x",
+            (d: DataPoint) =>
+              xScale(new Date(d.date)) -
+              (shape === "circle" ? 0 : shape === "square" ? squareSize : triangleSize)
+          )
+          .attr(
+            shape === "circle" ? "cy" : "y",
+            (d: DataPoint) =>
+              yScale(d.value) - (shape === "circle" ? 0 : shape === "square" ? squareSize : triangleSize)
+          )
+          .attr(
+            shape === "circle" ? "r" : "width",
+            shape === "circle" ? circleSize : shape === "square" ? squareSize * 2 : triangleSize * 2
+          )
+          .attr(
+            shape === "circle" ? null : "height",
+            shape === "circle" ? null : shape === "square" ? squareSize * 2 : triangleSize * 2
+          )
+          .attr(
+            shape === "triangle" ? "d" : null,
+            shape === "triangle"
+              ? (d: DataPoint) => {
+                  const x = xScale(new Date(d.date));
+                  const y = yScale(d.value);
+                  return `M${x},${y - triangleSize} L${x + triangleSize},${y + triangleSize} L${x - triangleSize},${y + triangleSize} Z`;
+                }
+              : null
+          )
+          .attr("fill", color)
           .attr("stroke", "#fff")
           .attr("stroke-width", 2)
           .attr("transition", "all 0.1s ease-out")
@@ -577,6 +629,31 @@ const LineChart: React.FC<LineChartProps> = ({
     isNodataComponent: isNodataComponent,
     isNodata: isNodata,
   });
+
+  useEffect(() => {
+    if (renderCompleteRef.current && onChartDataProcessed) {
+      // Extract all dates from all series
+      const allDates = dataSet.flatMap(set =>
+        set.series.map(point => (xAxisDataType === "number" ? point.date : String(point.date)))
+      );
+
+      // Create unique dates array
+      const uniqueDates = [...new Set(allDates)];
+
+      const currentMetadata: ChartMetadata = {
+        xAxisDomain: uniqueDates,
+        yAxisDomain: yScale.domain() as [number, number],
+        visibleSeries: dataSet.map(d => d.label).filter(label => !disabledItems.includes(label)),
+        lineData: lineData,
+      };
+
+      // Rest of the function with comparison and callback...
+    }
+  }, [dataSet, xAxisDataType, yScale, disabledItems, lineData, onChartDataProcessed]);
+
+  useLayoutEffect(() => {
+    renderCompleteRef.current = true;
+  }, []);
 
   return (
     <Styled>

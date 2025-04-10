@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useCallback, useState } from "react";
+import React, { useMemo, useRef, useEffect, useCallback, useState, useLayoutEffect } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import XaxisBand from "./shared/XaxisBand";
@@ -25,6 +25,13 @@ interface TooltipData {
   series: DataPoint[];
 }
 
+// Add the ChartMetadata interface to define what data we'll expose
+interface ChartMetadata {
+  xAxisDomain: string[];
+  visibleKeys: string[];
+  renderedData: { [key: string]: RectData[] };
+}
+
 interface Props {
   dataSet: DataSet[];
   width: number;
@@ -48,6 +55,8 @@ interface Props {
     limit: number;
     sortingDir: "asc" | "desc";
   };
+  // New: callback to expose chart metadata to parent component
+  onChartDataProcessed?: (metadata: ChartMetadata) => void;
 }
 
 export interface RectData {
@@ -87,6 +96,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   isNodata,
   colorCallbackFn,
   filter,
+  onChartDataProcessed,
 }) => {
   const {
     colorsMapping,
@@ -100,6 +110,9 @@ const VerticalStackBarChart: React.FC<Props> = ({
   } = useChartContext();
   const chartRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const renderCompleteRef = useRef(false);
+  // Add a ref to store previous chart data for comparison
+  const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
   // Compute all keys present in the dataset (excluding "date")
   const allKeys = useMemo(() => {
@@ -228,7 +241,15 @@ const VerticalStackBarChart: React.FC<Props> = ({
     }
 
     const totalValuePerYear: number[] = flattenedDataSet.map(yearData =>
-      effectiveKeys.reduce((acc, key) => acc + (yearData[key] ? parseFloat(yearData[key]) : 0), 0)
+      effectiveKeys.reduce((acc, key) => {
+        // Parse the value safely, handling string values
+        const value = yearData[key];
+        if (value === undefined || value === null) {
+          return acc;
+        }
+        const numericValue = typeof value === "string" ? parseFloat(value) : value;
+        return acc + (isNaN(numericValue) ? 0 : numericValue);
+      }, 0)
     );
     const minValue = Math.min(...totalValuePerYear) < 0 ? Math.min(...totalValuePerYear) : 0;
     const maxValue = Math.max(...totalValuePerYear);
@@ -279,7 +300,15 @@ const VerticalStackBarChart: React.FC<Props> = ({
                   return;
                 }
 
-                const y1 = parseFloat(String(y0)) + parseFloat(String(value));
+                // Parse the value to float safely, handling string values
+                const numericValue = typeof value === "string" ? parseFloat(value) : value;
+
+                // Skip if the parsed value is NaN
+                if (isNaN(numericValue)) {
+                  return;
+                }
+
+                const y1 = parseFloat(String(y0)) + numericValue;
                 const rawHeight = yScale(y0) - yScale(y1);
                 // Only apply minimum height if the value exists (even if it's 0)
                 const itemHeight = value !== undefined && value !== null ? Math.max(3, rawHeight) : 0;
@@ -298,7 +327,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                   data: yearData,
                   seriesKey: dataItem.seriesKey,
                   seriesKeyAbbreviation: dataItem.seriesKeyAbbreviation,
-                  value: yearData[key],
+                  value: numericValue,
                   date: yearData.date,
                 };
                 y0 = y1;
@@ -398,6 +427,54 @@ const VerticalStackBarChart: React.FC<Props> = ({
     isNodataComponent: isNodataComponent,
     isNodata: isNodata,
   });
+
+  // Replace the previous useEffect with useLayoutEffect for data callback
+  useLayoutEffect(() => {
+    // Mark rendering as complete after the initial render
+    renderCompleteRef.current = true;
+  }, []);
+
+  // Use a separate useEffect to call the callback after rendering
+  useEffect(() => {
+    if (renderCompleteRef.current && onChartDataProcessed && stackedRectData) {
+      // Filter out keys with empty arrays
+      const filteredRenderedData = Object.fromEntries(
+        Object.entries(stackedRectData).filter(([_, array]) => array.length > 0)
+      );
+
+      // Create the current metadata with filtered data and UNIQUE xAxisDomain
+      const currentChartData: ChartMetadata = {
+        // Ensure xAxisDomain has unique values using Set
+        xAxisDomain: [...new Set(xAxisDomain ?? dates)],
+        visibleKeys: visibleKeys,
+        renderedData: filteredRenderedData,
+      };
+
+      // Check if the data has actually changed
+      const hasChanged =
+        !prevChartDataRef.current ||
+        JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
+          JSON.stringify(currentChartData.xAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.visibleKeys) !==
+          JSON.stringify(currentChartData.visibleKeys) ||
+        // Compare keys and content more efficiently
+        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
+          JSON.stringify(Object.keys(currentChartData.renderedData).sort());
+
+      // Only call the callback if data has changed
+      if (hasChanged) {
+        // Update the ref before calling the callback
+        prevChartDataRef.current = currentChartData;
+
+        // Call callback with a slight delay to ensure DOM updates are complete
+        const timeoutId = setTimeout(() => {
+          onChartDataProcessed(currentChartData);
+        }, 0);
+
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [onChartDataProcessed, xAxisDomain, dates, visibleKeys, stackedRectData]);
 
   return (
     <div style={{ position: "relative" }}>

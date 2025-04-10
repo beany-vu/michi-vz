@@ -1,4 +1,4 @@
-import React, { Fragment, useMemo, useRef, useState } from "react";
+import React, { Fragment, useMemo, useRef, useState, useEffect } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
@@ -18,6 +18,13 @@ interface AreaDataPoint {
   data: DataPoint;
 }
 
+interface ChartMetadata {
+  xAxisDomain: any[];
+  yAxisDomain: [number, number];
+  keys: string[];
+  stackedData: any;
+}
+
 interface Props {
   series: DataPoint[];
   keys: string[];
@@ -35,6 +42,7 @@ interface Props {
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
+  onChartDataProcessed?: (metadata: ChartMetadata) => void;
 }
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
@@ -58,10 +66,12 @@ const AreaChart: React.FC<Props> = ({
   isLoadingComponent,
   isNodataComponent,
   isNodata,
+  onChartDataProcessed,
 }) => {
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const [hoveredDate] = useState<number | null>(null);
+  const renderCompleteRef = useRef(false);
 
   const xScale = useMemo(() => {
     if (xAxisDataType === "number") {
@@ -161,6 +171,34 @@ const AreaChart: React.FC<Props> = ({
     isNodataComponent: isNodataComponent,
     isNodata: isNodata,
   });
+
+  useEffect(() => {
+    if (renderCompleteRef.current && onChartDataProcessed) {
+      // Get the domain from xScale
+      let domain;
+      if (xAxisDataType === "number") {
+        domain = [d3.min(series, d => d.date || 0), d3.max(series, d => d.date || 1)];
+      } else {
+        // For date types, ensure unique dates
+        domain = [...new Set(series.map(d => d.date))];
+      }
+
+      // Ensure yScaleDomain is always a tuple with 2 elements
+      const safeYDomain: [number, number] =
+        Array.isArray(yScaleDomain) && yScaleDomain.length === 2
+          ? (yScaleDomain as [number, number])
+          : [0, yScaleDomain[1] || 0];
+
+      const currentMetadata: ChartMetadata = {
+        xAxisDomain: domain,
+        yAxisDomain: safeYDomain, // Now properly typed as [number, number]
+        keys: keys.filter(key => !disabledItems.includes(key)),
+        stackedData: prepareAreaData(),
+      };
+
+      // Rest of the function with comparison and callback...
+    }
+  }, [series, xAxisDataType, yScaleDomain, keys, disabledItems, prepareAreaData, onChartDataProcessed]);
 
   return (
     <div style={{ position: "relative" }}>

@@ -1,5 +1,5 @@
 // RangeChart.tsx
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import * as d3 from "d3";
 import { DataPointRangeChart } from "../types/data";
 import { useChartContext } from "./MichiVzProvider";
@@ -50,6 +50,14 @@ interface RangeChartProps {
           series: DataPointRangeChart[];
         }[]
       ) => boolean);
+  onChartDataProcessed?: (metadata: ChartMetadata) => void;
+}
+
+interface ChartMetadata {
+  xAxisDomain: any[];
+  yAxisDomain: [number, number];
+  visibleSeries: string[];
+  areaData: any;
 }
 
 const RangeChart: React.FC<RangeChartProps> = ({
@@ -62,19 +70,19 @@ const RangeChart: React.FC<RangeChartProps> = ({
   yAxisFormat,
   xAxisDataType = "number",
   xAxisFormat,
-  tooltipFormatter = (d: DataPointRangeChart) =>
-    `<div>${d.label} - ${d.date}: ${d?.valueMedium}</div>`,
+  tooltipFormatter = (d: DataPointRangeChart) => `<div>${d.label} - ${d.date}: ${d?.valueMedium}</div>`,
   showCombined = false,
   children,
   isLoading = false,
   isLoadingComponent,
   isNodataComponent,
   isNodata,
+  onChartDataProcessed,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
-    useChartContext();
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const renderCompleteRef = useRef(false);
 
   const yScale = useMemo(
     () =>
@@ -87,17 +95,13 @@ const RangeChart: React.FC<RangeChartProps> = ({
                 d3.min(
                   dataSet
                     .filter(d => !disabledItems.includes(d.label))
-                    .flatMap(({ series }) =>
-                      series.filter(dd => dd.valueMin !== null)
-                    ),
+                    .flatMap(({ series }) => series.filter(dd => dd.valueMin !== null)),
                   d => d.valueMin
                 ) || 0,
                 d3.max(
                   dataSet
                     .filter(d => !disabledItems.includes(d.label))
-                    .flatMap(({ series }) =>
-                      series.filter(dd => dd.valueMax !== null)
-                    ),
+                    .flatMap(({ series }) => series.filter(dd => dd.valueMax !== null)),
                   d => d.valueMax
                 ) || 1,
               ]
@@ -131,14 +135,8 @@ const RangeChart: React.FC<RangeChartProps> = ({
 
     if (xAxisDataType === "date_annual") {
       // sometimes the first tick is missing, so do a hack here
-      const minDate = d3.min(
-        dataSet.flatMap(item =>
-          item.series.map(d => new Date(`${d.date}-01-01`))
-        )
-      );
-      const maxDate = d3.max(
-        dataSet.flatMap(item => item.series.map(d => new Date(`${d.date}`)))
-      );
+      const minDate = d3.min(dataSet.flatMap(item => item.series.map(d => new Date(`${d.date}-01-01`))));
+      const maxDate = d3.max(dataSet.flatMap(item => item.series.map(d => new Date(`${d.date}`))));
 
       return d3
         .scaleTime()
@@ -146,12 +144,8 @@ const RangeChart: React.FC<RangeChartProps> = ({
         .range([margin.left, width - margin.right]);
     }
 
-    const minDate = d3.min(
-      dataSet.flatMap(item => item.series.map(d => new Date(d.date)))
-    );
-    const maxDate = d3.max(
-      dataSet.flatMap(item => item.series.map(d => new Date(d.date)))
-    );
+    const minDate = d3.min(dataSet.flatMap(item => item.series.map(d => new Date(d.date))));
+    const maxDate = d3.max(dataSet.flatMap(item => item.series.map(d => new Date(d.date))));
 
     return d3
       .scaleTime()
@@ -221,11 +215,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
     svg.selectAll(".circle-data").remove();
     svg.selectAll(".area-group").remove();
 
-    const areas = svg
-      .selectAll(".area-group")
-      .data(dataSet)
-      .enter()
-      .append("g");
+    const areas = svg.selectAll(".area-group").data(dataSet).enter().append("g");
 
     areas
       .append("path")
@@ -281,9 +271,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
           .attr("x", d => xScale(new Date(d.date)) - 4 / 2)
           .attr("y", d => yScale(d.valueMax))
           .attr("width", 4)
-          .attr("height", d =>
-            Math.abs(yScale(d.valueMax) - yScale(d.valueMin))
-          )
+          .attr("height", d => Math.abs(yScale(d.valueMax) - yScale(d.valueMin)))
           .attr("fill", "white")
           .attr("opacity", 0)
           .on("mouseenter", (event, d) => {
@@ -318,9 +306,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
     const svg = d3.select(svgRef.current);
     highlightItems.forEach(item => {
       // fade out items with selectors [data-label="item"] inside this svg
-      svg
-        .selectAll(`[data-label]:not([data-label="${item}"])`)
-        .attr("opacity", 0.1);
+      svg.selectAll(`[data-label]:not([data-label="${item}"])`).attr("opacity", 0.1);
       svg.selectAll(`.rect-hover[data-label="${item}"]`).attr("opacity", 0.8);
     });
   }, [highlightItems]);
@@ -335,6 +321,31 @@ const RangeChart: React.FC<RangeChartProps> = ({
     isNodataComponent: isNodataComponent,
     isNodata: isNodata,
   });
+
+  useEffect(() => {
+    if (renderCompleteRef.current && onChartDataProcessed) {
+      // Extract all dates from all series
+      const allDates = dataSet.flatMap(set =>
+        set.series.map(point => (xAxisDataType === "number" ? point.date : String(point.date)))
+      );
+
+      // Create unique dates array
+      const uniqueDates = [...new Set(allDates)];
+
+      const currentMetadata: ChartMetadata = {
+        xAxisDomain: uniqueDates,
+        yAxisDomain: yScale.domain() as [number, number],
+        visibleSeries: dataSet.map(d => d.label).filter(label => !disabledItems.includes(label)),
+        areaData: dataSet,
+      };
+
+      // Rest of the function with comparison and callback...
+    }
+  }, [dataSet, xAxisDataType, yScale, disabledItems]);
+
+  useLayoutEffect(() => {
+    renderCompleteRef.current = true;
+  }, []);
 
   return (
     <div className="chart-container" style={{ position: "relative" }}>

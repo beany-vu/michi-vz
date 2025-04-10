@@ -1,5 +1,5 @@
 import * as d3 from "d3";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import { useChartContext } from "../components/MichiVzProvider";
 import Title from "../components/shared/Title";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
@@ -45,6 +45,14 @@ interface LineChartProps {
     criteria: "valueBased" | "valueCompared"; // sorting criteria
     sortingDir: "asc" | "desc";
   };
+  onChartDataProcessed?: (metadata: ChartMetadata) => void;
+}
+
+interface ChartMetadata {
+  yAxisDomain: string[];
+  xAxisDomain: any[];
+  visibleItems: string[];
+  barData: any;
 }
 
 const DualHorizontalBarChart: React.FC<LineChartProps> = ({
@@ -63,6 +71,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
   isLoadingComponent,
   isNodataComponent,
   isNodata,
+  onChartDataProcessed,
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
@@ -81,6 +90,11 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     visibleItems,
   } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const renderCompleteRef = useRef(false);
+
+  useLayoutEffect(() => {
+    renderCompleteRef.current = true;
+  }, []);
 
   // New: compute filteredDataSet
   const filteredDataSet = useMemo(() => {
@@ -201,6 +215,22 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     isNodataComponent: isNodataComponent,
     isNodata: isNodata,
   });
+
+  useEffect(() => {
+    if (renderCompleteRef.current && onChartDataProcessed) {
+      // Ensure unique labels
+      const uniqueLabels = [...new Set(yAxisDomain)];
+
+      const currentMetadata: ChartMetadata = {
+        yAxisDomain: uniqueLabels,
+        xAxisDomain: xAxisDomain,
+        visibleItems: visibleItems,
+        barData: filteredDataSet,
+      };
+
+      // Rest of the function with comparison and callback...
+    }
+  }, [yAxisDomain, xAxisDomain, visibleItems, filteredDataSet]);
 
   return (
     <div style={{ position: "relative" }}>

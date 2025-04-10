@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useLayoutEffect } from "react";
 import Title from "./shared/Title";
 import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
@@ -11,6 +11,12 @@ import LoadingIndicator from "./shared/LoadingIndicator";
 
 interface DataPoint {
   [key: string]: number | undefined;
+}
+
+interface ChartMetadata {
+  yAxisDomain: string[];
+  xAxisDomain: [number, number];
+  visibleItems: string[];
 }
 
 interface BarBellChartProps {
@@ -27,13 +33,10 @@ interface BarBellChartProps {
   xAxisFormat?: (d: number | string) => string;
   yAxisFormat?: (d: number | string) => string;
   xAxisDataType?: "number" | "date_annual" | "date_monthly";
-  tooltipFormat?: (
-    d: DataPoint,
-    currentKey: string,
-    currentValue: string | number
-  ) => string;
+  tooltipFormat?: (d: DataPoint, currentKey: string, currentValue: string | number) => string;
   showGrid?: { x: boolean; y: boolean };
   children?: React.ReactNode;
+  onChartDataProcessed?: (metadata: ChartMetadata) => void;
 }
 
 const BarBellChart: React.FC<BarBellChartProps> = ({
@@ -53,11 +56,16 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   xAxisFormat,
   tooltipFormat = null,
   showGrid = defaultConf.SHOW_GRID,
+  onChartDataProcessed,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
-    useChartContext();
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const refTooltip = useRef<HTMLDivElement>(null);
+  const renderCompleteRef = useRef(false);
+
+  useLayoutEffect(() => {
+    renderCompleteRef.current = true;
+  }, []);
 
   const generateTooltip = (
     d: DataPoint,
@@ -147,6 +155,21 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     isNodataComponent: isNodataComponent,
     isNodata: isNodata,
   });
+
+  useEffect(() => {
+    if (renderCompleteRef.current && onChartDataProcessed) {
+      // Ensure unique values in yValues
+      const uniqueYValues = [...new Set(yValues.map(String))];
+
+      const currentMetadata: ChartMetadata = {
+        yAxisDomain: uniqueYValues,
+        xAxisDomain: [0, maxValueX],
+        visibleItems: keys.filter(key => !disabledItems.includes(key)),
+      };
+
+      // Rest of the function with comparison and callback...
+    }
+  }, [yValues, maxValueX, keys, disabledItems]);
 
   return (
     <div style={{ position: "relative" }}>

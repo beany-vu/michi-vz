@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useCallback, Suspense, useState } from "react";
+import React, { useMemo, useRef, useEffect, useCallback, Suspense, useState, useLayoutEffect } from "react";
 import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
 import Title from "./shared/Title";
@@ -47,6 +47,13 @@ interface DataPoint {
   date?: string;
 }
 
+interface ChartMetadata {
+  xAxisDomain: any[];
+  yAxisDomain: any[];
+  visiblePoints: any[];
+  pointsData: any;
+}
+
 interface ScatterPlotChartProps<T extends number | string> {
   dataSet: DataPoint[];
   width: number;
@@ -78,6 +85,7 @@ interface ScatterPlotChartProps<T extends number | string> {
     sortingDir: "asc" | "desc";
     date?: string; // Added date property for filtering by date
   };
+  onChartDataProcessed?: (metadata: ChartMetadata) => void;
 }
 
 const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
@@ -102,6 +110,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   dScaleLegend,
   dScaleLegendFormatter,
   filter,
+  onChartDataProcessed,
 }) => {
   const ref = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -116,6 +125,12 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     setVisibleItems,
     visibleItems,
   } = useChartContext();
+
+  const renderCompleteRef = useRef(false);
+
+  useLayoutEffect(() => {
+    renderCompleteRef.current = true;
+  }, []);
 
   // Apply filtering based on filter prop, now including date filtering
   const filteredDataSet = useMemo(() => {
@@ -325,6 +340,22 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     isNodataComponent: isNodataComponent,
     isNodata: isNodata,
   });
+
+  useEffect(() => {
+    if (renderCompleteRef.current && onChartDataProcessed) {
+      // For scatter plots, we might want to keep unique date+sector combinations
+      const uniqueXValues = [...new Set(filteredDataSet.map(d => d.x))];
+
+      const currentMetadata: ChartMetadata = {
+        xAxisDomain: uniqueXValues,
+        yAxisDomain: yAxisDomain || yScale.domain(),
+        visiblePoints: filteredDataSet.map(d => d.label),
+        pointsData: filteredDataSet,
+      };
+
+      // Rest of the function with comparison and callback...
+    }
+  }, [filteredDataSet, yAxisDomain, yScale]);
 
   return (
     <Styled style={{ position: "relative" }}>

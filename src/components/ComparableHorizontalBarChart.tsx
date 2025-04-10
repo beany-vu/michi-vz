@@ -1,5 +1,5 @@
 import * as d3 from "d3";
-import React, { useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useCallback, useLayoutEffect } from "react";
 import Title from "../components/shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
@@ -47,6 +47,14 @@ interface LineChartProps {
     criteria: "valueBased" | "valueCompared";
     sortingDir: "asc" | "desc";
   };
+  onChartDataProcessed?: (metadata: ChartMetadata) => void;
+}
+
+interface ChartMetadata {
+  yAxisDomain: string[];
+  xAxisDomain: any[];
+  visibleItems: string[];
+  barData: any;
 }
 
 const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
@@ -66,6 +74,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   isLoadingComponent,
   isNodataComponent,
   isNodata,
+  onChartDataProcessed,
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
@@ -85,6 +94,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     setDisabledItems,
   } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const renderCompleteRef = useRef(false);
 
   // Memoize filtered data set
   const filteredDataSet = useMemo(() => {
@@ -351,6 +361,27 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     handleHighlight,
     handleUnhighlight,
   ]);
+
+  useLayoutEffect(() => {
+    renderCompleteRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (renderCompleteRef.current && onChartDataProcessed) {
+      // Ensure unique values in yAxisDomain
+      const uniqueLabels = [...new Set(yAxisDomain)];
+
+      const currentMetadata: ChartMetadata = {
+        yAxisDomain: uniqueLabels,
+        xAxisDomain: xAxisDomain,
+        visibleItems: visibleItems,
+        barData: filteredDataSet,
+      };
+
+      // Rest of the function with comparison and callback...
+      onChartDataProcessed(currentMetadata);
+    }
+  }, [yAxisDomain, xAxisDomain, visibleItems, filteredDataSet, onChartDataProcessed]);
 
   return (
     <div style={{ position: "relative" }}>
