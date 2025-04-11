@@ -1,5 +1,5 @@
 import * as d3 from "d3";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useCallback, useLayoutEffect } from "react";
 import Title from "../components/shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
@@ -18,13 +18,6 @@ const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
 const HEIGHT = 480 - MARGIN.top - MARGIN.bottom;
 
-export const VALUE_TYPE = {
-  BASED: "based",
-  COMPARED: "compared",
-} as const;
-
-export type TValueType = (typeof VALUE_TYPE)[keyof typeof VALUE_TYPE];
-
 interface LineChartProps {
   dataSet: DataPoint[];
   width: number;
@@ -37,18 +30,36 @@ interface LineChartProps {
   title?: string;
   tooltipFormatter?: (
     d: DataPoint | undefined,
-    dataSet?: DataPoint[],
-    type?: TValueType,
+    dataSet?: {
+      label: string;
+      color: string;
+      series: DataPoint[];
+    }[]
   ) => string;
   children?: React.ReactNode;
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
+  // New: filter prop for sorting
+  filter?: {
+    limit: number;
+    criteria: "valueBased" | "valueCompared";
+    sortingDir: "asc" | "desc";
+  };
+  onChartDataProcessed?: (metadata: ChartMetadata) => void;
+}
+
+interface ChartMetadata {
+  yAxisDomain: string[];
+  xAxisDomain: any[];
+  visibleItems: string[];
+  barData: any;
 }
 
 const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   dataSet,
+  filter,
   title,
   width = WIDTH,
   height = HEIGHT,
@@ -63,12 +74,12 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   isLoadingComponent,
   isNodataComponent,
   isNodata,
+  onChartDataProcessed,
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
     y: number;
     data: DataPoint;
-    type: TValueType;
   } | null>(null);
   const {
     colorsMapping,
@@ -76,93 +87,162 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     highlightItems,
     setHighlightItems,
     disabledItems,
+    setHiddenItems,
+    hiddenItems,
+    setVisibleItems,
+    visibleItems,
+    setDisabledItems,
   } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const renderCompleteRef = useRef(false);
+
+  // Memoize filtered data set
+  const filteredDataSet = useMemo(() => {
+    if (!filter) return dataSet;
+    return dataSet
+      .slice()
+      .sort((a, b) => {
+        const aVal = Number(a[filter.criteria]);
+        const bVal = Number(b[filter.criteria]);
+        return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
+      })
+      .slice(0, filter.limit);
+  }, [dataSet, filter]);
+
+  // Memoize yAxisDomain
   const yAxisDomain = useMemo(
-    () =>
-      dataSet
-        ?.filter((d) => !disabledItems.includes(d?.label))
-        ?.map((d) => d?.label),
-    [dataSet, disabledItems],
+    () => filteredDataSet.filter(d => !disabledItems.includes(d?.label))?.map(d => d?.label),
+    [filteredDataSet, disabledItems]
   );
 
+  // Memoize xAxisRange
   const xAxisRange = useMemo(() => {
-    if (dataSet.length > 0) {
-      return dataSet
-        ?.filter((d) => !disabledItems.includes(d?.label))
-        ?.map((d) => [d.valueBased, d.valueCompared])
+    if (filteredDataSet.length > 0) {
+      return filteredDataSet
+        ?.filter(d => !disabledItems.includes(d?.label))
+        ?.map(d => [d.valueBased, d.valueCompared])
         ?.flat();
     }
     return [];
-  }, [dataSet, disabledItems]);
+  }, [filteredDataSet, disabledItems]);
 
+  // Memoize xAxisDomain
   const xAxisDomain = useMemo(() => {
-    const range =
-      xAxisPredefinedDomain.length > 0 ? xAxisPredefinedDomain : xAxisRange;
+    const range = xAxisPredefinedDomain.length > 0 ? xAxisPredefinedDomain : xAxisRange;
     if (xAxisDataType === "number") {
       const min = Math.min(...range);
       const max = Math.max(...range);
       return [max, min];
     }
     if (xAxisDataType === "date_annual") {
-      return [
-        new Date(Math.max(...range), 1, 1),
-        new Date(Math.min(...range), 1, 1),
-      ];
+      return [new Date(Math.max(...range), 1, 1), new Date(Math.min(...range), 1, 1)];
     }
     if (xAxisRange.length >= 2) {
       const minDate = new Date(Math.min(...range));
       const maxDate = new Date(Math.max(...range));
       return [maxDate, minDate] as [Date, Date];
     }
-  }, [xAxisRange, xAxisPredefinedDomain, disabledItems]);
+  }, [xAxisRange, xAxisPredefinedDomain, xAxisDataType]);
 
-  const yAxisScale = d3
-    .scaleBand()
-    .domain(yAxisDomain)
-    .range([margin.top, height - margin.bottom]);
+  // Memoize scales
+  const yAxisScale = useMemo(
+    () =>
+      d3
+        .scaleBand()
+        .domain(yAxisDomain)
+        .range([margin.top, height - margin.bottom])
+        .padding(0.1),
+    [yAxisDomain, height, margin]
+  );
 
-  const xAxisScale =
-    xAxisDataType === "number"
-      ? d3
-          .scaleLinear()
-          .domain(xAxisDomain)
-          .range([width - margin.left, margin.right])
-          .clamp(true)
-          .nice()
-      : d3
-          .scaleTime()
-          .domain(xAxisDomain)
-          .range([width - margin.left, margin.right]);
+  const xAxisScale = useMemo(
+    () =>
+      xAxisDataType === "number"
+        ? d3
+            .scaleLinear()
+            .domain(xAxisDomain)
+            .range([width - margin.left, margin.right])
+            .clamp(true)
+            .nice()
+        : d3
+            .scaleTime()
+            .domain(xAxisDomain)
+            .range([width - margin.left, margin.right]),
+    [xAxisDomain, width, margin, xAxisDataType]
+  );
 
-  const handleMouseOver = (
-    d: DataPoint,
-    event: React.MouseEvent<SVGRectElement, MouseEvent>,
-    type: TValueType,
-  ) => {
+  // Memoize the YaxisBand component
+  const memoizedYaxisBand = useMemo(() => {
+    return <YaxisBand yScale={yAxisScale} width={width} margin={margin} yAxisFormat={yAxisFormat} />;
+  }, [yAxisScale, width, margin, yAxisFormat]);
+
+  // Memoize event handlers
+  const handleMouseOver = useCallback((d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>) => {
     if (svgRef.current) {
       const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
-
-      setTooltip(() => ({
+      setTooltip({
         x: mousePoint[0],
         y: mousePoint[1],
         data: d,
-        type,
-      }));
+      });
     }
-  };
+  }, []);
 
-  const handleMouseOut = () => {
+  const handleMouseOut = useCallback(() => {
     setTooltip(null);
-  };
+  }, []);
 
+  const handleHighlight = useCallback(
+    (label: string) => {
+      setHighlightItems([label]);
+    },
+    [setHighlightItems]
+  );
+
+  const handleUnhighlight = useCallback(() => {
+    setHighlightItems([]);
+  }, [setHighlightItems]);
+
+  // Update hiddenItems based on filteredDataSet
   useEffect(() => {
-    d3.select(svgRef.current).select(".bar").attr("opacity", 0.3);
-    highlightItems.forEach((item) => {
-      d3.select(svgRef.current)
-        .selectAll(`.bar-[data-label="${item}"]`)
-        .attr("opacity", 1);
-    });
+    if (filter) {
+      const newHidden = dataSet
+        .filter(item => !filteredDataSet.some(filtered => filtered.label === item.label))
+        .map(item => item.label);
+
+      if (JSON.stringify(newHidden) !== JSON.stringify(hiddenItems)) {
+        setHiddenItems(newHidden);
+      }
+    } else {
+      if (hiddenItems.length > 0) {
+        setHiddenItems([]);
+      }
+    }
+  }, [dataSet, filteredDataSet, filter, hiddenItems, setHiddenItems]);
+
+  // Update visibleItems based on filteredDataSet
+  useEffect(() => {
+    if (filter) {
+      const newVisible = filteredDataSet.map(item => item.label);
+      if (JSON.stringify(newVisible) !== JSON.stringify(visibleItems)) {
+        setVisibleItems(newVisible);
+      }
+    } else {
+      const allLabels = dataSet.map(item => item.label);
+      if (JSON.stringify(allLabels) !== JSON.stringify(visibleItems)) {
+        setVisibleItems(allLabels);
+      }
+    }
+  }, [dataSet, filteredDataSet, filter, visibleItems, setVisibleItems]);
+
+  // Update bar opacity based on highlightItems
+  useEffect(() => {
+    if (svgRef.current) {
+      d3.select(svgRef.current).select(".bar").attr("opacity", 0.3);
+      highlightItems.forEach(item => {
+        d3.select(svgRef.current).selectAll(`.bar-[data-label="${item}"]`).attr("opacity", 1);
+      });
+    }
   }, [highlightItems]);
 
   const displayIsNodata = useDisplayIsNodata({
@@ -172,6 +252,137 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     isNodata: isNodata,
   });
 
+  // Memoize the bars rendering
+  const renderBars = useMemo(() => {
+    return filteredDataSet
+      .filter(d => !disabledItems.includes(d?.label) && visibleItems.includes(d?.label))
+      .map((d, i) => {
+        const x1 = margin.left + xAxisScale(Math.min(0, d.valueBased)) - margin.left;
+        const x2 = margin.left + xAxisScale(Math.min(0, d.valueCompared)) - margin.left;
+        const width1 = Math.abs(xAxisScale(d.valueBased) - xAxisScale(0));
+        const width2 = Math.abs(xAxisScale(d.valueCompared) - xAxisScale(0));
+
+        const y = yAxisScale(d?.label) || 0;
+        const standardHeight = yAxisScale.bandwidth();
+
+        return (
+          <g
+            className={"bar"}
+            data-label={d?.label}
+            key={i}
+            style={{
+              opacity: highlightItems.includes(d?.label) || highlightItems.length === 0 ? 1 : 0.3,
+            }}
+            onMouseOver={() => handleHighlight(d?.label)}
+            onMouseOut={handleUnhighlight}
+          >
+            {width1 < width2 ? (
+              <>
+                <rect
+                  className="value-compared"
+                  x={x2}
+                  y={y + (standardHeight - 30) / 2}
+                  width={Math.max(width2, 3)}
+                  height={30}
+                  fill={colorsMapping[d?.label] ?? d.color}
+                  opacity={0.9}
+                  rx={5}
+                  ry={5}
+                  onMouseOver={event => handleMouseOver(d, event)}
+                  onMouseOut={handleMouseOut}
+                  stroke="#fff"
+                  strokeWidth={1}
+                />
+                <rect
+                  className="value-based"
+                  x={x1}
+                  y={y + (standardHeight - 30) / 2}
+                  width={Math.max(width1, 3)}
+                  height={30}
+                  fill={colorsBasedMapping[d?.label] ?? d?.color}
+                  rx={5}
+                  ry={5}
+                  onMouseOver={event => handleMouseOver(d, event)}
+                  onMouseOut={handleMouseOut}
+                  opacity={0.9}
+                  stroke="#fff"
+                  strokeWidth={1}
+                />
+              </>
+            ) : (
+              <>
+                <rect
+                  className="value-based"
+                  x={x1}
+                  y={y + (standardHeight - 30) / 2}
+                  width={Math.max(width1, 3)}
+                  height={30}
+                  fill={colorsBasedMapping[d?.label] ?? d?.color}
+                  rx={5}
+                  ry={5}
+                  onMouseOver={event => handleMouseOver(d, event)}
+                  onMouseOut={handleMouseOut}
+                  opacity={0.9}
+                  stroke="#fff"
+                  strokeWidth={1}
+                />
+                <rect
+                  className="value-compared"
+                  x={x2}
+                  y={y + (standardHeight - 30) / 2}
+                  width={Math.max(width2, 3)}
+                  height={30}
+                  fill={colorsMapping[d?.label] ?? d.color}
+                  opacity={0.9}
+                  rx={5}
+                  ry={5}
+                  onMouseOver={event => handleMouseOver(d, event)}
+                  onMouseOut={handleMouseOut}
+                  stroke="#fff"
+                  strokeWidth={1}
+                />
+              </>
+            )}
+          </g>
+        );
+      });
+  }, [
+    filteredDataSet,
+    disabledItems,
+    visibleItems,
+    margin,
+    xAxisScale,
+    yAxisScale,
+    highlightItems,
+    colorsMapping,
+    colorsBasedMapping,
+    handleMouseOver,
+    handleMouseOut,
+    handleHighlight,
+    handleUnhighlight,
+  ]);
+
+  useLayoutEffect(() => {
+    renderCompleteRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (renderCompleteRef.current && onChartDataProcessed) {
+      // Ensure unique values in yAxisDomain
+      const uniqueLabels = [...new Set(yAxisDomain)];
+
+      const currentMetadata: ChartMetadata = {
+        yAxisDomain: uniqueLabels,
+        xAxisDomain: xAxisDomain,
+        visibleItems: visibleItems,
+        barData: filteredDataSet,
+      };
+
+      // Rest of the function with comparison and callback...
+      onChartDataProcessed(currentMetadata);
+    }
+  }, [yAxisDomain, xAxisDomain, visibleItems, filteredDataSet, onChartDataProcessed]);
+
   return (
     <div style={{ position: "relative" }}>
       <svg
@@ -179,7 +390,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         height={height}
         ref={svgRef}
         style={{ overflow: "visible" }}
-        onMouseOut={(event) => {
+        onMouseOut={event => {
           event.stopPropagation();
           event.preventDefault();
           setHighlightItems([]);
@@ -196,124 +407,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           xAxisFormat={xAxisFormat}
           xAxisDataType={xAxisDataType}
         />
-        <YaxisBand
-          yScale={yAxisScale}
-          width={width}
-          margin={margin}
-          yAxisFormat={yAxisFormat}
-        />
-        {dataSet
-          .filter((d) => !disabledItems.includes(d?.label))
-          .map((d, i) => {
-            const x1 =
-              margin.left + xAxisScale(Math.min(0, d.valueBased)) - margin.left;
-            const x2 =
-              margin.left +
-              xAxisScale(Math.min(0, d.valueCompared)) -
-              margin.left;
-            const width1 = Math.abs(xAxisScale(d.valueBased) - xAxisScale(0));
-            const width2 = Math.abs(
-              xAxisScale(d.valueCompared) - xAxisScale(0),
-            );
-
-            const y = yAxisScale(d?.label) || 0;
-            const standardHeight = yAxisScale.bandwidth();
-
-            return (
-              <g
-                className={"bar"}
-                data-label={d?.label}
-                key={i}
-                style={{
-                  opacity:
-                    highlightItems.includes(d?.label) ||
-                    highlightItems.length === 0
-                      ? 1
-                      : 0.3,
-                }}
-                onMouseOver={() => setHighlightItems([d?.label])}
-                onMouseOut={() => setHighlightItems([])}
-              >
-                {/* Conditionally render based on width comparison */}
-                {width1 < width2 ? (
-                  <>
-                    <rect
-                      className="value-compared"
-                      x={x2}
-                      y={y + (standardHeight - 30) / 2}
-                      width={width2}
-                      height={30}
-                      fill={colorsMapping[d?.label] ?? d.color}
-                      opacity={0.9}
-                      rx={5}
-                      ry={5}
-                      onMouseOver={(event) =>
-                        handleMouseOver(d, event, "compared")
-                      }
-                      onMouseOut={handleMouseOut}
-                      stroke="#fff"
-                      strokeWidth={1}
-                    />
-                    <rect
-                      className="value-based"
-                      x={x1}
-                      y={y + (standardHeight - 30) / 2}
-                      width={width1}
-                      height={30}
-                      fill={colorsBasedMapping[d?.label] ?? d?.color}
-                      rx={5}
-                      ry={5}
-                      onMouseOver={(event) =>
-                        handleMouseOver(d, event, "based")
-                      }
-                      onMouseOut={handleMouseOut}
-                      opacity={0.9}
-                      stroke="#fff"
-                      strokeWidth={1}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <rect
-                      className="value-based"
-                      x={x1}
-                      y={y + (standardHeight - 30) / 2}
-                      width={width1}
-                      height={30}
-                      fill={colorsBasedMapping[d?.label] ?? d?.color}
-                      rx={5}
-                      ry={5}
-                      onMouseOver={(event) =>
-                        handleMouseOver(d, event, "based")
-                      }
-                      onMouseOut={handleMouseOut}
-                      opacity={0.9}
-                      stroke="#fff"
-                      strokeWidth={1}
-                    />
-                    <rect
-                      className="value-compared"
-                      x={x2}
-                      y={y + (standardHeight - 30) / 2}
-                      width={width2}
-                      height={30}
-                      fill={colorsMapping[d?.label] ?? d.color}
-                      opacity={0.9}
-                      rx={5}
-                      ry={5}
-                      onMouseOver={(event) =>
-                        handleMouseOver(d, event, "compared")
-                      }
-                      onMouseOut={handleMouseOut}
-                      stroke="#fff"
-                      strokeWidth={1}
-                    />
-                  </>
-                )}
-                {/* Rest of your code */}
-              </g>
-            );
-          })}
+        {memoizedYaxisBand}
+        {renderBars}
       </svg>
       {tooltip && (
         <div
@@ -329,20 +424,17 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         >
           {!tooltipFormatter && (
             <div>
-              ${tooltip?.data?.label}: ${tooltip?.data?.valueBased} - $
-              {tooltip?.data?.valueCompared}
+              ${tooltip?.data?.label}: ${tooltip?.data?.valueBased} - ${tooltip?.data?.valueCompared}
             </div>
           )}
-          {tooltipFormatter &&
-            tooltipFormatter(tooltip?.data, dataSet, tooltip?.type)}
+          {tooltipFormatter && tooltipFormatter(tooltip?.data)}
         </div>
       )}
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
-
       {displayIsNodata && <>{isNodataComponent}</>}
     </div>
   );
 };
 
-export default ComparableHorizontalBarChart;
+export default React.memo(ComparableHorizontalBarChart);

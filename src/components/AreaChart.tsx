@@ -1,4 +1,4 @@
-import React, { Fragment, useMemo, useRef, useState } from "react";
+import React, { Fragment, useMemo, useRef, useState, useEffect } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
@@ -18,6 +18,13 @@ interface AreaDataPoint {
   data: DataPoint;
 }
 
+interface ChartMetadata {
+  xAxisDomain: any[];
+  yAxisDomain: [number, number];
+  keys: string[];
+  stackedData: any;
+}
+
 interface Props {
   series: DataPoint[];
   keys: string[];
@@ -28,17 +35,14 @@ interface Props {
   xAxisFormat?: (d: number) => string;
   yAxisFormat?: (d: number) => string;
   yAxisDomain?: [number, number] | null;
-  tooltipFormatter?: (
-    d: DataPoint,
-    series: DataPoint[],
-    key: string,
-  ) => string | null;
+  tooltipFormatter?: (d: DataPoint, series: DataPoint[], key: string) => string | null;
   children?: React.ReactNode;
   xAxisDataType: "number" | "date_annual" | "date_monthly";
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
+  onChartDataProcessed?: (metadata: ChartMetadata) => void;
 }
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
@@ -62,34 +66,27 @@ const AreaChart: React.FC<Props> = ({
   isLoadingComponent,
   isNodataComponent,
   isNodata,
+  onChartDataProcessed,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
-    useChartContext();
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const [hoveredDate] = useState<number | null>(null);
+  const renderCompleteRef = useRef(false);
 
   const xScale = useMemo(() => {
     if (xAxisDataType === "number") {
       return d3
         .scaleLinear()
-        .domain([
-          d3.min(series, (d) => d.date || 0),
-          d3.max(series, (d) => d.date || 1),
-        ])
+        .domain([d3.min(series, d => d.date || 0), d3.max(series, d => d.date || 1)])
         .range([margin.left, width - margin.right])
         .clamp(true)
         .nice();
     }
 
     const minDate = d3.min(
-      series.map(
-        (d) =>
-          new Date(
-            xAxisDataType === "date_annual" ? `${d.date} 01 01` : d.date,
-          ),
-      ),
+      series.map(d => new Date(xAxisDataType === "date_annual" ? `${d.date} 01 01` : d.date))
     );
-    const maxDate = d3.max(series.map((d) => new Date(d.date)));
+    const maxDate = d3.max(series.map(d => new Date(d.date)));
 
     return d3
       .scaleTime()
@@ -106,12 +103,12 @@ const AreaChart: React.FC<Props> = ({
     // return the max value of the sum of all the keys, don't count the date
     const max = d3.max(
       series,
-      (d) =>
+      d =>
         d3.sum(
           Object.keys(d)
-            .filter((key) => !disabledItems.includes(key))
-            .map((key) => (key === "date" ? 0 : d[key] || 0)),
-        ) || 0,
+            .filter(key => !disabledItems.includes(key))
+            .map(key => (key === "date" ? 0 : d[key] || 0))
+        ) || 0
     );
 
     return [0, max];
@@ -125,7 +122,7 @@ const AreaChart: React.FC<Props> = ({
         .range([height - margin.bottom, margin.top])
         .clamp(true)
         .nice(),
-    [series, width, height, margin],
+    [series, width, height, margin]
   );
 
   const stackedData = useMemo(() => {
@@ -144,16 +141,16 @@ const AreaChart: React.FC<Props> = ({
 
   const areaGenerator = d3
     .area<AreaDataPoint>()
-    .defined((d) => d[0] !== null && d[1] !== null)
-    .x((d) => {
+    .defined(d => d[0] !== null && d[1] !== null)
+    .x(d => {
       if (xAxisDataType === "number") {
         return xScale(d.data.date);
       } else {
         return xScale(new Date(d.data.date).getTime()); // Assuming d.data.date is a JavaScript Date object
       }
     })
-    .y0((d) => yScale(d[0]))
-    .y1((d) => yScale(d[1]))
+    .y0(d => yScale(d[0]))
+    .y1(d => yScale(d[1]))
     .curve(d3.curveMonotoneX);
 
   const handleAreaSegmentHover = (dataPoint: DataPoint, key: string) => {
@@ -164,9 +161,7 @@ const AreaChart: React.FC<Props> = ({
     return `
         <div style="background: #fff; padding: 5px">
             <p>${dataPoint.date}</p>
-            <p style="color:${colorsMapping[key]}">${key}: ${
-              dataPoint[key] ?? "N/A"
-            }</p>
+            <p style="color:${colorsMapping[key]}">${key}: ${dataPoint[key] ?? "N/A"}</p>
         </div>`;
   };
 
@@ -176,6 +171,34 @@ const AreaChart: React.FC<Props> = ({
     isNodataComponent: isNodataComponent,
     isNodata: isNodata,
   });
+
+  useEffect(() => {
+    if (renderCompleteRef.current && onChartDataProcessed) {
+      // Get the domain from xScale
+      let domain;
+      if (xAxisDataType === "number") {
+        domain = [d3.min(series, d => d.date || 0), d3.max(series, d => d.date || 1)];
+      } else {
+        // For date types, ensure unique dates
+        domain = [...new Set(series.map(d => d.date))];
+      }
+
+      // Ensure yScaleDomain is always a tuple with 2 elements
+      const safeYDomain: [number, number] =
+        Array.isArray(yScaleDomain) && yScaleDomain.length === 2
+          ? (yScaleDomain as [number, number])
+          : [0, yScaleDomain[1] || 0];
+
+      const currentMetadata: ChartMetadata = {
+        xAxisDomain: domain,
+        yAxisDomain: safeYDomain, // Now properly typed as [number, number]
+        keys: keys.filter(key => !disabledItems.includes(key)),
+        stackedData: prepareAreaData(),
+      };
+
+      // Rest of the function with comparison and callback...
+    }
+  }, [series, xAxisDataType, yScaleDomain, keys, disabledItems, prepareAreaData, onChartDataProcessed]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -222,19 +245,14 @@ const AreaChart: React.FC<Props> = ({
           yAxisFormat={yAxisFormat}
         />
         <g>
-          {prepareAreaData().map((areaData) => (
+          {prepareAreaData().map(areaData => (
             <Fragment key={areaData.key}>
               <path
                 d={areaGenerator(areaData.values)}
                 fill={areaData.fill}
                 stroke={"#fff"}
                 strokeWidth={1}
-                opacity={
-                  highlightItems.length === 0 ||
-                  highlightItems.includes(areaData.key)
-                    ? 1
-                    : 0.2
-                }
+                opacity={highlightItems.length === 0 || highlightItems.includes(areaData.key) ? 1 : 0.2}
                 style={{ transition: "opacity 0.1s ease-out" }}
                 onMouseMove={() => {
                   setHighlightItems([areaData.key]);
@@ -244,15 +262,12 @@ const AreaChart: React.FC<Props> = ({
                 }}
               />
               {/* Here's the addition*/}
-              {areaData.values.map((dataPoint) => (
+              {areaData.values.map(dataPoint => (
                 <rect
                   key={`${areaData.key}-${dataPoint.data.date}`}
                   x={
-                    xScale(
-                      xAxisDataType === "number"
-                        ? dataPoint.data.date
-                        : new Date(dataPoint.data.date),
-                    ) - 2
+                    xScale(xAxisDataType === "number" ? dataPoint.data.date : new Date(dataPoint.data.date)) -
+                    2
                   }
                   y={yScale(dataPoint[1])} // Start from top of the area segment
                   width={4}
@@ -263,19 +278,16 @@ const AreaChart: React.FC<Props> = ({
                   height={yScale(dataPoint[0]) - yScale(dataPoint[1])} // Height of the area segment
                   fill="#fff"
                   opacity={highlightItems.includes(areaData.key) ? 0.5 : 0}
-                  onMouseEnter={(event) => {
+                  onMouseEnter={event => {
                     setHighlightItems([areaData.key]);
                     d3.select(".tooltip")
                       .style("visibility", "visible")
-                      .html(
-                        handleAreaSegmentHover(dataPoint.data, areaData.key),
-                      );
+                      .html(handleAreaSegmentHover(dataPoint.data, areaData.key));
 
                     const [x, y] = d3.pointer(event);
                     const tooltip = d3.select(".tooltip").node() as HTMLElement;
                     const tooltipWidth = tooltip.getBoundingClientRect().width;
-                    const tooltipHeight =
-                      tooltip.getBoundingClientRect().height;
+                    const tooltipHeight = tooltip.getBoundingClientRect().height;
                     d3.select(".tooltip")
                       .style("left", x - tooltipWidth / 2 + "px")
                       .style("top", y - tooltipHeight - 10 + "px");

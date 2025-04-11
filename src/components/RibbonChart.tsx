@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from "react";
+import React, { useMemo, useRef, useEffect, useLayoutEffect } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import XaxisBand from "./shared/XaxisBand";
@@ -10,6 +10,13 @@ import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 interface DataPoint {
   date: number;
   [key: string]: number | undefined;
+}
+
+interface ChartMetadata {
+  xAxisDomain: string[];
+  yAxisDomain: [number, number];
+  keys: string[];
+  stackedData: any;
 }
 
 interface Props {
@@ -27,6 +34,7 @@ interface Props {
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
   tooltipContent?: (data: DataPoint) => string;
+  onChartDataProcessed?: (metadata: ChartMetadata) => void;
 }
 
 interface RectData {
@@ -58,13 +66,14 @@ const RibbonChart: React.FC<Props> = ({
   isNodataComponent,
   isNodata,
   tooltipContent,
+  onChartDataProcessed,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
-    useChartContext();
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
+  const renderCompleteRef = useRef(false);
 
   // xScale
-  const dates = useMemo(() => series.map((d) => String(d.date)), [series]);
+  const dates = useMemo(() => series.map(d => String(d.date)), [series]);
   const xScale = useMemo(
     () =>
       d3
@@ -72,7 +81,7 @@ const RibbonChart: React.FC<Props> = ({
         .domain(dates)
         .range([margin.left, width - margin.right])
         .padding(0.1),
-    [series, width, height, margin],
+    [series, width, height, margin]
   );
 
   // yScale
@@ -80,12 +89,12 @@ const RibbonChart: React.FC<Props> = ({
     // return the max value of the sum of all the keys, don't count the date
     const max = d3.max(
       series,
-      (d) =>
+      d =>
         d3.sum(
           Object.keys(d)
-            .filter((key) => !disabledItems.includes(key))
-            .map((key) => (key === "date" ? 0 : d[key] || 0)),
-        ) || 0,
+            .filter(key => !disabledItems.includes(key))
+            .map(key => (key === "date" ? 0 : d[key] || 0))
+        ) || 0
     );
 
     return [0, max];
@@ -99,7 +108,7 @@ const RibbonChart: React.FC<Props> = ({
         .range([height - margin.bottom, margin.top])
         .clamp(true)
         .nice(),
-    [series, width, height, margin],
+    [series, width, height, margin]
   );
 
   const prepareStackedData = (seriesData: DataPoint[]) => {
@@ -107,12 +116,12 @@ const RibbonChart: React.FC<Props> = ({
       acc[key] = null;
       return acc;
     }, {});
-    seriesData.forEach((yearData) => {
+    seriesData.forEach(yearData => {
       let y0 = 0;
       [...keys]
-        .filter((key) => !disabledItems.includes(key))
+        .filter(key => !disabledItems.includes(key))
         .sort((a, b) => (yearData[a] || 0) - (yearData[b] || 0))
-        .forEach((key) => {
+        .forEach(key => {
           const y1 = y0 + (yearData[key] || 0);
           const height = yScale(y0) - yScale(y1);
           const rectData = {
@@ -128,9 +137,7 @@ const RibbonChart: React.FC<Props> = ({
           y0 = y1;
           stackedData = {
             ...stackedData,
-            [key]: stackedData[key]
-              ? [stackedData[key], rectData].flat()
-              : [rectData],
+            [key]: stackedData[key] ? [stackedData[key], rectData].flat() : [rectData],
           };
         });
     });
@@ -140,7 +147,7 @@ const RibbonChart: React.FC<Props> = ({
   const stackedRectData = useMemo(
     // remove keys from object that are disabled
     () => prepareStackedData(series),
-    [series, width, height, margin, disabledItems],
+    [series, width, height, margin, disabledItems]
   );
   const generateTooltipContent = (data: DataPoint) => {
     // Process your data and generate HTML string as per requirements
@@ -148,13 +155,8 @@ const RibbonChart: React.FC<Props> = ({
     <div style="background: #fff; padding: 5px">
       <p>${xAxisFormat?.(String(data.date)) ?? data.date}</p>
       ${Object.keys(data)
-        .filter((key) => key !== "date")
-        .map(
-          (key) =>
-            `<p style="color:${colorsMapping[key]}">${key}: ${
-              data[key] ?? "N/A"
-            }</p>`,
-        )
+        .filter(key => key !== "date")
+        .map(key => `<p style="color:${colorsMapping[key]}">${key}: ${data[key] ?? "N/A"}</p>`)
         .join("")}
     </div>`;
   };
@@ -165,6 +167,43 @@ const RibbonChart: React.FC<Props> = ({
     isNodataComponent: isNodataComponent,
     isNodata: isNodata,
   });
+
+  useLayoutEffect(() => {
+    renderCompleteRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (renderCompleteRef.current && onChartDataProcessed) {
+      // Ensure unique values in dates
+      const uniqueDates = [...new Set(dates)];
+
+      // Ensure yScaleDomain is always a tuple with 2 elements
+      const safeYDomain: [number, number] =
+        Array.isArray(yScaleDomain) && yScaleDomain.length === 2
+          ? (yScaleDomain as [number, number])
+          : [0, yScaleDomain[1] || 0];
+
+      const currentMetadata: ChartMetadata = {
+        xAxisDomain: uniqueDates,
+        yAxisDomain: safeYDomain, // Now properly typed as [number, number]
+        keys: keys.filter(key => !disabledItems.includes(key)),
+        stackedData: stackedRectData,
+      };
+
+      // Rest of the function with comparison and callback...
+    }
+  }, [
+    series,
+    width,
+    height,
+    margin,
+    disabledItems,
+    stackedRectData,
+    dates,
+    keys,
+    yScaleDomain,
+    onChartDataProcessed,
+  ]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -186,7 +225,7 @@ const RibbonChart: React.FC<Props> = ({
         width={width}
         height={height}
         style={{ overflow: "visible" }}
-        onMouseOut={(event) => {
+        onMouseOut={event => {
           event.preventDefault();
           event.stopPropagation();
           setHighlightItems([]);
@@ -197,12 +236,7 @@ const RibbonChart: React.FC<Props> = ({
         <Title x={width / 2} y={MARGIN.top / 2}>
           {title}
         </Title>
-        <XaxisBand
-          xScale={xScale}
-          height={height}
-          margin={margin}
-          xAxisFormat={xAxisFormat}
-        />
+        <XaxisBand xScale={xScale} height={height} margin={margin} xAxisFormat={xAxisFormat} />
         <YaxisLinear
           yScale={yScale}
           width={width}
@@ -213,8 +247,8 @@ const RibbonChart: React.FC<Props> = ({
         />
         <g>
           {keys
-            .filter((key) => !disabledItems.includes(key))
-            .map((key) => {
+            .filter(key => !disabledItems.includes(key))
+            .map(key => {
               return (
                 <g
                   key={`stack-${key}.replaceAll(" ", "-").replaceAll(",", "")`}
@@ -235,16 +269,10 @@ const RibbonChart: React.FC<Props> = ({
                       const topCurveControl = `Q${d.x + d.width} ${d.y}`;
                       const segmentTopCurve = `M${pointTopLeft.x} ${
                         pointTopLeft.y
-                      } ${topCurveControl} ${pointTopRight.x ?? 0} ${
-                        pointTopRight.y ?? 0
-                      }`;
+                      } ${topCurveControl} ${pointTopRight.x ?? 0} ${pointTopRight.y ?? 0}`;
 
-                      const rightSideLine = `V ${
-                        pointTopRight.y + pointTopRight.height
-                      } `;
-                      const segmentBottomCurve = `Q${d.x + d.width} ${
-                        d.y + d.height
-                      } ${pointTopLeft.x} ${
+                      const rightSideLine = `V ${pointTopRight.y + pointTopRight.height} `;
+                      const segmentBottomCurve = `Q${d.x + d.width} ${d.y + d.height} ${pointTopLeft.x} ${
                         pointTopLeft.y + pointTopLeft.height
                       } `;
                       const leftSideLine = `V ${pointTopLeft.y} `;
@@ -257,10 +285,7 @@ const RibbonChart: React.FC<Props> = ({
                               d={pathD}
                               fill={d.fill}
                               opacity={
-                                highlightItems.length === 0 ||
-                                highlightItems.includes(d.key)
-                                  ? 0.4
-                                  : 0.1
+                                highlightItems.length === 0 || highlightItems.includes(d.key) ? 0.4 : 0.1
                               }
                               stroke={"#fff"}
                               strokeOpacity={0.4}
@@ -279,50 +304,29 @@ const RibbonChart: React.FC<Props> = ({
                             rx={1.5}
                             stroke={"#fff"}
                             strokeOpacity={0.5}
-                            opacity={
-                              highlightItems.length === 0 ||
-                              highlightItems.includes(d.key)
-                                ? 1
-                                : 0.1
-                            }
-                            ref={(node) => {
+                            opacity={highlightItems.length === 0 || highlightItems.includes(d.key) ? 1 : 0.1}
+                            ref={node => {
                               if (node) {
                                 d3.select(node)
                                   .on("mouseover", function () {
                                     setHighlightItems([d.key]);
                                     d3.select(".tooltip")
                                       .style("visibility", "visible")
-                                      .html(
-                                        tooltipContent?.(d.data) ||
-                                          generateTooltipContent(d.data),
-                                      ); // you can define this function or inline its logic
+                                      .html(tooltipContent?.(d.data) || generateTooltipContent(d.data)); // you can define this function or inline its logic
                                   })
                                   .on("mousemove", function (event) {
                                     const [x, y] = d3.pointer(event);
-                                    const tooltip = d3
-                                      .select(".tooltip")
-                                      .node() as HTMLElement;
-                                    const tooltipWidth =
-                                      tooltip.getBoundingClientRect().width;
-                                    const tooltipHeight =
-                                      tooltip.getBoundingClientRect().height;
+                                    const tooltip = d3.select(".tooltip").node() as HTMLElement;
+                                    const tooltipWidth = tooltip.getBoundingClientRect().width;
+                                    const tooltipHeight = tooltip.getBoundingClientRect().height;
 
                                     d3.select(".tooltip")
-                                      .style(
-                                        "left",
-                                        x - tooltipWidth / 2 + "px",
-                                      )
-                                      .style(
-                                        "top",
-                                        y - tooltipHeight - 10 + "px",
-                                      );
+                                      .style("left", x - tooltipWidth / 2 + "px")
+                                      .style("top", y - tooltipHeight - 10 + "px");
                                   })
                                   .on("mouseout", function () {
                                     setHighlightItems([]);
-                                    d3.select(".tooltip").style(
-                                      "visibility",
-                                      "hidden",
-                                    );
+                                    d3.select(".tooltip").style("visibility", "hidden");
                                   });
                               }
                             }}

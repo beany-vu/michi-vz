@@ -8,7 +8,7 @@ export default {
   component: ScatterPlot, // Use your ScatterPlot component
   tags: ["autodocs"],
   decorators: [
-    (Story) => (
+    Story => (
       <MichiVzProvider>
         <Story />
       </MichiVzProvider>
@@ -30,14 +30,20 @@ export const Primary = {
       left: 50,
     },
     yAxisDomain: [0, 25],
-    xAxisFormat: (d) => `${d}%`,
+    xAxisFormat: d => `${d}%`,
     xAxisDataType: "number",
     // xAxisDataType: "band",
-    yAxisFormat: (d) => `${d}%`,
+    yAxisFormat: d => `${d}%`,
     title: "My Scatter Plot", // Change the title as needed
+    filter: {
+      limit: "5",
+      date: "202009",
+      sortingDir: "desc",
+      criteria: "d",
+    },
     dataSet: [
       {
-        year: "202009",
+        date: "202009",
         sector: "10",
         x: 70,
         y: 20.5,
@@ -47,7 +53,7 @@ export const Primary = {
         code: 123,
       },
       {
-        year: "202009",
+        date: "202009",
         sector: "22",
         x: 64.28571,
         y: 8.035714,
@@ -56,7 +62,7 @@ export const Primary = {
         color: "#17BECF",
       },
       {
-        year: "202009",
+        date: "202009",
         sector: "30",
         x: 90.90909,
         y: 37.585,
@@ -65,7 +71,7 @@ export const Primary = {
         color: "#FF7F0E",
       },
       {
-        year: "202009",
+        date: "202009",
         sector: "48",
         x: 4.761905,
         y: 12.4569,
@@ -74,7 +80,7 @@ export const Primary = {
         color: "#D62728",
       },
       {
-        year: "202009",
+        date: "202009",
         sector: "62",
         x: 4,
         y: 12.4569,
@@ -83,7 +89,7 @@ export const Primary = {
         color: "#9467BD",
       },
       {
-        year: "202009",
+        date: "202009",
         sector: "68",
         x: 87.5,
         y: 13.33333,
@@ -92,7 +98,7 @@ export const Primary = {
         color: "#8C564B",
       },
       {
-        year: "202009",
+        date: "202009",
         sector: "70",
         x: 2.941176,
         y: 0.5,
@@ -101,7 +107,7 @@ export const Primary = {
         color: "#E377C2",
       },
       {
-        year: "202009",
+        date: "202009",
         sector: "71",
         x: 78.04878,
         y: 9.939024,
@@ -110,7 +116,7 @@ export const Primary = {
         color: "#7F7F7F",
       },
       {
-        year: "202009",
+        date: "202009",
         sector: "92",
         x: 10,
         y: 25,
@@ -119,7 +125,7 @@ export const Primary = {
         color: "#BCBD22",
       },
       {
-        year: "202009",
+        date: "202009",
         sector: "99",
         x: 5,
         y: 3.240741,
@@ -128,7 +134,7 @@ export const Primary = {
         color: "#2CA02C",
       },
       {
-        year: "202009",
+        date: "202009",
         sector: "101",
         x: 0,
         y: 10,
@@ -139,7 +145,7 @@ export const Primary = {
     ],
     // dataSet: [
     //   {
-    //     year: "202009",
+    //     date: "202009",
     //     sector: "10",
     //     x: 70,
     //     y: 20.5,
@@ -150,7 +156,7 @@ export const Primary = {
     //     shape: "square",
     //   },
     //   {
-    //     year: "202009",
+    //     date: "202009",
     //     sector: "22",
     //     x: 64.28571,
     //     y: 8.035714,
@@ -159,7 +165,7 @@ export const Primary = {
     //     color: "#17BECF",
     //   },
     //   {
-    //     year: "202009",
+    //     date: "202009",
     //     sector: "30",
     //     x: 90.90909,
     //     y: 37.585,

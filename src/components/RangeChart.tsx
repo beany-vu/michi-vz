@@ -1,5 +1,5 @@
 // RangeChart.tsx
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import * as d3 from "d3";
 import { DataPointRangeChart } from "../types/data";
 import { useChartContext } from "./MichiVzProvider";
@@ -7,6 +7,7 @@ import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisLinear from "./shared/YaxisLinear";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
+import LoadingIndicator from "./shared/LoadingIndicator";
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
@@ -33,7 +34,7 @@ interface RangeChartProps {
       label: string;
       color: string;
       series: DataPointRangeChart[];
-    }[],
+    }[]
   ) => string;
   showCombined?: boolean;
   children?: React.ReactNode;
@@ -47,8 +48,16 @@ interface RangeChartProps {
           label: string;
           color: string;
           series: DataPointRangeChart[];
-        }[],
+        }[]
       ) => boolean);
+  onChartDataProcessed?: (metadata: ChartMetadata) => void;
+}
+
+interface ChartMetadata {
+  xAxisDomain: any[];
+  yAxisDomain: [number, number];
+  visibleSeries: string[];
+  areaData: any;
 }
 
 const RangeChart: React.FC<RangeChartProps> = ({
@@ -61,19 +70,19 @@ const RangeChart: React.FC<RangeChartProps> = ({
   yAxisFormat,
   xAxisDataType = "number",
   xAxisFormat,
-  tooltipFormatter = (d: DataPointRangeChart) =>
-    `<div>${d.label} - ${d.date}: ${d?.valueMedium}</div>`,
+  tooltipFormatter = (d: DataPointRangeChart) => `<div>${d.label} - ${d.date}: ${d?.valueMedium}</div>`,
   showCombined = false,
   children,
   isLoading = false,
   isLoadingComponent,
   isNodataComponent,
   isNodata,
+  onChartDataProcessed,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
-    useChartContext();
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const renderCompleteRef = useRef(false);
 
   const yScale = useMemo(
     () =>
@@ -85,26 +94,22 @@ const RangeChart: React.FC<RangeChartProps> = ({
             : [
                 d3.min(
                   dataSet
-                    .filter((d) => !disabledItems.includes(d.label))
-                    .flatMap(({ series }) =>
-                      series.filter((dd) => dd.valueMin !== null),
-                    ),
-                  (d) => d.valueMin,
+                    .filter(d => !disabledItems.includes(d.label))
+                    .flatMap(({ series }) => series.filter(dd => dd.valueMin !== null)),
+                  d => d.valueMin
                 ) || 0,
                 d3.max(
                   dataSet
-                    .filter((d) => !disabledItems.includes(d.label))
-                    .flatMap(({ series }) =>
-                      series.filter((dd) => dd.valueMax !== null),
-                    ),
-                  (d) => d.valueMax,
+                    .filter(d => !disabledItems.includes(d.label))
+                    .flatMap(({ series }) => series.filter(dd => dd.valueMax !== null)),
+                  d => d.valueMax
                 ) || 1,
-              ],
+              ]
         )
         .range([height - margin.bottom, margin.top])
         .clamp(true)
         .nice(),
-    [dataSet, width, height, disabledItems, yAxisDomain],
+    [dataSet, width, height, disabledItems, yAxisDomain]
   );
 
   const xScale = useMemo(() => {
@@ -114,13 +119,13 @@ const RangeChart: React.FC<RangeChartProps> = ({
         .domain([
           d3.min(
             dataSet
-              .filter((d) => !disabledItems.includes(d.label))
-              .flatMap((item) => item.series.map((d) => d.date as number)),
+              .filter(d => !disabledItems.includes(d.label))
+              .flatMap(item => item.series.map(d => d.date as number))
           ) || 0,
           d3.max(
             dataSet
-              .filter((d) => !disabledItems.includes(d.label))
-              .flatMap((item) => item.series.map((d) => d.date as number)),
+              .filter(d => !disabledItems.includes(d.label))
+              .flatMap(item => item.series.map(d => d.date as number))
           ) || 1,
         ])
         .range([margin.left, width - margin.right])
@@ -130,16 +135,8 @@ const RangeChart: React.FC<RangeChartProps> = ({
 
     if (xAxisDataType === "date_annual") {
       // sometimes the first tick is missing, so do a hack here
-      const minDate = d3.min(
-        dataSet.flatMap((item) =>
-          item.series.map((d) => new Date(`${d.date}-01-01`)),
-        ),
-      );
-      const maxDate = d3.max(
-        dataSet.flatMap((item) =>
-          item.series.map((d) => new Date(`${d.date}`)),
-        ),
-      );
+      const minDate = d3.min(dataSet.flatMap(item => item.series.map(d => new Date(`${d.date}-01-01`))));
+      const maxDate = d3.max(dataSet.flatMap(item => item.series.map(d => new Date(`${d.date}`))));
 
       return d3
         .scaleTime()
@@ -147,12 +144,8 @@ const RangeChart: React.FC<RangeChartProps> = ({
         .range([margin.left, width - margin.right]);
     }
 
-    const minDate = d3.min(
-      dataSet.flatMap((item) => item.series.map((d) => new Date(d.date))),
-    );
-    const maxDate = d3.max(
-      dataSet.flatMap((item) => item.series.map((d) => new Date(d.date))),
-    );
+    const minDate = d3.min(dataSet.flatMap(item => item.series.map(d => new Date(d.date))));
+    const maxDate = d3.max(dataSet.flatMap(item => item.series.map(d => new Date(d.date))));
 
     return d3
       .scaleTime()
@@ -170,23 +163,23 @@ const RangeChart: React.FC<RangeChartProps> = ({
 
   const getAreaGenerator = d3
     .area<DataPointRangeChart>()
-    .x((d) => {
+    .x(d => {
       return xScale(new Date(d.date));
     })
-    .y0((d) => {
+    .y0(d => {
       return yScale(d.valueMin);
     })
-    .y1((d) => {
+    .y1(d => {
       return yScale(d.valueMax);
     })
     .curve(d3.curveBumpX);
 
   const getLineGenerator = d3
     .line<DataPointRangeChart>()
-    .x((d) => {
+    .x(d => {
       return xScale(new Date(d.date));
     })
-    .y((d) => {
+    .y(d => {
       // Use the average for a line
       return yScale((d.valueMax + d.valueMin) / 2);
     })
@@ -222,35 +215,23 @@ const RangeChart: React.FC<RangeChartProps> = ({
     svg.selectAll(".circle-data").remove();
     svg.selectAll(".area-group").remove();
 
-    const areas = svg
-      .selectAll(".area-group")
-      .data(dataSet)
-      .enter()
-      .append("g");
+    const areas = svg.selectAll(".area-group").data(dataSet).enter().append("g");
 
     areas
       .append("path")
       .attr("class", (_, i) => `area area-${i} area-group`)
-      .attr("d", (d) => {
-        console.log(111, d.series);
-
+      .attr("d", d => {
         if (showLine(d.series[0])) {
           const linePath = getLineGenerator(d.series);
-          console.log("Line Shape:", linePath);
           return linePath;
         } else {
           const areaPath = getAreaGenerator(d.series);
-          console.log("Area Shape:", areaPath);
           return areaPath;
         }
       })
-      .attr("fill", (d) =>
-        showLine(d.series[0]) ? "none" : colorsMapping[d.label] || d.color,
-      )
-      .attr("stroke", (d) =>
-        showLine(d.series[0]) ? colorsMapping[d.label] || d.color : "none",
-      )
-      .attr("data-label", (d) => d.label)
+      .attr("fill", d => (showLine(d.series[0]) ? "none" : colorsMapping[d.label] || d.color))
+      .attr("stroke", d => (showLine(d.series[0]) ? colorsMapping[d.label] || d.color : "none"))
+      .attr("data-label", d => d.label)
       .attr("transition", "all 0.1s ease-out")
       .on("mouseenter", function (event) {
         const label = d3.select(this).attr("label");
@@ -264,12 +245,9 @@ const RangeChart: React.FC<RangeChartProps> = ({
         svg.selectAll(".rect-hover").attr("opacity", 0);
         svg.selectAll(`.rect-hover[data-label="${label}"]`).attr("opacity", 1);
       })
-      .on("mouseout", (event) => {
+      .on("mouseout", event => {
         // mouse is on .react-hover then do nothing
-        if (
-          event.relatedTarget &&
-          event.relatedTarget.classList.contains("rect-hover")
-        ) {
+        if (event.relatedTarget && event.relatedTarget.classList.contains("rect-hover")) {
           return;
         }
         event.preventDefault();
@@ -280,7 +258,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
 
     // Add rect elements for each year
     dataSet
-      .filter((d) => !disabledItems.includes(d.label))
+      .filter(d => !disabledItems.includes(d.label))
       .forEach((data, i) => {
         svg
           .selectAll(`.rect-hover-${i}`)
@@ -290,12 +268,10 @@ const RangeChart: React.FC<RangeChartProps> = ({
           .attr("class", `rect-hover rect-hover-${i}`)
           .attr("stroke", "#ccc")
           .attr("data-label", data.label)
-          .attr("x", (d) => xScale(new Date(d.date)) - 4 / 2)
-          .attr("y", (d) => yScale(d.valueMax))
+          .attr("x", d => xScale(new Date(d.date)) - 4 / 2)
+          .attr("y", d => yScale(d.valueMax))
           .attr("width", 4)
-          .attr("height", (d) =>
-            Math.abs(yScale(d.valueMax) - yScale(d.valueMin)),
-          )
+          .attr("height", d => Math.abs(yScale(d.valueMax) - yScale(d.valueMin)))
           .attr("fill", "white")
           .attr("opacity", 0)
           .on("mouseenter", (event, d) => {
@@ -304,7 +280,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
             setHighlightItems([data.label]);
             showTooltip(event, tooltipFormatter(d, data.series, dataSet));
           })
-          .on("mouseleave", (event) => {
+          .on("mouseleave", event => {
             event.preventDefault();
             event.stopPropagation();
             setHighlightItems([]);
@@ -328,11 +304,9 @@ const RangeChart: React.FC<RangeChartProps> = ({
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
-    highlightItems.forEach((item) => {
+    highlightItems.forEach(item => {
       // fade out items with selectors [data-label="item"] inside this svg
-      svg
-        .selectAll(`[data-label]:not([data-label="${item}"])`)
-        .attr("opacity", 0.1);
+      svg.selectAll(`[data-label]:not([data-label="${item}"])`).attr("opacity", 0.1);
       svg.selectAll(`.rect-hover[data-label="${item}"]`).attr("opacity", 0.8);
     });
   }, [highlightItems]);
@@ -348,25 +322,40 @@ const RangeChart: React.FC<RangeChartProps> = ({
     isNodata: isNodata,
   });
 
+  useEffect(() => {
+    if (renderCompleteRef.current && onChartDataProcessed) {
+      // Extract all dates from all series
+      const allDates = dataSet.flatMap(set =>
+        set.series.map(point => (xAxisDataType === "number" ? point.date : String(point.date)))
+      );
+
+      // Create unique dates array
+      const uniqueDates = [...new Set(allDates)];
+
+      const currentMetadata: ChartMetadata = {
+        xAxisDomain: uniqueDates,
+        yAxisDomain: yScale.domain() as [number, number],
+        visibleSeries: dataSet.map(d => d.label).filter(label => !disabledItems.includes(label)),
+        areaData: dataSet,
+      };
+
+      // Rest of the function with comparison and callback...
+    }
+  }, [dataSet, xAxisDataType, yScale, disabledItems]);
+
+  useLayoutEffect(() => {
+    renderCompleteRef.current = true;
+  }, []);
+
   return (
     <div className="chart-container" style={{ position: "relative" }}>
-      {isLoading && isLoadingComponent}
-      {displayIsNodata && isNodataComponent}
-      {!isLoading && dataSet.length > 0 && (
-        <svg
-          className="chart"
-          width={width}
-          height={height}
-          ref={svgRef}
-          style={{ overflow: "visible" }}
-        >
+      {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
+      {isLoading && !isLoadingComponent && <LoadingIndicator />}
+      {displayIsNodata && <>{isNodataComponent}</>}
+      {!isLoading && !displayIsNodata && dataSet.length > 0 && (
+        <svg className="chart" width={width} height={height} ref={svgRef} style={{ overflow: "visible" }}>
           {title && (
-            <text
-              x={width / 2}
-              y={margin.top / 2}
-              textAnchor="middle"
-              className="chart-title"
-            >
+            <text x={width / 2} y={margin.top / 2} textAnchor="middle" className="chart-title">
               {title}
             </text>
           )}

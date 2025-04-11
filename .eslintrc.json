@@ -9,7 +9,8 @@
   "plugins": [
     "import",
     "react",
-    "@typescript-eslint"
+    "@typescript-eslint",
+    "prettier"
   ],
   "extends": [
     "airbnb-typescript",

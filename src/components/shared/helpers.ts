@@ -10,7 +10,7 @@ export const drawHalfLeftCircle = (
   x: number,
   y: number,
   radiusX: number,
-  radiusY: number,
+  radiusY: number
 ) => {
   return `M ${x},${y} A ${radiusX},${radiusY} 0 0 1, ${x} ${y - radiusX - radiusY}`;
 };

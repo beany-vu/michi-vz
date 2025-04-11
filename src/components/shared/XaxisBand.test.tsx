@@ -28,7 +28,7 @@ describe("<HorizontalAxisBand />", () => {
           height={mockHeight}
           margin={mockMargin}
         />
-      </svg>,
+      </svg>
     );
 
     // Wait for useEffect to apply D3 manipulations and then make assertions
@@ -37,7 +37,7 @@ describe("<HorizontalAxisBand />", () => {
         expect(container.querySelector(".x-axis")).not.toBeNull();
         expect(container.querySelectorAll(".tick").length).toBe(3);
       },
-      { timeout: 5000 },
+      { timeout: 5000 }
     );
   }, 5000);
 
@@ -49,7 +49,7 @@ describe("<HorizontalAxisBand />", () => {
           height={mockHeight}
           margin={mockMargin}
         />
-      </svg>,
+      </svg>
     );
 
     // Wait for useEffect to apply D3 manipulations and then make assertions
@@ -58,10 +58,10 @@ describe("<HorizontalAxisBand />", () => {
         const g = container.querySelector(".x-axis");
         expect(g).toBeTruthy();
         expect(g.getAttribute("transform")).toBe(
-          `translate(0,${mockHeight - mockMargin.bottom + 25})`,
+          `translate(0,${mockHeight - mockMargin.bottom + 25})`
         );
       },
-      { timeout: 5000 },
+      { timeout: 5000 }
     );
   });
 
@@ -73,7 +73,7 @@ describe("<HorizontalAxisBand />", () => {
           height={mockHeight}
           margin={mockMargin}
         />
-      </svg>,
+      </svg>
     );
 
     const domain = container.querySelector(".domain");
@@ -88,7 +88,7 @@ describe("<HorizontalAxisBand />", () => {
           height={mockHeight}
           margin={mockMargin}
         />
-      </svg>,
+      </svg>
     );
 
     const tickLines = container.querySelectorAll(".tick line");
@@ -109,7 +109,6 @@ describe("<HorizontalAxisBand />", () => {
   //   await waitFor(
   //     () => {
   //       const tickCircles = container.querySelectorAll(".tick .tickValueDot");
-  //       console.log("tickCircles", tickCircles.length);
   //       expect(tickCircles.length).toBeGreaterThan(0); // Assuming there will be at least one circle for your domain
   //
   //       // Test the first circle's attributes as a sample:

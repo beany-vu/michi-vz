@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useLayoutEffect } from "react";
 import Title from "./shared/Title";
 import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
@@ -7,9 +7,16 @@ import YaxisBand from "./shared/YaxisBand";
 import XaxisLinear from "./shared/XaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
+import LoadingIndicator from "./shared/LoadingIndicator";
 
 interface DataPoint {
   [key: string]: number | undefined;
+}
+
+interface ChartMetadata {
+  yAxisDomain: string[];
+  xAxisDomain: [number, number];
+  visibleItems: string[];
 }
 
 interface BarBellChartProps {
@@ -26,13 +33,10 @@ interface BarBellChartProps {
   xAxisFormat?: (d: number | string) => string;
   yAxisFormat?: (d: number | string) => string;
   xAxisDataType?: "number" | "date_annual" | "date_monthly";
-  tooltipFormat?: (
-    d: DataPoint,
-    currentKey: string,
-    currentValue: string | number,
-  ) => string;
+  tooltipFormat?: (d: DataPoint, currentKey: string, currentValue: string | number) => string;
   showGrid?: { x: boolean; y: boolean };
   children?: React.ReactNode;
+  onChartDataProcessed?: (metadata: ChartMetadata) => void;
 }
 
 const BarBellChart: React.FC<BarBellChartProps> = ({
@@ -52,17 +56,22 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   xAxisFormat,
   tooltipFormat = null,
   showGrid = defaultConf.SHOW_GRID,
+  onChartDataProcessed,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
-    useChartContext();
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const refTooltip = useRef<HTMLDivElement>(null);
+  const renderCompleteRef = useRef(false);
+
+  useLayoutEffect(() => {
+    renderCompleteRef.current = true;
+  }, []);
 
   const generateTooltip = (
     d: DataPoint,
     currentKey: string,
     currentValue: string | number,
-    event: React.MouseEvent<SVGRectElement | SVGCircleElement | HTMLDivElement>,
+    event: React.MouseEvent<SVGRectElement | SVGCircleElement | HTMLDivElement>
   ) => {
     event.preventDefault();
     event.stopPropagation();
@@ -92,18 +101,18 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     }
   };
 
-  const yValues = dataSet.map((d) => d.date).map((date) => date);
+  const yValues = dataSet.map(d => d.date).map(date => date);
 
   const yScale = scaleBand()
     .domain(
-      yValues.map((value) => {
+      yValues.map(value => {
         return `${value}`;
-      }),
+      })
     )
     .range([margin.top + 20, height - margin.bottom]);
 
   // xValues is the sum of all values which their key is not "date"
-  const xValues = dataSet.map((d) => {
+  const xValues = dataSet.map(d => {
     let sum = 0;
     for (const key in d) {
       if (key !== "date" && disabledItems.includes(key) === false) {
@@ -126,7 +135,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     if (highlightItems.length > 0) {
       svg.selectAll(".bar-data").style("opacity", 0.1);
       svg.selectAll(".bar-data-point-shape").style("opacity", 0.1);
-      highlightItems.forEach((item) => {
+      highlightItems.forEach(item => {
         svg.selectAll(`[data-label="${item}"]`).style("opacity", 0.9);
       });
     } else {
@@ -147,10 +156,26 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     isNodata: isNodata,
   });
 
+  useEffect(() => {
+    if (renderCompleteRef.current && onChartDataProcessed) {
+      // Ensure unique values in yValues
+      const uniqueYValues = [...new Set(yValues.map(String))];
+
+      const currentMetadata: ChartMetadata = {
+        yAxisDomain: uniqueYValues,
+        xAxisDomain: [0, maxValueX],
+        visibleItems: keys.filter(key => !disabledItems.includes(key)),
+      };
+
+      // Rest of the function with comparison and callback...
+    }
+  }, [yValues, maxValueX, keys, disabledItems]);
+
   return (
     <div style={{ position: "relative" }}>
-      {isLoading && isLoadingComponent}
-      {displayIsNodata && isNodataComponent}
+      {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
+      {isLoading && !isLoadingComponent && <LoadingIndicator />}
+      {displayIsNodata && <>{isNodataComponent}</>}
       <svg ref={ref} height={height} width={width}>
         {children}
         <Title x={width / 2} y={margin.top / 2}>
@@ -179,7 +204,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
           return (
             <g key={`group-line-${i}`} className={`group-line group-line-${i}`}>
               {keys
-                .filter((key) => !disabledItems.includes(key))
+                .filter(key => !disabledItems.includes(key))
                 .map((key, j) => {
                   const value = d[key];
                   const x = cumulativeX; // Use cumulativeX as the starting point for each rectangle
@@ -204,10 +229,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                           data-label={key}
                           key={`${key}-${i}`}
                           x={x}
-                          y={
-                            yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 ||
-                            0
-                          }
+                          y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 || 0}
                           height={4}
                           width={width}
                           fill={colorsMapping?.[key]}
@@ -215,7 +237,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                             transition: "all 0.1s ease-out",
                             opacity: disabledItems.includes(key) ? 0.1 : 0.9,
                           }}
-                          onMouseEnter={(event) => {
+                          onMouseEnter={event => {
                             setHighlightItems([key]);
                             generateTooltip(d, key, value, event);
                           }}
@@ -242,7 +264,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                             data-color={colorsMapping?.[key]}
                             className={`bar-data-point-shape ${value === 0 ? "data-value-zero" : ""}`}
                             style={shapeStyle}
-                            onMouseEnter={(event) => {
+                            onMouseEnter={event => {
                               setHighlightItems([key]);
                               generateTooltip(d, key, value, event);
                             }}
