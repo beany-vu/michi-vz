@@ -223,7 +223,12 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
 
       const currentMetadata: ChartMetadata = {
         yAxisDomain: uniqueLabels,
-        xAxisDomain: Array.isArray(xAxisDomain) ? xAxisDomain.map(String) : [],
+        xAxisDomain: xAxisDomain.map(value => {
+          if (value instanceof Date) {
+            return value.toISOString();
+          }
+          return value.toString();
+        }),
         visibleItems: visibleItems,
         renderedData: {
           [uniqueLabels[0]]: filteredDataSet,
