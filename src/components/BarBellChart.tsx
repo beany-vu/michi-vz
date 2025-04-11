@@ -63,6 +63,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   const ref = useRef<SVGSVGElement>(null);
   const refTooltip = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
+  const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
   useLayoutEffect(() => {
     renderCompleteRef.current = true;
@@ -171,9 +172,32 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
         },
       };
 
-      // Rest of the function with comparison and callback...
+      // Check if data has actually changed
+      const hasChanged =
+        !prevChartDataRef.current ||
+        JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
+          JSON.stringify(currentMetadata.yAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
+          JSON.stringify(currentMetadata.xAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.visibleItems) !==
+          JSON.stringify(currentMetadata.visibleItems) ||
+        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
+          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
+
+      // Only call callback if data has changed
+      if (hasChanged) {
+        // Update ref before calling callback
+        prevChartDataRef.current = currentMetadata;
+
+        // Call callback with slight delay to ensure DOM updates are complete
+        const timeoutId = setTimeout(() => {
+          onChartDataProcessed(currentMetadata);
+        }, 0);
+
+        return () => clearTimeout(timeoutId);
+      }
     }
-  }, [yValues, maxValueX, keys, disabledItems]);
+  }, [yValues, maxValueX, keys, disabledItems, dataSet, onChartDataProcessed]);
 
   return (
     <div style={{ position: "relative" }}>

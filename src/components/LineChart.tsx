@@ -137,6 +137,7 @@ const LineChart: React.FC<LineChartProps> = ({
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const renderCompleteRef = useRef(false);
+  const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
   const filteredDataSet = useMemo(() => {
     if (!filter) return dataSet;
@@ -630,6 +631,10 @@ const LineChart: React.FC<LineChartProps> = ({
     isNodata: isNodata,
   });
 
+  useLayoutEffect(() => {
+    renderCompleteRef.current = true;
+  }, []);
+
   useEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       // Extract all dates from all series
@@ -665,14 +670,32 @@ const LineChart: React.FC<LineChartProps> = ({
         ),
       };
 
-      // Rest of the function with comparison and callback...
-      onChartDataProcessed(currentMetadata);
+      // Check if data has actually changed
+      const hasChanged =
+        !prevChartDataRef.current ||
+        JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
+          JSON.stringify(currentMetadata.xAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
+          JSON.stringify(currentMetadata.yAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.visibleSeries) !==
+          JSON.stringify(currentMetadata.visibleSeries) ||
+        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
+          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
+
+      // Only call callback if data has changed
+      if (hasChanged) {
+        // Update ref before calling callback
+        prevChartDataRef.current = currentMetadata;
+
+        // Call callback with slight delay to ensure DOM updates are complete
+        const timeoutId = setTimeout(() => {
+          onChartDataProcessed(currentMetadata);
+        }, 0);
+
+        return () => clearTimeout(timeoutId);
+      }
     }
   }, [dataSet, xAxisDataType, yScale, disabledItems, lineData, filter, onChartDataProcessed]);
-
-  useLayoutEffect(() => {
-    renderCompleteRef.current = true;
-  }, []);
 
   return (
     <Styled>

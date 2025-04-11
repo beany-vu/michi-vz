@@ -1,4 +1,4 @@
-import React, { Fragment, useMemo, useRef, useState, useEffect } from "react";
+import React, { Fragment, useMemo, useRef, useState, useEffect, useLayoutEffect } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
@@ -35,11 +35,7 @@ interface Props {
   xAxisFormat?: (d: number) => string;
   yAxisFormat?: (d: number) => string;
   yAxisDomain?: [number, number] | null;
-  tooltipFormatter?: (
-    d: DataPoint,
-    series: DataPoint[],
-    key: string
-  ) => string | null;
+  tooltipFormatter?: (d: DataPoint, series: DataPoint[], key: string) => string | null;
   children?: React.ReactNode;
   xAxisDataType: "number" | "date_annual" | "date_monthly";
   isLoading?: boolean;
@@ -74,30 +70,24 @@ const AreaChart: React.FC<Props> = ({
   onChartDataProcessed,
   filter,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } =
-    useChartContext();
+  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const [hoveredDate] = useState<number | null>(null);
   const renderCompleteRef = useRef(false);
+  const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
   const xScale = useMemo(() => {
     if (xAxisDataType === "number") {
       return d3
         .scaleLinear()
-        .domain([
-          d3.min(series, d => d.date || 0),
-          d3.max(series, d => d.date || 1),
-        ])
+        .domain([d3.min(series, d => d.date || 0), d3.max(series, d => d.date || 1)])
         .range([margin.left, width - margin.right])
         .clamp(true)
         .nice();
     }
 
     const minDate = d3.min(
-      series.map(
-        d =>
-          new Date(xAxisDataType === "date_annual" ? `${d.date} 01 01` : d.date)
-      )
+      series.map(d => new Date(xAxisDataType === "date_annual" ? `${d.date} 01 01` : d.date))
     );
     const maxDate = d3.max(series.map(d => new Date(d.date)));
 
@@ -185,15 +175,16 @@ const AreaChart: React.FC<Props> = ({
     isNodata: isNodata,
   });
 
+  useLayoutEffect(() => {
+    renderCompleteRef.current = true;
+  }, []);
+
   useEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       // Get the domain from xScale
       let domain;
       if (xAxisDataType === "number") {
-        domain = [
-          d3.min(series, d => d.date || 0),
-          d3.max(series, d => d.date || 1),
-        ];
+        domain = [d3.min(series, d => d.date || 0), d3.max(series, d => d.date || 1)];
       } else {
         // For date types, ensure unique dates
         domain = [...new Set(series.map(d => d.date))];
@@ -212,37 +203,46 @@ const AreaChart: React.FC<Props> = ({
       let sortedKeys = keys;
       if (filter?.date) {
         sortedKeys = [...keys].sort((a, b) => {
-          const aValue =
-            series.find(d => String(d.date) === String(filter.date))?.[a] || 0;
-          const bValue =
-            series.find(d => String(d.date) === String(filter.date))?.[b] || 0;
-          return filter.sortingDir === "desc"
-            ? bValue - aValue
-            : aValue - bValue;
+          const aValue = series.find(d => String(d.date) === String(filter.date))?.[a] || 0;
+          const bValue = series.find(d => String(d.date) === String(filter.date))?.[b] || 0;
+          return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
         });
       }
 
       const currentMetadata: ChartMetadata = {
         xAxisDomain: domain.map(String),
-        yAxisDomain: safeYDomain, // Now properly typed as [number, number]
+        yAxisDomain: safeYDomain,
         keys: sortedKeys.filter(key => !disabledItems.includes(key)),
         renderedData: {
           [keys[0]]: series.map(d => ({ ...d, date: d.date as number })),
         },
       };
 
-      // Rest of the function with comparison and callback...
-      onChartDataProcessed(currentMetadata);
+      // Check if data has actually changed
+      const hasChanged =
+        !prevChartDataRef.current ||
+        JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
+          JSON.stringify(currentMetadata.xAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
+          JSON.stringify(currentMetadata.yAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.keys) !== JSON.stringify(currentMetadata.keys) ||
+        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
+          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
+
+      // Only call callback if data has changed
+      if (hasChanged) {
+        // Update ref before calling callback
+        prevChartDataRef.current = currentMetadata;
+
+        // Call callback with slight delay to ensure DOM updates are complete
+        const timeoutId = setTimeout(() => {
+          onChartDataProcessed(currentMetadata);
+        }, 0);
+
+        return () => clearTimeout(timeoutId);
+      }
     }
-  }, [
-    series,
-    xAxisDataType,
-    yScaleDomain,
-    keys,
-    disabledItems,
-    filter,
-    onChartDataProcessed,
-  ]);
+  }, [series, xAxisDataType, yScaleDomain, keys, disabledItems, filter, onChartDataProcessed]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -296,12 +296,7 @@ const AreaChart: React.FC<Props> = ({
                 fill={areaData.fill}
                 stroke={"#fff"}
                 strokeWidth={1}
-                opacity={
-                  highlightItems.length === 0 ||
-                  highlightItems.includes(areaData.key)
-                    ? 1
-                    : 0.2
-                }
+                opacity={highlightItems.length === 0 || highlightItems.includes(areaData.key) ? 1 : 0.2}
                 style={{ transition: "opacity 0.1s ease-out" }}
                 onMouseMove={() => {
                   setHighlightItems([areaData.key]);
@@ -315,11 +310,8 @@ const AreaChart: React.FC<Props> = ({
                 <rect
                   key={`${areaData.key}-${dataPoint.data.date}`}
                   x={
-                    xScale(
-                      xAxisDataType === "number"
-                        ? dataPoint.data.date
-                        : new Date(dataPoint.data.date)
-                    ) - 2
+                    xScale(xAxisDataType === "number" ? dataPoint.data.date : new Date(dataPoint.data.date)) -
+                    2
                   }
                   y={yScale(dataPoint[1])} // Start from top of the area segment
                   width={8}
@@ -334,15 +326,12 @@ const AreaChart: React.FC<Props> = ({
                     setHighlightItems([areaData.key]);
                     d3.select(".tooltip")
                       .style("visibility", "visible")
-                      .html(
-                        handleAreaSegmentHover(dataPoint.data, areaData.key)
-                      );
+                      .html(handleAreaSegmentHover(dataPoint.data, areaData.key));
 
                     const [x, y] = d3.pointer(event);
                     const tooltip = d3.select(".tooltip").node() as HTMLElement;
                     const tooltipWidth = tooltip.getBoundingClientRect().width;
-                    const tooltipHeight =
-                      tooltip.getBoundingClientRect().height;
+                    const tooltipHeight = tooltip.getBoundingClientRect().height;
                     d3.select(".tooltip")
                       .style("left", x - tooltipWidth / 2 + "px")
                       .style("top", y - tooltipHeight - 10 + "px");

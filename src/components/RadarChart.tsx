@@ -101,6 +101,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   } | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const renderCompleteRef = useRef(false);
+  const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
   const yScaleDomain = useMemo(() => {
     if (!series) return [0, 30];
@@ -277,6 +278,10 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     isNodata: isNodata,
   });
 
+  useLayoutEffect(() => {
+    renderCompleteRef.current = true;
+  }, []);
+
   useEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       // Ensure unique labels in poles.labels
@@ -297,13 +302,29 @@ export const RadarChart: React.FC<RadarChartProps> = ({
         ),
       };
 
-      // Rest of the function with comparison and callback...
-    }
-  }, [series, poles, processedSeries, disabledItems]);
+      // Check if data has actually changed
+      const hasChanged =
+        !prevChartDataRef.current ||
+        JSON.stringify(prevChartDataRef.current.poles) !== JSON.stringify(currentMetadata.poles) ||
+        JSON.stringify(prevChartDataRef.current.visibleSeries) !==
+          JSON.stringify(currentMetadata.visibleSeries) ||
+        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
+          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
-  useLayoutEffect(() => {
-    renderCompleteRef.current = true;
-  }, []);
+      // Only call callback if data has changed
+      if (hasChanged) {
+        // Update ref before calling callback
+        prevChartDataRef.current = currentMetadata;
+
+        // Call callback with slight delay to ensure DOM updates are complete
+        const timeoutId = setTimeout(() => {
+          onChartDataProcessed(currentMetadata);
+        }, 0);
+
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [series, poles, processedSeries, disabledItems, onChartDataProcessed]);
 
   return (
     <div style={{ position: "relative" }}>

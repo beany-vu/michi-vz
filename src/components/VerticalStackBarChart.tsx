@@ -120,7 +120,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   const chartRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
-  // Add a ref to store previous chart data for comparison
+  // Add ref for previous data comparison
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
   // Compute all keys present in the dataset (excluding "date")
@@ -439,7 +439,6 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
   // Replace the previous useEffect with useLayoutEffect for data callback
   useLayoutEffect(() => {
-    // Mark rendering as complete after the initial render
     renderCompleteRef.current = true;
   }, []);
 
@@ -475,7 +474,6 @@ const VerticalStackBarChart: React.FC<Props> = ({
           JSON.stringify(currentMetadata.xAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.visibleKeys) !==
           JSON.stringify(currentMetadata.visibleKeys) ||
-        // Compare keys and content more efficiently
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
           JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 

@@ -126,6 +126,8 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   } = useChartContext();
 
   const renderCompleteRef = useRef(false);
+  // Add ref for previous data comparison
+  const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
   useLayoutEffect(() => {
     renderCompleteRef.current = true;
@@ -368,8 +370,30 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
         },
       };
 
-      // Rest of the function with comparison and callback...
-      onChartDataProcessed(currentMetadata);
+      // Check if data has actually changed
+      const hasChanged =
+        !prevChartDataRef.current ||
+        JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
+          JSON.stringify(currentMetadata.xAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
+          JSON.stringify(currentMetadata.yAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.visiblePoints) !==
+          JSON.stringify(currentMetadata.visiblePoints) ||
+        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
+          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
+
+      // Only call callback if data has changed
+      if (hasChanged) {
+        // Update ref before calling callback
+        prevChartDataRef.current = currentMetadata;
+
+        // Call callback with slight delay to ensure DOM updates are complete
+        const timeoutId = setTimeout(() => {
+          onChartDataProcessed(currentMetadata);
+        }, 0);
+
+        return () => clearTimeout(timeoutId);
+      }
     }
   }, [filteredDataSet, yAxisDomain, yScale, filter, onChartDataProcessed]);
 

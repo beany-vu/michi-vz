@@ -95,6 +95,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const renderCompleteRef = useRef(false);
+  // Add ref for previous data comparison
+  const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
   // Memoize filtered data set
   const filteredDataSet = useMemo(() => {
@@ -368,20 +370,47 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
 
   useEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
-      // Ensure unique values in yAxisDomain
+      // Ensure unique labels
       const uniqueLabels = [...new Set(yAxisDomain)];
 
       const currentMetadata: ChartMetadata = {
         yAxisDomain: uniqueLabels,
-        xAxisDomain: Array.isArray(xAxisDomain) ? xAxisDomain.map(String) : [],
+        xAxisDomain: xAxisDomain.map(value => {
+          if (value instanceof Date) {
+            return value.toISOString();
+          }
+          return value.toString();
+        }),
         visibleItems: visibleItems,
         renderedData: {
           [uniqueLabels[0]]: filteredDataSet,
         },
       };
 
-      // Rest of the function with comparison and callback...
-      onChartDataProcessed(currentMetadata);
+      // Check if data has actually changed
+      const hasChanged =
+        !prevChartDataRef.current ||
+        JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
+          JSON.stringify(currentMetadata.yAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
+          JSON.stringify(currentMetadata.xAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.visibleItems) !==
+          JSON.stringify(currentMetadata.visibleItems) ||
+        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
+          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
+
+      // Only call callback if data has changed
+      if (hasChanged) {
+        // Update ref before calling callback
+        prevChartDataRef.current = currentMetadata;
+
+        // Call callback with slight delay to ensure DOM updates are complete
+        const timeoutId = setTimeout(() => {
+          onChartDataProcessed(currentMetadata);
+        }, 0);
+
+        return () => clearTimeout(timeoutId);
+      }
     }
   }, [yAxisDomain, xAxisDomain, visibleItems, filteredDataSet, onChartDataProcessed]);
 

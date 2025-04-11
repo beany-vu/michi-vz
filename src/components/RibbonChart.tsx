@@ -71,6 +71,7 @@ const RibbonChart: React.FC<Props> = ({
   const { colorsMapping, highlightItems, setHighlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const renderCompleteRef = useRef(false);
+  const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
   // xScale
   const dates = useMemo(() => series.map(d => String(d.date)), [series]);
@@ -185,14 +186,36 @@ const RibbonChart: React.FC<Props> = ({
 
       const currentMetadata: ChartMetadata = {
         xAxisDomain: uniqueDates,
-        yAxisDomain: safeYDomain, // Now properly typed as [number, number]
+        yAxisDomain: safeYDomain,
         keys: keys.filter(key => !disabledItems.includes(key)),
         renderedData: {
           [keys[0]]: stackedRectData[keys[0]] as RectData[],
         },
       };
 
-      // Rest of the function with comparison and callback...
+      // Check if data has actually changed
+      const hasChanged =
+        !prevChartDataRef.current ||
+        JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
+          JSON.stringify(currentMetadata.xAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
+          JSON.stringify(currentMetadata.yAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.keys) !== JSON.stringify(currentMetadata.keys) ||
+        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
+          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
+
+      // Only call callback if data has changed
+      if (hasChanged) {
+        // Update ref before calling callback
+        prevChartDataRef.current = currentMetadata;
+
+        // Call callback with slight delay to ensure DOM updates are complete
+        const timeoutId = setTimeout(() => {
+          onChartDataProcessed(currentMetadata);
+        }, 0);
+
+        return () => clearTimeout(timeoutId);
+      }
     }
   }, [
     series,
