@@ -88,10 +88,10 @@ interface LineChartProps {
 }
 
 interface ChartMetadata {
-  xAxisDomain: any[];
+  xAxisDomain: string[];
   yAxisDomain: [number, number];
   visibleSeries: string[];
-  lineData: any;
+  renderedData: { [key: string]: DataPoint[] };
 }
 
 const debounce = (func: Function, wait: number) => {
@@ -640,16 +640,35 @@ const LineChart: React.FC<LineChartProps> = ({
       // Create unique dates array
       const uniqueDates = [...new Set(allDates)];
 
+      // Sort series based on values at the filter date if filter exists
+      let sortedSeries = dataSet.map(d => d.label);
+      if (filter?.date) {
+        sortedSeries = sortedSeries.sort((a, b) => {
+          const aData = dataSet.find(d => d.label === a);
+          const bData = dataSet.find(d => d.label === b);
+          const aValue = aData?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
+          const bValue = bData?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
+          return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
+        });
+      }
+
       const currentMetadata: ChartMetadata = {
-        xAxisDomain: uniqueDates,
+        xAxisDomain: uniqueDates.map(String),
         yAxisDomain: yScale.domain() as [number, number],
-        visibleSeries: dataSet.map(d => d.label).filter(label => !disabledItems.includes(label)),
-        lineData: lineData,
+        visibleSeries: sortedSeries.filter(label => !disabledItems.includes(label)),
+        renderedData: lineData.reduce(
+          (acc, item) => {
+            acc[item.label] = item.points;
+            return acc;
+          },
+          {} as { [key: string]: DataPoint[] }
+        ),
       };
 
       // Rest of the function with comparison and callback...
+      onChartDataProcessed(currentMetadata);
     }
-  }, [dataSet, xAxisDataType, yScale, disabledItems, lineData, onChartDataProcessed]);
+  }, [dataSet, xAxisDataType, yScale, disabledItems, lineData, filter, onChartDataProcessed]);
 
   useLayoutEffect(() => {
     renderCompleteRef.current = true;

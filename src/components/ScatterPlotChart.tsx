@@ -9,7 +9,6 @@ import { useChartContext } from "./MichiVzProvider";
 import { drawHalfLeftCircle } from "../components/shared/helpers";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
-import { orderBy } from "lodash";
 
 const Styled = styled.div`
   .shape {
@@ -48,10 +47,10 @@ interface DataPoint {
 }
 
 interface ChartMetadata {
-  xAxisDomain: any[];
-  yAxisDomain: any[];
-  visiblePoints: any[];
-  pointsData: any;
+  xAxisDomain: string[];
+  yAxisDomain: [number, number];
+  visiblePoints: string[];
+  renderedData: { [key: string]: DataPoint[] };
 }
 
 interface ScatterPlotChartProps<T extends number | string> {
@@ -346,16 +345,33 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
       // For scatter plots, we might want to keep unique date+sector combinations
       const uniqueXValues = [...new Set(filteredDataSet.map(d => d.x))];
 
+      // Sort points based on filter criteria
+      let sortedPoints = filteredDataSet.map(d => d.label);
+      if (filter?.criteria) {
+        sortedPoints = sortedPoints.sort((a, b) => {
+          const aData = filteredDataSet.find(d => d.label === a);
+          const bData = filteredDataSet.find(d => d.label === b);
+          const aValue = aData?.[filter.criteria] || 0;
+          const bValue = bData?.[filter.criteria] || 0;
+          return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
+        });
+      }
+
       const currentMetadata: ChartMetadata = {
-        xAxisDomain: uniqueXValues,
-        yAxisDomain: yAxisDomain || yScale.domain(),
-        visiblePoints: filteredDataSet.map(d => d.label),
-        pointsData: filteredDataSet,
+        xAxisDomain: uniqueXValues.map(String),
+        yAxisDomain: yAxisDomain
+          ? [Number(yAxisDomain[0]), Number(yAxisDomain[1])]
+          : [Number(yScale.domain()[0]), Number(yScale.domain()[1])],
+        visiblePoints: sortedPoints,
+        renderedData: {
+          [uniqueXValues[0]]: filteredDataSet,
+        },
       };
 
       // Rest of the function with comparison and callback...
+      onChartDataProcessed(currentMetadata);
     }
-  }, [filteredDataSet, yAxisDomain, yScale]);
+  }, [filteredDataSet, yAxisDomain, yScale, filter, onChartDataProcessed]);
 
   return (
     <Styled style={{ position: "relative" }}>

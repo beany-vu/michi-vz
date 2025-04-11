@@ -1,6 +1,7 @@
 import React from "react";
 import ScatterPlot from "../src/components/ScatterPlotChart.tsx"; // Import your ScatterPlot component
 import { Meta } from "@storybook/react";
+import { fn } from "@storybook/test";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
 
 export default {
@@ -18,6 +19,7 @@ export default {
 
 export const Primary = {
   args: {
+    onChartDataProcessed: fn(),
     // xScale: /* Provide your x-axis scale here */,
     // yScale: /* Provide your y-axis scale here */,
     // data: /* Provide your data points here */,

@@ -1,6 +1,7 @@
 import React from "react";
 import ComparableHorizontalBarChart from "src/components/ComparableHorizontalBarChart";
 import { Meta } from "@storybook/react";
+import { fn } from "@storybook/test";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
 
 // Define the default metadata for the component
@@ -20,6 +21,7 @@ export default {
 // Create a default story using the template
 export const Primary = {
   args: {
+    onChartDataProcessed: fn(),
     isNoDataComponent: <div>No data</div>,
     dataSet: [
       {

@@ -50,9 +50,9 @@ interface LineChartProps {
 
 interface ChartMetadata {
   yAxisDomain: string[];
-  xAxisDomain: any[];
+  xAxisDomain: string[];
   visibleItems: string[];
-  barData: any;
+  renderedData: { [key: string]: DataPoint[] };
 }
 
 const DualHorizontalBarChart: React.FC<LineChartProps> = ({
@@ -223,9 +223,11 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
 
       const currentMetadata: ChartMetadata = {
         yAxisDomain: uniqueLabels,
-        xAxisDomain: xAxisDomain,
+        xAxisDomain: Array.isArray(xAxisDomain) ? xAxisDomain.map(String) : [],
         visibleItems: visibleItems,
-        barData: filteredDataSet,
+        renderedData: {
+          [uniqueLabels[0]]: filteredDataSet,
+        },
       };
 
       // Rest of the function with comparison and callback...

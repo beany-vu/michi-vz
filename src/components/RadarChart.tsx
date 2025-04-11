@@ -47,9 +47,13 @@ interface DataPoint {
 }
 
 interface ChartMetadata {
-  poles: any;
+  poles: {
+    domain: number[];
+    range: number[];
+    labels: string[];
+  };
   visibleSeries: string[];
-  processedData: any;
+  renderedData: { [key: string]: DataPoint[] };
 }
 
 export interface RadarChartProps {
@@ -284,7 +288,13 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           labels: uniqueLabels,
         },
         visibleSeries: series.filter(s => !disabledItems.includes(s.label)).map(s => s.label),
-        processedData: processedSeries,
+        renderedData: processedSeries.reduce(
+          (res, item) => {
+            res[item.label] = [item];
+            return res;
+          },
+          {} as { [key: string]: DataPoint[] }
+        ),
       };
 
       // Rest of the function with comparison and callback...

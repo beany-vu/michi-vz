@@ -1,6 +1,7 @@
 import React from "react";
 import LineChartComponent from "../src/components/LineChart";
 import { Meta } from "@storybook/react";
+import { fn } from "@storybook/test";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
 
 // Define the default metadata for the component
@@ -45,6 +46,7 @@ export default {
 // Create a default story using the template
 export const Primary = {
   args: {
+    onChartDataProcessed: fn(),
     dataSet: [
       {
         label: "Country 1",

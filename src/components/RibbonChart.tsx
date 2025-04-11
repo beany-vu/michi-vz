@@ -16,7 +16,7 @@ interface ChartMetadata {
   xAxisDomain: string[];
   yAxisDomain: [number, number];
   keys: string[];
-  stackedData: any;
+  renderedData: { [key: string]: RectData[] };
 }
 
 interface Props {
@@ -187,7 +187,9 @@ const RibbonChart: React.FC<Props> = ({
         xAxisDomain: uniqueDates,
         yAxisDomain: safeYDomain, // Now properly typed as [number, number]
         keys: keys.filter(key => !disabledItems.includes(key)),
-        stackedData: stackedRectData,
+        renderedData: {
+          [keys[0]]: stackedRectData[keys[0]] as RectData[],
+        },
       };
 
       // Rest of the function with comparison and callback...

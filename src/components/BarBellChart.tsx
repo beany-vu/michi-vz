@@ -17,6 +17,7 @@ interface ChartMetadata {
   yAxisDomain: string[];
   xAxisDomain: [number, number];
   visibleItems: string[];
+  renderedData: { [key: string]: DataPoint[] };
 }
 
 interface BarBellChartProps {
@@ -165,6 +166,9 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
         yAxisDomain: uniqueYValues,
         xAxisDomain: [0, maxValueX],
         visibleItems: keys.filter(key => !disabledItems.includes(key)),
+        renderedData: {
+          [keys[0]]: dataSet,
+        },
       };
 
       // Rest of the function with comparison and callback...

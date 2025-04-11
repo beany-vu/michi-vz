@@ -54,10 +54,10 @@ interface RangeChartProps {
 }
 
 interface ChartMetadata {
-  xAxisDomain: any[];
+  xAxisDomain: string[];
   yAxisDomain: [number, number];
   visibleSeries: string[];
-  areaData: any;
+  renderedData: { [key: string]: DataPointRangeChart[] };
 }
 
 const RangeChart: React.FC<RangeChartProps> = ({
@@ -333,10 +333,16 @@ const RangeChart: React.FC<RangeChartProps> = ({
       const uniqueDates = [...new Set(allDates)];
 
       const currentMetadata: ChartMetadata = {
-        xAxisDomain: uniqueDates,
+        xAxisDomain: uniqueDates.map(String),
         yAxisDomain: yScale.domain() as [number, number],
         visibleSeries: dataSet.map(d => d.label).filter(label => !disabledItems.includes(label)),
-        areaData: dataSet,
+        renderedData: dataSet.reduce(
+          (acc, d) => {
+            acc[d.label] = d.series;
+            return acc;
+          },
+          {} as { [key: string]: DataPointRangeChart[] }
+        ),
       };
 
       // Rest of the function with comparison and callback...

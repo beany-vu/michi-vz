@@ -6,6 +6,14 @@ import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
+import styled from "styled-components";
+
+const VerticalStackBarChartStyled = styled.div`
+  position: relative;
+  rect {
+    transition: all 0.1s ease-out;
+    }
+}`;
 
 interface DataPoint {
   date: string | null;
@@ -54,6 +62,7 @@ interface Props {
   filter?: {
     limit: number;
     sortingDir: "asc" | "desc";
+    date?: string;
   };
   // New: callback to expose chart metadata to parent component
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
@@ -436,17 +445,26 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
   // Use a separate useEffect to call the callback after rendering
   useEffect(() => {
-    if (renderCompleteRef.current && onChartDataProcessed && stackedRectData) {
+    if (renderCompleteRef.current && onChartDataProcessed) {
       // Filter out keys with empty arrays
       const filteredRenderedData = Object.fromEntries(
         Object.entries(stackedRectData).filter(([_, array]) => array.length > 0)
       );
 
+      // Sort visibleKeys based on values at the filter date if filter exists
+      let sortedVisibleKeys = visibleKeys;
+      if (filter?.date) {
+        sortedVisibleKeys = [...visibleKeys].sort((a, b) => {
+          const aValue = stackedRectData[a]?.find(d => String(d.date) === String(filter.date))?.value || 0;
+          const bValue = stackedRectData[b]?.find(d => String(d.date) === String(filter.date))?.value || 0;
+          return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
+        });
+      }
+
       // Create the current metadata with filtered data and UNIQUE xAxisDomain
-      const currentChartData: ChartMetadata = {
-        // Ensure xAxisDomain has unique values using Set
+      const currentMetadata: ChartMetadata = {
         xAxisDomain: [...new Set(xAxisDomain ?? dates)],
-        visibleKeys: visibleKeys,
+        visibleKeys: sortedVisibleKeys,
         renderedData: filteredRenderedData,
       };
 
@@ -454,30 +472,30 @@ const VerticalStackBarChart: React.FC<Props> = ({
       const hasChanged =
         !prevChartDataRef.current ||
         JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
-          JSON.stringify(currentChartData.xAxisDomain) ||
+          JSON.stringify(currentMetadata.xAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.visibleKeys) !==
-          JSON.stringify(currentChartData.visibleKeys) ||
+          JSON.stringify(currentMetadata.visibleKeys) ||
         // Compare keys and content more efficiently
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
-          JSON.stringify(Object.keys(currentChartData.renderedData).sort());
+          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
       // Only call the callback if data has changed
       if (hasChanged) {
         // Update the ref before calling the callback
-        prevChartDataRef.current = currentChartData;
+        prevChartDataRef.current = currentMetadata;
 
         // Call callback with a slight delay to ensure DOM updates are complete
         const timeoutId = setTimeout(() => {
-          onChartDataProcessed(currentChartData);
+          onChartDataProcessed(currentMetadata);
         }, 0);
 
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [onChartDataProcessed, xAxisDomain, dates, visibleKeys, stackedRectData]);
+  }, [xAxisDomain, dates, visibleKeys, stackedRectData, filter, onChartDataProcessed]);
 
   return (
-    <div style={{ position: "relative" }}>
+    <VerticalStackBarChartStyled>
       <div
         ref={tooltipRef}
         className={"tooltip"}
@@ -562,7 +580,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
       {displayIsNodata && <>{isNodataComponent}</>}
-    </div>
+    </VerticalStackBarChartStyled>
   );
 };
 
