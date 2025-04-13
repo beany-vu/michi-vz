@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import VerticalStackBarChart from "../src/components/VerticalStackBarChart";
 import { Meta } from "@storybook/react";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
+import { fn } from '@storybook/test';
 
 // Define the ChartMetadata interface to match what's in the component
 interface ChartMetadata {
@@ -68,6 +69,7 @@ export const Primary = {
     yAxisFormat: d => `${d}`,
     title: "Top DataSet by Total Value",
     filter: { limit: 1, sortingDir: "desc" },
+    onChartDataProcessed: fn(),
   },
 };
 

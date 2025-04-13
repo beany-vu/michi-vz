@@ -47,12 +47,9 @@ interface DataPoint {
 }
 
 interface ChartMetadata {
-  poles: {
-    domain: number[];
-    range: number[];
-    labels: string[];
-  };
-  visibleSeries: string[];
+  xAxisDomain: string[];
+  yAxisDomain: [number, number];
+  visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
 }
 
@@ -92,7 +89,16 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   isNodata,
   onChartDataProcessed,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } = useChartContext();
+  const {
+    colorsMapping,
+    highlightItems,
+    setHighlightItems,
+    disabledItems,
+    setHiddenItems,
+    hiddenItems,
+    setVisibleItems,
+    visibleItems,
+  } = useChartContext();
   const svgRef = useRef(null);
   const [tooltipData, setTooltipData] = useState<{
     date: string;
@@ -288,40 +294,32 @@ export const RadarChart: React.FC<RadarChartProps> = ({
       const uniqueLabels = poles?.labels ? [...new Set(poles.labels)] : [];
 
       const currentMetadata: ChartMetadata = {
-        poles: {
-          ...poles,
-          labels: uniqueLabels,
+        xAxisDomain: poles?.labels ? poles.labels.map(String) : [],
+        yAxisDomain: yScale.domain() as [number, number],
+        visibleItems: series.filter(s => !disabledItems.includes(s.label)).map(s => s.label),
+        renderedData: {
+          [uniqueLabels[0]]: series,
         },
-        visibleSeries: series.filter(s => !disabledItems.includes(s.label)).map(s => s.label),
-        renderedData: processedSeries.reduce(
-          (res, item) => {
-            res[item.label] = [item];
-            return res;
-          },
-          {} as { [key: string]: DataPoint[] }
-        ),
       };
 
       // Check if data has actually changed
       const hasChanged =
         !prevChartDataRef.current ||
-        JSON.stringify(prevChartDataRef.current.poles) !== JSON.stringify(currentMetadata.poles) ||
-        JSON.stringify(prevChartDataRef.current.visibleSeries) !==
-          JSON.stringify(currentMetadata.visibleSeries) ||
+        JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
+          JSON.stringify(currentMetadata.xAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
+          JSON.stringify(currentMetadata.yAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.visibleItems) !==
+          JSON.stringify(currentMetadata.visibleItems) ||
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
           JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
+      // Always update the ref with latest metadata
+      prevChartDataRef.current = currentMetadata;
+
       // Only call callback if data has changed
       if (hasChanged) {
-        // Update ref before calling callback
-        prevChartDataRef.current = currentMetadata;
-
-        // Call callback with slight delay to ensure DOM updates are complete
-        const timeoutId = setTimeout(() => {
-          onChartDataProcessed(currentMetadata);
-        }, 0);
-
-        return () => clearTimeout(timeoutId);
+        onChartDataProcessed(currentMetadata);
       }
     }
   }, [series, poles, processedSeries, disabledItems, onChartDataProcessed]);

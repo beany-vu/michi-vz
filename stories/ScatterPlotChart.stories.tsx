@@ -38,7 +38,7 @@ export const Primary = {
     yAxisFormat: d => `${d}%`,
     title: "My Scatter Plot", // Change the title as needed
     filter: {
-      limit: "5",
+      limit: 5,
       date: "202009",
       sortingDir: "desc",
       criteria: "d",

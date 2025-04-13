@@ -51,7 +51,7 @@ interface LineChartProps {
 interface ChartMetadata {
   yAxisDomain: string[];
   xAxisDomain: string[];
-  visibleItems: string[];
+  visibleKeys: string[];
   renderedData: { [key: string]: DataPoint[] };
 }
 
@@ -230,7 +230,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
           }
           return value.toString();
         }),
-        visibleItems: visibleItems,
+        visibleKeys: visibleItems,
         renderedData: {
           [uniqueLabels[0]]: filteredDataSet,
         },
@@ -243,8 +243,8 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
           JSON.stringify(currentMetadata.yAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
           JSON.stringify(currentMetadata.xAxisDomain) ||
-        JSON.stringify(prevChartDataRef.current.visibleItems) !==
-          JSON.stringify(currentMetadata.visibleItems) ||
+        JSON.stringify(prevChartDataRef.current.visibleKeys) !==
+          JSON.stringify(currentMetadata.visibleKeys) ||
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
           JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 

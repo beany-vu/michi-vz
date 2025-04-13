@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, Suspense, useCallback, useLayoutEffect } from "react";
+import React, { useEffect, useMemo, useRef, Suspense, useCallback, useLayoutEffect, FC } from "react";
 import * as d3 from "d3";
 import { ScaleTime } from "d3";
 import { DataPoint } from "../types/data";
@@ -20,9 +20,9 @@ const DASH_SEPARATOR_LENGTH = 4;
 const Styled = styled.div`
   path,
   circle {
-    transition: opacity 0.1s ease-out;
-    will-change: opacity;
-    transition-delay: 0.1s;
+    transition-property: all;
+    transition-duration: 0.1s;
+    transition-timing-function: ease-out;
     transition-behavior: allow-discrete;
   }
 
@@ -90,7 +90,7 @@ interface LineChartProps {
 interface ChartMetadata {
   xAxisDomain: string[];
   yAxisDomain: [number, number];
-  visibleSeries: string[];
+  visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
 }
 
@@ -103,7 +103,7 @@ const debounce = (func: Function, wait: number) => {
   };
 };
 
-const LineChart: React.FC<LineChartProps> = ({
+const LineChart: FC<LineChartProps> = ({
   dataSet,
   filter,
   title,
@@ -660,7 +660,7 @@ const LineChart: React.FC<LineChartProps> = ({
       const currentMetadata: ChartMetadata = {
         xAxisDomain: uniqueDates.map(String),
         yAxisDomain: yScale.domain() as [number, number],
-        visibleSeries: sortedSeries.filter(label => !disabledItems.includes(label)),
+        visibleItems: sortedSeries.filter(label => !disabledItems.includes(label)),
         renderedData: lineData.reduce(
           (acc, item) => {
             acc[item.label] = item.points;
@@ -677,22 +677,17 @@ const LineChart: React.FC<LineChartProps> = ({
           JSON.stringify(currentMetadata.xAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
           JSON.stringify(currentMetadata.yAxisDomain) ||
-        JSON.stringify(prevChartDataRef.current.visibleSeries) !==
-          JSON.stringify(currentMetadata.visibleSeries) ||
+        JSON.stringify(prevChartDataRef.current.visibleItems) !==
+          JSON.stringify(currentMetadata.visibleItems) ||
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
           JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
+      // Always update the ref with latest metadata
+      prevChartDataRef.current = currentMetadata;
+
       // Only call callback if data has changed
       if (hasChanged) {
-        // Update ref before calling callback
-        prevChartDataRef.current = currentMetadata;
-
-        // Call callback with slight delay to ensure DOM updates are complete
-        const timeoutId = setTimeout(() => {
-          onChartDataProcessed(currentMetadata);
-        }, 0);
-
-        return () => clearTimeout(timeoutId);
+        onChartDataProcessed(currentMetadata);
       }
     }
   }, [dataSet, xAxisDataType, yScale, disabledItems, lineData, filter, onChartDataProcessed]);

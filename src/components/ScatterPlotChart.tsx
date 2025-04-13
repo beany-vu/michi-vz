@@ -49,7 +49,7 @@ interface DataPoint {
 interface ChartMetadata {
   xAxisDomain: string[];
   yAxisDomain: [number, number];
-  visiblePoints: string[];
+  visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
 }
 
@@ -94,7 +94,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   margin = defaultConf.MARGIN,
   title,
   children,
-  isLoading,
+  isLoading = false,
   isLoadingComponent,
   isNodataComponent,
   isNodata,
@@ -182,19 +182,19 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
 
   // Update visibleItems based on filter
   useEffect(() => {
-    if (filter) {
-      const newVisible = filteredDataSet.map(item => item.label);
-
+    if (filter != null) {
+      const newVisible = dataSet
+        .filter(item => filteredDataSet.some(filtered => filtered.label === item.label))
+        .map(item => item.label);
       if (JSON.stringify(newVisible) !== JSON.stringify(visibleItems)) {
         setVisibleItems(newVisible);
       }
     } else {
-      const allLabels = dataSet.map(item => item.label);
-      if (JSON.stringify(allLabels) !== JSON.stringify(visibleItems)) {
-        setVisibleItems(allLabels);
+      if (visibleItems.length !== 0) {
+        setVisibleItems([]);
       }
     }
-  }, [dataSet, filteredDataSet, filter, visibleItems, setVisibleItems]);
+  }, [dataSet, filter, filteredDataSet, visibleItems, setVisibleItems]);
 
   // Use filteredDataSet instead of dataSet in all calculations
   const xValues = useMemo(() => filteredDataSet.map(d => d.x || 0), [filteredDataSet]);
@@ -336,66 +336,56 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   );
 
   const displayIsNodata = useDisplayIsNodata({
-    dataSet: dataSet,
-    isLoading: isLoading,
-    isNodataComponent: isNodataComponent,
-    isNodata: isNodata,
+    dataSet,
+    isLoading,
+    isNodataComponent,
+    isNodata,
   });
 
+  if (isLoading) {
+    return isLoadingComponent || <div>Loading...</div>;
+  }
+
+  if (displayIsNodata) {
+    return isNodataComponent || <div>No data available</div>;
+  }
+
+  // Update metadata with visibleItems
   useEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
-      // For scatter plots, we might want to keep unique date+sector combinations
-      const uniqueXValues = [...new Set(filteredDataSet.map(d => d.x))];
-
-      // Sort points based on filter criteria
-      let sortedPoints = filteredDataSet.map(d => d.label);
-      if (filter?.criteria) {
-        sortedPoints = sortedPoints.sort((a, b) => {
-          const aData = filteredDataSet.find(d => d.label === a);
-          const bData = filteredDataSet.find(d => d.label === b);
-          const aValue = aData?.[filter.criteria] || 0;
-          const bValue = bData?.[filter.criteria] || 0;
-          return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
-        });
-      }
-
       const currentMetadata: ChartMetadata = {
-        xAxisDomain: uniqueXValues.map(String),
-        yAxisDomain: yAxisDomain
-          ? [Number(yAxisDomain[0]), Number(yAxisDomain[1])]
-          : [Number(yScale.domain()[0]), Number(yScale.domain()[1])],
-        visiblePoints: sortedPoints,
+        xAxisDomain: xValues.map(String),
+        yAxisDomain: yScale.domain() as [number, number],
+        visibleItems: filteredDataSet.map(d => d.label),
         renderedData: {
-          [uniqueXValues[0]]: filteredDataSet,
+          points: renderOrderedDataSet,
         },
       };
 
-      // Check if data has actually changed
       const hasChanged =
         !prevChartDataRef.current ||
         JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
           JSON.stringify(currentMetadata.xAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
           JSON.stringify(currentMetadata.yAxisDomain) ||
-        JSON.stringify(prevChartDataRef.current.visiblePoints) !==
-          JSON.stringify(currentMetadata.visiblePoints) ||
+        JSON.stringify(prevChartDataRef.current.visibleItems) !==
+          JSON.stringify(currentMetadata.visibleItems) ||
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
           JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
-      // Only call callback if data has changed
       if (hasChanged) {
-        // Update ref before calling callback
-        prevChartDataRef.current = currentMetadata;
-
-        // Call callback with slight delay to ensure DOM updates are complete
-        const timeoutId = setTimeout(() => {
-          onChartDataProcessed(currentMetadata);
-        }, 0);
-
-        return () => clearTimeout(timeoutId);
+        onChartDataProcessed(currentMetadata);
       }
+
+      prevChartDataRef.current = currentMetadata;
     }
-  }, [filteredDataSet, yAxisDomain, yScale, filter, onChartDataProcessed]);
+  }, [
+    renderOrderedDataSet,
+    xValues,
+    yScale,
+    filteredDataSet,
+    onChartDataProcessed,
+  ]);
 
   return (
     <Styled style={{ position: "relative" }}>

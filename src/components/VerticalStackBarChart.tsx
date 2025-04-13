@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useCallback, useState, useLayoutEffect } from "react";
+import React, { useMemo, useRef, useEffect, useCallback, useLayoutEffect } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import XaxisBand from "./shared/XaxisBand";
@@ -11,8 +11,8 @@ import styled from "styled-components";
 const VerticalStackBarChartStyled = styled.div`
   position: relative;
   rect {
-    transition: all 0.1s ease-out;
-    }
+    transition: x 0.1s ease-out, y 0.1s ease-out, width 0.1s ease-out, height 0.1s ease-out;
+  }
 }`;
 
 interface DataPoint {
@@ -24,6 +24,7 @@ interface DataSet {
   seriesKey: string;
   seriesKeyAbbreviation: string;
   series: DataPoint[];
+  label?: string;
 }
 
 interface TooltipData {
@@ -114,13 +115,12 @@ const VerticalStackBarChart: React.FC<Props> = ({
     disabledItems,
     setHiddenItems,
     hiddenItems,
-    visibleItems,
     setVisibleItems,
+    visibleItems,
   } = useChartContext();
   const chartRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
-  // Add ref for previous data comparison
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
   // Compute all keys present in the dataset (excluding "date")
@@ -167,7 +167,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
     return sorted.slice(0, filter.limit);
   }, [dataSet, filter]);
 
-  // UPDATED: Recalculate hiddenItems without using disabledItems
+  // Keep only the keys we need
   const keys = useMemo(() => {
     return Array.from(
       new Set(
@@ -194,25 +194,47 @@ const VerticalStackBarChart: React.FC<Props> = ({
     );
   }, [filteredDataSet]);
 
-  const hiddenKeys = useMemo(() => {
-    return [...keys.filter(key => !filteredKeys.includes(key))];
-  }, [keys, filteredKeys, seriesKeys]);
-
-  const visibleKeys = useMemo(() => {
-    return keys.filter(key => filteredKeys.includes(key));
-  }, [keys, filteredKeys]);
-
+  // Update hiddenItems based on filter
   useEffect(() => {
-    if (JSON.stringify(hiddenKeys) !== JSON.stringify(hiddenItems)) {
-      setHiddenItems(hiddenKeys);
-    }
-  }, [hiddenKeys, setHiddenItems, hiddenItems]);
+    if (filter != null) {
+      const newHidden = dataSet
+        .filter(
+          item => !filteredDataSet.some(
+            filtered => filtered.seriesKey === item.seriesKey
+          )
+        )
+        .map(item => item.seriesKey);
 
-  useEffect(() => {
-    if (JSON.stringify(visibleKeys) !== JSON.stringify(visibleItems)) {
-      setVisibleItems(visibleKeys);
+      if (JSON.stringify(newHidden) !== JSON.stringify(hiddenItems)) {
+        setHiddenItems(newHidden);
+      }
+    } else {
+      if (hiddenItems.length !== 0) {
+        setHiddenItems([]);
+      }
     }
-  }, [visibleKeys, setVisibleItems, visibleItems]);
+  }, [dataSet, filter, filteredDataSet, hiddenItems, setHiddenItems]);
+
+  // Update visibleItems based on filter
+  useEffect(() => {
+    if (filter != null) {
+      const newVisible = dataSet
+        .filter(
+          item => filteredDataSet.some(
+            filtered => filtered.seriesKey === item.seriesKey
+          )
+        )
+        .map(item => item.seriesKey);
+
+      if (JSON.stringify(newVisible) !== JSON.stringify(visibleItems)) {
+        setVisibleItems(newVisible);
+      }
+    } else {
+      if (visibleItems.length !== 0) {
+        setVisibleItems([]);
+      }
+    }
+  }, [dataSet, filter, filteredDataSet, visibleItems, setVisibleItems]);
 
   // Replace usage of dataSet with filteredDataSet:
   const flattenedDataSet = useMemo(() => {
@@ -451,9 +473,9 @@ const VerticalStackBarChart: React.FC<Props> = ({
       );
 
       // Sort visibleKeys based on values at the filter date if filter exists
-      let sortedVisibleKeys = visibleKeys;
+      let sortedVisibleKeys = visibleItems;
       if (filter?.date) {
-        sortedVisibleKeys = [...visibleKeys].sort((a, b) => {
+        sortedVisibleKeys = [...visibleItems].sort((a, b) => {
           const aValue = stackedRectData[a]?.find(d => String(d.date) === String(filter.date))?.value || 0;
           const bValue = stackedRectData[b]?.find(d => String(d.date) === String(filter.date))?.value || 0;
           return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
@@ -477,20 +499,15 @@ const VerticalStackBarChart: React.FC<Props> = ({
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
           JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
-      // Only call the callback if data has changed
+      // Always update the ref with latest metadata
+      prevChartDataRef.current = currentMetadata;
+
+      // Only call callback if data has changed
       if (hasChanged) {
-        // Update the ref before calling the callback
-        prevChartDataRef.current = currentMetadata;
-
-        // Call callback with a slight delay to ensure DOM updates are complete
-        const timeoutId = setTimeout(() => {
-          onChartDataProcessed(currentMetadata);
-        }, 0);
-
-        return () => clearTimeout(timeoutId);
+        onChartDataProcessed(currentMetadata);
       }
     }
-  }, [xAxisDomain, dates, visibleKeys, stackedRectData, filter, onChartDataProcessed]);
+  }, [xAxisDomain, dates, visibleItems, stackedRectData, filter, onChartDataProcessed]);
 
   return (
     <VerticalStackBarChartStyled>

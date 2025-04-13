@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode, useCallback, useMemo } from "react";
+import React, { createContext, useState, useContext, ReactNode, useCallback, useMemo, useEffect } from "react";
 
 // 1. Define the types for our context
 interface ChartContextProps {
@@ -16,8 +16,11 @@ interface ChartContextProps {
   >;
   hiddenItems: string[];
   setHiddenItems: React.Dispatch<React.SetStateAction<string[]>>;
-  visibleItems: string[]; // <-- new prop type
-  setVisibleItems: React.Dispatch<React.SetStateAction<string[]>>; // <-- new setter
+  visibleItems: string[]; // <-- renamed from visibleKeys
+  setVisibleItems: React.Dispatch<React.SetStateAction<string[]>>; // <-- renamed from setVisibleKeys
+  availableItems: string[]; // <-- new property to store initial state
+  setAvailableItems: React.Dispatch<React.SetStateAction<string[]>>; // <-- setter for availableItems
+  resetState: () => void; // Add reset function type
 }
 
 // 2. Provide default values for the context
@@ -34,8 +37,11 @@ const defaultChartContext: ChartContextProps = {
   setCategoryMetadata: () => {},
   hiddenItems: [],
   setHiddenItems: () => {},
-  visibleItems: [], // <-- new prop
-  setVisibleItems: () => {}, // <-- new setter
+  visibleItems: [], // <-- renamed from visibleKeys
+  setVisibleItems: () => {}, // <-- renamed from setVisibleKeys
+  availableItems: [], // <-- add default value
+  setAvailableItems: () => {}, // <-- add default setter
+  resetState: () => {}, // Add default reset function
 };
 
 const MichiVzContext = createContext<ChartContextProps>(defaultChartContext);
@@ -48,7 +54,8 @@ interface MichiVzProps {
   initialColorsMapping?: { [key: string]: string };
   initialColorsBasedMapping?: { [key: string]: string };
   initialCategoryMetadata?: { [key: string]: { color: string; label: string } };
-  initialVisibleItems?: string[]; // <-- add initial visible items if needed
+  initialVisibleItems?: string[]; // <-- renamed from initialVisibleKeys
+  initialAvailableItems?: string[]; // <-- add prop for initial available items
 }
 
 export const MichiVzProvider: React.FC<MichiVzProps> = ({
@@ -58,7 +65,8 @@ export const MichiVzProvider: React.FC<MichiVzProps> = ({
   initialColorsMapping = {},
   initialColorsBasedMapping = {},
   initialCategoryMetadata = {},
-  initialVisibleItems = [], // <-- add initial visible items if needed
+  initialVisibleItems = [], // <-- renamed from initialVisibleKeys
+  initialAvailableItems = initialVisibleItems, // <-- default to initialVisibleItems if not provided
 }) => {
   const [disabledItems, setDisabledItems] = useState<string[]>(initialDisabledItems);
   const [highlightItems, setHighlightItems] = useState<string[]>(initialHighlightItems);
@@ -70,7 +78,20 @@ export const MichiVzProvider: React.FC<MichiVzProps> = ({
     [key: string]: { color: string; label: string };
   }>(initialCategoryMetadata);
   const [hiddenItems, setHiddenItems] = useState<string[]>([]);
-  const [visibleItems, setVisibleItems] = useState<string[]>(initialVisibleItems);
+  const [visibleItems, setVisibleItems] = useState<string[]>(initialVisibleItems); // <-- renamed from visibleKeys
+  const [availableItems, setAvailableItems] = useState<string[]>(initialAvailableItems); // <-- add state for available items
+
+  // Add reset function
+  const resetState = useCallback(() => {
+    setDisabledItems([]);
+    setHighlightItems([]);
+    setColorsMapping({});
+    setColorsBasedMapping({});
+    setCategoryMetadata({});
+    setHiddenItems([]);
+    setVisibleItems([]);
+    setAvailableItems([]);
+  }, []); // Empty dependency array since we only need the setter functions which are stable
 
   // Memoize state setters to prevent unnecessary re-renders
   const memoizedSetDisabledItems = useCallback((value: React.SetStateAction<string[]>) => {
@@ -121,12 +142,20 @@ export const MichiVzProvider: React.FC<MichiVzProps> = ({
     });
   }, []);
 
-  const memoizedSetVisibleItems = useCallback((value: React.SetStateAction<string[]>) => {
-    setVisibleItems(prev => {
+  const memoizedSetVisibleItems = useCallback((value: React.SetStateAction<string[]>) => { // <-- renamed from memoizedSetVisibleKeys
+    setVisibleItems(prev => { // <-- renamed from setVisibleKeys
       const newValue = typeof value === "function" ? value(prev) : value;
       return JSON.stringify(prev) === JSON.stringify(newValue) ? prev : newValue;
     });
   }, []);
+
+  // Update the memoizedSetAvailableItems to be more focused
+  const memoizedSetAvailableItems = useCallback((value: React.SetStateAction<string[]>) => {
+    setAvailableItems(prev => {
+      const newValue = typeof value === "function" ? value(prev) : value;
+      return JSON.stringify(prev) === JSON.stringify(newValue) ? prev : newValue;
+    });
+  }, []); // Keep empty dependency array as we only need the stable setter function
 
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(
@@ -143,8 +172,11 @@ export const MichiVzProvider: React.FC<MichiVzProps> = ({
       setCategoryMetadata: memoizedSetCategoryMetadata,
       hiddenItems,
       setHiddenItems: memoizedSetHiddenItems,
-      visibleItems,
-      setVisibleItems: memoizedSetVisibleItems,
+      visibleItems, // <-- renamed from visibleKeys
+      setVisibleItems: memoizedSetVisibleItems, // <-- renamed from setVisibleKeys
+      availableItems, // <-- add to context value
+      setAvailableItems: memoizedSetAvailableItems, // <-- add setter to context value
+      resetState, // Add reset function to context
     }),
     [
       disabledItems,
@@ -153,14 +185,17 @@ export const MichiVzProvider: React.FC<MichiVzProps> = ({
       colorsBasedMapping,
       categoryMetadata,
       hiddenItems,
-      visibleItems,
+      visibleItems, // <-- renamed from visibleKeys
+      availableItems, // <-- add to dependencies
       memoizedSetDisabledItems,
       memoizedSetHighlightItems,
       memoizedSetColorsMapping,
       memoizedSetColorsBasedMapping,
       memoizedSetCategoryMetadata,
       memoizedSetHiddenItems,
-      memoizedSetVisibleItems,
+      memoizedSetVisibleItems, // <-- renamed from memoizedSetVisibleKeys
+      memoizedSetAvailableItems, // <-- add memoized setter to dependencies
+      resetState, // Add reset function to dependencies
     ]
   );
 

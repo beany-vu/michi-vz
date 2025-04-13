@@ -2,6 +2,7 @@ import React from "react";
 import RibbonChart from "../src/components/RibbonChart";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
 import { Meta } from "@storybook/react";
+import { fn } from '@storybook/test';
 
 // Define the default metadata for the component
 export default {
@@ -103,5 +104,6 @@ export const Primary = {
     },
     yAxisFormat: (d) => `${d}`, //
     title: "My Robbin Chart",
+    onChartDataProcessed: fn(),
   },
 };

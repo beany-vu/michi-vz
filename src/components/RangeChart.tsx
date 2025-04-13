@@ -56,7 +56,7 @@ interface RangeChartProps {
 interface ChartMetadata {
   xAxisDomain: string[];
   yAxisDomain: [number, number];
-  visibleSeries: string[];
+  visibleKeys: string[];
   renderedData: { [key: string]: DataPointRangeChart[] };
 }
 
@@ -341,7 +341,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
       const currentMetadata: ChartMetadata = {
         xAxisDomain: uniqueDates.map(String),
         yAxisDomain: yScale.domain() as [number, number],
-        visibleSeries: dataSet.map(d => d.label).filter(label => !disabledItems.includes(label)),
+        visibleKeys: dataSet.map(d => d.label).filter(label => !disabledItems.includes(label)),
         renderedData: dataSet.reduce(
           (acc, d) => {
             acc[d.label] = d.series;
@@ -358,22 +358,17 @@ const RangeChart: React.FC<RangeChartProps> = ({
           JSON.stringify(currentMetadata.xAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
           JSON.stringify(currentMetadata.yAxisDomain) ||
-        JSON.stringify(prevChartDataRef.current.visibleSeries) !==
-          JSON.stringify(currentMetadata.visibleSeries) ||
+        JSON.stringify(prevChartDataRef.current.visibleKeys) !==
+          JSON.stringify(currentMetadata.visibleKeys) ||
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
           JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
+      // Always update the ref with latest metadata
+      prevChartDataRef.current = currentMetadata;
+
       // Only call callback if data has changed
       if (hasChanged) {
-        // Update ref before calling callback
-        prevChartDataRef.current = currentMetadata;
-
-        // Call callback with slight delay to ensure DOM updates are complete
-        const timeoutId = setTimeout(() => {
-          onChartDataProcessed(currentMetadata);
-        }, 0);
-
-        return () => clearTimeout(timeoutId);
+        onChartDataProcessed(currentMetadata);
       }
     }
   }, [dataSet, xAxisDataType, yScale, disabledItems, onChartDataProcessed]);

@@ -14,8 +14,8 @@ interface DataPoint {
 }
 
 interface ChartMetadata {
-  yAxisDomain: string[];
-  xAxisDomain: [number, number];
+  xAxisDomain: string[];
+  yAxisDomain: [number, number];
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
 }
@@ -59,7 +59,16 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   showGrid = defaultConf.SHOW_GRID,
   onChartDataProcessed,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } = useChartContext();
+  const {
+    colorsMapping,
+    highlightItems,
+    setHighlightItems,
+    disabledItems,
+    setHiddenItems,
+    hiddenItems,
+    setVisibleItems,
+    visibleItems,
+  } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const refTooltip = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
@@ -164,8 +173,8 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
       const uniqueYValues = [...new Set(yValues.map(String))];
 
       const currentMetadata: ChartMetadata = {
-        yAxisDomain: uniqueYValues,
-        xAxisDomain: [0, maxValueX],
+        xAxisDomain: xValues.map(String),
+        yAxisDomain: [0, maxValueX],
         visibleItems: keys.filter(key => !disabledItems.includes(key)),
         renderedData: {
           [keys[0]]: dataSet,
@@ -175,10 +184,10 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
       // Check if data has actually changed
       const hasChanged =
         !prevChartDataRef.current ||
-        JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
-          JSON.stringify(currentMetadata.yAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
           JSON.stringify(currentMetadata.xAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
+          JSON.stringify(currentMetadata.yAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.visibleItems) !==
           JSON.stringify(currentMetadata.visibleItems) ||
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==

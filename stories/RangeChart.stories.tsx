@@ -3,6 +3,7 @@ import React from "react";
 import RangeChartComponent from "../src/components/RangeChart";
 import { Meta } from "@storybook/react";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
+import { fn } from "@storybook/test";
 
 export default {
   title: "Charts/Range Chart",
@@ -154,5 +155,6 @@ export const Primary = {
     tooltipFormatter: (dataSet, d) => {
       return JSON.stringify(d);
     },
+    onChartDataProcessed: fn(),
   },
 };

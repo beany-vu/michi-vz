@@ -15,8 +15,8 @@ interface DataPoint {
 interface ChartMetadata {
   xAxisDomain: string[];
   yAxisDomain: [number, number];
-  keys: string[];
-  renderedData: { [key: string]: RectData[] };
+  visibleItems: string[];
+  renderedData: { [key: string]: DataPoint[] };
 }
 
 interface Props {
@@ -68,7 +68,16 @@ const RibbonChart: React.FC<Props> = ({
   tooltipContent,
   onChartDataProcessed,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } = useChartContext();
+  const {
+    colorsMapping,
+    highlightItems,
+    setHighlightItems,
+    disabledItems,
+    setHiddenItems,
+    hiddenItems,
+    setVisibleItems,
+    visibleItems,
+  } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
@@ -187,9 +196,9 @@ const RibbonChart: React.FC<Props> = ({
       const currentMetadata: ChartMetadata = {
         xAxisDomain: uniqueDates,
         yAxisDomain: safeYDomain,
-        keys: keys.filter(key => !disabledItems.includes(key)),
+        visibleItems: keys.filter(key => !disabledItems.includes(key)),
         renderedData: {
-          [keys[0]]: stackedRectData[keys[0]] as RectData[],
+          [keys[0]]: series,
         },
       };
 
@@ -200,21 +209,17 @@ const RibbonChart: React.FC<Props> = ({
           JSON.stringify(currentMetadata.xAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
           JSON.stringify(currentMetadata.yAxisDomain) ||
-        JSON.stringify(prevChartDataRef.current.keys) !== JSON.stringify(currentMetadata.keys) ||
+        JSON.stringify(prevChartDataRef.current.visibleItems) !==
+          JSON.stringify(currentMetadata.visibleItems) ||
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
           JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
+      // Always update the ref with latest metadata
+      prevChartDataRef.current = currentMetadata;
+
       // Only call callback if data has changed
       if (hasChanged) {
-        // Update ref before calling callback
-        prevChartDataRef.current = currentMetadata;
-
-        // Call callback with slight delay to ensure DOM updates are complete
-        const timeoutId = setTimeout(() => {
-          onChartDataProcessed(currentMetadata);
-        }, 0);
-
-        return () => clearTimeout(timeoutId);
+        onChartDataProcessed(currentMetadata);
       }
     }
   }, [
@@ -223,7 +228,7 @@ const RibbonChart: React.FC<Props> = ({
     height,
     margin,
     disabledItems,
-    stackedRectData,
+    series,
     dates,
     keys,
     yScaleDomain,
