@@ -1,11 +1,5 @@
 import * as d3 from "d3";
-import React, {
-  useEffect,
-  useMemo,
-  useRef,
-  useCallback,
-  useLayoutEffect,
-} from "react";
+import React, { useEffect, useMemo, useRef, useCallback, useLayoutEffect } from "react";
 import Title from "../components/shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
@@ -21,6 +15,13 @@ interface DataPoint {
   valueCompared: number;
 }
 
+export const VALUE_TYPE = {
+  BASED: "based",
+  COMPARED: "compared",
+} as const;
+
+export type TValueType = (typeof VALUE_TYPE)[keyof typeof VALUE_TYPE];
+
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
 const HEIGHT = 480 - MARGIN.top - MARGIN.bottom;
@@ -35,14 +36,7 @@ interface LineChartProps {
   xAxisPredefinedDomain?: number[];
   xAxisDataType: "number" | "date_annual" | "date_monthly";
   title?: string;
-  tooltipFormatter?: (
-    d: DataPoint | undefined,
-    dataSet?: {
-      label: string;
-      color: string;
-      series: DataPoint[];
-    }[]
-  ) => string;
+  tooltipFormatter?: (d: DataPoint | undefined, dataSet?: DataPoint[], type?: TValueType) => React.ReactNode;
   children?: React.ReactNode;
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
@@ -89,15 +83,10 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     x: number;
     y: number;
     data: DataPoint;
+    type?: TValueType;
   } | null>(null);
-  const {
-    colorsMapping,
-    colorsBasedMapping,
-    highlightItems,
-    disabledItems,
-    hiddenItems,
-    visibleItems,
-  } = useChartContext();
+  const { colorsMapping, colorsBasedMapping, highlightItems, disabledItems, hiddenItems, visibleItems } =
+    useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const renderCompleteRef = useRef(false);
   // Add ref for previous data comparison
@@ -118,10 +107,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
 
   // Memoize yAxisDomain
   const yAxisDomain = useMemo(
-    () =>
-      filteredDataSet
-        .filter(d => !disabledItems.includes(d?.label))
-        ?.map(d => d?.label),
+    () => filteredDataSet.filter(d => !disabledItems.includes(d?.label))?.map(d => d?.label),
     [filteredDataSet, disabledItems]
   );
 
@@ -138,18 +124,14 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
 
   // Memoize xAxisDomain
   const xAxisDomain = useMemo(() => {
-    const range =
-      xAxisPredefinedDomain.length > 0 ? xAxisPredefinedDomain : xAxisRange;
+    const range = xAxisPredefinedDomain.length > 0 ? xAxisPredefinedDomain : xAxisRange;
     if (xAxisDataType === "number") {
       const min = Math.min(...range);
       const max = Math.max(...range);
       return [max, min];
     }
     if (xAxisDataType === "date_annual") {
-      return [
-        new Date(Math.max(...range), 1, 1),
-        new Date(Math.min(...range), 1, 1),
-      ];
+      return [new Date(Math.max(...range), 1, 1), new Date(Math.min(...range), 1, 1)];
     }
     if (xAxisRange.length >= 2) {
       const minDate = new Date(Math.min(...range));
@@ -187,25 +169,19 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
 
   // Memoize the YaxisBand component
   const memoizedYaxisBand = useMemo(() => {
-    return (
-      <YaxisBand
-        yScale={yAxisScale}
-        width={width}
-        margin={margin}
-        yAxisFormat={yAxisFormat}
-      />
-    );
+    return <YaxisBand yScale={yAxisScale} width={width} margin={margin} yAxisFormat={yAxisFormat} />;
   }, [yAxisScale, width, margin, yAxisFormat]);
 
   // Memoize event handlers
   const handleMouseOver = useCallback(
-    (d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>) => {
+    (d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>, type: TValueType) => {
       if (svgRef.current) {
         const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
         setTooltip({
           x: mousePoint[0],
           y: mousePoint[1],
           data: d,
+          type,
         });
       }
     },
@@ -227,15 +203,12 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     onHighlightItem([]);
   }, [onHighlightItem]);
 
-
   // Update bar opacity based on highlightItems
   useEffect(() => {
     if (svgRef.current) {
       d3.select(svgRef.current).select(".bar").attr("opacity", 0.3);
       highlightItems.forEach(item => {
-        d3.select(svgRef.current)
-          .selectAll(`.bar[data-label="${item}"]`)
-          .attr("opacity", 1);
+        d3.select(svgRef.current).selectAll(`.bar[data-label="${item}"]`).attr("opacity", 1);
       });
     }
   }, [highlightItems]);
@@ -250,15 +223,10 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   // Memoize the bars rendering
   const renderBars = useMemo(() => {
     return filteredDataSet
-      .filter(
-        d =>
-          !disabledItems.includes(d?.label) && visibleItems.includes(d?.label)
-      )
+      .filter(d => !disabledItems.includes(d?.label) && visibleItems.includes(d?.label))
       .map((d, i) => {
-        const x1 =
-          margin.left + xAxisScale(Math.min(0, d.valueBased)) - margin.left;
-        const x2 =
-          margin.left + xAxisScale(Math.min(0, d.valueCompared)) - margin.left;
+        const x1 = margin.left + xAxisScale(Math.min(0, d.valueBased)) - margin.left;
+        const x2 = margin.left + xAxisScale(Math.min(0, d.valueCompared)) - margin.left;
         const width1 = Math.abs(xAxisScale(d.valueBased) - xAxisScale(0));
         const width2 = Math.abs(xAxisScale(d.valueCompared) - xAxisScale(0));
 
@@ -271,10 +239,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
             data-label={d?.label}
             key={i}
             style={{
-              opacity:
-                highlightItems.includes(d?.label) || highlightItems.length === 0
-                  ? 1
-                  : 0.3,
+              opacity: highlightItems.includes(d?.label) || highlightItems.length === 0 ? 1 : 0.3,
             }}
             onMouseOver={() => handleHighlight(d?.label)}
             onMouseOut={handleUnhighlight}
@@ -291,7 +256,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   opacity={0.9}
                   rx={5}
                   ry={5}
-                  onMouseOver={event => handleMouseOver(d, event)}
+                  onMouseOver={event => handleMouseOver(d, event, "compared")}
                   onMouseOut={handleMouseOut}
                   stroke="#fff"
                   strokeWidth={1}
@@ -305,7 +270,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   fill={colorsBasedMapping[d?.label] ?? d?.color}
                   rx={5}
                   ry={5}
-                  onMouseOver={event => handleMouseOver(d, event)}
+                  onMouseOver={event => handleMouseOver(d, event, "based")}
                   onMouseOut={handleMouseOut}
                   opacity={0.9}
                   stroke="#fff"
@@ -323,7 +288,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   fill={colorsBasedMapping[d?.label] ?? d?.color}
                   rx={5}
                   ry={5}
-                  onMouseOver={event => handleMouseOver(d, event)}
+                  onMouseOver={event => handleMouseOver(d, event, "based")}
                   onMouseOut={handleMouseOut}
                   opacity={0.9}
                   stroke="#fff"
@@ -339,7 +304,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   opacity={0.9}
                   rx={5}
                   ry={5}
-                  onMouseOver={event => handleMouseOver(d, event)}
+                  onMouseOver={event => handleMouseOver(d, event, "compared")}
                   onMouseOut={handleMouseOut}
                   stroke="#fff"
                   strokeWidth={1}
@@ -398,9 +363,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           JSON.stringify(currentMetadata.xAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.visibleItems) !==
           JSON.stringify(currentMetadata.visibleItems) ||
-        JSON.stringify(
-          Object.keys(prevChartDataRef.current.renderedData).sort()
-        ) !== JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
+        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
+          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
       // Only call callback if data has changed
       if (hasChanged) {
@@ -415,13 +379,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [
-    yAxisDomain,
-    xAxisDomain,
-    visibleItems,
-    filteredDataSet,
-    onChartDataProcessed,
-  ]);
+  }, [yAxisDomain, xAxisDomain, visibleItems, filteredDataSet, onChartDataProcessed]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -464,11 +422,10 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         >
           {!tooltipFormatter && (
             <div>
-              ${tooltip?.data?.label}: ${tooltip?.data?.valueBased} - $
-              {tooltip?.data?.valueCompared}
+              ${tooltip?.data?.label}: ${tooltip?.data?.valueBased} - ${tooltip?.data?.valueCompared}
             </div>
           )}
-          {tooltipFormatter && tooltipFormatter(tooltip?.data)}
+          {tooltipFormatter && tooltipFormatter(tooltip?.data, dataSet, tooltip?.type)}
         </div>
       )}
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
