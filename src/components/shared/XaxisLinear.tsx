@@ -153,6 +153,7 @@ const XaxisLinear: FC<Props> = ({
       .attr("y2", position === "top" ? margin.top - 15 : -height + margin.bottom + margin.top - 15)
       .style("stroke-dasharray", "3,3")
       .style("stroke", showGrid ? "lightgray" : "transparent")
+      .attr("pointer-events", "none")
       .style("opacity", 1)
       .transition()
       .duration(750)

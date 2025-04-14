@@ -71,6 +71,7 @@ const XaxisBand: FC<Props> = ({ xScale, height, margin, xAxisFormat }) => {
       .attr("x2", 0)
       .attr("y1", 0)
       .attr("y2", -height + margin.bottom - 25)
+      .attr("pointer-events", "none")
       .style("stroke-dasharray", "3,3")
       .style("stroke", "transparent")
       .style("opacity", 1);

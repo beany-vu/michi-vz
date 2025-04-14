@@ -85,6 +85,7 @@ interface LineChartProps {
   };
   sandBoxMode?: boolean;
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
+  onHighlightItem: (labels: string[]) => void;
 }
 
 interface ChartMetadata {
@@ -123,16 +124,13 @@ const LineChart: FC<LineChartProps> = ({
   isNodata,
   sandBoxMode = false,
   onChartDataProcessed,
+  onHighlightItem,
 }) => {
   const {
     colorsMapping,
     highlightItems,
-    setHighlightItems,
     disabledItems,
-    setHiddenItems,
-    hiddenItems,
-    setVisibleItems,
-    visibleItems,
+   
   } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -156,31 +154,6 @@ const LineChart: FC<LineChartProps> = ({
       .slice(0, filter.limit);
   }, [dataSet, filter]);
 
-  const newHiddenItems = useMemo(() => {
-    if (sandBoxMode || !filter) return [];
-    return dataSet
-      .filter(item => !filteredDataSet.some(filtered => filtered.label === item.label))
-      .map(item => item.label);
-  }, [dataSet, filteredDataSet, filter, sandBoxMode]);
-
-  const newVisibleItems = useMemo(() => {
-    if (sandBoxMode) return [];
-    return filteredDataSet.map(item => item.label);
-  }, [filteredDataSet, sandBoxMode]);
-
-  useEffect(() => {
-    if (sandBoxMode) return;
-    if (JSON.stringify(newHiddenItems) !== JSON.stringify(hiddenItems)) {
-      setHiddenItems(newHiddenItems);
-    }
-  }, [newHiddenItems, hiddenItems, setHiddenItems, sandBoxMode]);
-
-  useEffect(() => {
-    if (sandBoxMode) return;
-    if (JSON.stringify(newVisibleItems) !== JSON.stringify(visibleItems)) {
-      setVisibleItems(newVisibleItems);
-    }
-  }, [newVisibleItems, visibleItems, setVisibleItems, sandBoxMode]);
 
   const yScale = useMemo(
     () =>
@@ -442,7 +415,7 @@ const LineChart: FC<LineChartProps> = ({
             event.preventDefault();
             event.stopPropagation();
 
-            setHighlightItems([data.label]);
+            onHighlightItem([data.label]);
 
             const tooltipContent = tooltipFormatter(
               {
@@ -478,7 +451,7 @@ const LineChart: FC<LineChartProps> = ({
               (relatedTarget.classList.contains("line") || relatedTarget.classList.contains("line-overlay"));
 
             if (!isMouseOverLine) {
-              setHighlightItems([]);
+              onHighlightItem([]);
               if (tooltipRef?.current) {
                 tooltipRef.current.style.visibility = "hidden";
               }
@@ -521,21 +494,21 @@ const LineChart: FC<LineChartProps> = ({
     debounce((event, data) => {
       event.preventDefault();
       event.stopPropagation();
-      setHighlightItems([data.label]);
+      onHighlightItem([data.label]);
     }, 100),
-    [setHighlightItems]
+    [onHighlightItem]
   );
 
   const handleMouseOut = useCallback(
     debounce(event => {
       event.preventDefault();
       event.stopPropagation();
-      setHighlightItems([]);
+      onHighlightItem([]);
       if (tooltipRef?.current) {
         tooltipRef.current.style.visibility = "hidden";
       }
     }, 100),
-    [setHighlightItems]
+    [onHighlightItem]
   );
 
   const handleHover = useCallback(
@@ -707,7 +680,7 @@ const LineChart: FC<LineChartProps> = ({
               onMouseOut={event => {
                 event.preventDefault();
                 event.stopPropagation();
-                setHighlightItems([]);
+                onHighlightItem([]);
 
                 if (tooltipRef?.current) {
                   tooltipRef.current.style.visibility = "hidden";

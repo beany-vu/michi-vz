@@ -6,6 +6,7 @@ import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
+import useDeepCompareEffect from "use-deep-compare-effect";
 
 interface DataPoint {
   label: string;
@@ -46,12 +47,13 @@ interface LineChartProps {
     sortingDir: "asc" | "desc";
   };
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
+  onHighlightItem?: (labels: string[]) => void;
 }
 
 interface ChartMetadata {
   yAxisDomain: string[];
   xAxisDomain: string[];
-  visibleKeys: string[];
+  visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
 }
 
@@ -72,23 +74,15 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
   isNodataComponent,
   isNodata,
   onChartDataProcessed,
+  onHighlightItem,
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
     y: number;
     data: DataPoint;
   } | null>(null);
-  const {
-    colorsMapping,
-    colorsBasedMapping,
-    highlightItems,
-    setHighlightItems,
-    disabledItems,
-    setHiddenItems,
-    hiddenItems,
-    setVisibleItems,
-    visibleItems,
-  } = useChartContext();
+  const { colorsMapping, colorsBasedMapping, highlightItems, disabledItems, hiddenItems, visibleItems } =
+    useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
@@ -110,40 +104,11 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
       .slice(0, filter.limit);
   }, [dataSet, filter]);
 
-  // New: update hiddenItems based on filter
-  useEffect(() => {
-    if (filter != null) {
-      const newHidden = dataSet
-        .filter(item => !filteredDataSet.some(filtered => filtered.label === item.label))
-        .map(item => item.label);
-      if (JSON.stringify(newHidden) !== JSON.stringify(hiddenItems)) {
-        setHiddenItems(newHidden);
-      }
-    } else {
-      if (hiddenItems.length !== 0) {
-        setHiddenItems([]);
-      }
-    }
-  }, [dataSet, filter, filteredDataSet, hiddenItems, setHiddenItems]);
-
-  // New: update visibleItems based on filter
-  useEffect(() => {
-    if (filter != null) {
-      const newVisible = dataSet
-        .filter(item => filteredDataSet.some(filtered => filtered.label === item.label))
-        .map(item => item.label);
-      if (JSON.stringify(newVisible) !== JSON.stringify(visibleItems)) {
-        setVisibleItems(newVisible);
-      }
-    } else {
-      if (visibleItems.length !== 0) {
-        setVisibleItems([]);
-      }
-    }
-  }, [dataSet, filter, filteredDataSet, visibleItems, setVisibleItems]);
-
   const yAxisDomain = useMemo(
-    () => filteredDataSet.filter(d => !disabledItems.includes(d.label)).map(d => d.label),
+    () =>
+      filteredDataSet
+        .filter(d => !disabledItems.includes(d.label))
+        .map(d => d.label),
     [filteredDataSet]
   );
   const xAxisDomain = useMemo(() => {
@@ -185,7 +150,10 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     .clamp(true)
     .nice(1);
 
-  const handleMouseOver = (d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>) => {
+  const handleMouseOver = (
+    d: DataPoint,
+    event: React.MouseEvent<SVGRectElement, MouseEvent>
+  ) => {
     if (svgRef.current) {
       const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
 
@@ -217,7 +185,8 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     isNodata: isNodata,
   });
 
-  useEffect(() => {
+  // Replace useEffect with useDeepCompareEffect for metadata comparison
+  useDeepCompareEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       // Ensure unique labels
       const uniqueLabels = [...new Set(yAxisDomain)];
@@ -230,7 +199,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
           }
           return value.toString();
         }),
-        visibleKeys: visibleItems,
+        visibleItems: visibleItems,
         renderedData: {
           [uniqueLabels[0]]: filteredDataSet,
         },
@@ -243,8 +212,8 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
           JSON.stringify(currentMetadata.yAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
           JSON.stringify(currentMetadata.xAxisDomain) ||
-        JSON.stringify(prevChartDataRef.current.visibleKeys) !==
-          JSON.stringify(currentMetadata.visibleKeys) ||
+        JSON.stringify(prevChartDataRef.current.visibleItems) !==
+          JSON.stringify(currentMetadata.visibleItems) ||
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
           JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
@@ -261,7 +230,13 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [yAxisDomain, xAxisDomain, visibleItems, filteredDataSet, onChartDataProcessed]);
+  }, [
+    yAxisDomain,
+    xAxisDomain,
+    visibleItems,
+    filteredDataSet,
+    onChartDataProcessed,
+  ]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -273,7 +248,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
         onMouseOut={event => {
           event.stopPropagation();
           event.preventDefault();
-          setHighlightItems([]);
+          onHighlightItem([]);
         }}
       >
         {children}
@@ -309,8 +284,8 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
                 style={{
                   opacity: highlightItems.includes(d.label) || highlightItems.length === 0 ? 1 : 0.3,
                 }}
-                onMouseOver={() => setHighlightItems([d.label])}
-                onMouseOut={() => setHighlightItems([])}
+                onMouseOver={() => onHighlightItem([d.label])}
+                onMouseOut={() => onHighlightItem([])}
               >
                 <rect
                   x={width / 2}

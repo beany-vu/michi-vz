@@ -11,14 +11,14 @@ export default {
   decorators: [
     (Story) => (
       <MichiVzProvider
-        initialColorsMapping={{
+        colorsMapping={{
           Africa: "red",
           Euro: "purple",
           Asia: "orange",
           Australia: "green",
           "North America": "blue",
         }}
-        initialColorsBasedMapping={{
+        colorsBasedMapping={{
           Africa: "yellow",
           Euro: "navy",
           Asia: "violet",

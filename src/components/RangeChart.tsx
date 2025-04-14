@@ -8,6 +8,7 @@ import XaxisLinear from "./shared/XaxisLinear";
 import YaxisLinear from "./shared/YaxisLinear";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import LoadingIndicator from "./shared/LoadingIndicator";
+import useDeepCompareEffect from "use-deep-compare-effect";
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
@@ -51,12 +52,13 @@ interface RangeChartProps {
         }[]
       ) => boolean);
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
+  onHighlightItem?: (labels: string[]) => void;
 }
 
 interface ChartMetadata {
   xAxisDomain: string[];
   yAxisDomain: [number, number];
-  visibleKeys: string[];
+  visibleItems: string[];
   renderedData: { [key: string]: DataPointRangeChart[] };
 }
 
@@ -78,8 +80,13 @@ const RangeChart: React.FC<RangeChartProps> = ({
   isNodataComponent,
   isNodata,
   onChartDataProcessed,
+  onHighlightItem,
 }) => {
-  const { colorsMapping, highlightItems, setHighlightItems, disabledItems } = useChartContext();
+  const {
+    colorsMapping,
+    highlightItems,
+    disabledItems,
+  } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const renderCompleteRef = useRef(false);
@@ -279,13 +286,13 @@ const RangeChart: React.FC<RangeChartProps> = ({
           .on("mouseenter", (event, d) => {
             event.preventDefault();
             event.stopPropagation();
-            setHighlightItems([data.label]);
+            onHighlightItem([data.label]);
             showTooltip(event, tooltipFormatter(d, data.series, dataSet));
           })
           .on("mouseleave", event => {
             event.preventDefault();
             event.stopPropagation();
-            setHighlightItems([]);
+            onHighlightItem([]);
             hideTooltip();
           });
       });
@@ -328,7 +335,9 @@ const RangeChart: React.FC<RangeChartProps> = ({
     renderCompleteRef.current = true;
   }, []);
 
-  useEffect(() => {
+
+  // Replace useEffect with useDeepCompareEffect for metadata comparison
+  useDeepCompareEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       // Extract all dates from all series
       const allDates = dataSet.flatMap(set =>
@@ -341,7 +350,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
       const currentMetadata: ChartMetadata = {
         xAxisDomain: uniqueDates.map(String),
         yAxisDomain: yScale.domain() as [number, number],
-        visibleKeys: dataSet.map(d => d.label).filter(label => !disabledItems.includes(label)),
+        visibleItems: dataSet.map(d => d.label).filter(label => !disabledItems.includes(label)),
         renderedData: dataSet.reduce(
           (acc, d) => {
             acc[d.label] = d.series;
@@ -358,8 +367,8 @@ const RangeChart: React.FC<RangeChartProps> = ({
           JSON.stringify(currentMetadata.xAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
           JSON.stringify(currentMetadata.yAxisDomain) ||
-        JSON.stringify(prevChartDataRef.current.visibleKeys) !==
-          JSON.stringify(currentMetadata.visibleKeys) ||
+        JSON.stringify(prevChartDataRef.current.visibleItems) !==
+          JSON.stringify(currentMetadata.visibleItems) ||
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
           JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 

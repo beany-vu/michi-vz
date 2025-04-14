@@ -37,7 +37,7 @@ interface TooltipData {
 // Add the ChartMetadata interface to define what data we'll expose
 interface ChartMetadata {
   xAxisDomain: string[];
-  visibleKeys: string[];
+  visibleItems: string[];
   renderedData: { [key: string]: RectData[] };
 }
 
@@ -67,6 +67,7 @@ interface Props {
   };
   // New: callback to expose chart metadata to parent component
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
+  onHighlightItem?: (labels: string[]) => void;
 }
 
 export interface RectData {
@@ -107,15 +108,13 @@ const VerticalStackBarChart: React.FC<Props> = ({
   colorCallbackFn,
   filter,
   onChartDataProcessed,
+  onHighlightItem,
 }) => {
   const {
     colorsMapping,
     highlightItems,
-    setHighlightItems,
     disabledItems,
-    setHiddenItems,
     hiddenItems,
-    setVisibleItems,
     visibleItems,
   } = useChartContext();
   const chartRef = useRef<SVGSVGElement>(null);
@@ -123,7 +122,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
-  // Compute all keys present in the dataset (excluding "date")
+  // Remove unused seriesKeys and filteredKeys
   const allKeys = useMemo(() => {
     return Array.from(
       new Set(
@@ -178,63 +177,6 @@ const VerticalStackBarChart: React.FC<Props> = ({
       )
     );
   }, [dataSet]);
-
-  const seriesKeys = useMemo(() => {
-    return Array.from(new Set(dataSet.map(ds => ds.seriesKey)));
-  }, [dataSet]);
-
-  const filteredKeys = useMemo(() => {
-    return Array.from(
-      new Set(
-        filteredDataSet
-          .map(ds => ds.series.map(s => Object.keys(s)))
-          .flat(2)
-          .filter(d => d !== "date")
-      )
-    );
-  }, [filteredDataSet]);
-
-  // Update hiddenItems based on filter
-  useEffect(() => {
-    if (filter != null) {
-      const newHidden = dataSet
-        .filter(
-          item => !filteredDataSet.some(
-            filtered => filtered.seriesKey === item.seriesKey
-          )
-        )
-        .map(item => item.seriesKey);
-
-      if (JSON.stringify(newHidden) !== JSON.stringify(hiddenItems)) {
-        setHiddenItems(newHidden);
-      }
-    } else {
-      if (hiddenItems.length !== 0) {
-        setHiddenItems([]);
-      }
-    }
-  }, [dataSet, filter, filteredDataSet, hiddenItems, setHiddenItems]);
-
-  // Update visibleItems based on filter
-  useEffect(() => {
-    if (filter != null) {
-      const newVisible = dataSet
-        .filter(
-          item => filteredDataSet.some(
-            filtered => filtered.seriesKey === item.seriesKey
-          )
-        )
-        .map(item => item.seriesKey);
-
-      if (JSON.stringify(newVisible) !== JSON.stringify(visibleItems)) {
-        setVisibleItems(newVisible);
-      }
-    } else {
-      if (visibleItems.length !== 0) {
-        setVisibleItems([]);
-      }
-    }
-  }, [dataSet, filter, filteredDataSet, visibleItems, setVisibleItems]);
 
   // Replace usage of dataSet with filteredDataSet:
   const flattenedDataSet = useMemo(() => {
@@ -425,7 +367,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   // Memoize the mouse event handlers
   const handleMouseOver = useCallback(
     (key: string, d: RectData) => {
-      setHighlightItems([key]);
+      onHighlightItem([key]);
       if (tooltipRef.current) {
         tooltipRef.current.style.visibility = "visible";
         tooltipRef.current.innerHTML = generateTooltipContent(
@@ -442,15 +384,15 @@ const VerticalStackBarChart: React.FC<Props> = ({
         );
       }
     },
-    [setHighlightItems, generateTooltipContent, stackedRectData]
+    [onHighlightItem, generateTooltipContent, stackedRectData]
   );
 
   const handleMouseOut = useCallback(() => {
-    setHighlightItems([]);
+    onHighlightItem?.([]);
     if (tooltipRef.current) {
       tooltipRef.current.style.visibility = "hidden";
     }
-  }, [setHighlightItems]);
+  }, [onHighlightItem]);
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet: dataSet,
@@ -485,7 +427,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
       // Create the current metadata with filtered data and UNIQUE xAxisDomain
       const currentMetadata: ChartMetadata = {
         xAxisDomain: [...new Set(xAxisDomain ?? dates)],
-        visibleKeys: sortedVisibleKeys,
+        visibleItems: sortedVisibleKeys,
         renderedData: filteredRenderedData,
       };
 
@@ -494,8 +436,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
         !prevChartDataRef.current ||
         JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
           JSON.stringify(currentMetadata.xAxisDomain) ||
-        JSON.stringify(prevChartDataRef.current.visibleKeys) !==
-          JSON.stringify(currentMetadata.visibleKeys) ||
+        JSON.stringify(prevChartDataRef.current.visibleItems) !==
+          JSON.stringify(currentMetadata.visibleItems) ||
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
           JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
@@ -507,7 +449,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
         onChartDataProcessed(currentMetadata);
       }
     }
-  }, [xAxisDomain, dates, visibleItems, stackedRectData, filter, onChartDataProcessed]);
+  }, [xAxisDomain, dates, visibleItems, stackedRectData, filter, onChartDataProcessed, onHighlightItem]);
 
   return (
     <VerticalStackBarChartStyled>
@@ -599,4 +541,4 @@ const VerticalStackBarChart: React.FC<Props> = ({
   );
 };
 
-export default VerticalStackBarChart;
+export default React.memo(VerticalStackBarChart);

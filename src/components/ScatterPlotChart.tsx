@@ -9,6 +9,7 @@ import { useChartContext } from "./MichiVzProvider";
 import { drawHalfLeftCircle } from "../components/shared/helpers";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
+import useDeepCompareEffect from "use-deep-compare-effect";
 
 const Styled = styled.div`
   .shape {
@@ -85,6 +86,7 @@ interface ScatterPlotChartProps<T extends number | string> {
     date?: string; // Added date property for filtering by date
   };
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
+  onHighlightItem?: (labels: string[]) => void;
 }
 
 const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
@@ -110,18 +112,18 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   dScaleLegendFormatter,
   filter,
   onChartDataProcessed,
+  onHighlightItem,
 }) => {
   const ref = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [activePoint, setActivePoint] = useState<DataPoint | null>(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const {
     colorsMapping,
     highlightItems,
-    setHighlightItems,
     disabledItems,
-    setHiddenItems,
     hiddenItems,
-    setVisibleItems,
     visibleItems,
   } = useChartContext();
 
@@ -163,38 +165,6 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     return [...filteredDataSet].sort((a, b) => b.d - a.d);
   }, [filteredDataSet]);
 
-  // Update hiddenItems based on filter
-  useEffect(() => {
-    if (filter) {
-      const newHidden = dataSet
-        .filter(item => !filteredDataSet.some(filtered => filtered.label === item.label))
-        .map(item => item.label);
-
-      if (JSON.stringify(newHidden) !== JSON.stringify(hiddenItems)) {
-        setHiddenItems(newHidden);
-      }
-    } else {
-      if (hiddenItems.length > 0) {
-        setHiddenItems([]);
-      }
-    }
-  }, [dataSet, filteredDataSet, filter, hiddenItems, setHiddenItems]);
-
-  // Update visibleItems based on filter
-  useEffect(() => {
-    if (filter != null) {
-      const newVisible = dataSet
-        .filter(item => filteredDataSet.some(filtered => filtered.label === item.label))
-        .map(item => item.label);
-      if (JSON.stringify(newVisible) !== JSON.stringify(visibleItems)) {
-        setVisibleItems(newVisible);
-      }
-    } else {
-      if (visibleItems.length !== 0) {
-        setVisibleItems([]);
-      }
-    }
-  }, [dataSet, filter, filteredDataSet, visibleItems, setVisibleItems]);
 
   // Use filteredDataSet instead of dataSet in all calculations
   const xValues = useMemo(() => filteredDataSet.map(d => d.x || 0), [filteredDataSet]);
@@ -287,10 +257,21 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
 
   const handleMouseEnter = useCallback(
     (event, d) => {
-      setActivePoint(d); // Store the active point
-      setHighlightItems([d.label]);
+      // Clear any pending hide timeout
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = null;
+      }
+
+      setActivePoint(d);
+      onHighlightItem([d.label]);
+      const [x, y] = d3.pointer(event);
+      setMousePosition({ x, y });
 
       if (tooltipRef.current) {
+        tooltipRef.current.style.left = "-9999px";
+        tooltipRef.current.style.top = "-9999px";
+        tooltipRef.current.style.opacity = "0";
         tooltipRef.current.style.display = "block";
 
         if (tooltipFormatter) {
@@ -305,35 +286,61 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
           `;
         }
 
-        // Initial positioning
-        const [x, y] = d3.pointer(event);
-        tooltipRef.current.style.left = `${x + 10}px`;
-        tooltipRef.current.style.top = `${y - 10}px`;
+        requestAnimationFrame(() => {
+          if (tooltipRef.current) {
+            tooltipRef.current.style.left = `${mousePosition.x + 10}px`;
+            tooltipRef.current.style.top = `${mousePosition.y - 10}px`;
+            tooltipRef.current.style.opacity = "1";
+          }
+        });
       }
     },
-    [setHighlightItems, tooltipFormatter, xAxisFormat, yAxisFormat]
+    [onHighlightItem, tooltipFormatter, xAxisFormat, yAxisFormat, mousePosition]
   );
 
-  const handleMouseLeave = useCallback(() => {
-    setActivePoint(null); // Clear the active point
-    setHighlightItems([]);
-    if (tooltipRef.current) {
-      tooltipRef.current.style.display = "none";
-    }
-  }, [setHighlightItems]);
-
-  // Global mouse move handler for the SVG
   const handleSvgMouseMove = useCallback(
     event => {
-      // Only update tooltip position if there's an active point
-      if (activePoint && tooltipRef.current) {
+      if (activePoint) {
         const [x, y] = d3.pointer(event);
-        tooltipRef.current.style.left = `${x + 10}px`;
-        tooltipRef.current.style.top = `${y - 10}px`;
+        setMousePosition({ x, y });
       }
     },
     [activePoint]
   );
+
+  useLayoutEffect(() => {
+    if (tooltipRef.current && activePoint) {
+      tooltipRef.current.style.left = `${mousePosition.x + 10}px`;
+      tooltipRef.current.style.top = `${mousePosition.y - 10}px`;
+    }
+  }, [mousePosition, activePoint]);
+
+  const handleMouseLeave = useCallback(() => {
+    setActivePoint(null);
+    onHighlightItem([]);
+    if (tooltipRef.current) {
+      tooltipRef.current.style.opacity = "0";
+      // Clear any existing timeout
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+      }
+      // Set new timeout
+      hideTimeoutRef.current = setTimeout(() => {
+        if (tooltipRef.current) {
+          tooltipRef.current.style.display = "none";
+        }
+      }, 100);
+    }
+  }, [onHighlightItem]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet,
@@ -350,8 +357,8 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     return isNodataComponent || <div>No data available</div>;
   }
 
-  // Update metadata with visibleItems
-  useEffect(() => {
+  // Replace useEffect with useDeepCompareEffect for metadata comparison
+  useDeepCompareEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       const currentMetadata: ChartMetadata = {
         xAxisDomain: xValues.map(String),
@@ -379,13 +386,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
 
       prevChartDataRef.current = currentMetadata;
     }
-  }, [
-    renderOrderedDataSet,
-    xValues,
-    yScale,
-    filteredDataSet,
-    onChartDataProcessed,
-  ]);
+  }, [renderOrderedDataSet, xValues, yScale, filteredDataSet, onChartDataProcessed]);
 
   return (
     <Styled style={{ position: "relative" }}>
@@ -529,6 +530,12 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
             borderRadius: "5px",
             pointerEvents: "none",
             zIndex: 1000,
+            opacity: 0,
+            transition: "opacity 0.1s ease-out",
+            transitionDelay: "0.1s",
+            willChange: "opacity, transform",
+            transform: "translate3d(0, 0, 0)",
+            backfaceVisibility: "hidden"
           }}
         />
       </Suspense>

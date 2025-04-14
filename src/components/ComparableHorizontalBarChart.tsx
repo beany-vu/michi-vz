@@ -1,11 +1,18 @@
 import * as d3 from "d3";
-import React, { useEffect, useMemo, useRef, useCallback, useLayoutEffect } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  useLayoutEffect,
+} from "react";
 import Title from "../components/shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
 import { useChartContext } from "../components/MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
+import useDeepCompareEffect from "use-deep-compare-effect";
 
 interface DataPoint {
   label: string;
@@ -48,12 +55,13 @@ interface LineChartProps {
     sortingDir: "asc" | "desc";
   };
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
+  onHighlightItem?: (labels: string[]) => void;
 }
 
 interface ChartMetadata {
   yAxisDomain: string[];
   xAxisDomain: string[];
-  visibleKeys: string[];
+  visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
 }
 
@@ -75,6 +83,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   isNodataComponent,
   isNodata,
   onChartDataProcessed,
+  onHighlightItem,
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
@@ -85,11 +94,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     colorsMapping,
     colorsBasedMapping,
     highlightItems,
-    setHighlightItems,
     disabledItems,
-    setHiddenItems,
     hiddenItems,
-    setVisibleItems,
     visibleItems,
   } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -112,7 +118,10 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
 
   // Memoize yAxisDomain
   const yAxisDomain = useMemo(
-    () => filteredDataSet.filter(d => !disabledItems.includes(d?.label))?.map(d => d?.label),
+    () =>
+      filteredDataSet
+        .filter(d => !disabledItems.includes(d?.label))
+        ?.map(d => d?.label),
     [filteredDataSet, disabledItems]
   );
 
@@ -129,14 +138,18 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
 
   // Memoize xAxisDomain
   const xAxisDomain = useMemo(() => {
-    const range = xAxisPredefinedDomain.length > 0 ? xAxisPredefinedDomain : xAxisRange;
+    const range =
+      xAxisPredefinedDomain.length > 0 ? xAxisPredefinedDomain : xAxisRange;
     if (xAxisDataType === "number") {
       const min = Math.min(...range);
       const max = Math.max(...range);
       return [max, min];
     }
     if (xAxisDataType === "date_annual") {
-      return [new Date(Math.max(...range), 1, 1), new Date(Math.min(...range), 1, 1)];
+      return [
+        new Date(Math.max(...range), 1, 1),
+        new Date(Math.min(...range), 1, 1),
+      ];
     }
     if (xAxisRange.length >= 2) {
       const minDate = new Date(Math.min(...range));
@@ -174,20 +187,30 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
 
   // Memoize the YaxisBand component
   const memoizedYaxisBand = useMemo(() => {
-    return <YaxisBand yScale={yAxisScale} width={width} margin={margin} yAxisFormat={yAxisFormat} />;
+    return (
+      <YaxisBand
+        yScale={yAxisScale}
+        width={width}
+        margin={margin}
+        yAxisFormat={yAxisFormat}
+      />
+    );
   }, [yAxisScale, width, margin, yAxisFormat]);
 
   // Memoize event handlers
-  const handleMouseOver = useCallback((d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>) => {
-    if (svgRef.current) {
-      const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
-      setTooltip({
-        x: mousePoint[0],
-        y: mousePoint[1],
-        data: d,
-      });
-    }
-  }, []);
+  const handleMouseOver = useCallback(
+    (d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>) => {
+      if (svgRef.current) {
+        const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
+        setTooltip({
+          x: mousePoint[0],
+          y: mousePoint[1],
+          data: d,
+        });
+      }
+    },
+    []
+  );
 
   const handleMouseOut = useCallback(() => {
     setTooltip(null);
@@ -195,53 +218,24 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
 
   const handleHighlight = useCallback(
     (label: string) => {
-      setHighlightItems([label]);
+      onHighlightItem([label]);
     },
-    [setHighlightItems]
+    [onHighlightItem]
   );
 
   const handleUnhighlight = useCallback(() => {
-    setHighlightItems([]);
-  }, [setHighlightItems]);
+    onHighlightItem([]);
+  }, [onHighlightItem]);
 
-  // Update hiddenItems based on filteredDataSet
-  useEffect(() => {
-    if (filter) {
-      const newHidden = dataSet
-        .filter(item => !filteredDataSet.some(filtered => filtered.label === item.label))
-        .map(item => item.label);
-
-      if (JSON.stringify(newHidden) !== JSON.stringify(hiddenItems)) {
-        setHiddenItems(newHidden);
-      }
-    } else {
-      if (hiddenItems.length > 0) {
-        setHiddenItems([]);
-      }
-    }
-  }, [dataSet, filteredDataSet, filter, hiddenItems, setHiddenItems]);
-
-  // Update visibleItems based on filteredDataSet
-  useEffect(() => {
-    if (filter) {
-      const newVisible = filteredDataSet.map(item => item.label);
-      if (JSON.stringify(newVisible) !== JSON.stringify(visibleItems)) {
-        setVisibleItems(newVisible);
-      }
-    } else {
-      const allLabels = dataSet.map(item => item.label);
-      if (JSON.stringify(allLabels) !== JSON.stringify(visibleItems)) {
-        setVisibleItems(allLabels);
-      }
-    }
-  }, [dataSet, filteredDataSet, filter, visibleItems, setVisibleItems]);
 
   // Update bar opacity based on highlightItems
   useEffect(() => {
     if (svgRef.current) {
       d3.select(svgRef.current).select(".bar").attr("opacity", 0.3);
       highlightItems.forEach(item => {
-        d3.select(svgRef.current).selectAll(`.bar-[data-label="${item}"]`).attr("opacity", 1);
+        d3.select(svgRef.current)
+          .selectAll(`.bar[data-label="${item}"]`)
+          .attr("opacity", 1);
       });
     }
   }, [highlightItems]);
@@ -256,10 +250,15 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   // Memoize the bars rendering
   const renderBars = useMemo(() => {
     return filteredDataSet
-      .filter(d => !disabledItems.includes(d?.label) && visibleItems.includes(d?.label))
+      .filter(
+        d =>
+          !disabledItems.includes(d?.label) && visibleItems.includes(d?.label)
+      )
       .map((d, i) => {
-        const x1 = margin.left + xAxisScale(Math.min(0, d.valueBased)) - margin.left;
-        const x2 = margin.left + xAxisScale(Math.min(0, d.valueCompared)) - margin.left;
+        const x1 =
+          margin.left + xAxisScale(Math.min(0, d.valueBased)) - margin.left;
+        const x2 =
+          margin.left + xAxisScale(Math.min(0, d.valueCompared)) - margin.left;
         const width1 = Math.abs(xAxisScale(d.valueBased) - xAxisScale(0));
         const width2 = Math.abs(xAxisScale(d.valueCompared) - xAxisScale(0));
 
@@ -272,7 +271,10 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
             data-label={d?.label}
             key={i}
             style={{
-              opacity: highlightItems.includes(d?.label) || highlightItems.length === 0 ? 1 : 0.3,
+              opacity:
+                highlightItems.includes(d?.label) || highlightItems.length === 0
+                  ? 1
+                  : 0.3,
             }}
             onMouseOver={() => handleHighlight(d?.label)}
             onMouseOut={handleUnhighlight}
@@ -367,7 +369,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     renderCompleteRef.current = true;
   }, []);
 
-  useEffect(() => {
+  // Replace useEffect with useDeepCompareEffect for metadata comparison
+  useDeepCompareEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       // Ensure unique labels
       const uniqueLabels = [...new Set(yAxisDomain)];
@@ -380,7 +383,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           }
           return value.toString();
         }),
-        visibleKeys: visibleItems,
+        visibleItems: visibleItems,
         renderedData: {
           [uniqueLabels[0]]: filteredDataSet,
         },
@@ -393,10 +396,11 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           JSON.stringify(currentMetadata.yAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
           JSON.stringify(currentMetadata.xAxisDomain) ||
-        JSON.stringify(prevChartDataRef.current.visibleKeys) !==
-          JSON.stringify(currentMetadata.visibleKeys) ||
-        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
-          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
+        JSON.stringify(prevChartDataRef.current.visibleItems) !==
+          JSON.stringify(currentMetadata.visibleItems) ||
+        JSON.stringify(
+          Object.keys(prevChartDataRef.current.renderedData).sort()
+        ) !== JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
       // Only call callback if data has changed
       if (hasChanged) {
@@ -411,7 +415,13 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [yAxisDomain, xAxisDomain, visibleItems, filteredDataSet, onChartDataProcessed]);
+  }, [
+    yAxisDomain,
+    xAxisDomain,
+    visibleItems,
+    filteredDataSet,
+    onChartDataProcessed,
+  ]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -423,7 +433,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         onMouseOut={event => {
           event.stopPropagation();
           event.preventDefault();
-          setHighlightItems([]);
+          onHighlightItem([]);
         }}
       >
         {children}
@@ -454,7 +464,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         >
           {!tooltipFormatter && (
             <div>
-              ${tooltip?.data?.label}: ${tooltip?.data?.valueBased} - ${tooltip?.data?.valueCompared}
+              ${tooltip?.data?.label}: ${tooltip?.data?.valueBased} - $
+              {tooltip?.data?.valueCompared}
             </div>
           )}
           {tooltipFormatter && tooltipFormatter(tooltip?.data)}

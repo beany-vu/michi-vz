@@ -18,13 +18,15 @@ export default {
   decorators: [
     Story => (
       <MichiVzProvider
-        initialColorsMapping={{
+      
+        colorsMapping={{
           Exports: "green",
           Imports: "red",
           Africa: "orange",
           "Non-LDC": "purple",
           Sudan: "blue",
         }}
+        disabledItems={["Africa", "Non-LDC"]}
       >
         <Story />
       </MichiVzProvider>

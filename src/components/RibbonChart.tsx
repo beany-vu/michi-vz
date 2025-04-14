@@ -6,6 +6,7 @@ import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
+import useDeepCompareEffect from "use-deep-compare-effect";
 
 interface DataPoint {
   date: number;
@@ -35,6 +36,7 @@ interface Props {
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
   tooltipContent?: (data: DataPoint) => string;
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
+  onHighlightItem?: (labels: string[]) => void;
 }
 
 interface RectData {
@@ -67,16 +69,12 @@ const RibbonChart: React.FC<Props> = ({
   isNodata,
   tooltipContent,
   onChartDataProcessed,
+  onHighlightItem,
 }) => {
   const {
     colorsMapping,
     highlightItems,
-    setHighlightItems,
     disabledItems,
-    setHiddenItems,
-    hiddenItems,
-    setVisibleItems,
-    visibleItems,
   } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const renderCompleteRef = useRef(false);
@@ -182,7 +180,7 @@ const RibbonChart: React.FC<Props> = ({
     renderCompleteRef.current = true;
   }, []);
 
-  useEffect(() => {
+  useDeepCompareEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       // Ensure unique values in dates
       const uniqueDates = [...new Set(dates)];
@@ -222,18 +220,7 @@ const RibbonChart: React.FC<Props> = ({
         onChartDataProcessed(currentMetadata);
       }
     }
-  }, [
-    series,
-    width,
-    height,
-    margin,
-    disabledItems,
-    series,
-    dates,
-    keys,
-    yScaleDomain,
-    onChartDataProcessed,
-  ]);
+  }, [series, width, height, margin, disabledItems, series, dates, keys, yScaleDomain, onChartDataProcessed]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -258,7 +245,7 @@ const RibbonChart: React.FC<Props> = ({
         onMouseOut={event => {
           event.preventDefault();
           event.stopPropagation();
-          setHighlightItems([]);
+          onHighlightItem([]);
           d3.select(".tooltip").style("visibility", "hidden");
         }}
       >
@@ -320,8 +307,8 @@ const RibbonChart: React.FC<Props> = ({
                               stroke={"#fff"}
                               strokeOpacity={0.4}
                               style={{ transition: "opacity 0.1s ease-out" }}
-                              onMouseOver={() => setHighlightItems([d.key])}
-                              onMouseOut={() => setHighlightItems([])}
+                              onMouseOver={() => onHighlightItem([d.key])}
+                              onMouseOut={() => onHighlightItem([])}
                             />
                           )}
                           <rect
@@ -339,7 +326,7 @@ const RibbonChart: React.FC<Props> = ({
                               if (node) {
                                 d3.select(node)
                                   .on("mouseover", function () {
-                                    setHighlightItems([d.key]);
+                                    onHighlightItem([d.key]);
                                     d3.select(".tooltip")
                                       .style("visibility", "visible")
                                       .html(tooltipContent?.(d.data) || generateTooltipContent(d.data)); // you can define this function or inline its logic
@@ -355,7 +342,7 @@ const RibbonChart: React.FC<Props> = ({
                                       .style("top", y - tooltipHeight - 10 + "px");
                                   })
                                   .on("mouseout", function () {
-                                    setHighlightItems([]);
+                                    onHighlightItem([]);
                                     d3.select(".tooltip").style("visibility", "hidden");
                                   });
                               }

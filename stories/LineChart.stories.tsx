@@ -12,7 +12,7 @@ export default {
   decorators: [
     Story => (
       <MichiVzProvider
-        initialColorsMapping={{
+        colorsMapping={{
           "Country 1": "green",
           "Item 1": "red",
           "Item 2": "purple",
@@ -35,7 +35,7 @@ export default {
           "Item 19": "brown",
           "Item 20": "pink",
         }}
-        initialHighlightItems={["Item 1"]}
+        // highlightItems={["Item 1"]}
       >
         <Story />
       </MichiVzProvider>
@@ -71,7 +71,7 @@ export const Primary = {
             certainty: true,
           },
           {
-            year: 2005,
+            year: 2017,
             date: "2005",
             value: 33.6,
             certainty: true,

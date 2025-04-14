@@ -157,7 +157,9 @@ export default {
   component: BarBellChart,
   decorators: [
     Story => (
-      <MichiVzProvider initialColorsMapping={{ step1: "red", step2: "blue", step3: "pink" }}>
+      <MichiVzProvider
+        colorsMapping={{ step1: "red", step2: "blue", step3: "pink" }}
+      >
         <Story />
       </MichiVzProvider>
     ),

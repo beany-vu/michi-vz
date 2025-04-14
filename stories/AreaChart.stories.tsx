@@ -2,22 +2,25 @@ import AreaChart from "../src/components/AreaChart";
 import { Meta } from "@storybook/react";
 import { MichiVzProvider } from "../src/components";
 import React from "react";
+import { fn } from '@storybook/test';
 
 // Define the default metadata for the component
 export default {
   title: "Charts/Area Chart",
   component: AreaChart,
   tags: ["autodocs"],
+  argTypes: {
+    onChartDataProcessed: { action: 'onChartDataProcessed' }
+  },
   decorators: [
     (Story) => (
       <MichiVzProvider
-        initialColorsMapping={{
+        colorsMapping={{
           Processed: "red",
           "Semi-processed": "purple",
           Raw: "orange",
         }}
-        initialDisabledItems={["Africa"]}
-        initialHighlightItems={["Europe"]}
+        // highlightItems={["Processed"]}
       >
         <Story />
       </MichiVzProvider>
@@ -28,6 +31,7 @@ export default {
 // Create a default story using the template
 export const Primary = {
   args: {
+    onChartDataProcessed: fn(),
     colorsMapping: {
       Raw: "red",
       "Semi-processed": "blue",
@@ -468,6 +472,6 @@ export const Primary = {
     yAxisFormat: (d) => `${d}`, //
     title: "My Robbin Chart",
     yAxisDomain: [0, 100],
-    xAxisDataType: "date_annual",
+    xAxisDataType: "date_monthly",
   },
 };

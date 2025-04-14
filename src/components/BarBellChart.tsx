@@ -34,10 +34,15 @@ interface BarBellChartProps {
   xAxisFormat?: (d: number | string) => string;
   yAxisFormat?: (d: number | string) => string;
   xAxisDataType?: "number" | "date_annual" | "date_monthly";
-  tooltipFormat?: (d: DataPoint, currentKey: string, currentValue: string | number) => string;
+  tooltipFormat?: (
+    d: DataPoint,
+    currentKey: string,
+    currentValue: string | number
+  ) => string;
   showGrid?: { x: boolean; y: boolean };
   children?: React.ReactNode;
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
+  onHighlightItem?: (labels: string[]) => void;
 }
 
 const BarBellChart: React.FC<BarBellChartProps> = ({
@@ -58,17 +63,9 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   tooltipFormat = null,
   showGrid = defaultConf.SHOW_GRID,
   onChartDataProcessed,
+  onHighlightItem,
 }) => {
-  const {
-    colorsMapping,
-    highlightItems,
-    setHighlightItems,
-    disabledItems,
-    setHiddenItems,
-    hiddenItems,
-    setVisibleItems,
-    visibleItems,
-  } = useChartContext();
+  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const refTooltip = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
@@ -169,9 +166,6 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
 
   useEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
-      // Ensure unique values in yValues
-      const uniqueYValues = [...new Set(yValues.map(String))];
-
       const currentMetadata: ChartMetadata = {
         xAxisDomain: xValues.map(String),
         yAxisDomain: [0, maxValueX],
@@ -190,8 +184,9 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
           JSON.stringify(currentMetadata.yAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.visibleItems) !==
           JSON.stringify(currentMetadata.visibleItems) ||
-        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
-          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
+        JSON.stringify(
+          Object.keys(prevChartDataRef.current.renderedData).sort()
+        ) !== JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
       // Only call callback if data has changed
       if (hasChanged) {
@@ -266,7 +261,10 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                           data-label={key}
                           key={`${key}-${i}`}
                           x={x}
-                          y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 || 0}
+                          y={
+                            yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 ||
+                            0
+                          }
                           height={4}
                           width={width}
                           fill={colorsMapping?.[key]}
@@ -275,11 +273,11 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                             opacity: disabledItems.includes(key) ? 0.1 : 0.9,
                           }}
                           onMouseEnter={event => {
-                            setHighlightItems([key]);
+                            onHighlightItem([key]);
                             generateTooltip(d, key, value, event);
                           }}
                           onMouseLeave={() => {
-                            setHighlightItems([]);
+                            onHighlightItem([]);
                             hideTooltip();
                           }}
                           data-tooltip={JSON.stringify(d)}
@@ -302,11 +300,11 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                             className={`bar-data-point-shape ${value === 0 ? "data-value-zero" : ""}`}
                             style={shapeStyle}
                             onMouseEnter={event => {
-                              setHighlightItems([key]);
+                              onHighlightItem([key]);
                               generateTooltip(d, key, value, event);
                             }}
                             onMouseLeave={() => {
-                              setHighlightItems([]);
+                              onHighlightItem([]);
                               hideTooltip();
                             }}
                           ></div>

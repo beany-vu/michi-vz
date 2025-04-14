@@ -6,6 +6,8 @@ import { useChartContext } from "./MichiVzProvider";
 import XaxisLinear from "./shared/XaxisLinear";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
+import useDeepCompareEffect from "use-deep-compare-effect";
+import styled from "styled-components";
 
 interface DataPoint {
   date: number;
@@ -43,6 +45,7 @@ interface Props {
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
+  onHighlightItem?: (labels: string[]) => void;
   filter?: { date: number; sortingDir: "asc" | "desc" };
 }
 
@@ -68,22 +71,15 @@ const AreaChart: React.FC<Props> = ({
   isNodataComponent,
   isNodata,
   onChartDataProcessed,
+  onHighlightItem,
   filter,
 }) => {
-  const {
-    colorsMapping,
-    highlightItems,
-    setHighlightItems,
-    disabledItems,
-    setHiddenItems,
-    hiddenItems,
-    setVisibleItems,
-    visibleItems,
-  } = useChartContext();
+  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const [hoveredDate] = useState<number | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
+
 
   const xScale = useMemo(() => {
     if (xAxisDataType === "number") {
@@ -188,7 +184,7 @@ const AreaChart: React.FC<Props> = ({
     renderCompleteRef.current = true;
   }, []);
 
-  useEffect(() => {
+  useDeepCompareEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       // Get the domain from xScale
       let domain;
@@ -268,7 +264,7 @@ const AreaChart: React.FC<Props> = ({
         style={{ overflow: "visible" }}
         onMouseOut={() => {
           d3.select(".tooltip").style("visibility", "hidden");
-          setHighlightItems([]);
+            onHighlightItem?.([]);
         }}
       >
         {children}
@@ -301,10 +297,10 @@ const AreaChart: React.FC<Props> = ({
                 opacity={highlightItems.length === 0 || highlightItems.includes(areaData.key) ? 1 : 0.2}
                 style={{ transition: "opacity 0.1s ease-out" }}
                 onMouseMove={() => {
-                  setHighlightItems([areaData.key]);
+                  onHighlightItem([areaData.key]);
                 }}
                 onMouseOut={() => {
-                  setHighlightItems([]);
+                  onHighlightItem([]);
                 }}
               />
               {/* Here's the addition*/}
@@ -325,10 +321,12 @@ const AreaChart: React.FC<Props> = ({
                   fill="#fff"
                   opacity={highlightItems.includes(areaData.key) ? 0.5 : 0}
                   onMouseEnter={event => {
-                    setHighlightItems([areaData.key]);
+                    onHighlightItem([areaData.key]);
                     d3.select(".tooltip")
                       .style("visibility", "visible")
-                      .html(handleAreaSegmentHover(dataPoint.data, areaData.key));
+                      .html(
+                        handleAreaSegmentHover(dataPoint.data, areaData.key)
+                      );
 
                     const [x, y] = d3.pointer(event);
                     const tooltip = d3.select(".tooltip").node() as HTMLElement;
@@ -339,6 +337,7 @@ const AreaChart: React.FC<Props> = ({
                       .style("top", y - tooltipHeight - 10 + "px");
                   }}
                   onMouseOut={() => {
+                    onHighlightItem([]);
                     d3.select(".tooltip").style("visibility", "hidden");
                   }}
                 />
@@ -358,40 +357,6 @@ const AreaChart: React.FC<Props> = ({
             </Fragment>
           ))}
         </g>
-        {/*<g className="hover-overlays" style={{pointerEvents: "none"}}>*/}
-        {/*    {series.map((dataPoint, i) => (*/}
-        {/*        <rect*/}
-        {/*            key={i}*/}
-        {/*            x={xScale(dataPoint.date) - rectWidth / 2}*/}
-        {/*            y={margin.top}*/}
-        {/*            width={rectWidth}*/}
-        {/*            height={height - margin.bottom - margin.top}*/}
-        {/*            fill="transparent"*/}
-        {/*            pointerEvents="all"*/}
-        {/*            onMouseOver={() => {*/}
-        {/*                const hoveredDate = dataPoint.date;*/}
-        {/*                setHoveredDate(hoveredDate);*/}
-
-        {/*                d3.select(".tooltip")*/}
-        {/*                    .style("visibility", "visible")*/}
-        {/*                    .html(generateTooltipContentForYear(Number(hoveredDate)));*/}
-        {/*            }}*/}
-        {/*            onMouseMove={(event) => {*/}
-        {/*                const [x, y] = d3.pointer(event);*/}
-        {/*                const tooltip = d3.select(".tooltip").node() as HTMLElement;*/}
-        {/*                const tooltipWidth = tooltip.getBoundingClientRect().width;*/}
-        {/*                const tooltipHeight = tooltip.getBoundingClientRect().height;*/}
-        {/*                d3.select(".tooltip")*/}
-        {/*                    .style("left", (x - tooltipWidth / 2) + "px")*/}
-        {/*                    .style("top", (y - tooltipHeight - 10) + "px");*/}
-        {/*            }}*/}
-        {/*            onMouseOut={() => {*/}
-        {/*                setHoveredDate(null);*/}
-        {/*                d3.select(".tooltip").style("visibility", "hidden");*/}
-        {/*            }}*/}
-        {/*        />*/}
-        {/*    ))}*/}
-        {/*</g>*/}
       </svg>
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}

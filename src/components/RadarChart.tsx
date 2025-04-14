@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useLayoutEffect,
+} from "react";
 import * as d3 from "d3";
 import styled from "styled-components";
 import range from "lodash/range";
@@ -27,13 +33,19 @@ const DataPoints = styled.g`
 
 const Tooltip = styled.div`
   position: absolute;
-  padding: 5px 10px;
+  padding: 8px 12px;
   border-radius: 4px;
   pointer-events: none;
   z-index: 1000;
   transition: opacity 0.3s;
   font-size: 12px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+  max-width: 200px;
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
 `;
 
 interface DataPoint {
@@ -56,7 +68,11 @@ interface ChartMetadata {
 export interface RadarChartProps {
   width: number;
   height: number;
-  tooltipFormatter?: (data: { date: string; value: number; series: never[] }) => React.ReactNode;
+  tooltipFormatter?: (data: {
+    date: string;
+    value: number;
+    series: never[];
+  }) => React.ReactNode;
   poleLabelFormatter?: (data: string) => string;
   radialLabelFormatter?: (data: number) => string;
   series: DataPoint[];
@@ -72,6 +88,7 @@ export interface RadarChartProps {
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
+  onHighlightItem?: (labels: string[]) => void;
 }
 
 export const RadarChart: React.FC<RadarChartProps> = ({
@@ -88,17 +105,9 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   isNodataComponent,
   isNodata,
   onChartDataProcessed,
+  onHighlightItem,
 }) => {
-  const {
-    colorsMapping,
-    highlightItems,
-    setHighlightItems,
-    disabledItems,
-    setHiddenItems,
-    hiddenItems,
-    setVisibleItems,
-    visibleItems,
-  } = useChartContext();
+  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const svgRef = useRef(null);
   const [tooltipData, setTooltipData] = useState<{
     date: string;
@@ -135,20 +144,27 @@ export const RadarChart: React.FC<RadarChartProps> = ({
 
   const anglesDateMapping = useMemo(
     () =>
-      poles?.labels?.reduce((res: { [x: string]: number }, cur: string, i: number) => {
-        res[cur] = (i / poles.labels.length) * 2 * Math.PI;
-        return res;
-      }, {}),
+      poles?.labels?.reduce(
+        (res: { [x: string]: number }, cur: string, i: number) => {
+          res[cur] = (i / poles.labels.length) * 2 * Math.PI;
+          return res;
+        },
+        {}
+      ),
     [poles?.labels]
   );
 
-  const genPolygonPoints = (data: { value: number; date: string }[], scale: (n: number) => number) => {
-    const points: { x: number; y: number; date: string; value: number }[] = new Array(data.length).fill({
-      x: null,
-      y: null,
-      date: null,
-      value: null,
-    });
+  const genPolygonPoints = (
+    data: { value: number; date: string }[],
+    scale: (n: number) => number
+  ) => {
+    const points: { x: number; y: number; date: string; value: number }[] =
+      new Array(data.length).fill({
+        x: null,
+        y: null,
+        date: null,
+        value: null,
+      });
 
     const pointString: string = data.reduce((res, cur, i) => {
       if (i > data.length) return res;
@@ -161,7 +177,9 @@ export const RadarChart: React.FC<RadarChartProps> = ({
       const angle = anglesDateMapping[cur.date];
       // Now include the center of the radar chart in your calculations.
       const xVal = Math.round(width / 2 + scale(cur.value) * Math.sin(angle));
-      const yVal = Math.round(height / 2 + scale(cur.value) * Math.cos(angle) * -1);
+      const yVal = Math.round(
+        height / 2 + scale(cur.value) * Math.cos(angle) * -1
+      );
 
       points[i] = { x: xVal, y: yVal, date: cur.date, value: cur.value };
       res += `${xVal},${yVal} `;
@@ -198,12 +216,19 @@ export const RadarChart: React.FC<RadarChartProps> = ({
         [x1, y1],
         [x2, y2],
       ]);
-      svg.append("path").attr("d", line).attr("stroke", "#c1c1c1").attr("stroke-width", 1).lower();
+      svg
+        .append("path")
+        .attr("d", line)
+        .attr("stroke", "#c1c1c1")
+        .attr("stroke-width", 1)
+        .lower();
     }
 
     // Drawing radial circles
     const numCircleTicks = 6; // Or any other desired number.
-    const circleRadii = range(1, numCircleTicks + 1).map(value => (height / 2) * (value / numCircleTicks));
+    const circleRadii = range(1, numCircleTicks + 1).map(
+      value => (height / 2) * (value / numCircleTicks)
+    );
 
     circleRadii.forEach((radius, i) => {
       const tickValue = yScale.invert(radius - 30);
@@ -267,12 +292,17 @@ export const RadarChart: React.FC<RadarChartProps> = ({
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
-    svg.selectAll(".series").attr("opacity", highlightItems.length === 0 ? 1 : 0.5);
+    svg
+      .selectAll(".series")
+      .attr("opacity", highlightItems.length === 0 ? 1 : 0.5);
     svg.selectAll(".data-point").attr("opacity", 0);
 
     highlightItems.forEach((item: string) => {
       svg.selectAll(`.series[data-label="${item}"]`).attr("opacity", 1).raise();
-      svg.selectAll(`.data-point[data-label="${item}"]`).attr("opacity", 1).raise();
+      svg
+        .selectAll(`.data-point[data-label="${item}"]`)
+        .attr("opacity", 1)
+        .raise();
       svg.selectAll(".radial-label").raise();
     });
   }, [highlightItems]);
@@ -296,7 +326,9 @@ export const RadarChart: React.FC<RadarChartProps> = ({
       const currentMetadata: ChartMetadata = {
         xAxisDomain: poles?.labels ? poles.labels.map(String) : [],
         yAxisDomain: yScale.domain() as [number, number],
-        visibleItems: series.filter(s => !disabledItems.includes(s.label)).map(s => s.label),
+        visibleItems: series
+          .filter(s => !disabledItems.includes(s.label))
+          .map(s => s.label),
         renderedData: {
           [uniqueLabels[0]]: series,
         },
@@ -311,8 +343,9 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           JSON.stringify(currentMetadata.yAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.visibleItems) !==
           JSON.stringify(currentMetadata.visibleItems) ||
-        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
-          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
+        JSON.stringify(
+          Object.keys(prevChartDataRef.current.renderedData).sort()
+        ) !== JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
       // Always update the ref with latest metadata
       prevChartDataRef.current = currentMetadata;
@@ -326,7 +359,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
 
   return (
     <div style={{ position: "relative" }}>
-      <Tooltip ref={tooltipRef} style={{ display: "none" }} className="tooltip">
+      <Tooltip ref={tooltipRef} style={{ opacity: tooltipData ? 1 : 0 }} className="tooltip">
         {tooltipData && (
           <>
             {tooltipFormatter ? (
@@ -354,81 +387,81 @@ export const RadarChart: React.FC<RadarChartProps> = ({
         onMouseOut={event => {
           event.preventDefault();
           event.stopPropagation();
-          setHighlightItems([]);
+          onHighlightItem([]);
           setTooltipData(null);
         }}
       >
         {children}
-        {processedSeries.map(({ label, pointString, points, color }, i: number) => (
-          <g key={`series-${i}`} data-label={label} className={`series`}>
-            <Polygon
-              points={pointString}
-              fill={"transparent"}
-              data-label={colorsMapping[label]}
-              stroke={colorsMapping[label] ?? color}
-              strokeWidth={2}
-              onMouseEnter={event => {
-                event.preventDefault();
-                setHighlightItems([label]);
-              }}
-              onMouseOut={event => {
-                event.preventDefault();
-                setHighlightItems([]);
-              }}
-            />
-            <DataPoints className={`data-points data-points-${i}`}>
-              {points.map(
-                (
-                  point: {
-                    x: string | number | null | undefined;
-                    y: string | number | null | undefined;
-                    date: string;
-                    value: number;
-                  },
-                  j: number
-                ) => (
-                  <g key={`data-point-${j}`}>
-                    {point.x !== null && point.y !== null && (
-                      <DataPointStyled
-                        className={`data-point data-point-${i}`}
-                        data-label={label}
-                        r={5}
-                        cx={point.x}
-                        cy={point.y}
-                        stroke="#fff"
-                        strokeWidth={2}
-                        fill={colorsMapping[label] ?? color}
-                        onMouseEnter={e => {
-                          setHighlightItems([label]);
-                          setTooltipData({
-                            date: point.date,
-                            value: point.value,
-                            series: points as never[],
-                          });
-                          if (tooltipRef.current) {
-                            const rect = svgRef.current.getBoundingClientRect();
-                            const offsetX = e.pageX - rect.left - window.scrollX;
-                            const offsetY = e.pageY - rect.top - window.scrollY;
-
-                            tooltipRef.current.style.top = `${offsetY}px`;
-                            tooltipRef.current.style.left = `${offsetX + 10}px`;
-                            tooltipRef.current.style.display = "block";
-                          }
-                        }}
-                        onMouseOut={() => {
-                          setTooltipData(null);
-                          if (tooltipRef.current) {
-                            tooltipRef.current.style.display = "none";
-                          }
-                        }}
-                      />
-                    )}
-                  </g>
-                )
-              )}
-            </DataPoints>
-          </g>
-        ))}
+        {processedSeries.map(
+          ({ label, pointString, points, color }, i: number) => (
+            <g key={`series-${i}`} data-label={label} className={`series`}>
+              <Polygon
+                points={pointString}
+                fill={"transparent"}
+                data-label={colorsMapping[label]}
+                stroke={colorsMapping[label] ?? color}
+                strokeWidth={2}
+                onMouseEnter={event => {
+                  event.preventDefault();
+                  onHighlightItem([label]);
+                }}
+                onMouseOut={event => {
+                  event.preventDefault();
+                  onHighlightItem([]);
+                }}
+              />
+              <DataPoints className={`data-points data-points-${i}`}>
+                {points.map(
+                  (
+                    point: {
+                      x: string | number | null | undefined;
+                      y: string | number | null | undefined;
+                      date: string;
+                      value: number;
+                    },
+                    j: number
+                  ) => (
+                    <g key={`data-point-${j}`}>
+                      {point.x !== null && point.y !== null && (
+                        <DataPointStyled
+                          className={`data-point data-point-${i}`}
+                          data-label={label}
+                          r={5}
+                          cx={point.x}
+                          cy={point.y}
+                          stroke="#fff"
+                          strokeWidth={2}
+                          fill={colorsMapping[label] ?? color}
+                          onMouseEnter={e => {
+                            onHighlightItem([label]);
+                            setTooltipData({
+                              date: point.date,
+                              value: point.value,
+                              series: points as never[],
+                            });
+                            if (tooltipRef.current) {
+                              const tooltip = tooltipRef.current;
+                              const svgRect = svgRef.current.getBoundingClientRect();
+                              const x = e.clientX - svgRect.left;
+                              const y = e.clientY - svgRect.top;
+                              
+                              tooltip.style.left = `${x}px`;
+                              tooltip.style.top = `${y}px`;
+                            }
+                          }}
+                          onMouseOut={() => {
+                            onHighlightItem([]);
+                            setTooltipData(null);
+                          }}
+                        />
+                      )}
+                    </g>
+                  )
+                )}
+              </DataPoints>
+            </g>
+          )
+        )}
       </svg>
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}

@@ -1,7 +1,6 @@
 import React from "react";
-import ComparableHorizontalBarChart from "src/components/ComparableHorizontalBarChart";
+import ComparableHorizontalBarChart from "../src/components/ComparableHorizontalBarChart";
 import { Meta } from "@storybook/react";
-import { fn } from "@storybook/test";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
 
 // Define the default metadata for the component
@@ -11,7 +10,15 @@ export default {
   tags: ["autodocs"],
   decorators: [
     Story => (
-      <MichiVzProvider initialHighlightItems={["Euro"]}>
+      <MichiVzProvider
+        colorsMapping={{
+          Congo: "red",
+          "Congo, Democratic Republic of": "blue",
+          Egypt: "green",
+          Madagascar: "yellow",
+        }}
+        visibleItems={["Congo", "Congo, Democratic Republic of", "Egypt", "Madagascar"]}
+      >
         <Story />
       </MichiVzProvider>
     ),
@@ -21,7 +28,9 @@ export default {
 // Create a default story using the template
 export const Primary = {
   args: {
-    onChartDataProcessed: fn(),
+    onChartDataProcessed: processData => {
+      console.log(processData);
+    },
     isNoDataComponent: <div>No data</div>,
     dataSet: [
       {
@@ -57,7 +66,7 @@ export const Primary = {
     xAisFormat: d => `${d}`, // Example: format values as percentages
     yAxisFormat: d => `${d}`, // Example: format values as percentages
     title: "My Comparable Vertical Bar Chart",
-    tooltipFormatter: (d: any) => {
+    tooltipFormatter: (d: unknown) => {
       return JSON.stringify(d);
     },
     children: (

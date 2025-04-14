@@ -300,7 +300,17 @@ export default {
   tags: ["autodocs"],
 } as Meta;
 
-const Template: Story<RadarChartProps> = (args) => <RadarChart {...args} />;
+const Template: Story<RadarChartProps> = args => (
+  <MichiVzProvider
+    colorsMapping={{
+      "UAE": "red",
+      "France": "blue",
+    }}
+    highlightItems={["UAE"]}
+  >
+    <RadarChart {...args} />
+  </MichiVzProvider>
+);
 
 export const Primary = Template.bind({});
 Primary.args = {
@@ -331,4 +341,7 @@ Primary.args = {
   },
   isLoading: false,
   isNodataComponent: <>ddd</>,
+  onHighlightItem: (labels: string[]) => {
+    console.log(labels);
+  },
 };
