@@ -60,6 +60,7 @@ interface ChartMetadata {
   yAxisDomain: [number, number];
   visibleItems: string[];
   renderedData: { [key: string]: DataPointRangeChart[] };
+  chartType: "range-chart";
 }
 
 const RangeChart: React.FC<RangeChartProps> = ({
@@ -72,7 +73,8 @@ const RangeChart: React.FC<RangeChartProps> = ({
   yAxisFormat,
   xAxisDataType = "number",
   xAxisFormat,
-  tooltipFormatter = (d: DataPointRangeChart) => `<div>${d.label} - ${d.date}: ${d?.valueMedium}</div>`,
+  tooltipFormatter = (d: DataPointRangeChart) =>
+    `<div>${d.label} - ${d.date}: ${d?.valueMedium}</div>`,
   showCombined = false,
   children,
   isLoading = false,
@@ -82,11 +84,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
   onChartDataProcessed,
   onHighlightItem,
 }) => {
-  const {
-    colorsMapping,
-    highlightItems,
-    disabledItems,
-  } = useChartContext();
+  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const renderCompleteRef = useRef(false);
@@ -144,7 +142,9 @@ const RangeChart: React.FC<RangeChartProps> = ({
 
     if (xAxisDataType === "date_annual") {
       // sometimes the first tick is missing, so do a hack here
-      const minDate = d3.min(dataSet.flatMap(item => item.series.map(d => new Date(`${d.date}-01-01`))));
+      const minDate = d3.min(
+        dataSet.flatMap(item => item.series.map(d => new Date(`${d.date}-01-01`)))
+      );
       const maxDate = d3.max(dataSet.flatMap(item => item.series.map(d => new Date(`${d.date}`))));
 
       return d3
@@ -335,7 +335,6 @@ const RangeChart: React.FC<RangeChartProps> = ({
     renderCompleteRef.current = true;
   }, []);
 
-
   // Replace useEffect with useDeepCompareEffect for metadata comparison
   useDeepCompareEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
@@ -345,10 +344,10 @@ const RangeChart: React.FC<RangeChartProps> = ({
       );
 
       // Create unique dates array
-      const uniqueDates = [...new Set(allDates)];
+      const uniqueDates = [...new Set(allDates)].map(date => String(date));
 
       const currentMetadata: ChartMetadata = {
-        xAxisDomain: uniqueDates.map(String),
+        xAxisDomain: uniqueDates,
         yAxisDomain: yScale.domain() as [number, number],
         visibleItems: dataSet.map(d => d.label).filter(label => !disabledItems.includes(label)),
         renderedData: dataSet.reduce(
@@ -358,6 +357,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
           },
           {} as { [key: string]: DataPointRangeChart[] }
         ),
+        chartType: "range-chart",
       };
 
       // Check if data has actually changed
@@ -388,7 +388,13 @@ const RangeChart: React.FC<RangeChartProps> = ({
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
       {displayIsNodata && <>{isNodataComponent}</>}
       {!isLoading && !displayIsNodata && dataSet.length > 0 && (
-        <svg className="chart" width={width} height={height} ref={svgRef} style={{ overflow: "visible" }}>
+        <svg
+          className="chart"
+          width={width}
+          height={height}
+          ref={svgRef}
+          style={{ overflow: "visible" }}
+        >
           {title && (
             <text x={width / 2} y={margin.top / 2} textAnchor="middle" className="chart-title">
               {title}

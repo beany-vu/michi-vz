@@ -18,7 +18,6 @@ export default {
   decorators: [
     Story => (
       <MichiVzProvider
-      
         colorsMapping={{
           Exports: "green",
           Imports: "red",
@@ -26,7 +25,7 @@ export default {
           "Non-LDC": "purple",
           Sudan: "blue",
         }}
-        disabledItems={["Africa", "Non-LDC"]}
+        // disabledItems={["Non-LDC"]}
       >
         <Story />
       </MichiVzProvider>
@@ -41,27 +40,27 @@ export const Primary = {
         seriesKey: "Africa",
         seriesKeyAbbreviation: "Africa",
         series: [
-          { date: "2001", Africa: "55043000" },
-          { date: "2002", Africa: "60000000" },
-          { date: "2003", Africa: "172065000" },
+          { date: "2001", Africa: "666" },
+          { date: "2002", Africa: "777" },
+          { date: "2003", Africa: "989" },
         ],
       },
       {
         seriesKey: "Non-LDC",
         seriesKeyAbbreviation: "Non-LDC",
         series: [
-          { date: "2001", "Non-LDC": "42029000" },
-          { date: "2002", "Non-LDC": "38000000" },
-          { date: "2003", "Non-LDC": "48000000" },
+          { date: "2001", "Non-LDC": "444" },
+          { date: "2002", "Non-LDC": "333" },
+          { date: "2003", "Non-LDC": "222" },
         ],
       },
       {
         seriesKey: "Sudan",
         seriesKeyAbbreviation: "Sudan",
         series: [
-          { date: "2001", Sudan: "420290400" },
-          { date: "2002", Sudan: "380000400" },
-          { date: "2003", Sudan: "80000040" },
+          { date: "2001", Sudan: "789" },
+          { date: "2002", Sudan: "456" },
+          { date: "2003", Sudan: "123" },
         ],
       },
     ],
@@ -70,8 +69,10 @@ export const Primary = {
     margin: { top: 50, right: 50, bottom: 50, left: 50 },
     yAxisFormat: d => `${d}`,
     title: "Top DataSet by Total Value",
-    filter: { limit: 1, sortingDir: "desc" },
-    onChartDataProcessed: fn(),
+    filter: { limit: 2, sortingDir: "desc", date: "2003" },
+    onChartDataProcessed: data => {
+      console.log({ data });
+    },
   },
 };
 
@@ -106,7 +107,10 @@ export const WithDataCallback = () => {
         height={480}
         margin={{ top: 50, right: 50, bottom: 50, left: 50 }}
         title="Chart with Data Callback"
-        onChartDataProcessed={setChartData}
+        onChartDataProcessed={metadata => {
+          console.log(metadata);
+          setChartData(metadata);
+        }}
       />
 
       {chartData && (

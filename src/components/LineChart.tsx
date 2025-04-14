@@ -93,6 +93,7 @@ interface ChartMetadata {
   yAxisDomain: [number, number];
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
+  chartType: "line-chart";
 }
 
 const debounce = (func: Function, wait: number) => {
@@ -126,12 +127,7 @@ const LineChart: FC<LineChartProps> = ({
   onChartDataProcessed,
   onHighlightItem,
 }) => {
-  const {
-    colorsMapping,
-    highlightItems,
-    disabledItems,
-   
-  } = useChartContext();
+  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const renderCompleteRef = useRef(false);
@@ -153,7 +149,6 @@ const LineChart: FC<LineChartProps> = ({
       })
       .slice(0, filter.limit);
   }, [dataSet, filter]);
-
 
   const yScale = useMemo(
     () =>
@@ -209,7 +204,9 @@ const LineChart: FC<LineChartProps> = ({
       const minDate = d3.min(
         filteredDataSet.flatMap(item => item.series.map(d => new Date(`${d.date}-01-01`)))
       );
-      const maxDate = d3.max(filteredDataSet.flatMap(item => item.series.map(d => new Date(`${d.date}`))));
+      const maxDate = d3.max(
+        filteredDataSet.flatMap(item => item.series.map(d => new Date(`${d.date}`)))
+      );
 
       return d3
         .scaleTime()
@@ -265,7 +262,8 @@ const LineChart: FC<LineChartProps> = ({
 
         if (!series[i]?.certainty) {
           const dashes = Math.floor(segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH));
-          const remainder = Math.ceil(segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH)) + 5;
+          const remainder =
+            Math.ceil(segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH)) + 5;
 
           for (let j = 0; j < dashes; j++) {
             dashArray.push(DASH_LENGTH);
@@ -333,6 +331,11 @@ const LineChart: FC<LineChartProps> = ({
           .attr("stroke-width", 2)
           .attr("fill", "none")
           .attr("pointer-events", "none")
+          .each(function (d: DataPoint[]) {
+            const pathNode = this as SVGPathElement;
+            const dashArray = getDashArrayMemoized(d, pathNode, xScale);
+            d3.select(this).attr("stroke-dasharray", dashArray);
+          })
           .on("mouseenter", event => handleMouseEnter(event, data))
           .on("mouseout", handleMouseOut);
 
@@ -386,7 +389,8 @@ const LineChart: FC<LineChartProps> = ({
           .attr(
             shape === "circle" ? "cy" : "y",
             (d: DataPoint) =>
-              yScale(d.value) - (shape === "circle" ? 0 : shape === "square" ? squareSize : triangleSize)
+              yScale(d.value) -
+              (shape === "circle" ? 0 : shape === "square" ? squareSize : triangleSize)
           )
           .attr(
             shape === "circle" ? "r" : "width",
@@ -448,7 +452,8 @@ const LineChart: FC<LineChartProps> = ({
             const relatedTarget = event.relatedTarget;
             const isMouseOverLine =
               relatedTarget &&
-              (relatedTarget.classList.contains("line") || relatedTarget.classList.contains("line-overlay"));
+              (relatedTarget.classList.contains("line") ||
+                relatedTarget.classList.contains("line-overlay"));
 
             if (!isMouseOverLine) {
               onHighlightItem([]);
@@ -466,7 +471,7 @@ const LineChart: FC<LineChartProps> = ({
       svg
         .selectAll(`circle[data-label="${key}"]`)
         .attr("stroke", "#fff")
-        .attr("stroke-width", 5)
+        .attr("stroke-width", 2)
         .attr("fill", colorsMapping[key]);
       svg.selectAll(`[label="${key}"]`).attr("fill", colorsMapping[key]);
     });
@@ -481,7 +486,10 @@ const LineChart: FC<LineChartProps> = ({
 
     if (highlightItems.length > 0) {
       highlightItems.forEach(item => {
-        svg.selectAll(`[data-label="${item}"]`).classed("dimmed", false).classed("highlighted", true);
+        svg
+          .selectAll(`[data-label="${item}"]`)
+          .classed("dimmed", false)
+          .classed("highlighted", true);
       });
     }
 
@@ -618,29 +626,44 @@ const LineChart: FC<LineChartProps> = ({
       // Create unique dates array
       const uniqueDates = [...new Set(allDates)];
 
-      // Sort series based on values at the filter date if filter exists
-      let sortedSeries = dataSet.map(d => d.label);
+      // Sort and filter series based on values at the filter date if filter exists
+      let visibleSeries = dataSet.map(d => d.label);
       if (filter?.date) {
-        sortedSeries = sortedSeries.sort((a, b) => {
+        visibleSeries = visibleSeries.sort((a, b) => {
           const aData = dataSet.find(d => d.label === a);
           const bData = dataSet.find(d => d.label === b);
-          const aValue = aData?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
-          const bValue = bData?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
+          const aValue =
+            aData?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
+          const bValue =
+            bData?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
           return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
         });
+
+        // Apply limit if specified
+        if (filter.limit) {
+          visibleSeries = visibleSeries.slice(0, filter.limit);
+        }
       }
 
       const currentMetadata: ChartMetadata = {
         xAxisDomain: uniqueDates.map(String),
         yAxisDomain: yScale.domain() as [number, number],
-        visibleItems: sortedSeries.filter(label => !disabledItems.includes(label)),
+        visibleItems: visibleSeries.filter(
+          label =>
+            !disabledItems.includes(label) &&
+            dataSet.find(d => d.label === label)?.series.length > 0
+        ),
         renderedData: lineData.reduce(
           (acc, item) => {
-            acc[item.label] = item.points;
+            // Only include data for visible series
+            if (item.points.length > 0 && visibleSeries.includes(item.label)) {
+              acc[item.label] = item.points;
+            }
             return acc;
           },
           {} as { [key: string]: DataPoint[] }
         ),
+        chartType: "line-chart",
       };
 
       // Check if data has actually changed

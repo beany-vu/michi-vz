@@ -53,26 +53,27 @@ export const Primary = {
         color: "red",
         series: [
           {
-            year: 2002,
             date: "2002",
             value: 24.14,
             certainty: false,
           },
           {
-            year: 2003,
             date: "2003",
             value: 20.68,
             certainty: true,
           },
           {
-            year: 2004,
             date: "2004",
             value: 29.34,
             certainty: true,
           },
           {
-            year: 2017,
-            date: "2005",
+            date: "2006",
+            value: 33.6,
+            certainty: false,
+          },
+          {
+            date: "2007",
             value: 33.6,
             certainty: true,
           },

@@ -53,10 +53,11 @@ interface LineChartProps {
 }
 
 interface ChartMetadata {
-  yAxisDomain: string[];
   xAxisDomain: string[];
+  yAxisDomain: [number, number];
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
+  chartType: "comparable-horizontal-bar-chart";
 }
 
 const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
@@ -169,7 +170,9 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
 
   // Memoize the YaxisBand component
   const memoizedYaxisBand = useMemo(() => {
-    return <YaxisBand yScale={yAxisScale} width={width} margin={margin} yAxisFormat={yAxisFormat} />;
+    return (
+      <YaxisBand yScale={yAxisScale} width={width} margin={margin} yAxisFormat={yAxisFormat} />
+    );
   }, [yAxisScale, width, margin, yAxisFormat]);
 
   // Memoize event handlers
@@ -341,17 +344,13 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
       const uniqueLabels = [...new Set(yAxisDomain)];
 
       const currentMetadata: ChartMetadata = {
-        yAxisDomain: uniqueLabels,
-        xAxisDomain: xAxisDomain.map(value => {
-          if (value instanceof Date) {
-            return value.toISOString();
-          }
-          return value.toString();
-        }),
+        xAxisDomain: uniqueLabels,
+        yAxisDomain: [Number(yAxisScale.domain()[0]), Number(yAxisScale.domain()[1])],
         visibleItems: visibleItems,
         renderedData: {
           [uniqueLabels[0]]: filteredDataSet,
         },
+        chartType: "comparable-horizontal-bar-chart",
       };
 
       // Check if data has actually changed

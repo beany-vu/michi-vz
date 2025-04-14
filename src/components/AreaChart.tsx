@@ -1,4 +1,4 @@
-import React, { Fragment, useMemo, useRef, useState, useEffect, useLayoutEffect } from "react";
+import React, { Fragment, useMemo, useRef, useState, useLayoutEffect } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
@@ -7,7 +7,6 @@ import XaxisLinear from "./shared/XaxisLinear";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import useDeepCompareEffect from "use-deep-compare-effect";
-import styled from "styled-components";
 
 interface DataPoint {
   date: number;
@@ -25,6 +24,7 @@ interface ChartMetadata {
   yAxisDomain: [number, number];
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
+  chartType: "area-chart";
 }
 
 interface Props {
@@ -79,7 +79,6 @@ const AreaChart: React.FC<Props> = ({
   const [hoveredDate] = useState<number | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
-
 
   const xScale = useMemo(() => {
     if (xAxisDataType === "number") {
@@ -218,6 +217,7 @@ const AreaChart: React.FC<Props> = ({
         renderedData: {
           [keys[0]]: series,
         },
+        chartType: "area-chart",
       };
 
       // Check if data has actually changed
@@ -262,9 +262,13 @@ const AreaChart: React.FC<Props> = ({
         width={width}
         height={height}
         style={{ overflow: "visible" }}
-        onMouseOut={() => {
-          d3.select(".tooltip").style("visibility", "hidden");
+        onMouseOut={event => {
+          // Only clear highlight if mouse leaves the SVG container
+          const target = event.relatedTarget as HTMLElement;
+          if (!target || !target.closest("svg.chart")) {
+            d3.select(".tooltip").style("visibility", "hidden");
             onHighlightItem?.([]);
+          }
         }}
       >
         {children}
@@ -294,22 +298,34 @@ const AreaChart: React.FC<Props> = ({
                 fill={areaData.fill}
                 stroke={"#fff"}
                 strokeWidth={1}
-                opacity={highlightItems.length === 0 || highlightItems.includes(areaData.key) ? 1 : 0.2}
+                opacity={
+                  highlightItems.length === 0 || highlightItems.includes(areaData.key) ? 1 : 0.2
+                }
                 style={{ transition: "opacity 0.1s ease-out" }}
-                onMouseMove={() => {
+                onMouseMove={event => {
+                  event.stopPropagation();
                   onHighlightItem([areaData.key]);
                 }}
-                onMouseOut={() => {
-                  onHighlightItem([]);
+                onMouseOut={event => {
+                  // Don't clear highlight if moving to a rect element
+                  const target = event.relatedTarget as HTMLElement;
+                  if (!target || !target.classList.contains("rect-hover")) {
+                    event.stopPropagation();
+                    onHighlightItem([]);
+                  }
                 }}
               />
               {/* Here's the addition*/}
               {areaData.values.map(dataPoint => (
                 <rect
                   key={`${areaData.key}-${dataPoint.data.date}`}
+                  className="rect-hover"
                   x={
-                    xScale(xAxisDataType === "number" ? dataPoint.data.date : new Date(dataPoint.data.date)) -
-                    2
+                    xScale(
+                      xAxisDataType === "number"
+                        ? dataPoint.data.date
+                        : new Date(dataPoint.data.date)
+                    ) - 2
                   }
                   y={yScale(dataPoint[1])} // Start from top of the area segment
                   width={8}
@@ -321,13 +337,11 @@ const AreaChart: React.FC<Props> = ({
                   fill="#fff"
                   opacity={highlightItems.includes(areaData.key) ? 0.5 : 0}
                   onMouseEnter={event => {
+                    event.stopPropagation();
                     onHighlightItem([areaData.key]);
                     d3.select(".tooltip")
                       .style("visibility", "visible")
-                      .html(
-                        handleAreaSegmentHover(dataPoint.data, areaData.key)
-                      );
-
+                      .html(handleAreaSegmentHover(dataPoint.data, areaData.key));
                     const [x, y] = d3.pointer(event);
                     const tooltip = d3.select(".tooltip").node() as HTMLElement;
                     const tooltipWidth = tooltip.getBoundingClientRect().width;
@@ -336,9 +350,18 @@ const AreaChart: React.FC<Props> = ({
                       .style("left", x - tooltipWidth / 2 + "px")
                       .style("top", y - tooltipHeight - 10 + "px");
                   }}
-                  onMouseOut={() => {
-                    onHighlightItem([]);
-                    d3.select(".tooltip").style("visibility", "hidden");
+                  onMouseOut={event => {
+                    // Don't clear highlight if moving to another rect or the path
+                    const target = event.relatedTarget as HTMLElement;
+                    if (
+                      !target ||
+                      (!target.classList.contains("rect-hover") &&
+                        target.tagName.toLowerCase() !== "path")
+                    ) {
+                      event.stopPropagation();
+                      onHighlightItem([]);
+                      d3.select(".tooltip").style("visibility", "hidden");
+                    }
                   }}
                 />
               ))}
@@ -351,7 +374,6 @@ const AreaChart: React.FC<Props> = ({
                   y2={height - margin.bottom}
                   stroke={"#666"}
                   strokeWidth={1}
-                  pointerEvents="none"
                 />
               )}
             </Fragment>

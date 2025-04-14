@@ -51,10 +51,11 @@ interface LineChartProps {
 }
 
 interface ChartMetadata {
-  yAxisDomain: string[];
   xAxisDomain: string[];
+  yAxisDomain: [number, number];
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
+  chartType: "dual-horizontal-bar-chart";
 }
 
 const DualHorizontalBarChart: React.FC<LineChartProps> = ({
@@ -81,8 +82,14 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     y: number;
     data: DataPoint;
   } | null>(null);
-  const { colorsMapping, colorsBasedMapping, highlightItems, disabledItems, hiddenItems, visibleItems } =
-    useChartContext();
+  const {
+    colorsMapping,
+    colorsBasedMapping,
+    highlightItems,
+    disabledItems,
+    hiddenItems,
+    visibleItems,
+  } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
@@ -105,10 +112,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
   }, [dataSet, filter]);
 
   const yAxisDomain = useMemo(
-    () =>
-      filteredDataSet
-        .filter(d => !disabledItems.includes(d.label))
-        .map(d => d.label),
+    () => filteredDataSet.filter(d => !disabledItems.includes(d.label)).map(d => d.label),
     [filteredDataSet]
   );
   const xAxisDomain = useMemo(() => {
@@ -150,10 +154,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     .clamp(true)
     .nice(1);
 
-  const handleMouseOver = (
-    d: DataPoint,
-    event: React.MouseEvent<SVGRectElement, MouseEvent>
-  ) => {
+  const handleMouseOver = (d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>) => {
     if (svgRef.current) {
       const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
 
@@ -192,26 +193,22 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
       const uniqueLabels = [...new Set(yAxisDomain)];
 
       const currentMetadata: ChartMetadata = {
-        yAxisDomain: uniqueLabels,
-        xAxisDomain: xAxisDomain.map(value => {
-          if (value instanceof Date) {
-            return value.toISOString();
-          }
-          return value.toString();
-        }),
+        xAxisDomain: uniqueLabels,
+        yAxisDomain: [Number(yAxisScale.domain()[0]), Number(yAxisScale.domain()[1])],
         visibleItems: visibleItems,
         renderedData: {
           [uniqueLabels[0]]: filteredDataSet,
         },
+        chartType: "dual-horizontal-bar-chart",
       };
 
       // Check if data has actually changed
       const hasChanged =
         !prevChartDataRef.current ||
-        JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
-          JSON.stringify(currentMetadata.yAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
           JSON.stringify(currentMetadata.xAxisDomain) ||
+        JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
+          JSON.stringify(currentMetadata.yAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.visibleItems) !==
           JSON.stringify(currentMetadata.visibleItems) ||
         JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
@@ -230,13 +227,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [
-    yAxisDomain,
-    xAxisDomain,
-    visibleItems,
-    filteredDataSet,
-    onChartDataProcessed,
-  ]);
+  }, [yAxisDomain, xAxisDomain, visibleItems, filteredDataSet, onChartDataProcessed]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -282,7 +273,8 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
                 className={`bar bar-${d.label.replaceAll(" ", "-").replaceAll(",", "")}`}
                 key={i}
                 style={{
-                  opacity: highlightItems.includes(d.label) || highlightItems.length === 0 ? 1 : 0.3,
+                  opacity:
+                    highlightItems.includes(d.label) || highlightItems.length === 0 ? 1 : 0.3,
                 }}
                 onMouseOver={() => onHighlightItem([d.label])}
                 onMouseOut={() => onHighlightItem([])}

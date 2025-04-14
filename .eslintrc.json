@@ -27,10 +27,7 @@
     "react/prop-types": "off",
     // Prop types are not typically needed with TypeScript
     "prettier/prettier": [
-      "error",
-      {
-        "printWidth": 80
-      }
+      "error"
     ],
     "import/extensions": [
       "error",

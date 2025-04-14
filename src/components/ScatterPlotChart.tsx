@@ -34,6 +34,15 @@ const Styled = styled.div`
     border-style: solid;
     background: transparent !important;
   }
+
+  circle,
+  rect,
+  path {
+    transition-property: all;
+    transition-duration: 0.1s;
+    transition-timing-function: ease-out;
+    transition-behavior: allow-discrete;
+  }
 `;
 
 interface DataPoint {
@@ -52,6 +61,7 @@ interface ChartMetadata {
   yAxisDomain: [number, number];
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
+  chartType: "scatter-plot-chart";
 }
 
 interface ScatterPlotChartProps<T extends number | string> {
@@ -119,13 +129,8 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   const [activePoint, setActivePoint] = useState<DataPoint | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const {
-    colorsMapping,
-    highlightItems,
-    disabledItems,
-    hiddenItems,
-    visibleItems,
-  } = useChartContext();
+  const { colorsMapping, highlightItems, disabledItems, hiddenItems, visibleItems } =
+    useChartContext();
 
   const renderCompleteRef = useRef(false);
   // Add ref for previous data comparison
@@ -165,7 +170,6 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     return [...filteredDataSet].sort((a, b) => b.d - a.d);
   }, [filteredDataSet]);
 
-
   // Use filteredDataSet instead of dataSet in all calculations
   const xValues = useMemo(() => filteredDataSet.map(d => d.x || 0), [filteredDataSet]);
 
@@ -175,32 +179,34 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
 
   const yDomain = useMemo(() => [0, Math.max(...yValues) || 0], [yValues]);
 
-  const xScale: d3.ScaleLinear<number, number> | d3.ScaleTime<number, number> | d3.ScaleBand<string> =
-    useMemo(() => {
-      if (xAxisDataType === "number") {
-        return d3
-          .scaleLinear()
-          .domain((xAxisDomain as [number, number]) ?? xDomain)
-          .range([margin.left, width - margin.right])
-          .nice()
-          .clamp(true);
-      }
-      if (xAxisDataType === "date_annual" || xAxisDataType === "date_monthly") {
-        return d3
-          .scaleTime()
-          .domain(xDomain)
-          .range([margin.left, width - margin.right])
-          .nice()
-          .clamp(true);
-      }
-      if (xAxisDataType === "band") {
-        return d3
-          .scaleBand<string>()
-          .domain(dataSet.map(d => d.label)) // Assuming dataSet has labels for bands
-          .range([margin.left, width - margin.right])
-          .padding(0.1); // Adjust padding as needed
-      }
-    }, [xDomain, width, margin]);
+  const xScale:
+    | d3.ScaleLinear<number, number>
+    | d3.ScaleTime<number, number>
+    | d3.ScaleBand<string> = useMemo(() => {
+    if (xAxisDataType === "number") {
+      return d3
+        .scaleLinear()
+        .domain((xAxisDomain as [number, number]) ?? xDomain)
+        .range([margin.left, width - margin.right])
+        .nice()
+        .clamp(true);
+    }
+    if (xAxisDataType === "date_annual" || xAxisDataType === "date_monthly") {
+      return d3
+        .scaleTime()
+        .domain(xDomain)
+        .range([margin.left, width - margin.right])
+        .nice()
+        .clamp(true);
+    }
+    if (xAxisDataType === "band") {
+      return d3
+        .scaleBand<string>()
+        .domain(dataSet.map(d => d.label)) // Assuming dataSet has labels for bands
+        .range([margin.left, width - margin.right])
+        .padding(0.1); // Adjust padding as needed
+    }
+  }, [xDomain, width, margin]);
 
   const yScale = useMemo(
     () =>
@@ -367,6 +373,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
         renderedData: {
           points: renderOrderedDataSet,
         },
+        chartType: "scatter-plot-chart",
       };
 
       const hasChanged =
@@ -535,7 +542,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
             transitionDelay: "0.1s",
             willChange: "opacity, transform",
             transform: "translate3d(0, 0, 0)",
-            backfaceVisibility: "hidden"
+            backfaceVisibility: "hidden",
           }}
         />
       </Suspense>

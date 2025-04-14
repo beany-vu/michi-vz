@@ -39,6 +39,7 @@ interface ChartMetadata {
   xAxisDomain: string[];
   visibleItems: string[];
   renderedData: { [key: string]: RectData[] };
+  chartType: "vertical-stack-bar-chart";
 }
 
 interface Props {
@@ -110,13 +111,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   onChartDataProcessed,
   onHighlightItem,
 }) => {
-  const {
-    colorsMapping,
-    highlightItems,
-    disabledItems,
-    hiddenItems,
-    visibleItems,
-  } = useChartContext();
+  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const chartRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
@@ -134,15 +129,10 @@ const VerticalStackBarChart: React.FC<Props> = ({
     );
   }, [dataSet]);
 
-  // Modified: effectiveKeys should consider visibleItems but not be affected by disabledItems
+  // Modified: effectiveKeys should filter out hidden items
   const effectiveKeys = useMemo(() => {
-    // If visibleItems is provided, use it as a filter for keys
-    // But don't filter by disabledItems here - that happens in rendering
-    if (visibleItems.length > 0) {
-      return allKeys.filter(key => visibleItems.includes(key));
-    }
-    return allKeys;
-  }, [allKeys, visibleItems]); // Remove disabledItems from dependency array
+    return allKeys.filter(key => !disabledItems.includes(key));
+  }, [allKeys, disabledItems]);
 
   // NEW: compute filteredDataSet from the entire dataSet by summing all numeric properties (except "date")
   const filteredDataSet = useMemo(() => {
@@ -195,7 +185,10 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
   // xScale
   const extractDates = (data: DataPoint): string => String(data.date);
-  const dates = useMemo(() => flattenedDataSet.map(extractDates), [flattenedDataSet, disabledItems]);
+  const dates = useMemo(
+    () => flattenedDataSet.map(extractDates),
+    [flattenedDataSet, disabledItems]
+  );
 
   const xScale = useMemo(
     () =>
@@ -244,7 +237,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   const prepareStackedData = useCallback(
     (rawDataSet: DataSet[]): { [p: string]: RectData[] } => {
       const stackedData = effectiveKeys
-        .filter(key => !disabledItems.includes(key) && !hiddenItems.includes(key))
+        .filter(key => !disabledItems.includes(key))
         .reduce(
           (acc, key) => {
             acc[key] = [];
@@ -253,18 +246,22 @@ const VerticalStackBarChart: React.FC<Props> = ({
           {} as { [key: string]: RectData[] }
         );
 
+      // Get the actual number of visible series for width calculation
+      const visibleSeriesCount = rawDataSet.filter(
+        dataItem => !disabledItems.includes(dataItem.seriesKey)
+      ).length;
+
       rawDataSet
-        .filter(
-          dataItem => !hiddenItems.includes(dataItem.seriesKey) && !disabledItems.includes(dataItem.seriesKey)
-        )
+        .filter(dataItem => !disabledItems.includes(dataItem.seriesKey))
         .forEach((dataItem, groupIndex) => {
           const series = dataItem.series;
-          const groupWidth = xScale.bandwidth() / Object.keys(stackedData).length;
+          // Use visibleSeriesCount instead of total stackedData length
+          const groupWidth = xScale.bandwidth() / visibleSeriesCount;
 
           series.forEach(yearData => {
             let y0 = 0;
             effectiveKeys
-              .filter(key => !disabledItems.includes(key) && !hiddenItems.includes(key))
+              .filter(key => !disabledItems.includes(key))
               .reverse()
               .forEach(key => {
                 const value = yearData[key];
@@ -284,7 +281,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
                 const y1 = parseFloat(String(y0)) + numericValue;
                 const rawHeight = yScale(y0) - yScale(y1);
                 // Only apply minimum height if the value exists (even if it's 0)
-                const itemHeight = value !== undefined && value !== null ? Math.max(3, rawHeight) : 0;
+                const itemHeight =
+                  value !== undefined && value !== null ? Math.max(3, rawHeight) : 0;
                 const rectData = {
                   key,
                   height: itemHeight,
@@ -311,7 +309,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
       return stackedData;
     },
-    [effectiveKeys, disabledItems, hiddenItems, xScale, yScale, colorsMapping]
+    [effectiveKeys, disabledItems, xScale, yScale, colorsMapping]
   );
 
   // Memoize the stacked rect data
@@ -345,7 +343,10 @@ const VerticalStackBarChart: React.FC<Props> = ({
                     ${Object.keys(data)
                       .filter(key => key !== "date")
                       .sort()
-                      .map(key => `<p style="color:${colorsMapping[key]}">${key}: ${data[key] ?? "N/A"}</p>`)
+                      .map(
+                        key =>
+                          `<p style="color:${colorsMapping[key]}">${key}: ${data[key] ?? "N/A"}</p>`
+                      )
                       .join("")}
                 </div>`;
     },
@@ -409,26 +410,50 @@ const VerticalStackBarChart: React.FC<Props> = ({
   // Use a separate useEffect to call the callback after rendering
   useEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
-      // Filter out keys with empty arrays
-      const filteredRenderedData = Object.fromEntries(
-        Object.entries(stackedRectData).filter(([_, array]) => array.length > 0)
+      // First get all data that has values
+      const allRenderedData = Object.fromEntries(
+        Object.entries(stackedRectData).filter(([, array]) => {
+          const hasData = array.length > 0;
+          return hasData;
+        })
       );
 
-      // Sort visibleKeys based on values at the filter date if filter exists
-      let sortedVisibleKeys = visibleItems;
-      if (filter?.date) {
-        sortedVisibleKeys = [...visibleItems].sort((a, b) => {
-          const aValue = stackedRectData[a]?.find(d => String(d.date) === String(filter.date))?.value || 0;
-          const bValue = stackedRectData[b]?.find(d => String(d.date) === String(filter.date))?.value || 0;
-          return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
-        });
+      // Get all keys that have data
+      let renderedKeys = Object.keys(allRenderedData);
+
+      // If we have a filter date and limit, sort and limit the keys
+      if (filter?.date && filter?.limit) {
+        console.log("Filtering with date:", filter.date);
+        console.log("Available dates in data:", [
+          ...new Set(
+            Object.values(stackedRectData)
+              .flat()
+              .map(d => d.date)
+          ),
+        ]);
+
+        renderedKeys = renderedKeys
+          .sort((a, b) => {
+            const aData = stackedRectData[a]?.find(d => String(d.date) === String(filter.date));
+            const bData = stackedRectData[b]?.find(d => String(d.date) === String(filter.date));
+            const aValue = aData?.value ?? 0;
+            const bValue = bData?.value ?? 0;
+
+            console.log(`Comparing ${a} (${aValue}) and ${b} (${bValue}) at date ${filter.date}`);
+
+            return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
+          })
+          .slice(0, filter.limit);
+
+        console.log("Final sorted and limited keys:", renderedKeys);
       }
 
       // Create the current metadata with filtered data and UNIQUE xAxisDomain
       const currentMetadata: ChartMetadata = {
         xAxisDomain: [...new Set(xAxisDomain ?? dates)],
-        visibleItems: sortedVisibleKeys,
-        renderedData: filteredRenderedData,
+        visibleItems: renderedKeys,
+        renderedData: allRenderedData,
+        chartType: "vertical-stack-bar-chart",
       };
 
       // Check if the data has actually changed
@@ -449,7 +474,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
         onChartDataProcessed(currentMetadata);
       }
     }
-  }, [xAxisDomain, dates, visibleItems, stackedRectData, filter, onChartDataProcessed, onHighlightItem]);
+  }, [xAxisDomain, dates, stackedRectData, filter, onChartDataProcessed, onHighlightItem]);
 
   return (
     <VerticalStackBarChartStyled>
@@ -492,43 +517,41 @@ const VerticalStackBarChart: React.FC<Props> = ({
         />
         <g>
           {keys.map(key => {
-            if (hiddenItems.includes(key)) return null;
-
             return (
               <g key={key}>
                 {stackedRectData[key] &&
-                  stackedRectData[key]
-                    .filter(d => !hiddenItems.includes(d.seriesKey))
-                    .map((d: RectData, i: number) => (
-                      <React.Fragment key={`item-${i}`}>
-                        <rect
-                          x={d.x}
-                          y={d.y}
-                          width={d.width}
-                          height={d.height}
-                          fill={colorCallbackFn?.(key, d) ?? d.fill ?? "transparent"}
-                          rx={2}
-                          stroke={"#fff"}
-                          className={`bar`}
-                          opacity={highlightItems.length === 0 || highlightItems.includes(key) ? 1 : 0.2}
-                          onMouseOver={() => handleMouseOver(key, d)}
-                          onMouseMove={updateTooltipPosition}
-                          onMouseOut={handleMouseOut}
-                        />
-                        {d.seriesKeyAbbreviation && (
-                          <text
-                            x={d.x + d.width / 2}
-                            y={height - margin.bottom + 15}
-                            textAnchor="middle"
-                            fontSize="12"
-                            fill="#000"
-                            className={"x-axis-label"}
-                          >
-                            <tspan>{d.seriesKeyAbbreviation}</tspan>
-                          </text>
-                        )}
-                      </React.Fragment>
-                    ))}
+                  stackedRectData[key].map((d: RectData, i: number) => (
+                    <React.Fragment key={`item-${i}`}>
+                      <rect
+                        x={d.x}
+                        y={d.y}
+                        width={d.width}
+                        height={d.height}
+                        fill={colorCallbackFn?.(key, d) ?? d.fill ?? "transparent"}
+                        rx={2}
+                        stroke={"#fff"}
+                        className={`bar`}
+                        opacity={
+                          highlightItems.length === 0 || highlightItems.includes(key) ? 1 : 0.2
+                        }
+                        onMouseOver={() => handleMouseOver(key, d)}
+                        onMouseMove={updateTooltipPosition}
+                        onMouseOut={handleMouseOut}
+                      />
+                      {d.seriesKeyAbbreviation && (
+                        <text
+                          x={d.x + d.width / 2}
+                          y={height - margin.bottom + 15}
+                          textAnchor="middle"
+                          fontSize="12"
+                          fill="#000"
+                          className={"x-axis-label"}
+                        >
+                          <tspan>{d.seriesKeyAbbreviation}</tspan>
+                        </text>
+                      )}
+                    </React.Fragment>
+                  ))}
               </g>
             );
           })}
@@ -541,4 +564,4 @@ const VerticalStackBarChart: React.FC<Props> = ({
   );
 };
 
-export default React.memo(VerticalStackBarChart);
+export default VerticalStackBarChart;

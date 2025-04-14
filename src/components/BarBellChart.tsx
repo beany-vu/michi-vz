@@ -18,6 +18,7 @@ interface ChartMetadata {
   yAxisDomain: [number, number];
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
+  chartType: "bar-bell-chart";
 }
 
 interface BarBellChartProps {
@@ -34,11 +35,7 @@ interface BarBellChartProps {
   xAxisFormat?: (d: number | string) => string;
   yAxisFormat?: (d: number | string) => string;
   xAxisDataType?: "number" | "date_annual" | "date_monthly";
-  tooltipFormat?: (
-    d: DataPoint,
-    currentKey: string,
-    currentValue: string | number
-  ) => string;
+  tooltipFormat?: (d: DataPoint, currentKey: string, currentValue: string | number) => string;
   showGrid?: { x: boolean; y: boolean };
   children?: React.ReactNode;
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
@@ -173,6 +170,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
         renderedData: {
           [keys[0]]: dataSet,
         },
+        chartType: "bar-bell-chart",
       };
 
       // Check if data has actually changed
@@ -184,9 +182,8 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
           JSON.stringify(currentMetadata.yAxisDomain) ||
         JSON.stringify(prevChartDataRef.current.visibleItems) !==
           JSON.stringify(currentMetadata.visibleItems) ||
-        JSON.stringify(
-          Object.keys(prevChartDataRef.current.renderedData).sort()
-        ) !== JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
+        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
+          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
 
       // Only call callback if data has changed
       if (hasChanged) {
@@ -261,10 +258,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                           data-label={key}
                           key={`${key}-${i}`}
                           x={x}
-                          y={
-                            yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 ||
-                            0
-                          }
+                          y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 || 0}
                           height={4}
                           width={width}
                           fill={colorsMapping?.[key]}

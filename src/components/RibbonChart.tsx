@@ -18,6 +18,7 @@ interface ChartMetadata {
   yAxisDomain: [number, number];
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
+  chartType: "ribbon-chart";
 }
 
 interface Props {
@@ -71,11 +72,7 @@ const RibbonChart: React.FC<Props> = ({
   onChartDataProcessed,
   onHighlightItem,
 }) => {
-  const {
-    colorsMapping,
-    highlightItems,
-    disabledItems,
-  } = useChartContext();
+  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
@@ -198,6 +195,7 @@ const RibbonChart: React.FC<Props> = ({
         renderedData: {
           [keys[0]]: series,
         },
+        chartType: "ribbon-chart",
       };
 
       // Check if data has actually changed
@@ -220,7 +218,18 @@ const RibbonChart: React.FC<Props> = ({
         onChartDataProcessed(currentMetadata);
       }
     }
-  }, [series, width, height, margin, disabledItems, series, dates, keys, yScaleDomain, onChartDataProcessed]);
+  }, [
+    series,
+    width,
+    height,
+    margin,
+    disabledItems,
+    series,
+    dates,
+    keys,
+    yScaleDomain,
+    onChartDataProcessed,
+  ]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -302,7 +311,9 @@ const RibbonChart: React.FC<Props> = ({
                               d={pathD}
                               fill={d.fill}
                               opacity={
-                                highlightItems.length === 0 || highlightItems.includes(d.key) ? 0.4 : 0.1
+                                highlightItems.length === 0 || highlightItems.includes(d.key)
+                                  ? 0.4
+                                  : 0.1
                               }
                               stroke={"#fff"}
                               strokeOpacity={0.4}
@@ -321,7 +332,11 @@ const RibbonChart: React.FC<Props> = ({
                             rx={1.5}
                             stroke={"#fff"}
                             strokeOpacity={0.5}
-                            opacity={highlightItems.length === 0 || highlightItems.includes(d.key) ? 1 : 0.1}
+                            opacity={
+                              highlightItems.length === 0 || highlightItems.includes(d.key)
+                                ? 1
+                                : 0.1
+                            }
                             ref={node => {
                               if (node) {
                                 d3.select(node)
@@ -329,7 +344,9 @@ const RibbonChart: React.FC<Props> = ({
                                     onHighlightItem([d.key]);
                                     d3.select(".tooltip")
                                       .style("visibility", "visible")
-                                      .html(tooltipContent?.(d.data) || generateTooltipContent(d.data)); // you can define this function or inline its logic
+                                      .html(
+                                        tooltipContent?.(d.data) || generateTooltipContent(d.data)
+                                      ); // you can define this function or inline its logic
                                   })
                                   .on("mousemove", function (event) {
                                     const [x, y] = d3.pointer(event);
