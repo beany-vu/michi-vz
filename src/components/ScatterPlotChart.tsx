@@ -1,4 +1,12 @@
-import React, { useMemo, useRef, useEffect, useCallback, Suspense, useState, useLayoutEffect } from "react";
+import React, {
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+  Suspense,
+  useState,
+  useLayoutEffect,
+} from "react";
 import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
 import Title from "./shared/Title";
@@ -10,6 +18,7 @@ import { drawHalfLeftCircle } from "../components/shared/helpers";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
 import useDeepCompareEffect from "use-deep-compare-effect";
+import LoadingIndicator from "./shared/LoadingIndicator";
 
 const Styled = styled.div`
   .shape {
@@ -129,8 +138,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   const [activePoint, setActivePoint] = useState<DataPoint | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { colorsMapping, highlightItems, disabledItems, hiddenItems, visibleItems } =
-    useChartContext();
+  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
 
   const renderCompleteRef = useRef(false);
   // Add ref for previous data comparison
@@ -254,7 +262,6 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
       svg.selectAll("foreignObject").style("opacity", 0.9);
       return;
     }
-    // set opacity for all circles to 0.1, except for the highlighted ones (detect by data-label attribute)
     svg.selectAll("foreignObject[data-label]").style("opacity", 0.1);
     highlightItems.forEach(label => {
       svg.selectAll(`foreignObject[data-label="${label}"]`).style("opacity", 1);
@@ -355,15 +362,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     isNodata,
   });
 
-  if (isLoading) {
-    return isLoadingComponent || <div>Loading...</div>;
-  }
-
-  if (displayIsNodata) {
-    return isNodataComponent || <div>No data available</div>;
-  }
-
-  // Replace useEffect with useDeepCompareEffect for metadata comparison
+  // Move useDeepCompareEffect here, before any conditional returns
   useDeepCompareEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       const currentMetadata: ChartMetadata = {
@@ -397,155 +396,156 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
 
   return (
     <Styled style={{ position: "relative" }}>
-      {isLoading && isLoadingComponent}
-      {displayIsNodata && isNodataComponent}
-      <Suspense fallback={null}>
-        <svg
-          width={width}
-          height={height}
-          ref={ref}
-          onMouseMove={handleSvgMouseMove} // Add global mouse move handler
-        >
-          <Title x={width / 2} y={margin.top / 2}>
-            {title}
-          </Title>
-          {children}
+      <div style={{ position: "relative", width: width, height: height }}>
+        {isLoading ? (
+          <LoadingIndicator />
+        ) : (
+          <Suspense fallback={<LoadingIndicator />}>
+            <svg width={width} height={height} ref={ref} onMouseMove={handleSvgMouseMove}>
+              <Title x={width / 2} y={margin.top / 2}>
+                {title}
+              </Title>
+              {children}
 
-          {/* Use renderOrderedDataSet instead of filteredDataSet for proper rendering order */}
-          {renderOrderedDataSet
-            .filter(d => !disabledItems.includes(d.label))
-            .map((d, i) => {
-              const x = getXValue(d);
-              const y = yScale(d.y);
-              const size = xAxisDataType === "band" ? d.d / 2 : dScale(d.d);
-              const radius = size / 2;
-              const fill = colorsMapping?.[d.label] || d.color || "transparent";
+              {/* Use renderOrderedDataSet instead of filteredDataSet for proper rendering order */}
+              {renderOrderedDataSet
+                .filter(d => !disabledItems.includes(d.label))
+                .map((d, i) => {
+                  const x = getXValue(d);
+                  const y = yScale(d.y);
+                  const size = xAxisDataType === "band" ? d.d / 2 : dScale(d.d);
+                  const radius = size / 2;
+                  const fill = colorsMapping?.[d.label] || d.color || "transparent";
 
-              // Function to create the right shape based on the shape prop
-              return (
-                <g
-                  key={i}
-                  transform={`translate(${x}, ${y})`}
-                  opacity={0.9}
-                  data-label={d.label}
-                  onMouseEnter={event => handleMouseEnter(event, d)}
-                  onMouseLeave={handleMouseLeave}
-                >
-                  {d.shape === "square" ? (
-                    <rect
-                      x={-radius}
-                      y={-radius}
-                      width={size}
-                      height={size}
-                      fill={fill}
-                      stroke="#fff"
-                      strokeWidth={2}
-                    />
-                  ) : d.shape === "triangle" ? (
-                    <path
-                      d={`M0,${-radius} L${radius},${radius} L${-radius},${radius} Z`}
-                      fill={fill}
-                      stroke="#fff"
-                      strokeWidth={2}
-                    />
-                  ) : (
-                    // Default is circle
-                    <circle r={radius} fill={fill} stroke="#fff" strokeWidth={2} />
+                  // Function to create the right shape based on the shape prop
+                  return (
+                    <g
+                      key={i}
+                      transform={`translate(${x}, ${y})`}
+                      opacity={0.9}
+                      data-label={d.label}
+                      onMouseEnter={event => handleMouseEnter(event, d)}
+                      onMouseLeave={handleMouseLeave}
+                    >
+                      {d.shape === "square" ? (
+                        <rect
+                          x={-radius}
+                          y={-radius}
+                          width={size}
+                          height={size}
+                          fill={fill}
+                          stroke="#fff"
+                          strokeWidth={2}
+                        />
+                      ) : d.shape === "triangle" ? (
+                        <path
+                          d={`M0,${-radius} L${radius},${radius} L${-radius},${radius} Z`}
+                          fill={fill}
+                          stroke="#fff"
+                          strokeWidth={2}
+                        />
+                      ) : (
+                        // Default is circle
+                        <circle r={radius} fill={fill} stroke="#fff" strokeWidth={2} />
+                      )}
+                    </g>
+                  );
+                })}
+              {!isLoading && dataSet.length && (
+                <g className="michi-vz-legend">
+                  {dScaleLegendFormatter && dScaleLegendFormatter(dDomain, dScale)}
+                  {dScaleLegend?.title && (
+                    <text x={dLegendPosition.x} y={dLegendPosition.y - 120} textAnchor={"middle"}>
+                      {dScaleLegend?.title}
+                    </text>
                   )}
+                  <path
+                    d={drawHalfLeftCircle(dLegendPosition.x, dLegendPosition.y, 40, 40)}
+                    fill={"none"}
+                    stroke={"#ccc"}
+                  />
+                  <path
+                    d={drawHalfLeftCircle(dLegendPosition.x, dLegendPosition.y, 20, 20)}
+                    fill={"none"}
+                    stroke={"#ccc"}
+                  />
+                  <path
+                    d={drawHalfLeftCircle(dLegendPosition.x, dLegendPosition.y, 8, 8)}
+                    fill={"none"}
+                    stroke={"#ccc"}
+                  />
+                  <text x={dLegendPosition.x} y={dLegendPosition.y}>
+                    {dScaleLegend?.valueFormatter
+                      ? dScaleLegend.valueFormatter(dScale.invert(16))
+                      : dScale.invert(16)}
+                  </text>
+                  <text x={dLegendPosition.x} y={dLegendPosition.y - 40}>
+                    {dScaleLegend?.valueFormatter
+                      ? dScaleLegend.valueFormatter(dScale.invert(40))
+                      : dScale.invert(40)}
+                  </text>
+                  <text x={dLegendPosition.x} y={dLegendPosition.y - 80}>
+                    {dScaleLegend?.valueFormatter
+                      ? dScaleLegend.valueFormatter(dScale.invert(80))
+                      : dScale.invert(80)}
+                  </text>
                 </g>
-              );
-            })}
-          {!isLoading && dataSet.length && (
-            <g className="michi-vz-legend">
-              {dScaleLegendFormatter && dScaleLegendFormatter(dDomain, dScale)}
-              {dScaleLegend?.title && (
-                <text x={dLegendPosition.x} y={dLegendPosition.y - 120} textAnchor={"middle"}>
-                  {dScaleLegend?.title}
-                </text>
               )}
-              <path
-                d={drawHalfLeftCircle(dLegendPosition.x, dLegendPosition.y, 40, 40)}
-                fill={"none"}
-                stroke={"#ccc"}
+              {xAxisDataType === "number" ||
+              xAxisDataType === "date_annual" ||
+              xAxisDataType === "date_monthly" ? (
+                <XaxisLinear
+                  xScale={xScale as d3.ScaleLinear<number, number> | d3.ScaleTime<number, number>}
+                  height={height}
+                  margin={margin}
+                  xAxisFormat={xAxisFormat}
+                  xAxisDataType={xAxisDataType}
+                  ticks={5}
+                  showGrid={showGrid?.x || false}
+                />
+              ) : (
+                <XaxisBand
+                  xScale={xScale as d3.ScaleBand<string>}
+                  height={height}
+                  margin={margin}
+                  xAxisFormat={xAxisFormat}
+                />
+              )}
+              <YaxisLinear
+                yScale={yScale}
+                width={width}
+                height={height}
+                margin={margin}
+                yAxisFormat={yAxisFormat}
+                yTicksQty={yTicksQty}
               />
-              <path
-                d={drawHalfLeftCircle(dLegendPosition.x, dLegendPosition.y, 20, 20)}
-                fill={"none"}
-                stroke={"#ccc"}
-              />
-              <path
-                d={drawHalfLeftCircle(dLegendPosition.x, dLegendPosition.y, 8, 8)}
-                fill={"none"}
-                stroke={"#ccc"}
-              />
-              <text x={dLegendPosition.x} y={dLegendPosition.y}>
-                {dScaleLegend?.valueFormatter
-                  ? dScaleLegend.valueFormatter(dScale.invert(16))
-                  : dScale.invert(16)}
-              </text>
-              <text x={dLegendPosition.x} y={dLegendPosition.y - 40}>
-                {dScaleLegend?.valueFormatter
-                  ? dScaleLegend.valueFormatter(dScale.invert(40))
-                  : dScale.invert(40)}
-              </text>
-              <text x={dLegendPosition.x} y={dLegendPosition.y - 80}>
-                {dScaleLegend?.valueFormatter
-                  ? dScaleLegend.valueFormatter(dScale.invert(80))
-                  : dScale.invert(80)}
-              </text>
-            </g>
-          )}
-          {xAxisDataType === "number" ||
-          xAxisDataType === "date_annual" ||
-          xAxisDataType === "date_monthly" ? (
-            <XaxisLinear
-              xScale={xScale as d3.ScaleLinear<number, number> | d3.ScaleTime<number, number>}
-              height={height}
-              margin={margin}
-              xAxisFormat={xAxisFormat}
-              xAxisDataType={xAxisDataType}
-              ticks={5}
-              showGrid={showGrid?.x || false}
-            />
-          ) : (
-            <XaxisBand
-              xScale={xScale as d3.ScaleBand<string>}
-              height={height}
-              margin={margin}
-              xAxisFormat={xAxisFormat}
-            />
-          )}
-          <YaxisLinear
-            yScale={yScale}
-            width={width}
-            height={height}
-            margin={margin}
-            yAxisFormat={yAxisFormat}
-            yTicksQty={yTicksQty}
-          />
-        </svg>
+            </svg>
 
-        <div
-          ref={tooltipRef}
-          className="tooltip"
-          style={{
-            position: "absolute",
-            display: "none",
-            padding: "10px",
-            backgroundColor: "rgba(0, 0, 0, 0.6)",
-            color: "white",
-            borderRadius: "5px",
-            pointerEvents: "none",
-            zIndex: 1000,
-            opacity: 0,
-            transition: "opacity 0.1s ease-out",
-            transitionDelay: "0.1s",
-            willChange: "opacity, transform",
-            transform: "translate3d(0, 0, 0)",
-            backfaceVisibility: "hidden",
-          }}
-        />
-      </Suspense>
+            <div
+              ref={tooltipRef}
+              className="tooltip"
+              style={{
+                position: "absolute",
+                display: "none",
+                padding: "10px",
+                backgroundColor: "rgba(0, 0, 0, 0.6)",
+                color: "white",
+                borderRadius: "5px",
+                pointerEvents: "none",
+                zIndex: 1000,
+                opacity: 0,
+                transition: "opacity 0.1s ease-out",
+                transitionDelay: "0.1s",
+                willChange: "opacity, transform",
+                transform: "translate3d(0, 0, 0)",
+                backfaceVisibility: "hidden",
+              }}
+            />
+          </Suspense>
+        )}
+        {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
+        {displayIsNodata && <>{isNodataComponent}</>}
+      </div>
     </Styled>
   );
 };

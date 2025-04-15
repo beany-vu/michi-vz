@@ -29,29 +29,19 @@ export default {
 export const Primary = {
   args: {
     onChartDataProcessed: processData => {
-      console.log(processData);
+      console.log({ processData });
     },
     isNoDataComponent: <div>No data</div>,
     dataSet: [
       {
-        label: "Congo",
-        valueBased: 71508.24,
-        valueCompared: 30710.44,
+        label: "Africa",
+        valueBased: 100,
+        valueCompared: 54.50999999999999,
       },
       {
-        label: "Congo, Democratic Republic of",
-        valueBased: 92140.3,
-        valueCompared: 211002.26,
-      },
-      {
-        label: "Egypt",
-        valueBased: 6881171.69,
-        valueCompared: 4039803.91,
-      },
-      {
-        label: "Madagascar",
-        valueBased: 272213.58,
-        valueCompared: 176016.4,
+        label: "Rest of the World",
+        valueBased: 100,
+        valueCompared: 49.59,
       },
     ],
     width: 900,

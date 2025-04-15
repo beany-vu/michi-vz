@@ -148,7 +148,7 @@ const AreaChart: React.FC<Props> = ({
 
   const areaGenerator = d3
     .area<AreaDataPoint>()
-    .defined(d => d[0] !== null && d[1] !== null)
+    .defined(() => true)
     .x(d => {
       if (xAxisDataType === "number") {
         return xScale(d.data.date);
@@ -156,8 +156,8 @@ const AreaChart: React.FC<Props> = ({
         return xScale(new Date(d.data.date).getTime()); // Assuming d.data.date is a JavaScript Date object
       }
     })
-    .y0(d => yScale(d[0]))
-    .y1(d => yScale(d[1]))
+    .y0(d => yScale(d[0] || 0))
+    .y1(d => yScale(d[1] || 0))
     .curve(d3.curveMonotoneX);
 
   const handleAreaSegmentHover = (dataPoint: DataPoint, key: string) => {
@@ -327,13 +327,13 @@ const AreaChart: React.FC<Props> = ({
                         : new Date(dataPoint.data.date)
                     ) - 2
                   }
-                  y={yScale(dataPoint[1])} // Start from top of the area segment
+                  y={yScale(dataPoint[1] || 0)} // Handle null values
                   width={8}
                   strokeWidth={1}
                   rx={3}
                   ry={3}
                   stroke={"#ccc"}
-                  height={yScale(dataPoint[0]) - yScale(dataPoint[1])} // Height of the area segment
+                  height={yScale(dataPoint[0] || 0) - yScale(dataPoint[1] || 0)} // Handle null values
                   fill="#fff"
                   opacity={highlightItems.includes(areaData.key) ? 0.5 : 0}
                   onMouseEnter={event => {

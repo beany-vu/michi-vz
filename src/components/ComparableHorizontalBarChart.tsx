@@ -36,7 +36,11 @@ interface LineChartProps {
   xAxisPredefinedDomain?: number[];
   xAxisDataType: "number" | "date_annual" | "date_monthly";
   title?: string;
-  tooltipFormatter?: (d: DataPoint | undefined, dataSet?: DataPoint[], type?: TValueType) => React.ReactNode;
+  tooltipFormatter?: (
+    d: DataPoint | undefined,
+    dataSet?: DataPoint[],
+    type?: TValueType
+  ) => React.ReactNode;
   children?: React.ReactNode;
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
@@ -86,7 +90,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     data: DataPoint;
     type?: TValueType;
   } | null>(null);
-  const { colorsMapping, colorsBasedMapping, highlightItems, disabledItems, hiddenItems, visibleItems } =
+  const { colorsMapping, colorsBasedMapping, highlightItems, disabledItems, visibleItems } =
     useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const renderCompleteRef = useRef(false);
@@ -225,8 +229,13 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
 
   // Memoize the bars rendering
   const renderBars = useMemo(() => {
+    const shouldShowAll = visibleItems.length === 0;
     return filteredDataSet
-      .filter(d => !disabledItems.includes(d?.label) && visibleItems.includes(d?.label))
+      .filter(d =>
+        shouldShowAll
+          ? !disabledItems.includes(d?.label)
+          : !disabledItems.includes(d?.label) && visibleItems.includes(d?.label)
+      )
       .map((d, i) => {
         const x1 = margin.left + xAxisScale(Math.min(0, d.valueBased)) - margin.left;
         const x2 = margin.left + xAxisScale(Math.min(0, d.valueCompared)) - margin.left;
@@ -346,7 +355,9 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
       const currentMetadata: ChartMetadata = {
         xAxisDomain: uniqueLabels,
         yAxisDomain: [Number(yAxisScale.domain()[0]), Number(yAxisScale.domain()[1])],
-        visibleItems: visibleItems,
+        visibleItems: filteredDataSet
+          .filter(d => !disabledItems.includes(d?.label) && visibleItems.includes(d?.label))
+          .map(d => d.label),
         renderedData: {
           [uniqueLabels[0]]: filteredDataSet,
         },
@@ -421,7 +432,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         >
           {!tooltipFormatter && (
             <div>
-              ${tooltip?.data?.label}: ${tooltip?.data?.valueBased} - ${tooltip?.data?.valueCompared}
+              ${tooltip?.data?.label}: ${tooltip?.data?.valueBased} - $
+              {tooltip?.data?.valueCompared}
             </div>
           )}
           {tooltipFormatter && tooltipFormatter(tooltip?.data, dataSet, tooltip?.type)}
@@ -434,4 +446,4 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   );
 };
 
-export default React.memo(ComparableHorizontalBarChart);
+export default ComparableHorizontalBarChart;
