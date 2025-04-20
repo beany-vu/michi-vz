@@ -176,13 +176,16 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     return { points, pointString };
   };
 
-  const processedSeries = series
-    // sort disabled items first
-    .filter((d: DataPoint) => !disabledItems.includes(d.label))
-    .map((item: DataPoint) => ({
-      ...genPolygonPoints(item.data, yScale),
-      ...item,
-    }));
+  const processedSeries =
+    series && series.length > 0
+      ? series
+          // sort disabled items first
+          .filter((d: DataPoint) => !disabledItems.includes(d.label))
+          .map((item: DataPoint) => ({
+            ...genPolygonPoints(item.data, yScale),
+            ...item,
+          }))
+      : [];
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -303,9 +306,12 @@ export const RadarChart: React.FC<RadarChartProps> = ({
       const currentMetadata: ChartMetadata = {
         xAxisDomain: poles?.labels ? poles.labels.map(String) : [],
         yAxisDomain: yScale.domain() as [number, number],
-        visibleItems: series.filter(s => !disabledItems.includes(s.label)).map(s => s.label),
+        visibleItems:
+          series && series.length > 0
+            ? series.filter(s => !disabledItems.includes(s.label)).map(s => s.label)
+            : [],
         renderedData: {
-          [uniqueLabels[0]]: series,
+          [uniqueLabels[0] || "default"]: series || [],
         },
         chartType: "radar-chart",
       };

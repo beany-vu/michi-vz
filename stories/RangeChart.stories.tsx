@@ -10,15 +10,15 @@ export default {
   component: RangeChartComponent,
   tags: ["autodocs"],
   decorators: [
-    (Story) => (
+    Story => (
       <MichiVzProvider
-        initialColorsMapping={{
+        colorsMapping={{
           Egypt: "red",
           Euro: "purple",
           "Rest of the World": "orange",
           Africa: "purple",
         }}
-        initialHighlightItems={["Africa"]}
+        highlightItems={["Africa"]}
       >
         <Story />
       </MichiVzProvider>

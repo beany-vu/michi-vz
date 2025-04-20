@@ -9,7 +9,7 @@ export default {
   component: DualHorizontalBarChart,
   tags: ["autodocs"],
   decorators: [
-    (Story) => (
+    Story => (
       <MichiVzProvider
         colorsMapping={{
           Africa: "red",
@@ -25,7 +25,7 @@ export default {
           Australia: "darkgreen",
           "North America": "grey",
         }}
-        initialHighlightItems={["Euro"]}
+        highlightItems={["Euro"]}
       >
         <Story />
       </MichiVzProvider>

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useLayoutEffect } from "react";
+import React, { useMemo, useRef, useLayoutEffect } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import XaxisBand from "./shared/XaxisBand";
@@ -77,8 +77,25 @@ const RibbonChart: React.FC<Props> = ({
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
+  // Add filteredDataSet to filter out disabled items
+  const filteredDataSet = useMemo(() => {
+    // Filter keys that are in disabledItems
+    return series.map(dataPoint => {
+      const filtered = { ...dataPoint };
+
+      // Remove properties that are in disabledItems
+      Object.keys(filtered).forEach(key => {
+        if (disabledItems.includes(key) && key !== "date") {
+          delete filtered[key];
+        }
+      });
+
+      return filtered;
+    });
+  }, [series, disabledItems]);
+
   // xScale
-  const dates = useMemo(() => series.map(d => String(d.date)), [series]);
+  const dates = useMemo(() => filteredDataSet.map(d => String(d.date)), [filteredDataSet]);
   const xScale = useMemo(
     () =>
       d3
@@ -86,24 +103,24 @@ const RibbonChart: React.FC<Props> = ({
         .domain(dates)
         .range([margin.left, width - margin.right])
         .padding(0.1),
-    [series, width, height, margin]
+    [filteredDataSet, width, margin, dates]
   );
 
   // yScale
   const yScaleDomain = useMemo(() => {
     // return the max value of the sum of all the keys, don't count the date
     const max = d3.max(
-      series,
+      filteredDataSet,
       d =>
         d3.sum(
           Object.keys(d)
-            .filter(key => !disabledItems.includes(key))
-            .map(key => (key === "date" ? 0 : d[key] || 0))
+            .filter(key => key !== "date")
+            .map(key => d[key] || 0)
         ) || 0
     );
 
     return [0, max];
-  }, [series, keys, disabledItems]);
+  }, [filteredDataSet, keys]);
 
   const yScale = useMemo(
     () =>
@@ -113,7 +130,7 @@ const RibbonChart: React.FC<Props> = ({
         .range([height - margin.bottom, margin.top])
         .clamp(true)
         .nice(),
-    [series, width, height, margin]
+    [filteredDataSet, height, margin, yScaleDomain]
   );
 
   const prepareStackedData = (seriesData: DataPoint[]) => {
@@ -151,8 +168,8 @@ const RibbonChart: React.FC<Props> = ({
 
   const stackedRectData = useMemo(
     // remove keys from object that are disabled
-    () => prepareStackedData(series),
-    [series, width, height, margin, disabledItems]
+    () => prepareStackedData(filteredDataSet),
+    [filteredDataSet, width, height, margin, disabledItems]
   );
   const generateTooltipContent = (data: DataPoint) => {
     // Process your data and generate HTML string as per requirements
@@ -167,7 +184,7 @@ const RibbonChart: React.FC<Props> = ({
   };
 
   const displayIsNodata = useDisplayIsNodata({
-    dataSet: series,
+    dataSet: filteredDataSet,
     isLoading: isLoading,
     isNodataComponent: isNodataComponent,
     isNodata: isNodata,
@@ -193,7 +210,7 @@ const RibbonChart: React.FC<Props> = ({
         yAxisDomain: safeYDomain,
         visibleItems: keys.filter(key => !disabledItems.includes(key)),
         renderedData: {
-          [keys[0]]: series,
+          [keys[0]]: filteredDataSet,
         },
         chartType: "ribbon-chart",
       };
@@ -219,12 +236,11 @@ const RibbonChart: React.FC<Props> = ({
       }
     }
   }, [
-    series,
+    filteredDataSet,
     width,
     height,
     margin,
     disabledItems,
-    series,
     dates,
     keys,
     yScaleDomain,

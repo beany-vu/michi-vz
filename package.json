@@ -1,11 +1,12 @@
 {
   "name": "michi-vz",
-  "version": "0.3.0",
+  "version": "0.3.4",
   "description": "a visualization library based on d3 and react",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
+    "test:watch": "jest --watch",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "lint": "eslint './src/**/*.{ts,tsx}'",
@@ -43,6 +44,7 @@
     "@storybook/react": "^8.5.3",
     "@storybook/react-webpack5": "^8.5.3",
     "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^15.0.7",
     "@types/d3": "^7.4.3",
     "@types/jest": "^29.5.12",
     "@types/react": "^19.1.0",
@@ -68,30 +70,5 @@
   },
   "moduleNameMapper": {
     "^src/(.*)$": "<rootDir>/src/$1"
-  },
-  "jest": {
-    "roots": [
-      "<rootDir>/src"
-    ],
-    "transform": {
-      "^.+\\.(ts|tsx)?$": "babel-jest"
-    },
-    "transformIgnorePatterns": [
-      "/node_modules/(?!d3|d3-array|internmap|delaunator|robust-predicates)"
-    ],
-    "moduleNameMapper": {
-      "d3": "<rootDir>/node_modules/d3/dist/d3.min.js",
-      "^d3-(.*)$": "<rootDir>/node_modules/d3-$1/dist/d3-$1.min.js"
-    },
-    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.tsx?$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "jsx",
-      "json",
-      "node"
-    ],
-    "testEnvironment": "jsdom"
   }
 }

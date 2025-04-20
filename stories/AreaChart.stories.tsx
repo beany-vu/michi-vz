@@ -2,7 +2,7 @@ import AreaChart from "../src/components/AreaChart";
 import { Meta } from "@storybook/react";
 import { MichiVzProvider } from "../src/components";
 import React from "react";
-import { fn } from '@storybook/test';
+import { fn } from "@storybook/test";
 
 // Define the default metadata for the component
 export default {
@@ -10,10 +10,10 @@ export default {
   component: AreaChart,
   tags: ["autodocs"],
   argTypes: {
-    onChartDataProcessed: { action: 'onChartDataProcessed' }
+    onChartDataProcessed: { action: "onChartDataProcessed" },
   },
   decorators: [
-    (Story) => (
+    Story => (
       <MichiVzProvider
         colorsMapping={{
           Processed: "red",
@@ -462,16 +462,51 @@ export const Primary = {
     ],
 
     width: 900,
-    height: 400,
+    height: 480,
     margin: {
       top: 50,
-      right: 50,
-      bottom: 50,
-      left: 50,
+      right: 70,
+      bottom: 70,
+      left: 70,
     },
-    yAxisFormat: (d) => `${d}`, //
-    title: "My Robbin Chart",
+    yAxisFormat: (d: any) => `${d}%`,
+    title: "Area Chart",
     yAxisDomain: [0, 100],
     xAxisDataType: "date_monthly",
+    xAxisFormat: (d: any) => {
+      const date = new Date(d);
+      return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+    },
+    ticks: 6,
+  },
+};
+
+export const QuarterlyTicks = {
+  args: {
+    ...Primary.args,
+    xAxisFormat: (d: any) => {
+      const date = new Date(d);
+      const month = date.getMonth() + 1;
+      if (month === 1 || month === 7) {
+        return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+      }
+      return "";
+    },
+    ticks: 4,
+  },
+};
+
+export const YearlyTicks = {
+  args: {
+    ...Primary.args,
+    xAxisFormat: (d: any) => {
+      const date = new Date(d);
+      const month = date.getMonth() + 1;
+      if (month === 1) {
+        return date.toLocaleDateString("en-US", { year: "numeric" });
+      }
+      return "";
+    },
+    ticks: 3,
   },
 };

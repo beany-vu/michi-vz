@@ -1,4 +1,12 @@
-import React, { useEffect, useMemo, useRef, Suspense, useCallback, useLayoutEffect, FC } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  Suspense,
+  useCallback,
+  useLayoutEffect,
+  FC,
+} from "react";
 import * as d3 from "d3";
 import { ScaleTime } from "d3";
 import { DataPoint } from "../types/data";
@@ -18,8 +26,8 @@ const DASH_LENGTH = 4;
 const DASH_SEPARATOR_LENGTH = 4;
 
 const Styled = styled.div`
-  path,
-  circle {
+  position: relative;
+  path {
     transition-property: all;
     transition-duration: 0.1s;
     transition-timing-function: ease-out;
@@ -134,21 +142,32 @@ const LineChart: FC<LineChartProps> = ({
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
   const filteredDataSet = useMemo(() => {
-    if (!filter) return dataSet;
-    return dataSet
-      .filter(item => {
-        const targetPoint = item.series.find(d => d.date.toString() === filter.date.toString());
-        return targetPoint !== undefined;
-      })
-      .sort((a, b) => {
-        const aPoint = a.series.find(d => d.date.toString() === filter.date.toString());
-        const bPoint = b.series.find(d => d.date.toString() === filter.date.toString());
-        const aVal = aPoint ? Number(aPoint[filter.criteria]) : 0;
-        const bVal = bPoint ? Number(bPoint[filter.criteria]) : 0;
-        return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
-      })
-      .slice(0, filter.limit);
-  }, [dataSet, filter]);
+    // Start with the base dataset, excluding disabled items
+    let result = dataSet.filter(d => !disabledItems.includes(d.label));
+
+    // Apply filter logic if filter exists
+    if (filter) {
+      result = result
+        .filter(item => {
+          const targetPoint = item.series.find(d => d.date.toString() === filter.date.toString());
+          return targetPoint !== undefined;
+        })
+        .sort((a, b) => {
+          const aPoint = a.series.find(d => d.date.toString() === filter.date.toString());
+          const bPoint = b.series.find(d => d.date.toString() === filter.date.toString());
+          const aVal = aPoint ? Number(aPoint[filter.criteria]) : 0;
+          const bVal = bPoint ? Number(bPoint[filter.criteria]) : 0;
+          return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
+        })
+        .slice(0, filter.limit);
+    }
+
+    // Pre-process each dataset to ensure valid points for line rendering
+    return result.map(item => ({
+      ...item,
+      series: item.series.filter(point => point.value !== null && point.value !== undefined),
+    }));
+  }, [dataSet, filter, disabledItems]);
 
   const yScale = useMemo(
     () =>
@@ -159,15 +178,11 @@ const LineChart: FC<LineChartProps> = ({
             ? yAxisDomain
             : [
                 d3.min(
-                  filteredDataSet
-                    .filter(d => !disabledItems.includes(d.label))
-                    .flatMap(({ series }) => series.filter(dd => dd.value !== null)),
+                  filteredDataSet.flatMap(({ series }) => series.filter(dd => dd.value !== null)),
                   d => d.value
                 ) || 0,
                 d3.max(
-                  filteredDataSet
-                    .filter(d => !disabledItems.includes(d.label))
-                    .flatMap(({ series }) => series.filter(dd => dd.value !== null)),
+                  filteredDataSet.flatMap(({ series }) => series.filter(dd => dd.value !== null)),
                   d => d.value
                 ) || 1,
               ]
@@ -175,7 +190,7 @@ const LineChart: FC<LineChartProps> = ({
         .range([height - margin.bottom, margin.top])
         .clamp(true)
         .nice(),
-    [filteredDataSet, width, height, disabledItems, yAxisDomain]
+    [filteredDataSet, height, margin, yAxisDomain]
   );
 
   const xScale = useMemo(() => {
@@ -183,16 +198,8 @@ const LineChart: FC<LineChartProps> = ({
       return d3
         .scaleLinear()
         .domain([
-          d3.min(
-            filteredDataSet
-              .filter(d => !disabledItems.includes(d.label))
-              .flatMap(item => item.series.map(d => d.date as number))
-          ) || 0,
-          d3.max(
-            filteredDataSet
-              .filter(d => !disabledItems.includes(d.label))
-              .flatMap(item => item.series.map(d => d.date as number))
-          ) || 1,
+          d3.min(filteredDataSet.flatMap(item => item.series.map(d => d.date as number))) || 0,
+          d3.max(filteredDataSet.flatMap(item => item.series.map(d => d.date as number))) || 1,
         ])
         .range([margin.left, width - margin.right])
         .clamp(true)
@@ -221,7 +228,7 @@ const LineChart: FC<LineChartProps> = ({
       .scaleTime()
       .domain([minDate || 0, maxDate || 1])
       .range([margin.left, width - margin.right]);
-  }, [filteredDataSet, width, height, disabledItems, xAxisDataType]);
+  }, [filteredDataSet, width, margin, xAxisDataType]);
 
   const getYValueAtX = useCallback((series: DataPoint[], x: number | Date): number | undefined => {
     if (x instanceof Date) {
@@ -312,10 +319,10 @@ const LineChart: FC<LineChartProps> = ({
     svg.selectAll(".line-overlay").remove();
     svg.selectAll(".data-group").remove();
 
-    // draw lines
-    filteredDataSet
-      .filter(d => !disabledItems.includes(d.label))
-      .forEach((data, i) => {
+    // draw lines - no need to filter disabledItems again since it's handled in filteredDataSet
+    filteredDataSet.forEach((data, i) => {
+      // We already filtered nulls in the useMemo, just check for enough points
+      if (data.series.length > 1) {
         svg
           .append("path")
           .datum(data.series)
@@ -328,7 +335,7 @@ const LineChart: FC<LineChartProps> = ({
             })
           )
           .attr("stroke", colorsMapping[data.label] ?? data.color)
-          .attr("stroke-width", 2)
+          .attr("stroke-width", 2.5) // Slightly thicker line for better visibility
           .attr("fill", "none")
           .attr("pointer-events", "none")
           .each(function (d: DataPoint[]) {
@@ -339,130 +346,126 @@ const LineChart: FC<LineChartProps> = ({
           .on("mouseenter", event => handleMouseEnter(event, data))
           .on("mouseout", handleMouseOut);
 
-        if (data.series) {
-          svg
-            .append("path")
-            .datum(data.series)
-            .attr(
-              "class",
-              `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${data.label} line-group-overlay-${data.label}`
-            )
-            .attr("d", (d: DataPoint[]) =>
-              line({
-                d: d,
-                curve: data?.curve,
-              })
-            )
-            .attr("stroke", colorsMapping[data.label] ?? data.color)
-            .attr("stroke-width", 5)
-            .attr("fill", "none")
-            .attr("pointer-events", "stroke")
-            .attr("opacity", 0.05)
-            .on("mouseenter", event => handleMouseEnter(event, data))
-            .on("mouseout", handleMouseOut);
-        }
-      });
+        svg
+          .append("path")
+          .datum(data.series)
+          .attr(
+            "class",
+            `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${data.label} line-group-overlay-${data.label}`
+          )
+          .attr("d", (d: DataPoint[]) =>
+            line({
+              d: d,
+              curve: data?.curve,
+            })
+          )
+          .attr("stroke", colorsMapping[data.label] ?? data.color)
+          .attr("stroke-width", 8) // Wider overlay for easier mouse interaction
+          .attr("fill", "none")
+          .attr("pointer-events", "stroke")
+          .attr("opacity", 0.05) // Slightly higher opacity for better visibility
+          .on("mouseenter", event => handleMouseEnter(event, data))
+          .on("mouseout", handleMouseOut);
+      }
+    });
 
     // draw circles on the line to indicate data points
-    filteredDataSet
-      .filter(d => !disabledItems.includes(d.label))
-      .forEach((data, i) => {
-        const shape = data.shape || "circle";
-        const circleSize = 3; // Size for circles
-        const squareSize = 6; // Final adjusted size for squares
-        const triangleSize = 8; // Final adjusted size for triangles
-        const color = colorsMapping[data.label] ?? data.color ?? "transparent";
+    filteredDataSet.forEach((data, i) => {
+      const shape = data.shape || "circle";
+      const circleSize = 5; // Size for circles
+      const squareSize = 6; // Final adjusted size for squares
+      const triangleSize = 8; // Final adjusted size for triangles
+      const color = colorsMapping[data.label] ?? data.color ?? "transparent";
 
-        svg
-          .selectAll(`.data-point-${i}`)
-          .data(data.series)
-          .enter()
-          .append(shape === "circle" ? "circle" : shape === "square" ? "rect" : "path")
-          .attr("class", `data-group data-group-${i} data-group-${data.label}`)
-          .attr("data-label", data.label)
-          .attr(
-            shape === "circle" ? "cx" : "x",
-            (d: DataPoint) =>
-              xScale(new Date(d.date)) -
-              (shape === "circle" ? 0 : shape === "square" ? squareSize : triangleSize)
-          )
-          .attr(
-            shape === "circle" ? "cy" : "y",
-            (d: DataPoint) =>
-              yScale(d.value) -
-              (shape === "circle" ? 0 : shape === "square" ? squareSize : triangleSize)
-          )
-          .attr(
-            shape === "circle" ? "r" : "width",
-            shape === "circle" ? circleSize : shape === "square" ? squareSize * 2 : triangleSize * 2
-          )
-          .attr(
-            shape === "circle" ? null : "height",
-            shape === "circle" ? null : shape === "square" ? squareSize * 2 : triangleSize * 2
-          )
-          .attr(
-            shape === "triangle" ? "d" : null,
-            shape === "triangle"
-              ? (d: DataPoint) => {
-                  const x = xScale(new Date(d.date));
-                  const y = yScale(d.value);
-                  return `M${x},${y - triangleSize} L${x + triangleSize},${y + triangleSize} L${x - triangleSize},${y + triangleSize} Z`;
-                }
-              : null
-          )
-          .attr("fill", color)
-          .attr("stroke", "#fff")
-          .attr("stroke-width", 2)
-          .attr("transition", "all 0.1s ease-out")
-          .attr("cursor", "crosshair")
-          .on("mouseenter", (event, d) => {
-            event.preventDefault();
-            event.stopPropagation();
-
-            onHighlightItem([data.label]);
-
-            const tooltipContent = tooltipFormatter(
-              {
-                ...d,
-                label: data.label,
-              } as DataPoint,
-              data.series,
-              filteredDataSet
-            );
-
-            if (tooltipRef?.current && svgRef.current) {
-              const [mouseX, mouseY] = d3.pointer(event);
-              const svgRect = svgRef.current.getBoundingClientRect();
-              const tooltip = tooltipRef.current;
-
-              // Calculate position relative to SVG container
-              const xPosition = svgRect.left + mouseX + 10;
-              const yPosition = svgRect.top + mouseY - 25;
-
-              tooltip.style.left = `${xPosition}px`;
-              tooltip.style.top = `${yPosition}px`;
-              tooltip.style.visibility = "visible";
-              tooltip.innerHTML = tooltipContent;
-            }
-          })
-          .on("mouseout", event => {
-            event.preventDefault();
-            event.stopPropagation();
-
-            const relatedTarget = event.relatedTarget;
-            const isMouseOverLine =
-              relatedTarget &&
-              (relatedTarget.classList.contains("line") ||
-                relatedTarget.classList.contains("line-overlay"));
-
-            if (!isMouseOverLine) {
-              onHighlightItem([]);
-              if (tooltipRef?.current) {
-                tooltipRef.current.style.visibility = "hidden";
+      svg
+        .selectAll(`.data-point-${i}`)
+        .data(data.series)
+        .enter()
+        .append(shape === "circle" ? "circle" : shape === "square" ? "rect" : "path")
+        .attr("class", `data-group data-group-${i} data-group-${data.label}`)
+        .attr("data-label", data.label)
+        .attr(
+          shape === "circle" ? "cx" : "x",
+          (d: DataPoint) =>
+            xScale(new Date(d.date)) -
+            (shape === "circle" ? 0 : shape === "square" ? squareSize : triangleSize)
+        )
+        .attr(
+          shape === "circle" ? "cy" : "y",
+          (d: DataPoint) =>
+            yScale(d.value) -
+            (shape === "circle" ? 0 : shape === "square" ? squareSize : triangleSize)
+        )
+        .attr(
+          shape === "circle" ? "r" : "width",
+          shape === "circle" ? circleSize : shape === "square" ? squareSize * 2 : triangleSize * 2
+        )
+        .attr(
+          shape === "circle" ? null : "height",
+          shape === "circle" ? null : shape === "square" ? squareSize * 2 : triangleSize * 2
+        )
+        .attr(
+          shape === "triangle" ? "d" : null,
+          shape === "triangle"
+            ? (d: DataPoint) => {
+                const x = xScale(new Date(d.date));
+                const y = yScale(d.value);
+                return `M${x},${y - triangleSize} L${x + triangleSize},${y + triangleSize} L${x - triangleSize},${y + triangleSize} Z`;
               }
+            : null
+        )
+        .attr("fill", color)
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 2)
+        .attr("cursor", "crosshair")
+        .on("mouseenter", (event, d) => {
+          event.preventDefault();
+          event.stopPropagation();
+
+          onHighlightItem([data.label]);
+
+          const tooltipContent = tooltipFormatter(
+            {
+              ...d,
+              label: data.label,
+            } as DataPoint,
+            data.series,
+            filteredDataSet
+          );
+
+          if (tooltipRef?.current && svgRef.current) {
+            const [mouseX, mouseY] = d3.pointer(event);
+            const svgRect = svgRef.current.getBoundingClientRect();
+            const tooltip = tooltipRef.current;
+
+            // Calculate position relative to SVG container
+            const xPosition = svgRect.left + mouseX + 10;
+            const yPosition = svgRect.top + mouseY - 25;
+
+            tooltip.style.left = `${xPosition}px`;
+            tooltip.style.top = `${yPosition}px`;
+            tooltip.style.visibility = "visible";
+            tooltip.innerHTML = tooltipContent;
+          }
+        })
+        .on("mouseout", event => {
+          event.preventDefault();
+          event.stopPropagation();
+
+          const relatedTarget = event.relatedTarget;
+          const isMouseOverLine =
+            relatedTarget &&
+            (relatedTarget.classList.contains("line") ||
+              relatedTarget.classList.contains("line-overlay"));
+
+          if (!isMouseOverLine) {
+            onHighlightItem([]);
+            if (tooltipRef?.current) {
+              tooltipRef.current.style.visibility = "hidden";
             }
-          });
-      });
+          }
+        });
+    });
   }, [filteredDataSet, width, height, margin, disabledItems, xAxisDataType, getDashArrayMemoized]);
 
   useEffect(() => {
@@ -503,7 +506,7 @@ const LineChart: FC<LineChartProps> = ({
       event.preventDefault();
       event.stopPropagation();
       onHighlightItem([data.label]);
-    }, 100),
+    }, 50),
     [onHighlightItem]
   );
 
@@ -515,7 +518,7 @@ const LineChart: FC<LineChartProps> = ({
       if (tooltipRef?.current) {
         tooltipRef.current.style.visibility = "hidden";
       }
-    }, 100),
+    }, 50),
     [onHighlightItem]
   );
 
@@ -740,7 +743,7 @@ const LineChart: FC<LineChartProps> = ({
           ref={tooltipRef}
           className="tooltip"
           style={{
-            position: "fixed",
+            position: "absolute",
             visibility: "hidden",
             transition: "visibility 0.1s ease-out, opacity 0.1s ease-out",
             willChange: "visibility, opacity, top, left",

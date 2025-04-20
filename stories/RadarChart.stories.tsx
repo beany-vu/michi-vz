@@ -1,5 +1,5 @@
 import React from "react";
-import { Story, Meta } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react";
 import { RadarChart, RadarChartProps } from "src/components/RadarChart";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
 
@@ -300,11 +300,11 @@ export default {
   tags: ["autodocs"],
 } as Meta;
 
-const Template: Story<RadarChartProps> = args => (
+const Template: StoryFn<RadarChartProps> = args => (
   <MichiVzProvider
     colorsMapping={{
-      "UAE": "red",
-      "France": "blue",
+      UAE: "red",
+      France: "blue",
     }}
     highlightItems={["UAE"]}
   >

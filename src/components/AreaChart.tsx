@@ -47,6 +47,7 @@ interface Props {
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
   filter?: { date: number; sortingDir: "asc" | "desc" };
+  ticks?: number;
 }
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
@@ -73,6 +74,7 @@ const AreaChart: React.FC<Props> = ({
   onChartDataProcessed,
   onHighlightItem,
   filter,
+  ticks = 5,
 }) => {
   const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
@@ -153,7 +155,8 @@ const AreaChart: React.FC<Props> = ({
       if (xAxisDataType === "number") {
         return xScale(d.data.date);
       } else {
-        return xScale(new Date(d.data.date).getTime()); // Assuming d.data.date is a JavaScript Date object
+        // Assuming d.data.date is a JavaScript Date object
+        return xScale(new Date(d.data.date).getTime());
       }
     })
     .y0(d => yScale(d[0] || 0))
@@ -281,6 +284,7 @@ const AreaChart: React.FC<Props> = ({
           margin={margin}
           xAxisFormat={xAxisFormat}
           xAxisDataType={xAxisDataType}
+          ticks={ticks}
         />
         <YaxisLinear
           yScale={yScale}
@@ -333,7 +337,8 @@ const AreaChart: React.FC<Props> = ({
                   rx={3}
                   ry={3}
                   stroke={"#ccc"}
-                  height={yScale(dataPoint[0] || 0) - yScale(dataPoint[1] || 0)} // Handle null values
+                  // Handle null values
+                  height={yScale(dataPoint[0] || 0) - yScale(dataPoint[1] || 0)}
                   fill="#fff"
                   opacity={highlightItems.includes(areaData.key) ? 0.5 : 0}
                   onMouseEnter={event => {

@@ -1,44 +1,41 @@
-// import React from "react";
-// import { render } from "@testing-library/react";
-// import "@testing-library/jest-dom"; // For the "toBeInTheDocument" matcher
-// import Title from "./Title";
+import React from "react";
+import { render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import Title from "./Title";
 
-// describe("<Title />", () => {
-//   it("renders without crashing", () => {
-//     render(
-//       <svg>
-//         <Title x={0} y={0}>
-//           Test Title
-//         </Title>
-//       </svg>
-//     );
-//   });
+describe("Title component", () => {
+  test("renders title text when provided", () => {
+    const testText = "Test Title";
+    render(
+      <Title x={100} y={50}>
+        {testText}
+      </Title>
+    );
 
-//   it("receives x and y as numbers and children as string", () => {
-//     const { getByText } = render(
-//       <svg>
-//         <Title x={100} y={50}>
-//           Test Title
-//         </Title>
-//       </svg>
-//     );
+    expect(screen.getByText(testText)).toBeInTheDocument();
+  });
 
-//     const title = getByText("Test Title");
+  test("has correct position attributes", () => {
+    const testText = "Test Title";
+    const { container } = render(
+      <Title x={100} y={50}>
+        {testText}
+      </Title>
+    );
 
-//     expect(title).toBeInTheDocument();
-//     // Checking the attributes of the rendered element
-//     expect(title).toHaveAttribute("x", "100");
-//     expect(title).toHaveAttribute("y", "50");
-//   });
+    const titleElement = container.querySelector(".title");
+    expect(titleElement).toHaveAttribute("x", "100");
+    expect(titleElement).toHaveAttribute("y", "50");
+  });
 
-//   it("renders the correct title text", () => {
-//     const { getByText } = render(
-//       <svg>
-//         <Title x={0} y={0}>
-//           Another Test Title
-//         </Title>
-//       </svg>
-//     );
-//     expect(getByText("Another Test Title")).toBeInTheDocument();
-//   });
-// });
+  test("renders nothing when children is empty", () => {
+    const { container } = render(
+      <Title x={100} y={50}>
+        {""}
+      </Title>
+    );
+
+    const titleElement = container.querySelector(".title");
+    expect(titleElement).not.toBeInTheDocument();
+  });
+});

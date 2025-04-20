@@ -4,8 +4,8 @@
     "types": ["jest", "@testing-library/jest-dom"],
     "jsx": "react-jsx",
     "outDir": "./dist",
-    "rootDir": "./src",
-//    "strict": true,
+    //    "rootDir": "./src",
+    //    "strict": true,
     "moduleResolution": "node",
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -17,9 +17,9 @@
     "paths": {
       "src/*": ["./src/*"]
     },
-    "target": "ES2019",              // Set your desired target version
-    "downlevelIteration": true,       // Enable downlevel iteration
-    "allowJs": true,
+    "target": "ES2019", // Set your desired target version
+    "downlevelIteration": true, // Enable downlevel iteration
+    "allowJs": true
   },
   "include": [
     "src/**/*",
@@ -27,6 +27,8 @@
     "src/**/*.tsx",
     "**/*.test.ts",
     "**/*.test.tsx",
+    "stories/**/*.ts",
+    "stories/**/*.tsx"
   ],
   "exclude": ["node_modules", "build", "dist"],
 }

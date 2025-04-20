@@ -52,6 +52,24 @@ const Styled = styled.div`
     transition-timing-function: ease-out;
     transition-behavior: allow-discrete;
   }
+
+  /* Override any existing tooltip styles */
+  .tooltip {
+    position: absolute !important;
+    display: none !important;
+    padding: 10px !important;
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    color: white !important;
+    border-radius: 5px !important;
+    pointer-events: none !important;
+    z-index: 1000 !important;
+    font-size: 12px !important;
+    white-space: nowrap !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
 `;
 
 interface DataPoint {
@@ -135,9 +153,8 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
 }) => {
   const ref = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const svgContainerRef = useRef<HTMLDivElement>(null);
   const [activePoint, setActivePoint] = useState<DataPoint | null>(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { colorsMapping, highlightItems, disabledItems } = useChartContext();
 
   const renderCompleteRef = useRef(false);
@@ -268,92 +285,88 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     });
   }, [highlightItems]);
 
+  // Create tooltip element in DOM on first render
+  useEffect(() => {
+    if (!tooltipRef.current) {
+      const tooltip = document.createElement("div");
+      tooltip.className = "tooltip";
+      tooltip.style.cssText = `
+        position: absolute !important;
+        display: none !important;
+        padding: 10px !important;
+        background-color: rgba(0, 0, 0, 0.8) !important;
+        color: white !important;
+        border-radius: 5px !important;
+        pointer-events: none !important;
+        z-index: 1000 !important;
+        transition: none !important;
+        animation: none !important;
+        transform: none !important;
+      `;
+      document.body.appendChild(tooltip);
+      tooltipRef.current = tooltip;
+    }
+
+    return () => {
+      if (tooltipRef.current) {
+        document.body.removeChild(tooltipRef.current);
+      }
+    };
+  }, []);
+
   const handleMouseEnter = useCallback(
     (event, d) => {
-      // Clear any pending hide timeout
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-        hideTimeoutRef.current = null;
-      }
-
       setActivePoint(d);
       onHighlightItem([d.label]);
-      const [x, y] = d3.pointer(event);
-      setMousePosition({ x, y });
 
-      if (tooltipRef.current) {
-        tooltipRef.current.style.left = "-9999px";
-        tooltipRef.current.style.top = "-9999px";
-        tooltipRef.current.style.opacity = "0";
-        tooltipRef.current.style.display = "block";
+      if (!tooltipRef.current) return;
 
-        if (tooltipFormatter) {
-          tooltipRef.current.innerHTML = tooltipFormatter(d);
-        } else {
-          tooltipRef.current.innerHTML = `
-            <div>
-              <div>${d.label}</div>
-              <div>${xAxisFormat ? xAxisFormat(d.x) : d.x}</div>
-              <div>${yAxisFormat ? yAxisFormat(d.y) : d.y}</div>
-            </div>
-          `;
-        }
+      // Get mouse position relative to document
+      const x = event.clientX;
+      const y = event.clientY;
 
-        requestAnimationFrame(() => {
-          if (tooltipRef.current) {
-            tooltipRef.current.style.left = `${mousePosition.x + 10}px`;
-            tooltipRef.current.style.top = `${mousePosition.y - 10}px`;
-            tooltipRef.current.style.opacity = "1";
-          }
-        });
+      // Create tooltip content
+      let content = "";
+      if (tooltipFormatter) {
+        content = tooltipFormatter(d);
+      } else {
+        content = `
+          <div>
+            <div>${d.label}</div>
+            <div>${xAxisFormat ? xAxisFormat(d.x) : d.x}</div>
+            <div>${yAxisFormat ? yAxisFormat(d.y) : d.y}</div>
+          </div>
+        `;
       }
+
+      // Apply content and position at once
+      tooltipRef.current.innerHTML = content;
+      tooltipRef.current.style.left = `${x + 10}px`;
+      tooltipRef.current.style.top = `${y - 10}px`;
+      tooltipRef.current.style.display = "block";
     },
-    [onHighlightItem, tooltipFormatter, xAxisFormat, yAxisFormat, mousePosition]
+    [onHighlightItem, tooltipFormatter, xAxisFormat, yAxisFormat]
   );
 
   const handleSvgMouseMove = useCallback(
     event => {
-      if (activePoint) {
-        const [x, y] = d3.pointer(event);
-        setMousePosition({ x, y });
+      if (activePoint && tooltipRef.current) {
+        // Update tooltip position directly with client coordinates
+        tooltipRef.current.style.left = `${event.clientX + 10}px`;
+        tooltipRef.current.style.top = `${event.clientY - 10}px`;
       }
     },
     [activePoint]
   );
 
-  useLayoutEffect(() => {
-    if (tooltipRef.current && activePoint) {
-      tooltipRef.current.style.left = `${mousePosition.x + 10}px`;
-      tooltipRef.current.style.top = `${mousePosition.y - 10}px`;
-    }
-  }, [mousePosition, activePoint]);
-
   const handleMouseLeave = useCallback(() => {
     setActivePoint(null);
     onHighlightItem([]);
+
     if (tooltipRef.current) {
-      tooltipRef.current.style.opacity = "0";
-      // Clear any existing timeout
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-      }
-      // Set new timeout
-      hideTimeoutRef.current = setTimeout(() => {
-        if (tooltipRef.current) {
-          tooltipRef.current.style.display = "none";
-        }
-      }, 100);
+      tooltipRef.current.style.display = "none";
     }
   }, [onHighlightItem]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (hideTimeoutRef.current) {
-        clearTimeout(hideTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet,
@@ -396,7 +409,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
 
   return (
     <Styled style={{ position: "relative" }}>
-      <div style={{ position: "relative", width: width, height: height }}>
+      <div ref={svgContainerRef} style={{ position: "relative", width: width, height: height }}>
         {isLoading ? (
           <LoadingIndicator />
         ) : (
@@ -520,27 +533,6 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                 yTicksQty={yTicksQty}
               />
             </svg>
-
-            <div
-              ref={tooltipRef}
-              className="tooltip"
-              style={{
-                position: "absolute",
-                display: "none",
-                padding: "10px",
-                backgroundColor: "rgba(0, 0, 0, 0.6)",
-                color: "white",
-                borderRadius: "5px",
-                pointerEvents: "none",
-                zIndex: 1000,
-                opacity: 0,
-                transition: "opacity 0.1s ease-out",
-                transitionDelay: "0.1s",
-                willChange: "opacity, transform",
-                transform: "translate3d(0, 0, 0)",
-                backfaceVisibility: "hidden",
-              }}
-            />
           </Suspense>
         )}
         {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}

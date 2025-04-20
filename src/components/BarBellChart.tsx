@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useLayoutEffect } from "react";
+import React, { useEffect, useRef, useLayoutEffect, useMemo } from "react";
 import Title from "./shared/Title";
 import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
@@ -40,6 +40,7 @@ interface BarBellChartProps {
   children?: React.ReactNode;
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
+  filter?: { limit: number; criteria: string; sortingDir: string };
 }
 
 const BarBellChart: React.FC<BarBellChartProps> = ({
@@ -61,6 +62,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   showGrid = defaultConf.SHOW_GRID,
   onChartDataProcessed,
   onHighlightItem,
+  filter,
 }) => {
   const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
@@ -160,6 +162,25 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     isNodataComponent: isNodataComponent,
     isNodata: isNodata,
   });
+
+  const filteredDataSet = useMemo(() => {
+    // First filter out disabled items
+    let result = dataSet.filter(d => !disabledItems.includes(String(d.label)));
+
+    // Then apply filter logic if filter exists
+    if (filter) {
+      result = result
+        .slice()
+        .sort((a, b) => {
+          const aVal = a[filter.criteria] ?? 0;
+          const bVal = b[filter.criteria] ?? 0;
+          return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
+        })
+        .slice(0, filter.limit);
+    }
+
+    return result;
+  }, [dataSet, filter, disabledItems]);
 
   useEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {

@@ -1,5 +1,5 @@
 import React from "react";
-import ScatterPlot from "../src/components/ScatterPlotChart.tsx"; // Import your ScatterPlot component
+import ScatterPlot from "../src/components/ScatterPlotChart"; // Import your ScatterPlot component
 import { Meta } from "@storybook/react";
 import { fn } from "@storybook/test";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";

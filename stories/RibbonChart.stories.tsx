@@ -10,9 +10,9 @@ export default {
   component: RibbonChart,
   tags: ["autodocs"],
   decorators: [
-    (Story) => (
+    Story => (
       <MichiVzProvider
-        initialColorsMapping={{
+        colorsMapping={{
           dutyFree: "#1F77B4",
           iTariffPeaks: "#17BECF",
           nTariffPeaks: "#FF7F0E",
@@ -20,7 +20,7 @@ export default {
           notDutyFree: "#9467BD",
           trQuota: "#8C564B",
         }}
-        initialHighlightItems={["Africa"]}
+        highlightItems={["Africa"]}
       >
         <Story />
       </MichiVzProvider>

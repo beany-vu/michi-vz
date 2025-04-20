@@ -133,7 +133,8 @@ const XaxisLinear: FC<Props> = ({
 
     // Add transition for axis updates
     g.transition()
-      .duration(750)
+      .delay(150)
+      .duration(400)
       .call(axisBottom)
       .call(g => g.select(".domain").attr("stroke-opacity", 0))
       .call(g => g.select(".domain").remove())
@@ -182,7 +183,17 @@ const XaxisLinear: FC<Props> = ({
     return () => {
       g.selectAll("*").interrupt();
     };
-  }, [xScale, height, margin, xAxisFormat, xAxisDataType, tickValues, defaultFormatter, position, showGrid]);
+  }, [
+    xScale,
+    height,
+    margin,
+    xAxisFormat,
+    xAxisDataType,
+    tickValues,
+    defaultFormatter,
+    position,
+    showGrid,
+  ]);
 
   return <g className="x-axis-container" ref={ref} />;
 };

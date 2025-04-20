@@ -100,16 +100,23 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
 
   // New: compute filteredDataSet
   const filteredDataSet = useMemo(() => {
-    if (!filter) return dataSet;
-    return dataSet
-      .slice() // copy array to avoid mutating original during sort
-      .sort((a, b) => {
-        const aVal = a[filter.criteria] ?? 0;
-        const bVal = b[filter.criteria] ?? 0;
-        return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
-      })
-      .slice(0, filter.limit);
-  }, [dataSet, filter]);
+    // First filter out disabled items
+    let result = dataSet.filter(d => !disabledItems.includes(d.label));
+
+    // Then apply filter logic if filter exists
+    if (filter) {
+      result = result
+        .slice() // copy array to avoid mutating original during sort
+        .sort((a, b) => {
+          const aVal = a[filter.criteria] ?? 0;
+          const bVal = b[filter.criteria] ?? 0;
+          return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
+        })
+        .slice(0, filter.limit);
+    }
+
+    return result;
+  }, [dataSet, filter, disabledItems]);
 
   const yAxisDomain = useMemo(
     () => filteredDataSet.filter(d => !disabledItems.includes(d.label)).map(d => d.label),
