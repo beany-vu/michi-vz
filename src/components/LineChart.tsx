@@ -8,7 +8,7 @@ import React, {
   FC,
 } from "react";
 import * as d3 from "d3";
-import { ScaleTime } from "d3";
+import { color, ScaleTime } from "d3";
 import { DataPoint } from "../types/data";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
@@ -28,9 +28,9 @@ const DASH_SEPARATOR_LENGTH = 4;
 const Styled = styled.div`
   position: relative;
   path {
-    transition-property: all;
-    transition-duration: 0.1s;
-    transition-timing-function: ease-out;
+    transition:
+      stroke 0.1s ease-out,
+      opacity 0.1s ease-out;
     transition-behavior: allow-discrete;
   }
 
@@ -91,7 +91,6 @@ interface LineChartProps {
     criteria: string;
     sortingDir: "asc" | "desc";
   };
-  sandBoxMode?: boolean;
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem: (labels: string[]) => void;
 }
@@ -104,12 +103,11 @@ interface ChartMetadata {
   chartType: "line-chart";
 }
 
-const debounce = (func: Function, wait: number) => {
+const debounce = <T extends (...args: unknown[]) => void>(func: T, wait: number) => {
   let timeout: number;
-  return function (...args: any[]) {
-    const context = this;
+  return function (this: unknown, ...args: Parameters<T>) {
     clearTimeout(timeout);
-    timeout = window.setTimeout(() => func.apply(context, args), wait);
+    timeout = window.setTimeout(() => func.apply(this, args), wait);
   };
 };
 
@@ -131,7 +129,6 @@ const LineChart: FC<LineChartProps> = ({
   isLoadingComponent,
   isNodataComponent,
   isNodata,
-  sandBoxMode = false,
   onChartDataProcessed,
   onHighlightItem,
 }) => {
@@ -142,25 +139,28 @@ const LineChart: FC<LineChartProps> = ({
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
   const filteredDataSet = useMemo(() => {
+    // If no filter is provided, return the entire dataset excluding disabled items
+    if (!filter) {
+      return dataSet.filter(d => !disabledItems.includes(d.label));
+    }
+
     // Start with the base dataset, excluding disabled items
     let result = dataSet.filter(d => !disabledItems.includes(d.label));
 
     // Apply filter logic if filter exists
-    if (filter) {
-      result = result
-        .filter(item => {
-          const targetPoint = item.series.find(d => d.date.toString() === filter.date.toString());
-          return targetPoint !== undefined;
-        })
-        .sort((a, b) => {
-          const aPoint = a.series.find(d => d.date.toString() === filter.date.toString());
-          const bPoint = b.series.find(d => d.date.toString() === filter.date.toString());
-          const aVal = aPoint ? Number(aPoint[filter.criteria]) : 0;
-          const bVal = bPoint ? Number(bPoint[filter.criteria]) : 0;
-          return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
-        })
-        .slice(0, filter.limit);
-    }
+    result = result
+      .filter(item => {
+        const targetPoint = item.series.find(d => d.date.toString() === filter.date.toString());
+        return targetPoint !== undefined;
+      })
+      .sort((a, b) => {
+        const aPoint = a.series.find(d => d.date.toString() === filter.date.toString());
+        const bPoint = b.series.find(d => d.date.toString() === filter.date.toString());
+        const aVal = aPoint ? Number(aPoint[filter.criteria]) : 0;
+        const bVal = bPoint ? Number(bPoint[filter.criteria]) : 0;
+        return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
+      })
+      .slice(0, filter.limit);
 
     // Pre-process each dataset to ensure valid points for line rendering
     return result.map(item => ({
@@ -269,8 +269,9 @@ const LineChart: FC<LineChartProps> = ({
 
         if (!series[i]?.certainty) {
           const dashes = Math.floor(segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH));
-          const remainder =
-            Math.ceil(segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH)) + 5;
+          const remainder = Math.ceil(
+            segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH)
+          );
 
           for (let j = 0; j < dashes; j++) {
             dashArray.push(DASH_LENGTH);
@@ -295,11 +296,19 @@ const LineChart: FC<LineChartProps> = ({
     ({ d, curve }: { d: Iterable<DataPoint>; curve: string }) => {
       return d3
         .line<DataPoint>()
-        .x(d => xScale(new Date(d.date)))
+        .x(d => {
+          if (xAxisDataType === "number") {
+            return xScale(Number(d.date));
+          } else if (xAxisDataType === "date_annual") {
+            return xScale(new Date(`${d.date}-01-01`));
+          } else {
+            return xScale(new Date(d.date));
+          }
+        })
         .y(d => yScale(d.value))
         .curve(d3?.[curve] ?? d3.curveBumpX)(d);
     },
-    [xScale, yScale]
+    [xScale, yScale, xAxisDataType]
   );
 
   const lineData = useMemo(
@@ -312,6 +321,28 @@ const LineChart: FC<LineChartProps> = ({
     [dataSet]
   );
 
+  const handleMouseEnter = useCallback(
+    (data: { label: string; color: string; series: DataPoint[] }) =>
+      debounce((event: React.MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onHighlightItem([data.label]);
+      }, 10),
+    [onHighlightItem]
+  );
+
+  const handleMouseOut = useCallback(
+    debounce((event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onHighlightItem([]);
+      if (tooltipRef?.current) {
+        tooltipRef.current.style.visibility = "hidden";
+      }
+    }, 10),
+    [onHighlightItem]
+  );
+
   useEffect(() => {
     const svg = d3.select(svgRef.current);
 
@@ -320,7 +351,10 @@ const LineChart: FC<LineChartProps> = ({
     svg.selectAll(".data-group").remove();
 
     // draw lines - no need to filter disabledItems again since it's handled in filteredDataSet
-    filteredDataSet.forEach((data, i) => {
+
+    for (let i = 0; i < filteredDataSet.length; i++) {
+      const data = filteredDataSet[i];
+      const color = colorsMapping[data.label] ?? data.color ?? "#999"; // Add fallback color
       // We already filtered nulls in the useMemo, just check for enough points
       if (data.series.length > 1) {
         svg
@@ -328,13 +362,14 @@ const LineChart: FC<LineChartProps> = ({
           .datum(data.series)
           .attr("class", `line line-${i} data-group data-group-${i}`)
           .attr("data-label", data.label)
+
           .attr("d", (d: DataPoint[]) =>
             line({
               d: d,
-              curve: data?.curve,
+              curve: data?.curve ?? "curveBumpX", // Add fallback curve
             })
           )
-          .attr("stroke", colorsMapping[data.label] ?? data.color)
+          .attr("stroke", color)
           .attr("stroke-width", 2.5) // Slightly thicker line for better visibility
           .attr("fill", "none")
           .attr("pointer-events", "none")
@@ -342,9 +377,7 @@ const LineChart: FC<LineChartProps> = ({
             const pathNode = this as SVGPathElement;
             const dashArray = getDashArrayMemoized(d, pathNode, xScale);
             d3.select(this).attr("stroke-dasharray", dashArray);
-          })
-          .on("mouseenter", event => handleMouseEnter(event, data))
-          .on("mouseout", handleMouseOut);
+          });
 
         svg
           .append("path")
@@ -356,21 +389,25 @@ const LineChart: FC<LineChartProps> = ({
           .attr("d", (d: DataPoint[]) =>
             line({
               d: d,
-              curve: data?.curve,
+              curve: data?.curve ?? "curveBumpX",
             })
           )
-          .attr("stroke", colorsMapping[data.label] ?? data.color)
+          .attr("data-label", data.label)
+          .attr("stroke", color)
           .attr("stroke-width", 8) // Wider overlay for easier mouse interaction
           .attr("fill", "none")
           .attr("pointer-events", "stroke")
           .attr("opacity", 0.05) // Slightly higher opacity for better visibility
-          .on("mouseenter", event => handleMouseEnter(event, data))
+          .on("mouseenter", function (event) {
+            handleMouseEnter(data)(event);
+          })
           .on("mouseout", handleMouseOut);
       }
-    });
+    }
 
     // draw circles on the line to indicate data points
-    filteredDataSet.forEach((data, i) => {
+    for (let i = 0; i < filteredDataSet.length; i++) {
+      const data = filteredDataSet[i];
       const shape = data.shape || "circle";
       const circleSize = 5; // Size for circles
       const squareSize = 6; // Final adjusted size for squares
@@ -434,18 +471,32 @@ const LineChart: FC<LineChartProps> = ({
           );
 
           if (tooltipRef?.current && svgRef.current) {
-            const [mouseX, mouseY] = d3.pointer(event);
+            const [mouseX, mouseY] = d3.pointer(event, event.currentTarget);
             const svgRect = svgRef.current.getBoundingClientRect();
             const tooltip = tooltipRef.current;
 
-            // Calculate position relative to SVG container
-            const xPosition = svgRect.left + mouseX + 10;
-            const yPosition = svgRect.top + mouseY - 25;
-
-            tooltip.style.left = `${xPosition}px`;
-            tooltip.style.top = `${yPosition}px`;
+            // Get tooltip and SVG dimensions to check for overflow
             tooltip.style.visibility = "visible";
             tooltip.innerHTML = tooltipContent;
+            const tooltipRect = tooltip.getBoundingClientRect();
+
+            // Position relative to the currentTarget element
+            const xPosition = mouseX + 10;
+            const yPosition = mouseY - 25;
+
+            // Check if tooltip would overflow right edge
+            if (xPosition + tooltipRect.width > svgRect.width - margin.right) {
+              tooltip.style.left = `${mouseX - tooltipRect.width - 10}px`;
+            } else {
+              tooltip.style.left = `${xPosition}px`;
+            }
+
+            // Check if tooltip would overflow top edge
+            if (yPosition < margin.top) {
+              tooltip.style.top = `${mouseY + 10}px`;
+            } else {
+              tooltip.style.top = `${yPosition}px`;
+            }
           }
         })
         .on("mouseout", event => {
@@ -465,19 +516,46 @@ const LineChart: FC<LineChartProps> = ({
             }
           }
         });
-    });
-  }, [filteredDataSet, width, height, margin, disabledItems, xAxisDataType, getDashArrayMemoized]);
+    }
+  }, [
+    filteredDataSet,
+    width,
+    height,
+    margin,
+    disabledItems,
+    xAxisDataType,
+    getDashArrayMemoized,
+    colorsMapping,
+    line,
+    xScale,
+    yScale,
+    handleMouseEnter,
+    handleMouseOut,
+    onHighlightItem,
+    tooltipFormatter,
+    tooltipRef,
+    svgRef,
+  ]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
-    Object.keys(colorsMapping).forEach(key => {
+
+    // Use for loop instead of forEach for better performance
+    for (const key of Object.keys(colorsMapping)) {
+      // Update circle/point colors
+      svg.selectAll(`line[data-label="${key}"]`).attr("stroke", "#fff").attr("stroke-width", 2);
+
+      // Update path colors with proper selectors
       svg
-        .selectAll(`circle[data-label="${key}"]`)
-        .attr("stroke", "#fff")
-        .attr("stroke-width", 2)
-        .attr("fill", colorsMapping[key]);
-      svg.selectAll(`[label="${key}"]`).attr("fill", colorsMapping[key]);
-    });
+        .selectAll(`.line[data-label="${key}"]`)
+        .attr("stroke", colorsMapping[key] ?? "#eee") // Add fallback
+        .attr("stroke-width", 2.5);
+
+      // Update path overlay colors
+      svg
+        .selectAll(`.line-overlay[data-label="${key}"]`)
+        .attr("stroke", colorsMapping[key] ?? "#eee"); // Add fallback
+    }
   }, [colorsMapping]);
 
   useEffect(() => {
@@ -488,12 +566,13 @@ const LineChart: FC<LineChartProps> = ({
       .classed("highlighted", false);
 
     if (highlightItems.length > 0) {
-      highlightItems.forEach(item => {
+      // Use for loop instead of forEach
+      for (let i = 0; i < highlightItems.length; i++) {
         svg
-          .selectAll(`[data-label="${item}"]`)
+          .selectAll(`[data-label="${highlightItems[i]}"]`)
           .classed("dimmed", false)
           .classed("highlighted", true);
-      });
+      }
     }
 
     if (highlightItems.length === 0) {
@@ -501,32 +580,11 @@ const LineChart: FC<LineChartProps> = ({
     }
   }, [highlightItems]);
 
-  const handleMouseEnter = useCallback(
-    debounce((event, data) => {
-      event.preventDefault();
-      event.stopPropagation();
-      onHighlightItem([data.label]);
-    }, 50),
-    [onHighlightItem]
-  );
-
-  const handleMouseOut = useCallback(
-    debounce(event => {
-      event.preventDefault();
-      event.stopPropagation();
-      onHighlightItem([]);
-      if (tooltipRef?.current) {
-        tooltipRef.current.style.visibility = "hidden";
-      }
-    }, 50),
-    [onHighlightItem]
-  );
-
   const handleHover = useCallback(
     (event: MouseEvent) => {
       if (!svgRef.current || !tooltipRef.current) return;
 
-      const [x, y] = d3.pointer(event, svgRef.current);
+      const [x, y] = d3.pointer(event, event.currentTarget as SVGElement);
       const xValue = xScale.invert(x);
 
       const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
@@ -539,11 +597,29 @@ const LineChart: FC<LineChartProps> = ({
 
       const tooltip = tooltipRef.current;
       tooltip.innerHTML = `<div style="background: #fff; padding: 5px">${tooltipTitle}${tooltipContent}</div>`;
-      tooltip.style.left = x + "px";
-      tooltip.style.top = y + "px";
+
+      // Make tooltip visible to calculate its dimensions
       tooltip.style.opacity = "1";
       tooltip.style.visibility = "visible";
       tooltip.style.pointerEvents = "auto";
+
+      // Get dimensions to check for overflow
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const svgRect = svgRef.current.getBoundingClientRect();
+
+      // Check for right edge overflow
+      if (x + tooltipRect.width > svgRect.width - margin.right) {
+        tooltip.style.left = x - tooltipRect.width - 10 + "px";
+      } else {
+        tooltip.style.left = x + 10 + "px";
+      }
+
+      // Check for top/bottom edge overflow
+      if (y - tooltipRect.height < margin.top) {
+        tooltip.style.top = y + 10 + "px";
+      } else {
+        tooltip.style.top = y - tooltipRect.height - 5 + "px";
+      }
 
       const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
       const hoverLine = hoverLinesGroup.select(".hover-line");
@@ -558,7 +634,7 @@ const LineChart: FC<LineChartProps> = ({
 
       hoverLinesGroup.style("display", "block");
     },
-    [xScale, filteredDataSet, getYValueAtX]
+    [xScale, filteredDataSet, getYValueAtX, margin]
   );
 
   const handleCombinedMouseOut = useCallback(() => {
@@ -581,7 +657,9 @@ const LineChart: FC<LineChartProps> = ({
 
     const svg = d3.select(svgRef.current);
     const hoverLinesGroup = svg.append("g").attr("class", "hover-lines").style("display", "none");
-    const hoverLine = hoverLinesGroup
+
+    // Add the hover line to group and use it in callback
+    hoverLinesGroup
       .append("line")
       .attr("class", "hover-line")
       .attr("stroke", "lightgray")

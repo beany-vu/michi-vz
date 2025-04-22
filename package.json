@@ -1,6 +1,6 @@
 {
   "name": "michi-vz",
-  "version": "0.3.4",
+  "version": "0.3.022",
   "description": "a visualization library based on d3 and react",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,6 +17,7 @@
   "license": "ISC",
   "dependencies": {
     "@storybook/test": "^8.5.3",
+    "@testing-library/user-event": "^14.6.1",
     "d3": "^7.9.0",
     "d3-scale": "^4.0.2",
     "eslint-config-airbnb-typescript": "^17.1.0",
@@ -44,7 +45,7 @@
     "@storybook/react": "^8.5.3",
     "@storybook/react-webpack5": "^8.5.3",
     "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^15.0.7",
+    "@testing-library/react": "^16.3.0",
     "@types/d3": "^7.4.3",
     "@types/jest": "^29.5.12",
     "@types/react": "^19.1.0",

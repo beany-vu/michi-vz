@@ -4,7 +4,7 @@
     "types": ["jest", "@testing-library/jest-dom"],
     "jsx": "react-jsx",
     "outDir": "./dist",
-    //    "rootDir": "./src",
+    "rootDir": "./src",
     //    "strict": true,
     "moduleResolution": "node",
     "esModuleInterop": true,
@@ -21,14 +21,6 @@
     "downlevelIteration": true, // Enable downlevel iteration
     "allowJs": true
   },
-  "include": [
-    "src/**/*",
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "stories/**/*.ts",
-    "stories/**/*.tsx"
-  ],
-  "exclude": ["node_modules", "build", "dist"],
+  "include": ["src/**/*", "src/**/*.ts", "src/**/*.tsx", "**/*.test.ts", "**/*.test.tsx"],
+  "exclude": ["node_modules", "build", "dist", "stories"]
 }

@@ -34,6 +34,8 @@ export default {
           "Item 18": "yellow",
           "Item 19": "brown",
           "Item 20": "pink",
+          Africa: "red",
+          "Rest of the World": "blue",
         }}
         // highlightItems={["Item 1"]}
       >
@@ -691,7 +693,117 @@ export const Primary = {
     ...commonProps,
     dataSet: singleSeriesData,
     title: "Single Series Line Chart",
-    filter: { limit: 10, date: "2017", criteria: "value", sortingDir: "desc" },
+    series: [
+      {
+        label: "Africa",
+        series: [
+          {
+            year: 2015,
+            date: "2015",
+            value: -63.85,
+            certainty: false,
+            code: "1001",
+          },
+          {
+            year: 2016,
+            date: "2016",
+            value: -64.01,
+            certainty: true,
+            code: "1001",
+          },
+          {
+            year: 2017,
+            date: "2017",
+            value: -63.84,
+            certainty: true,
+            code: "1001",
+          },
+          {
+            year: 2018,
+            date: "2018",
+            value: -89.53,
+            certainty: true,
+            code: "1001",
+          },
+          {
+            year: 2019,
+            date: "2019",
+            value: -53.03,
+            certainty: true,
+            code: "1001",
+          },
+          {
+            year: 2020,
+            date: "2020",
+            value: -84.09,
+            certainty: true,
+            code: "1001",
+          },
+          {
+            year: 2021,
+            date: "2021",
+            value: -43.87,
+            certainty: true,
+            code: "1001",
+          },
+        ],
+      },
+      {
+        label: "Rest of the World",
+        series: [
+          {
+            year: 2015,
+            date: "2015",
+            value: -86.95,
+            certainty: false,
+            code: "1002",
+          },
+          {
+            year: 2016,
+            date: "2016",
+            value: -75.09,
+            certainty: true,
+            code: "1002",
+          },
+          {
+            year: 2017,
+            date: "2017",
+            value: -69.48,
+            certainty: true,
+            code: "1002",
+          },
+          {
+            year: 2018,
+            date: "2018",
+            value: -64.23,
+            certainty: true,
+            code: "1002",
+          },
+          {
+            year: 2019,
+            date: "2019",
+            value: -62.17,
+            certainty: true,
+            code: "1002",
+          },
+          {
+            year: 2020,
+            date: "2020",
+            value: -86.63,
+            certainty: true,
+            code: "1002",
+          },
+          {
+            year: 2021,
+            date: "2021",
+            value: -88.95,
+            certainty: true,
+            code: "1002",
+          },
+        ],
+      },
+    ],
+    filter: null,
   },
 };
 
