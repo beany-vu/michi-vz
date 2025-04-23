@@ -6,9 +6,10 @@ import React, {
   useCallback,
   useLayoutEffect,
   FC,
+  useState,
 } from "react";
 import * as d3 from "d3";
-import { color, ScaleTime } from "d3";
+import { ScaleTime } from "d3";
 import { DataPoint } from "../types/data";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
@@ -29,9 +30,22 @@ const Styled = styled.div`
   position: relative;
   path {
     transition:
-      stroke 0.1s ease-out,
-      opacity 0.1s ease-out;
+      stroke 0.3s ease-out,
+      opacity 0.3s ease-out;
     transition-behavior: allow-discrete;
+    will-change: stroke, opacity, d;
+  }
+
+  circle,
+  rect,
+  path.data-point {
+    transition:
+      fill 0.3s ease-out,
+      stroke 0.3s ease-out,
+      r 0.3s ease-out,
+      width 0.3s ease-out,
+      height 0.3s ease-out;
+    will-change: fill, stroke, r, width, height, d;
   }
 
   .data-group {
@@ -137,6 +151,31 @@ const LineChart: FC<LineChartProps> = ({
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const isInitialMount = useRef(true); // Track initial mount
+  const [isHovering, setIsHovering] = useState(false);
+
+  // Animation constants
+  const TRANSITION_DURATION = 400;
+  const TRANSITION_EASE = d3.easeQuadOut;
+
+  // Use this constant for the fallback semi-transparent color
+  const FALLBACK_COLOR = "rgba(253, 253, 253, 0.5)";
+
+  // Helper function to get the appropriate color
+  const getColor = useCallback(
+    (mappedColor: string | undefined, dataColor: string | undefined): string => {
+      if (mappedColor) return mappedColor;
+      if (dataColor) return dataColor;
+      return FALLBACK_COLOR;
+    },
+    []
+  );
+
+  // Add this helper function to sanitize labels for CSS class names
+  const sanitizeForClassName = useCallback((str: string): string => {
+    return str.replace(/[^a-z0-9]/gi, "_");
+  }, []);
 
   const filteredDataSet = useMemo(() => {
     // If no filter is provided, return the entire dataset excluding disabled items
@@ -321,145 +360,454 @@ const LineChart: FC<LineChartProps> = ({
     [dataSet]
   );
 
+  // Track context changes independently
+  const prevHighlightItems = useRef<string[]>([]);
+  const prevDisabledItems = useRef<string[]>([]);
+  const prevColorsMapping = useRef<{ [key: string]: string }>({});
+
+  // Update context refs without triggering effects
+  useEffect(() => {
+    prevHighlightItems.current = highlightItems;
+  }, [highlightItems]);
+
+  useEffect(() => {
+    prevDisabledItems.current = disabledItems;
+  }, [disabledItems]);
+
+  useEffect(() => {
+    prevColorsMapping.current = colorsMapping;
+  }, [colorsMapping]);
+
+  // Dedicated handling for hover interactions
   const handleMouseEnter = useCallback(
-    (data: { label: string; color: string; series: DataPoint[] }) =>
-      debounce((event: React.MouseEvent) => {
-        event.preventDefault();
-        event.stopPropagation();
-        onHighlightItem([data.label]);
-      }, 10),
+    (data: { label: string; color: string; series: DataPoint[] }) => (event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Set hover state to explicitly prevent loading indicator
+      setIsHovering(true);
+
+      // Change highlight state directly through context
+      onHighlightItem([data.label]);
+    },
     [onHighlightItem]
   );
 
   const handleMouseOut = useCallback(
-    debounce((event: React.MouseEvent) => {
+    (event: React.MouseEvent) => {
       event.preventDefault();
       event.stopPropagation();
+
+      // Keep hover state true briefly to prevent flicker
+      setIsHovering(true);
+
+      // Clear highlight
       onHighlightItem([]);
+
       if (tooltipRef?.current) {
         tooltipRef.current.style.visibility = "hidden";
       }
-    }, 10),
+
+      // Reset hover state after a small delay
+      setTimeout(() => {
+        setIsHovering(false);
+      }, 200);
+    },
     [onHighlightItem]
   );
 
+  // Reset hover state on mouse out from the chart
+  const handleChartMouseOut = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Ensure hover state is set
+      setIsHovering(true);
+
+      // Clear highlight
+      onHighlightItem([]);
+
+      if (tooltipRef?.current) {
+        tooltipRef.current.style.visibility = "hidden";
+      }
+
+      // Reset hover state after a small delay
+      setTimeout(() => {
+        setIsHovering(false);
+      }, 200);
+    },
+    [onHighlightItem]
+  );
+
+  // Direct highlight application without processing state
   useEffect(() => {
     const svg = d3.select(svgRef.current);
+    if (!svg.node()) return;
 
-    svg.selectAll(".line").remove();
-    svg.selectAll(".line-overlay").remove();
-    svg.selectAll(".data-group").remove();
+    // Set hover state to prevent loading during class changes
+    if (highlightItems.length > 0) {
+      setIsHovering(true);
+    }
 
-    // draw lines - no need to filter disabledItems again since it's handled in filteredDataSet
+    // Apply dimming/highlighting classes
+    svg
+      .selectAll(".data-group")
+      .classed("dimmed", highlightItems.length > 0)
+      .classed("highlighted", false);
 
-    for (let i = 0; i < filteredDataSet.length; i++) {
-      const data = filteredDataSet[i];
-      const color = colorsMapping[data.label] ?? data.color ?? "#999"; // Add fallback color
-      // We already filtered nulls in the useMemo, just check for enough points
-      if (data.series.length > 1) {
+    if (highlightItems.length > 0) {
+      // Use for loop instead of forEach
+      for (let i = 0; i < highlightItems.length; i++) {
         svg
-          .append("path")
-          .datum(data.series)
-          .attr("class", `line line-${i} data-group data-group-${i}`)
-          .attr("data-label", data.label)
-
-          .attr("d", (d: DataPoint[]) =>
-            line({
-              d: d,
-              curve: data?.curve ?? "curveBumpX", // Add fallback curve
-            })
-          )
-          .attr("stroke", color)
-          .attr("stroke-width", 2.5) // Slightly thicker line for better visibility
-          .attr("fill", "none")
-          .attr("pointer-events", "none")
-          .each(function (d: DataPoint[]) {
-            const pathNode = this as SVGPathElement;
-            const dashArray = getDashArrayMemoized(d, pathNode, xScale);
-            d3.select(this).attr("stroke-dasharray", dashArray);
-          });
-
-        svg
-          .append("path")
-          .datum(data.series)
-          .attr(
-            "class",
-            `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${data.label} line-group-overlay-${data.label}`
-          )
-          .attr("d", (d: DataPoint[]) =>
-            line({
-              d: d,
-              curve: data?.curve ?? "curveBumpX",
-            })
-          )
-          .attr("data-label", data.label)
-          .attr("stroke", color)
-          .attr("stroke-width", 8) // Wider overlay for easier mouse interaction
-          .attr("fill", "none")
-          .attr("pointer-events", "stroke")
-          .attr("opacity", 0.05) // Slightly higher opacity for better visibility
-          .on("mouseenter", function (event) {
-            handleMouseEnter(data)(event);
-          })
-          .on("mouseout", handleMouseOut);
+          .selectAll(`[data-label="${highlightItems[i]}"]`)
+          .classed("dimmed", false)
+          .classed("highlighted", true);
       }
     }
 
-    // draw circles on the line to indicate data points
-    for (let i = 0; i < filteredDataSet.length; i++) {
-      const data = filteredDataSet[i];
-      const shape = data.shape || "circle";
-      const circleSize = 5; // Size for circles
-      const squareSize = 6; // Final adjusted size for squares
-      const triangleSize = 8; // Final adjusted size for triangles
-      const color = colorsMapping[data.label] ?? data.color ?? "transparent";
+    // Reset hover state after class changes complete
+    const highlightTimer = setTimeout(() => {
+      if (highlightItems.length === 0) {
+        setIsHovering(false);
+      }
+    }, 100);
 
+    return () => clearTimeout(highlightTimer);
+  }, [highlightItems, svgRef]);
+
+  // Only show loading state during initial component mount or when explicitly isLoading is true
+  // Process data changes internally without showing loading overlay
+  useEffect(() => {
+    // Only show processing indicator on initial mount, not on subsequent data changes
+    if (isInitialMount.current) {
+      setIsProcessing(true);
+
+      const initialTimer = setTimeout(() => {
+        setIsProcessing(false);
+        isInitialMount.current = false;
+      }, TRANSITION_DURATION);
+
+      return () => clearTimeout(initialTimer);
+    }
+  }, [TRANSITION_DURATION]);
+
+  // Separate data processing effect that doesn't show loading overlay
+  useEffect(() => {
+    // Process data changes without showing loading overlay
+    // Internal-only state for cleanup and synchronization
+    const processingTimer = setTimeout(() => {
+      // This just manages cleanup timing, doesn't affect UI
+    }, TRANSITION_DURATION);
+
+    return () => clearTimeout(processingTimer);
+  }, [dataSet, filter, width, height, TRANSITION_DURATION]);
+
+  // Calculate whether to show the loading indicator
+  // Only show on initial load or explicit isLoading
+  const showLoadingIndicator = isLoading || (isProcessing && isInitialMount.current);
+
+  const visibleDataSets = useMemo(() => {
+    return filteredDataSet.filter(d => d.series.length > 1);
+  }, [filteredDataSet]);
+
+  const handleItemHighlight = useCallback(
+    (labels: string[]) => {
+      // Set hovering state to true whenever highlight changes
+      // This prevents processing overlay from showing during interactions
+      setIsHovering(true);
+      onHighlightItem(labels);
+
+      // Reset hover state after a delay to allow for normal processing later
+      clearTimeout((window as any).hoverResetTimer);
+      (window as any).hoverResetTimer = setTimeout(() => {
+        setIsHovering(false);
+      }, 1000); // 1 second delay to ensure hover state is fully complete
+    },
+    [onHighlightItem]
+  );
+
+  // Ensure we have clean data point removal when filter changes
+  useEffect(() => {
+    // This effect specifically runs when filter or dataset changes
+    // It ensures all old data points are properly removed
+
+    const svg = d3.select(svgRef.current);
+    if (!svg.node()) return;
+
+    // First, remove all existing data points before any new ones are rendered
+    // Use a more aggressive selector to ensure all old points are removed
+    svg.selectAll(".data-group:not(.line):not(.line-overlay)").remove();
+
+    // This ensures a clean slate for new data points to be rendered
+    // The main rendering effect will then add the correct points back
+  }, [filter, dataSet]); // Only run when filter or dataset changes
+
+  // Main rendering effect
+  useEffect(() => {
+    const svg = d3.select(svgRef.current);
+
+    // Instead of removing all lines, use D3 update pattern
+    // Create a key function that uniquely identifies each dataset
+    const keyFn = (d: (typeof filteredDataSet)[0]) => d.label;
+
+    // Line paths - main paths
+    const linePaths = svg.selectAll(".line").data(visibleDataSets, keyFn);
+
+    // Exit - remove lines that no longer exist
+    linePaths.exit().remove();
+
+    // Update - update existing lines
+    linePaths
+      .attr("d", d =>
+        line({
+          d: d.series,
+          curve: d?.curve ?? "curveBumpX",
+        })
+      )
+      .each(function (d) {
+        const pathNode = this as SVGPathElement;
+        const dashArray = getDashArrayMemoized(d.series, pathNode, xScale);
+        d3.select(this).attr("stroke-dasharray", dashArray);
+      });
+
+    // Enter - add new lines
+    linePaths
+      .enter()
+      .append("path")
+      .attr("class", (d, i) => `line line-${i} data-group data-group-${i}`)
+      .attr("data-label", d => d.label)
+      .attr("data-label-safe", d => sanitizeForClassName(d.label))
+      .attr("d", d =>
+        line({
+          d: d.series,
+          curve: d?.curve ?? "curveBumpX",
+        })
+      )
+      .attr("stroke", "transparent")
+      .attr("stroke-width", 2.5)
+      .attr("fill", "none")
+      .attr("pointer-events", "none")
+      .attr("transition", "stroke 0.5s ease-out, opacity 0.5s ease-out")
+      .attr("stroke", d => getColor(colorsMapping[d.label], d.color))
+      .attr("opacity", 0)
+      .each(function (d) {
+        const pathNode = this as SVGPathElement;
+        const dashArray = getDashArrayMemoized(d.series, pathNode, xScale);
+        d3.select(this).attr("stroke-dasharray", dashArray);
+      })
+      .transition()
+      .duration(TRANSITION_DURATION)
+      .ease(TRANSITION_EASE)
+      .attr("stroke", d => getColor(colorsMapping[d.label], d.color))
+      .attr("opacity", 1);
+
+    // Line overlays - handle similarly
+    const lineOverlays = svg.selectAll(".line-overlay").data(visibleDataSets, keyFn);
+
+    // Exit - remove overlays that no longer exist
+    lineOverlays.exit().remove();
+
+    // Update - update existing overlays
+    lineOverlays.attr("d", d =>
+      line({
+        d: d.series,
+        curve: d?.curve ?? "curveBumpX",
+      })
+    );
+
+    // Enter - add new overlays
+    const enterOverlays = lineOverlays
+      .enter()
+      .append("path")
+      .attr("class", (d, i) => {
+        const safeLabelClass = sanitizeForClassName(d.label);
+        return `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${safeLabelClass} line-group-overlay-${safeLabelClass}`;
+      })
+      .attr("data-label", d => d.label)
+      .attr("data-label-safe", d => sanitizeForClassName(d.label))
+      .attr("d", d =>
+        line({
+          d: d.series,
+          curve: d?.curve ?? "curveBumpX",
+        })
+      )
+      .attr("stroke", "transparent")
+      .attr("stroke-width", 8)
+      .attr("fill", "none")
+      .attr("pointer-events", "stroke")
+      .attr("opacity", 0.05);
+
+    enterOverlays
+      .transition()
+      .duration(TRANSITION_DURATION)
+      .ease(TRANSITION_EASE)
+      .attr("stroke", d => getColor(colorsMapping[d.label], d.color))
+      // Do not change the opacity for overlays
+      .on("end", function (d) {
+        // After transition completes, add event listeners
+        d3.select(this)
+          .on("mouseenter", function (event) {
+            handleItemHighlight([d.label]);
+          })
+          .on("mouseout", handleMouseOut);
+      });
+
+    // Ensure existing overlays have event listeners
+    lineOverlays
+      .on("mouseenter", function (event, d) {
+        handleItemHighlight([d.label]);
+      })
+      .on("mouseout", handleMouseOut);
+
+    // First remove any existing data points that don't belong to currently filtered datasets
+    svg
+      .selectAll(".data-group:not(.line):not(.line-overlay)")
+      .filter(function () {
+        const dataLabel = (this as SVGElement).getAttribute("data-label");
+        return !visibleDataSets.some(d => d.label === dataLabel);
+      })
+      .remove();
+
+    // Now draw points ONLY for the same datasets that have visible paths
+    for (let i = 0; i < visibleDataSets.length; i++) {
+      const data = visibleDataSets[i];
+      const shape = data.shape || "circle";
+      const circleSize = 5;
+      const squareSize = 6;
+      const triangleSize = 8;
+      const color = getColor(colorsMapping[data.label], data.color);
+      const safeLabelClass = sanitizeForClassName(data.label);
+
+      // Use a composite key that includes both dataset label and point date to ensure uniqueness
+      const pointKeyFn = (d: DataPoint) => `${data.label}-${d.date}`;
+
+      if (shape === "circle") {
+        // Select existing circles - use sanitized class names for selectors
+        const circles = svg
+          .selectAll(`.data-point-${i}[data-label="${data.label}"]`)
+          .data(data.series, pointKeyFn);
+
+        // Remove circles that no longer exist
+        circles.exit().remove();
+
+        // Update existing circles
+        circles
+          .attr("cx", d => xScale(new Date(d.date)))
+          .attr("cy", d => yScale(d.value))
+          .attr("fill", color);
+
+        // Add new circles
+        circles
+          .enter()
+          .append("circle")
+          .attr("class", `data-group data-group-${i} data-group-${safeLabelClass} data-point-${i}`)
+          .attr("data-label", data.label)
+          .attr("data-label-safe", safeLabelClass)
+          .attr("cx", d => xScale(new Date(d.date)))
+          .attr("cy", d => yScale(d.value))
+          .attr("r", 0) // Start with radius 0 for animation
+          .attr("fill", color)
+          .attr("stroke", "#fdfdfd")
+          .attr("stroke-width", 2)
+          .attr("cursor", "crosshair")
+          .transition()
+          .duration(TRANSITION_DURATION)
+          .ease(TRANSITION_EASE)
+          .attr("r", circleSize)
+          .attr("fill", color);
+      } else if (shape === "square") {
+        // Select existing squares
+        const squares = svg
+          .selectAll(`.data-point-${i}[data-label="${data.label}"]`)
+          .data(data.series, pointKeyFn);
+
+        // Remove squares that no longer exist
+        squares.exit().remove();
+
+        // Update existing squares
+        squares
+          .attr("x", d => xScale(new Date(d.date)) - squareSize)
+          .attr("y", d => yScale(d.value) - squareSize)
+          .attr("fill", color);
+
+        // Add new squares
+        squares
+          .enter()
+          .append("rect")
+          .attr("class", `data-group data-group-${i} data-group-${safeLabelClass} data-point-${i}`)
+          .attr("data-label", data.label)
+          .attr("data-label-safe", safeLabelClass)
+          .attr("x", d => xScale(new Date(d.date)) - squareSize)
+          .attr("y", d => yScale(d.value) - squareSize)
+          .attr("width", 0) // Start with width 0 for animation
+          .attr("height", 0) // Start with height 0 for animation
+          .attr("fill", color)
+          .attr("stroke", "#fdfdfd")
+          .attr("stroke-width", 2)
+          .attr("cursor", "crosshair")
+          .transition()
+          .duration(TRANSITION_DURATION)
+          .ease(TRANSITION_EASE)
+          .attr("width", squareSize * 2)
+          .attr("height", squareSize * 2)
+          .attr("fill", color);
+      } else if (shape === "triangle") {
+        // Select existing triangles
+        const triangles = svg
+          .selectAll(`.data-point-${i}[data-label="${data.label}"]`)
+          .data(data.series, pointKeyFn);
+
+        // Remove triangles that no longer exist
+        triangles.exit().remove();
+
+        // Update existing triangles
+        triangles
+          .attr("d", d => {
+            const x = xScale(new Date(d.date));
+            const y = yScale(d.value);
+            return `M${x},${y - triangleSize} L${x + triangleSize},${y + triangleSize} L${x - triangleSize},${y + triangleSize} Z`;
+          })
+          .attr("fill", color);
+
+        // Add new triangles - scale from center for animation
+        triangles
+          .enter()
+          .append("path")
+          .attr(
+            "class",
+            `data-group data-group-${i} data-group-${safeLabelClass} data-point-${i} data-point`
+          )
+          .attr("data-label", data.label)
+          .attr("data-label-safe", safeLabelClass)
+          .attr("d", d => {
+            const x = xScale(new Date(d.date));
+            const y = yScale(d.value);
+            return `M${x},${y} L${x},${y} L${x},${y} Z`; // Start as a point
+          })
+          .attr("fill", color)
+          .attr("stroke", "#fdfdfd")
+          .attr("stroke-width", 2)
+          .attr("cursor", "crosshair")
+          .transition()
+          .duration(TRANSITION_DURATION)
+          .ease(TRANSITION_EASE)
+          .attr("d", d => {
+            const x = xScale(new Date(d.date));
+            const y = yScale(d.value);
+            return `M${x},${y - triangleSize} L${x + triangleSize},${y + triangleSize} L${x - triangleSize},${y + triangleSize} Z`;
+          })
+          .attr("fill", color);
+      }
+
+      // Add event listeners to all data points after they've been created or updated
       svg
-        .selectAll(`.data-point-${i}`)
-        .data(data.series)
-        .enter()
-        .append(shape === "circle" ? "circle" : shape === "square" ? "rect" : "path")
-        .attr("class", `data-group data-group-${i} data-group-${data.label}`)
-        .attr("data-label", data.label)
-        .attr(
-          shape === "circle" ? "cx" : "x",
-          (d: DataPoint) =>
-            xScale(new Date(d.date)) -
-            (shape === "circle" ? 0 : shape === "square" ? squareSize : triangleSize)
-        )
-        .attr(
-          shape === "circle" ? "cy" : "y",
-          (d: DataPoint) =>
-            yScale(d.value) -
-            (shape === "circle" ? 0 : shape === "square" ? squareSize : triangleSize)
-        )
-        .attr(
-          shape === "circle" ? "r" : "width",
-          shape === "circle" ? circleSize : shape === "square" ? squareSize * 2 : triangleSize * 2
-        )
-        .attr(
-          shape === "circle" ? null : "height",
-          shape === "circle" ? null : shape === "square" ? squareSize * 2 : triangleSize * 2
-        )
-        .attr(
-          shape === "triangle" ? "d" : null,
-          shape === "triangle"
-            ? (d: DataPoint) => {
-                const x = xScale(new Date(d.date));
-                const y = yScale(d.value);
-                return `M${x},${y - triangleSize} L${x + triangleSize},${y + triangleSize} L${x - triangleSize},${y + triangleSize} Z`;
-              }
-            : null
-        )
-        .attr("fill", color)
-        .attr("stroke", "#fff")
-        .attr("stroke-width", 2)
-        .attr("cursor", "crosshair")
-        .on("mouseenter", (event, d) => {
+        .selectAll(`.data-point-${i}[data-label="${data.label}"]`)
+        .on("mouseenter", (event, d: DataPoint) => {
           event.preventDefault();
           event.stopPropagation();
 
-          onHighlightItem([data.label]);
+          handleItemHighlight([data.label]);
 
           const tooltipContent = tooltipFormatter(
             {
@@ -475,23 +823,19 @@ const LineChart: FC<LineChartProps> = ({
             const svgRect = svgRef.current.getBoundingClientRect();
             const tooltip = tooltipRef.current;
 
-            // Get tooltip and SVG dimensions to check for overflow
             tooltip.style.visibility = "visible";
             tooltip.innerHTML = tooltipContent;
             const tooltipRect = tooltip.getBoundingClientRect();
 
-            // Position relative to the currentTarget element
             const xPosition = mouseX + 10;
             const yPosition = mouseY - 25;
 
-            // Check if tooltip would overflow right edge
             if (xPosition + tooltipRect.width > svgRect.width - margin.right) {
               tooltip.style.left = `${mouseX - tooltipRect.width - 10}px`;
             } else {
               tooltip.style.left = `${xPosition}px`;
             }
 
-            // Check if tooltip would overflow top edge
             if (yPosition < margin.top) {
               tooltip.style.top = `${mouseY + 10}px`;
             } else {
@@ -510,7 +854,7 @@ const LineChart: FC<LineChartProps> = ({
               relatedTarget.classList.contains("line-overlay"));
 
           if (!isMouseOverLine) {
-            onHighlightItem([]);
+            handleItemHighlight([]);
             if (tooltipRef?.current) {
               tooltipRef.current.style.visibility = "hidden";
             }
@@ -519,44 +863,61 @@ const LineChart: FC<LineChartProps> = ({
     }
   }, [
     filteredDataSet,
+    visibleDataSets,
     width,
     height,
     margin,
-    disabledItems,
     xAxisDataType,
     getDashArrayMemoized,
     colorsMapping,
     line,
     xScale,
     yScale,
-    handleMouseEnter,
+    handleItemHighlight,
     handleMouseOut,
-    onHighlightItem,
     tooltipFormatter,
     tooltipRef,
     svgRef,
+    getColor,
+    sanitizeForClassName,
+    TRANSITION_DURATION,
+    TRANSITION_EASE,
   ]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
+    const TRANSITION_DURATION = 400; // Consistent duration
 
     // Use for loop instead of forEach for better performance
     for (const key of Object.keys(colorsMapping)) {
-      // Update circle/point colors
-      svg.selectAll(`line[data-label="${key}"]`).attr("stroke", "#fff").attr("stroke-width", 2);
+      // Update circle/point colors with transitions
+      svg
+        .selectAll(
+          `circle[data-label="${key}"], rect[data-label="${key}"], path.data-point[data-label="${key}"]`
+        )
+        .transition()
+        .duration(TRANSITION_DURATION)
+        .ease(d3.easeQuadOut) // Add consistent easing
+        .attr("fill", getColor(colorsMapping[key], null));
 
-      // Update path colors with proper selectors
+      // Update path colors with proper selectors and transitions
       svg
         .selectAll(`.line[data-label="${key}"]`)
-        .attr("stroke", colorsMapping[key] ?? "#eee") // Add fallback
+        .transition()
+        .duration(TRANSITION_DURATION)
+        .ease(d3.easeQuadOut) // Add consistent easing
+        .attr("stroke", getColor(colorsMapping[key], null))
         .attr("stroke-width", 2.5);
 
-      // Update path overlay colors
+      // Update path overlay colors with transitions
       svg
         .selectAll(`.line-overlay[data-label="${key}"]`)
-        .attr("stroke", colorsMapping[key] ?? "#eee"); // Add fallback
+        .transition()
+        .duration(TRANSITION_DURATION)
+        .ease(d3.easeQuadOut) // Add consistent easing
+        .attr("stroke", getColor(colorsMapping[key], null));
     }
-  }, [colorsMapping]);
+  }, [colorsMapping, getColor]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
@@ -772,51 +1133,61 @@ const LineChart: FC<LineChartProps> = ({
   return (
     <Styled>
       <div style={{ position: "relative", width: width, height: height }}>
-        {isLoading ? (
-          <LoadingIndicator />
-        ) : (
-          <Suspense fallback={<LoadingIndicator />}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              ref={svgRef}
-              width={width}
-              height={height}
-              onMouseOut={event => {
-                event.preventDefault();
-                event.stopPropagation();
-                onHighlightItem([]);
+        {/* Always render the SVG, but optionally overlay the loading indicator */}
+        <Suspense fallback={<LoadingIndicator />}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            ref={svgRef}
+            width={width}
+            height={height}
+            onMouseOut={handleChartMouseOut}
+          >
+            {children}
+            <Title x={width / 2} y={margin.top / 2}>
+              {title}
+            </Title>
+            {filteredDataSet.length > 0 && (
+              <>
+                <XaxisLinear
+                  xScale={xScale}
+                  height={height}
+                  margin={margin}
+                  xAxisFormat={xAxisFormat}
+                  xAxisDataType={xAxisDataType}
+                />
+                <YaxisLinear
+                  yScale={yScale}
+                  width={width}
+                  height={height}
+                  margin={margin}
+                  highlightZeroLine={true}
+                  yAxisFormat={yAxisFormat}
+                />
+              </>
+            )}
+          </svg>
+        </Suspense>
 
-                if (tooltipRef?.current) {
-                  tooltipRef.current.style.visibility = "hidden";
-                }
-              }}
-            >
-              {children}
-              <Title x={width / 2} y={margin.top / 2}>
-                {title}
-              </Title>
-              {filteredDataSet.length > 0 && (
-                <>
-                  <XaxisLinear
-                    xScale={xScale}
-                    height={height}
-                    margin={margin}
-                    xAxisFormat={xAxisFormat}
-                    xAxisDataType={xAxisDataType}
-                  />
-                  <YaxisLinear
-                    yScale={yScale}
-                    width={width}
-                    height={height}
-                    margin={margin}
-                    highlightZeroLine={true}
-                    yAxisFormat={yAxisFormat}
-                  />
-                </>
-              )}
-            </svg>
-          </Suspense>
+        {/* Show loading indicator as an overlay when loading */}
+        {showLoadingIndicator && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              background: "rgba(255, 255, 255, 0.7)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 10,
+            }}
+          >
+            {isLoadingComponent || <LoadingIndicator />}
+          </div>
         )}
+
         <div
           ref={tooltipRef}
           className="tooltip"
@@ -832,7 +1203,6 @@ const LineChart: FC<LineChartProps> = ({
             whiteSpace: "nowrap",
           }}
         />
-        {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
         {displayIsNodata && <>{isNodataComponent}</>}
       </div>
     </Styled>
