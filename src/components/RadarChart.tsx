@@ -36,6 +36,7 @@ const Tooltip = styled.div`
   background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0e0e0;
+  max-width: 200px;
   white-space: nowrap;
   transform: translate(-50%, -100%);
   margin-top: -10px;
@@ -79,6 +80,7 @@ export interface RadarChartProps {
   isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
+  tooltipContainerStyle?: React.CSSProperties;
 }
 
 export const RadarChart: React.FC<RadarChartProps> = ({
@@ -96,6 +98,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   isNodata,
   onChartDataProcessed,
   onHighlightItem,
+  tooltipContainerStyle,
 }) => {
   const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const svgRef = useRef(null);
@@ -339,7 +342,14 @@ export const RadarChart: React.FC<RadarChartProps> = ({
 
   return (
     <div style={{ position: "relative" }}>
-      <Tooltip ref={tooltipRef} style={{ opacity: tooltipData ? 1 : 0 }} className="tooltip">
+      <Tooltip
+        ref={tooltipRef}
+        style={{
+          opacity: tooltipData ? 1 : 0,
+          ...tooltipContainerStyle,
+        }}
+        className="tooltip"
+      >
         {tooltipData && (
           <>
             {tooltipFormatter ? (
