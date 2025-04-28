@@ -7,6 +7,18 @@ import XaxisLinear from "./shared/XaxisLinear";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import useDeepCompareEffect from "use-deep-compare-effect";
+import styled from "styled-components";
+
+const AreaChartContainer = styled.div`
+  position: relative;
+  contain: layout paint;
+  content-visibility: auto;
+  path {
+    transition: fill 0.1s ease-out;
+    will-change: fill;
+    transition-behavior: allow-discrete;
+  }
+`;
 
 interface DataPoint {
   date: number;
@@ -246,7 +258,7 @@ const AreaChart: React.FC<Props> = ({
   }, [series, xAxisDataType, yScaleDomain, keys, disabledItems, filter, onChartDataProcessed]);
 
   return (
-    <div style={{ position: "relative" }}>
+    <AreaChartContainer>
       <div
         className={"tooltip"}
         style={{
@@ -299,13 +311,12 @@ const AreaChart: React.FC<Props> = ({
             <Fragment key={areaData.key}>
               <path
                 d={areaGenerator(areaData.values)}
-                fill={areaData.fill}
+                fill={areaData.fill ? areaData.fill : "#fdfdfd"}
                 stroke={"#fff"}
                 strokeWidth={1}
                 opacity={
                   highlightItems.length === 0 || highlightItems.includes(areaData.key) ? 1 : 0.2
                 }
-                style={{ transition: "opacity 0.1s ease-out" }}
                 onMouseMove={event => {
                   event.stopPropagation();
                   onHighlightItem([areaData.key]);
@@ -388,7 +399,7 @@ const AreaChart: React.FC<Props> = ({
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
       {displayIsNodata && <>{isNodataComponent}</>}
-    </div>
+    </AreaChartContainer>
   );
 };
 

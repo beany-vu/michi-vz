@@ -24,16 +24,6 @@
     "@typescript-eslint/no-shadow": "off",
     "react/prop-types": "off",
     // Prop types are not typically needed with TypeScript
-    "max-len": [
-      "error",
-      {
-        "code": 100,
-        "ignoreUrls": true,
-        "ignoreStrings": true,
-        "ignoreTemplateLiterals": true,
-        "ignoreRegExpLiterals": true
-      }
-    ],
     "react/jsx-max-props-per-line": ["error", { "maximum": 1, "when": "multiline" }],
     "prettier/prettier": [
       "error",

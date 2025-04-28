@@ -20,14 +20,23 @@ import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
 
+// Extend the Window interface for custom properties
+declare global {
+  interface Window {
+    hoverResetTimer?: number; // Add optional timer ID
+  }
+}
+
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
 const HEIGHT = 480 - MARGIN.top - MARGIN.bottom;
 const DASH_LENGTH = 4;
 const DASH_SEPARATOR_LENGTH = 4;
 
-const Styled = styled.div`
+const LineChartContainer = styled.div`
   position: relative;
+  contain: layout paint;
+  content-visibility: auto;
   path {
     transition:
       stroke 0.3s ease-out,
@@ -42,20 +51,23 @@ const Styled = styled.div`
     transition:
       fill 0.3s ease-out,
       stroke 0.3s ease-out,
-      r 0.3s ease-out,
-      width 0.3s ease-out,
-      height 0.3s ease-out;
-    will-change: fill, stroke, r, width, height, d;
+      opacity 0.3s ease-out;
+    will-change: fill, stroke, opacity;
   }
 
   .data-group {
-    opacity: 1;
-    &.dimmed {
-      opacity: 0.05;
-    }
-    &.highlighted {
-      opacity: 1;
-    }
+    transition: opacity 0.3s ease-out;
+  }
+
+  /* Enhanced line-overlay styling for better hover targeting */
+  .line-overlay {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    cursor: pointer;
+    /* Critical for proper hover behavior */
+    pointer-events: stroke;
+    /* Always ensure it's visible for hover but transparent visually */
+    opacity: 0.05 !important;
   }
 `;
 
@@ -107,6 +119,7 @@ interface LineChartProps {
   };
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem: (labels: string[]) => void;
+  ticks?: number;
 }
 
 interface ChartMetadata {
@@ -116,14 +129,6 @@ interface ChartMetadata {
   renderedData: { [key: string]: DataPoint[] };
   chartType: "line-chart";
 }
-
-const debounce = <T extends (...args: unknown[]) => void>(func: T, wait: number) => {
-  let timeout: number;
-  return function (this: unknown, ...args: Parameters<T>) {
-    clearTimeout(timeout);
-    timeout = window.setTimeout(() => func.apply(this, args), wait);
-  };
-};
 
 const LineChart: FC<LineChartProps> = ({
   dataSet,
@@ -145,6 +150,7 @@ const LineChart: FC<LineChartProps> = ({
   isNodata,
   onChartDataProcessed,
   onHighlightItem,
+  ticks = 5,
 }) => {
   const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -153,7 +159,6 @@ const LineChart: FC<LineChartProps> = ({
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const isInitialMount = useRef(true); // Track initial mount
-  const [isHovering, setIsHovering] = useState(false);
 
   // Animation constants
   const TRANSITION_DURATION = 400;
@@ -378,103 +383,90 @@ const LineChart: FC<LineChartProps> = ({
     prevColorsMapping.current = colorsMapping;
   }, [colorsMapping]);
 
-  // Dedicated handling for hover interactions
-  const handleMouseEnter = useCallback(
-    (data: { label: string; color: string; series: DataPoint[] }) => (event: React.MouseEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      // Set hover state to explicitly prevent loading indicator
-      setIsHovering(true);
-
-      // Change highlight state directly through context
-      onHighlightItem([data.label]);
-    },
-    [onHighlightItem]
-  );
-
-  const handleMouseOut = useCallback(
-    (event: React.MouseEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      // Keep hover state true briefly to prevent flicker
-      setIsHovering(true);
-
-      // Clear highlight
-      onHighlightItem([]);
-
-      if (tooltipRef?.current) {
-        tooltipRef.current.style.visibility = "hidden";
-      }
-
-      // Reset hover state after a small delay
-      setTimeout(() => {
-        setIsHovering(false);
-      }, 200);
-    },
-    [onHighlightItem]
-  );
-
-  // Reset hover state on mouse out from the chart
-  const handleChartMouseOut = useCallback(
-    (event: React.MouseEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      // Ensure hover state is set
-      setIsHovering(true);
-
-      // Clear highlight
-      onHighlightItem([]);
-
-      if (tooltipRef?.current) {
-        tooltipRef.current.style.visibility = "hidden";
-      }
-
-      // Reset hover state after a small delay
-      setTimeout(() => {
-        setIsHovering(false);
-      }, 200);
-    },
-    [onHighlightItem]
-  );
-
-  // Direct highlight application without processing state
-  useEffect(() => {
+  // Update the useEffect that responds to highlightItems changes for consistency
+  useLayoutEffect(() => {
     const svg = d3.select(svgRef.current);
     if (!svg.node()) return;
 
-    // Set hover state to prevent loading during class changes
-    if (highlightItems.length > 0) {
-      setIsHovering(true);
-    }
+    // When no items are highlighted, all items should be fully visible
+    if (highlightItems.length === 0) {
+      svg.selectAll(".data-group").transition().duration(300).style("opacity", 1);
+      // Ensure line-overlays are always 0.05 opacity
+      svg.selectAll(".line-overlay").transition().duration(300).style("opacity", 0.05);
+    } else {
+      // First set all groups to low opacity
+      svg.selectAll(".data-group").transition().duration(300).style("opacity", 0.05);
 
-    // Apply dimming/highlighting classes
-    svg
-      .selectAll(".data-group")
-      .classed("dimmed", highlightItems.length > 0)
-      .classed("highlighted", false);
-
-    if (highlightItems.length > 0) {
-      // Use for loop instead of forEach
-      for (let i = 0; i < highlightItems.length; i++) {
+      // Then highlight all elements with the selected labels
+      highlightItems.forEach(label => {
         svg
-          .selectAll(`[data-label="${highlightItems[i]}"]`)
-          .classed("dimmed", false)
-          .classed("highlighted", true);
-      }
+          .selectAll(`[data-label="${label}"]:not(.line-overlay)`)
+          .transition()
+          .duration(300)
+          .style("opacity", 1);
+      });
+
+      // Ensure line-overlays are always 0.05 opacity
+      svg.selectAll(".line-overlay").transition().duration(300).style("opacity", 0.05);
     }
-
-    // Reset hover state after class changes complete
-    const highlightTimer = setTimeout(() => {
-      if (highlightItems.length === 0) {
-        setIsHovering(false);
-      }
-    }, 100);
-
-    return () => clearTimeout(highlightTimer);
   }, [highlightItems, svgRef]);
+
+  // Improve both handleItemHighlight and the line overlay event handlers to ensure ALL data points are properly faded
+  const handleItemHighlight = useCallback(
+    (labels: string[]) => {
+      // Direct DOM manipulation for immediate visual feedback
+      const svg = d3.select(svgRef.current);
+      if (svg.node() && labels.length > 0) {
+        // First fade ALL elements - both lines and points
+        svg.selectAll(".data-group").transition().duration(200).style("opacity", 0.05);
+        svg
+          .selectAll("circle, rect, path.data-point")
+          .transition()
+          .duration(200)
+          .style("opacity", 0.05);
+
+        // Then highlight all elements with the specified labels (except line-overlays)
+        labels.forEach(label => {
+          svg
+            .selectAll(`[data-label="${label}"]:not(.line-overlay)`)
+            .transition()
+            .duration(200)
+            .style("opacity", 1);
+          // Explicitly target all shapes by type to ensure nothing is missed
+          svg
+            .selectAll(
+              `circle[data-label="${label}"], rect[data-label="${label}"], path.data-point[data-label="${label}"]`
+            )
+            .transition()
+            .duration(200)
+            .style("opacity", 1);
+        });
+
+        // Ensure line-overlays are always 0.05 opacity
+        svg.selectAll(".line-overlay").transition().duration(200).style("opacity", 0.05);
+      } else if (svg.node()) {
+        // Reset all opacities when no items are highlighted
+        svg.selectAll(".data-group").transition().duration(200).style("opacity", 1);
+        svg
+          .selectAll("circle, rect, path.data-point")
+          .transition()
+          .duration(200)
+          .style("opacity", 1);
+
+        // Ensure line-overlays are always 0.05 opacity
+        svg.selectAll(".line-overlay").transition().duration(200).style("opacity", 0.05);
+      }
+
+      onHighlightItem(labels);
+
+      // Reset hover state after a delay to allow for normal processing later
+      clearTimeout(window.hoverResetTimer);
+      window.hoverResetTimer = window.setTimeout(() => {
+        // setIsHovering(false);
+      }, 1000); // 1 second delay to ensure hover state is fully complete
+    },
+    [onHighlightItem, svgRef]
+  );
 
   // Only show loading state during initial component mount or when explicitly isLoading is true
   // Process data changes internally without showing loading overlay
@@ -511,22 +503,6 @@ const LineChart: FC<LineChartProps> = ({
     return filteredDataSet.filter(d => d.series.length > 1);
   }, [filteredDataSet]);
 
-  const handleItemHighlight = useCallback(
-    (labels: string[]) => {
-      // Set hovering state to true whenever highlight changes
-      // This prevents processing overlay from showing during interactions
-      setIsHovering(true);
-      onHighlightItem(labels);
-
-      // Reset hover state after a delay to allow for normal processing later
-      clearTimeout((window as any).hoverResetTimer);
-      (window as any).hoverResetTimer = setTimeout(() => {
-        setIsHovering(false);
-      }, 1000); // 1 second delay to ensure hover state is fully complete
-    },
-    [onHighlightItem]
-  );
-
   // Ensure we have clean data point removal when filter changes
   useEffect(() => {
     // This effect specifically runs when filter or dataset changes
@@ -542,6 +518,63 @@ const LineChart: FC<LineChartProps> = ({
     // This ensures a clean slate for new data points to be rendered
     // The main rendering effect will then add the correct points back
   }, [filter, dataSet]); // Only run when filter or dataset changes
+
+  // Also update the handleMouseOut to restore opacity directly
+  const handleMouseOut = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Keep hover state true briefly to prevent flicker
+      // setIsHovering(true);
+
+      // Directly manage opacity through D3 before clearing highlight
+      const svg = d3.select(svgRef.current);
+      if (svg.node()) {
+        // Reset all groups to full opacity
+        svg.selectAll(".data-group").transition().duration(300).style("opacity", 1);
+        // Ensure line-overlays are always 0.05 opacity
+        svg.selectAll(".line-overlay").transition().duration(300).style("opacity", 0.05);
+      }
+
+      // Clear highlight in context
+      onHighlightItem([]);
+
+      if (tooltipRef?.current) {
+        tooltipRef.current.style.visibility = "hidden";
+      }
+
+      // Reset hover state after a small delay
+      setTimeout(() => {
+        // setIsHovering(false);
+      }, 300);
+    },
+    [onHighlightItem, svgRef]
+  );
+
+  // Reset hover state on mouse out from the chart
+  const handleChartMouseOut = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Ensure hover state is set
+      // setIsHovering(true);
+
+      // Clear highlight
+      onHighlightItem([]);
+
+      if (tooltipRef?.current) {
+        tooltipRef.current.style.visibility = "hidden";
+      }
+
+      // Reset hover state after a small delay
+      setTimeout(() => {
+        // setIsHovering(false);
+      }, 200);
+    },
+    [onHighlightItem]
+  );
 
   // Main rendering effect
   useEffect(() => {
@@ -632,11 +665,11 @@ const LineChart: FC<LineChartProps> = ({
           curve: d?.curve ?? "curveBumpX",
         })
       )
-      .attr("stroke", "transparent")
-      .attr("stroke-width", 8)
+      .attr("stroke", d => getColor(colorsMapping[d.label], d.color))
+      .attr("stroke-width", 6)
       .attr("fill", "none")
       .attr("pointer-events", "stroke")
-      .attr("opacity", 0.05);
+      .style("opacity", 0.05); // Use style instead of attr for consistency with transitions
 
     enterOverlays
       .transition()
@@ -644,19 +677,69 @@ const LineChart: FC<LineChartProps> = ({
       .ease(TRANSITION_EASE)
       .attr("stroke", d => getColor(colorsMapping[d.label], d.color))
       // Do not change the opacity for overlays
-      .on("end", function (d) {
+      .on("end", function (/* d */) {
+        // Remove unused 'd'
         // After transition completes, add event listeners
         d3.select(this)
-          .on("mouseenter", function (event) {
-            handleItemHighlight([d.label]);
+          .on("mouseenter", function (/* event */) {
+            // Remove unused 'event'
+            // Updated to directly use handleItemHighlight for consistency
+            const label = d3.select(this).attr("data-label");
+            if (label) {
+              // Get all SVG elements
+              const svg = d3.select(svgRef.current);
+
+              // IMMEDIATELY fade all points and lines with no transition
+              svg.selectAll(".data-group").style("opacity", 0.05);
+              svg.selectAll("circle, rect, path.data-point").style("opacity", 0.05);
+
+              // IMMEDIATELY highlight only points and lines with matching data-label
+              svg.selectAll(`[data-label="${label}"]:not(.line-overlay)`).style("opacity", 1);
+              // Double-ensure all shapes are explicitly targeted
+              svg
+                .selectAll(
+                  `circle[data-label="${label}"], rect[data-label="${label}"], path.data-point[data-label="${label}"]`
+                )
+                .style("opacity", 1);
+
+              // Keep line-overlays at consistent opacity
+              svg.selectAll(".line-overlay").style("opacity", 0.05);
+
+              // Use the standard highlight function after direct DOM manipulation
+              handleItemHighlight([label]);
+            }
           })
           .on("mouseout", handleMouseOut);
       });
 
-    // Ensure existing overlays have event listeners
+    // Update existing overlays event handlers too
     lineOverlays
-      .on("mouseenter", function (event, d) {
-        handleItemHighlight([d.label]);
+      .on("mouseenter", function (/* event, d */) {
+        // Remove unused 'event' and 'd'
+        // Get all SVG elements
+        const svg = d3.select(svgRef.current);
+        const label = d3.select(this).attr("data-label");
+
+        if (label) {
+          // IMMEDIATELY fade all points and lines with no transition
+          svg.selectAll(".data-group").style("opacity", 0.05);
+          svg.selectAll("circle, rect, path.data-point").style("opacity", 0.05);
+
+          // IMMEDIATELY highlight only points and lines with matching data-label
+          svg.selectAll(`[data-label="${label}"]:not(.line-overlay)`).style("opacity", 1);
+          // Double-ensure all shapes are explicitly targeted
+          svg
+            .selectAll(
+              `circle[data-label="${label}"], rect[data-label="${label}"], path.data-point[data-label="${label}"]`
+            )
+            .style("opacity", 1);
+
+          // Keep line-overlays at consistent opacity
+          svg.selectAll(".line-overlay").style("opacity", 0.05);
+
+          // Use the standard highlight function after direct DOM manipulation
+          handleItemHighlight([label]);
+        }
       })
       .on("mouseout", handleMouseOut);
 
@@ -701,21 +784,24 @@ const LineChart: FC<LineChartProps> = ({
         circles
           .enter()
           .append("circle")
-          .attr("class", `data-group data-group-${i} data-group-${safeLabelClass} data-point-${i}`)
+          .attr(
+            "class",
+            `data-group data-point data-group-${i} data-group-${safeLabelClass} data-point-${i}`
+          )
           .attr("data-label", data.label)
           .attr("data-label-safe", safeLabelClass)
           .attr("cx", d => xScale(new Date(d.date)))
           .attr("cy", d => yScale(d.value))
-          .attr("r", 0) // Start with radius 0 for animation
+          .attr("r", circleSize) // Set final size immediately
           .attr("fill", color)
           .attr("stroke", "#fdfdfd")
           .attr("stroke-width", 2)
           .attr("cursor", "crosshair")
+          .style("opacity", 0) // Start with opacity 0
           .transition()
           .duration(TRANSITION_DURATION)
           .ease(TRANSITION_EASE)
-          .attr("r", circleSize)
-          .attr("fill", color);
+          .style("opacity", 1); // Only transition opacity to 1
       } else if (shape === "square") {
         // Select existing squares
         const squares = svg
@@ -735,23 +821,25 @@ const LineChart: FC<LineChartProps> = ({
         squares
           .enter()
           .append("rect")
-          .attr("class", `data-group data-group-${i} data-group-${safeLabelClass} data-point-${i}`)
+          .attr(
+            "class",
+            `data-group data-point data-group-${i} data-group-${safeLabelClass} data-point-${i}`
+          )
           .attr("data-label", data.label)
           .attr("data-label-safe", safeLabelClass)
           .attr("x", d => xScale(new Date(d.date)) - squareSize)
           .attr("y", d => yScale(d.value) - squareSize)
-          .attr("width", 0) // Start with width 0 for animation
-          .attr("height", 0) // Start with height 0 for animation
+          .attr("width", squareSize * 2) // Set final size immediately
+          .attr("height", squareSize * 2) // Set final size immediately
           .attr("fill", color)
           .attr("stroke", "#fdfdfd")
           .attr("stroke-width", 2)
           .attr("cursor", "crosshair")
+          .style("opacity", 0) // Start with opacity 0
           .transition()
           .duration(TRANSITION_DURATION)
           .ease(TRANSITION_EASE)
-          .attr("width", squareSize * 2)
-          .attr("height", squareSize * 2)
-          .attr("fill", color);
+          .style("opacity", 1); // Only transition opacity to 1
       } else if (shape === "triangle") {
         // Select existing triangles
         const triangles = svg
@@ -776,7 +864,7 @@ const LineChart: FC<LineChartProps> = ({
           .append("path")
           .attr(
             "class",
-            `data-group data-group-${i} data-group-${safeLabelClass} data-point-${i} data-point`
+            `data-group data-point data-group-${i} data-group-${safeLabelClass} data-point-${i} data-point`
           )
           .attr("data-label", data.label)
           .attr("data-label-safe", safeLabelClass)
@@ -789,15 +877,11 @@ const LineChart: FC<LineChartProps> = ({
           .attr("stroke", "#fdfdfd")
           .attr("stroke-width", 2)
           .attr("cursor", "crosshair")
+          .style("opacity", 0) // Start with opacity 0
           .transition()
           .duration(TRANSITION_DURATION)
           .ease(TRANSITION_EASE)
-          .attr("d", d => {
-            const x = xScale(new Date(d.date));
-            const y = yScale(d.value);
-            return `M${x},${y - triangleSize} L${x + triangleSize},${y + triangleSize} L${x - triangleSize},${y + triangleSize} Z`;
-          })
-          .attr("fill", color);
+          .style("opacity", 1); // Only transition opacity to 1
       }
 
       // Add event listeners to all data points after they've been created or updated
@@ -884,7 +968,7 @@ const LineChart: FC<LineChartProps> = ({
     TRANSITION_EASE,
   ]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const svg = d3.select(svgRef.current);
     const TRANSITION_DURATION = 400; // Consistent duration
 
@@ -919,20 +1003,14 @@ const LineChart: FC<LineChartProps> = ({
     }
   }, [colorsMapping, getColor]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const svg = d3.select(svgRef.current);
-    svg
-      .selectAll(".data-group")
-      .classed("dimmed", highlightItems.length > 0)
-      .classed("highlighted", false);
+    svg.selectAll(".data-group").style("opacity", highlightItems.length > 0 ? 0.05 : 1);
 
     if (highlightItems.length > 0) {
       // Use for loop instead of forEach
       for (let i = 0; i < highlightItems.length; i++) {
-        svg
-          .selectAll(`[data-label="${highlightItems[i]}"]`)
-          .classed("dimmed", false)
-          .classed("highlighted", true);
+        svg.selectAll(`[data-label="${highlightItems[i]}"]`).style("opacity", 1);
       }
     }
 
@@ -1013,7 +1091,7 @@ const LineChart: FC<LineChartProps> = ({
     hoverLine.style("display", "none");
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!showCombined || !svgRef.current) return;
 
     const svg = d3.select(svgRef.current);
@@ -1058,7 +1136,7 @@ const LineChart: FC<LineChartProps> = ({
     renderCompleteRef.current = true;
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       // Extract all dates from all series
       const allDates = dataSet.flatMap(set =>
@@ -1131,7 +1209,7 @@ const LineChart: FC<LineChartProps> = ({
   }, [dataSet, xAxisDataType, yScale, disabledItems, lineData, filter, onChartDataProcessed]);
 
   return (
-    <Styled>
+    <LineChartContainer>
       <div style={{ position: "relative", width: width, height: height }}>
         {/* Always render the SVG, but optionally overlay the loading indicator */}
         <Suspense fallback={<LoadingIndicator />}>
@@ -1154,6 +1232,7 @@ const LineChart: FC<LineChartProps> = ({
                   margin={margin}
                   xAxisFormat={xAxisFormat}
                   xAxisDataType={xAxisDataType}
+                  ticks={ticks}
                 />
                 <YaxisLinear
                   yScale={yScale}
@@ -1205,7 +1284,7 @@ const LineChart: FC<LineChartProps> = ({
         />
         {displayIsNodata && <>{isNodataComponent}</>}
       </div>
-    </Styled>
+    </LineChartContainer>
   );
 };
 

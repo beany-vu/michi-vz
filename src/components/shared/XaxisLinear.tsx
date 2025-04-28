@@ -1,20 +1,6 @@
-import React, { FC, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { FC, useRef, useCallback, useMemo, useLayoutEffect } from "react";
 import { ScaleTime, ScaleLinear } from "d3-scale";
 import * as d3 from "d3";
-import range from "lodash/range";
-
-// Function to get dates with equal distance
-function getDatesWithEqualDistance(
-  startDate: string | number | Date,
-  endDate: string | number | Date,
-  numDates: number
-) {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const diff = end.getTime() - start.getTime();
-  const interval = diff / (numDates - 1);
-  return range(0, numDates).map(i => new Date(start.getTime() + i * interval));
-}
 
 interface Props {
   xScale: ScaleTime<number, number> | ScaleLinear<number, number>;
@@ -25,6 +11,8 @@ interface Props {
   ticks?: number;
   showGrid?: boolean;
   position?: "top" | "bottom";
+  isLoading?: boolean;
+  isEmpty?: boolean;
 }
 
 const checkIsTimeScale = (
@@ -57,70 +45,94 @@ const XaxisLinear: FC<Props> = ({
   ticks = 5,
   showGrid = false,
   position = "bottom",
+  isLoading = false,
+  isEmpty = false,
 }) => {
   const ref = useRef<SVGGElement>(null);
   const isTimeScale = checkIsTimeScale(xScale, xAxisDataType);
 
   // Memoize the default formatter
   const defaultFormatter = useCallback(
-    (d: number | Date) => {
+    (d: number | Date | { valueOf(): number }) => {
+      const value = d instanceof Date ? d : new Date(d.valueOf());
       if (isTimeScale) {
-        const dateObj = new Date(d);
-        const month = dateObj.toLocaleString("en-US", { month: "2-digit" });
-        const year = dateObj.getFullYear();
+        const month = value.toLocaleString("en-US", { month: "2-digit" });
+        const year = value.getFullYear();
         return xAxisDataType === "date_annual" ? `${year}` : `${month}-${year}`;
       } else {
-        return String(d);
+        return String(d.valueOf());
       }
     },
     [isTimeScale, xAxisDataType]
   );
 
-  // Memoize tick calculations
+  // Generate evenly spaced tick values that always include first and last
   const tickValues = useMemo(() => {
-    const minTick =
-      xAxisDataType === "date_annual"
-        ? d3.timeYear.floor(xScale.domain()[0] as Date)
-        : xAxisDataType === "date_monthly"
-          ? d3.timeMonth.floor(xScale.domain()[0] as Date)
-          : xScale.domain()[0];
-
-    const maxTick =
-      xAxisDataType === "date_annual"
-        ? d3.timeYear.ceil(xScale.domain()[1] as Date)
-        : xAxisDataType === "date_monthly"
-          ? d3.timeMonth.ceil(xScale.domain()[1] as Date)
-          : xScale.domain()[1];
-
-    let values: number[];
-    switch (xAxisDataType) {
-      case "date_annual":
-        values = d3.timeYear.range(minTick as Date, maxTick as Date, 1).map(d => d.valueOf());
-        break;
-      case "date_monthly":
-        values = d3.timeMonth.range(minTick as Date, maxTick as Date, 1).map(d => d.valueOf());
-        break;
-      default:
-        values = d3.ticks(minTick as number, maxTick as number, ticks);
-        break;
+    // Don't generate ticks if loading or empty
+    if (isLoading || isEmpty) {
+      return [];
     }
 
-    if (minTick === 0) {
-      values = [0, ...(values as number[]), maxTick as number];
+    const domain = xScale.domain();
+    const first = domain[0];
+    const last = domain[1];
+
+    // Calculate total available width
+    const availableWidth = xScale.range()[1] - xScale.range()[0];
+
+    // Estimate space needed per tick (average label width + padding)
+    const estimatedTickWidth = 80; // Base estimate in pixels
+
+    // Calculate how many ticks can fit
+    const maxFittingTicks = Math.floor(availableWidth / estimatedTickWidth);
+
+    // Use the smaller of maxFittingTicks or requested ticks
+    const effectiveTicks = Math.max(2, Math.min(maxFittingTicks, ticks));
+
+    if (effectiveTicks <= 2) {
+      return [first, last];
     }
 
-    return values;
-  }, [xScale, xAxisDataType, ticks]);
+    // Generate evenly spaced tick values
+    const result = [];
+    const domainStart = +first;
+    const domainEnd = +last;
+    const step = (domainEnd - domainStart) / (effectiveTicks - 1);
 
-  useEffect(() => {
+    for (let i = 0; i < effectiveTicks; i++) {
+      const value = domainStart + step * i;
+
+      // Convert value back to appropriate type
+      let tickValue;
+      if (isTimeScale) {
+        tickValue = new Date(value);
+      } else {
+        tickValue = value;
+      }
+
+      result.push(tickValue);
+    }
+
+    // Ensure the last value is exactly the domain end
+    if (result.length > 0) {
+      result[result.length - 1] = last;
+    }
+
+    return result;
+  }, [xScale, ticks, isTimeScale, isLoading, isEmpty]);
+
+  useLayoutEffect(() => {
     const g = d3.select(ref.current);
+    if (!g) return;
 
-    // Create the axis
+    // Create the axis and use our calculated tickValues
     const axisBottom = d3
       .axisBottom(xScale)
       .tickValues(tickValues)
-      .tickFormat((domainValue: number | Date) =>
-        xAxisFormat ? xAxisFormat(domainValue) : defaultFormatter(domainValue)
+      .tickFormat((domainValue: number | Date | { valueOf(): number }) =>
+        xAxisFormat
+          ? xAxisFormat(domainValue instanceof Date ? domainValue : domainValue.valueOf())
+          : defaultFormatter(domainValue)
       );
 
     // Initial setup
@@ -140,6 +152,13 @@ const XaxisLinear: FC<Props> = ({
       .call(g => g.select(".domain").remove())
       .call(g => g.selectAll("line").attr("stroke-opacity", 0))
       .call(g => g.selectAll("line").remove());
+
+    // Keep labels horizontal by default
+    g.selectAll(".tick text")
+      .attr("transform", "rotate(0)")
+      .style("text-anchor", "middle")
+      .attr("dx", "0")
+      .attr("dy", "0.71em");
 
     // Remove existing tick lines before adding new ones
     g.selectAll(".tick-line").remove();
@@ -169,7 +188,7 @@ const XaxisLinear: FC<Props> = ({
       .enter()
       .append("circle")
       .attr("class", "tickValueDot")
-      .merge(dots as any)
+      .merge(dots as d3.Selection<SVGCircleElement, number, SVGGElement, unknown>)
       .attr("cx", 0)
       .attr("cy", 0)
       .attr("r", 2)

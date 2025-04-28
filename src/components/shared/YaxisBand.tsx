@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { FC, useLayoutEffect, useRef, useMemo, useCallback } from "react";
 import { ScaleBand } from "d3-scale";
 import * as d3 from "d3";
 
@@ -74,7 +74,7 @@ const YaxisBand: FC<Props> = ({ yScale, width, margin, yAxisFormat, showGrid }) 
       .style("stroke", showGrid ? "lightgray" : "transparent");
   }, [axisGenerator, margin.left, showGrid, gridWidth]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!renderedRef.current) {
       // First render with transition
       if (ref.current) {

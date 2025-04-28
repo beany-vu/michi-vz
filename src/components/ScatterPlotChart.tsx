@@ -291,17 +291,16 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
       const tooltip = document.createElement("div");
       tooltip.className = "tooltip";
       tooltip.style.cssText = `
-        position: absolute !important;
-        display: none !important;
-        padding: 10px !important;
-        background-color: rgba(0, 0, 0, 0.8) !important;
-        color: white !important;
-        border-radius: 5px !important;
-        pointer-events: none !important;
-        z-index: 1000 !important;
-        transition: none !important;
-        animation: none !important;
-        transform: none !important;
+        position: absolute;
+        background-color: #fff;
+        display: none;
+        padding: 10px;
+        border-radius: 5px;
+        pointer-events: none;
+        z-index: 1000;
+        transition: none;
+        animation: none;
+        transform: none;
       `;
       document.body.appendChild(tooltip);
       tooltipRef.current = tooltip;

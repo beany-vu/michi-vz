@@ -987,3 +987,23 @@ export const PointColorExample = {
     },
   },
 };
+
+// Story with many X-axis ticks
+export const ManyTicks = {
+  args: {
+    ...commonProps,
+    dataSet: diverseDataSet,
+    title: "Chart with Many X-Axis Ticks (Annual Data)",
+    xAxisDataType: "date_annual", // Ensure correct data type
+    ticks: 30, // Set a high number of ticks
+    filter: null,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This example demonstrates how the chart renders when a high number of ticks is requested for the x-axis. This can be useful for testing label overlap and tick density.",
+      },
+    },
+  },
+};

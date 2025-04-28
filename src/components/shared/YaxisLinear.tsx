@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useRef, useMemo } from "react";
+import React, { FC, useRef, useMemo, useLayoutEffect } from "react";
 import { ScaleLinear } from "d3-scale";
 import * as d3 from "d3";
 
@@ -40,10 +40,11 @@ const YaxisLinear: FC<Props> = ({
   // Memoize the previous yScale domain to detect changes
   const prevYScaleDomain = useRef(yScale.domain());
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const g = d3.select(ref.current);
     const currentYScaleDomain = yScale.domain();
-    const yScaleChanged = JSON.stringify(currentYScaleDomain) !== JSON.stringify(prevYScaleDomain.current);
+    const yScaleChanged =
+      JSON.stringify(currentYScaleDomain) !== JSON.stringify(prevYScaleDomain.current);
     prevYScaleDomain.current = currentYScaleDomain;
 
     // Initial render with transition

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useCallback, useLayoutEffect } from "react";
+import React, { useMemo, useRef, useCallback, useLayoutEffect } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import XaxisBand from "./shared/XaxisBand";
@@ -408,7 +408,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   }, []);
 
   // Use a separate useEffect to call the callback after rendering
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       // First get all data that has values
       const allRenderedData = Object.fromEntries(
