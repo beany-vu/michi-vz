@@ -183,105 +183,231 @@ const LineChart: FC<LineChartProps> = ({
   }, []);
 
   const filteredDataSet = useMemo(() => {
+    // Create typed version to properly handle the dataset
+    type DataSetItem = {
+      label: string;
+      color: string;
+      shape?: "circle" | "square" | "triangle";
+      curve?: "curveBumpX" | "curveLinear";
+      series: DataPoint[];
+    };
+
     // If no filter is provided, return the entire dataset excluding disabled items
     if (!filter) {
-      return dataSet.filter(d => !disabledItems.includes(d.label));
+      const result: DataSetItem[] = [];
+      for (let i = 0; i < dataSet.length; i++) {
+        if (!disabledItems.includes(dataSet[i].label)) {
+          result.push(dataSet[i]);
+        }
+      }
+      return result;
     }
 
     // Start with the base dataset, excluding disabled items
-    let result = dataSet.filter(d => !disabledItems.includes(d.label));
+    const filtered: DataSetItem[] = [];
+    for (let i = 0; i < dataSet.length; i++) {
+      const item = dataSet[i] as DataSetItem;
+      if (!disabledItems.includes(item.label)) {
+        let hasTargetPoint = false;
+        const series = item.series;
+        for (let j = 0; j < series.length; j++) {
+          const point = series[j] as DataPoint;
+          if (point.date.toString() === filter.date.toString()) {
+            hasTargetPoint = true;
+            break;
+          }
+        }
+        if (hasTargetPoint) {
+          filtered.push(item);
+        }
+      }
+    }
 
-    // Apply filter logic if filter exists
-    result = result
-      .filter(item => {
-        const targetPoint = item.series.find(d => d.date.toString() === filter.date.toString());
-        return targetPoint !== undefined;
-      })
-      .sort((a, b) => {
-        const aPoint = a.series.find(d => d.date.toString() === filter.date.toString());
-        const bPoint = b.series.find(d => d.date.toString() === filter.date.toString());
-        const aVal = aPoint ? Number(aPoint[filter.criteria]) : 0;
-        const bVal = bPoint ? Number(bPoint[filter.criteria]) : 0;
-        return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
-      })
-      .slice(0, filter.limit);
+    // Sort based on filter criteria
+    filtered.sort((a, b) => {
+      let aVal = 0;
+      let bVal = 0;
 
-    // Pre-process each dataset to ensure valid points for line rendering
-    return result.map(item => ({
-      ...item,
-      series: item.series.filter(point => point.value !== null && point.value !== undefined),
-    }));
+      const aSeries = a.series;
+      for (let i = 0; i < aSeries.length; i++) {
+        const aPoint = aSeries[i] as DataPoint;
+        if (aPoint.date.toString() === filter.date.toString()) {
+          aVal = Number(aPoint[filter.criteria as keyof DataPoint] || 0);
+          break;
+        }
+      }
+
+      const bSeries = b.series;
+      for (let i = 0; i < bSeries.length; i++) {
+        const bPoint = bSeries[i] as DataPoint;
+        if (bPoint.date.toString() === filter.date.toString()) {
+          bVal = Number(bPoint[filter.criteria as keyof DataPoint] || 0);
+          break;
+        }
+      }
+
+      return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
+    });
+
+    // Apply limit
+    const result = filtered.slice(0, filter.limit);
+
+    // Pre-process to ensure valid points for line rendering
+    for (let i = 0; i < result.length; i++) {
+      const validPoints: DataPoint[] = [];
+      const series = result[i].series;
+      for (let j = 0; j < series.length; j++) {
+        const point = series[j] as DataPoint;
+        if (point.value !== null && point.value !== undefined) {
+          validPoints.push(point);
+        }
+      }
+      result[i] = { ...result[i], series: validPoints };
+    }
+
+    return result;
   }, [dataSet, filter, disabledItems]);
 
-  const yScale = useMemo(
-    () =>
-      d3
+  const yScale = useMemo(() => {
+    let minValue = Infinity;
+    let maxValue = -Infinity;
+
+    if (yAxisDomain) {
+      return d3
         .scaleLinear()
-        .domain(
-          yAxisDomain
-            ? yAxisDomain
-            : [
-                d3.min(
-                  filteredDataSet.flatMap(({ series }) => series.filter(dd => dd.value !== null)),
-                  d => d.value
-                ) || 0,
-                d3.max(
-                  filteredDataSet.flatMap(({ series }) => series.filter(dd => dd.value !== null)),
-                  d => d.value
-                ) || 1,
-              ]
-        )
+        .domain(yAxisDomain)
         .range([height - margin.bottom, margin.top])
         .clamp(true)
-        .nice(),
-    [filteredDataSet, height, margin, yAxisDomain]
-  );
+        .nice();
+    }
+
+    // Find min and max values manually with for loops
+    for (let i = 0; i < filteredDataSet.length; i++) {
+      const dataItem = filteredDataSet[i];
+      const series = dataItem.series as DataPoint[];
+      for (let j = 0; j < series.length; j++) {
+        const point = series[j] as DataPoint;
+        if (point.value !== null) {
+          minValue = Math.min(minValue, point.value);
+          maxValue = Math.max(maxValue, point.value);
+        }
+      }
+    }
+
+    // Handle edge case where no valid values were found
+    if (minValue === Infinity) minValue = 0;
+    if (maxValue === -Infinity) maxValue = 1;
+
+    return d3
+      .scaleLinear()
+      .domain([minValue, maxValue])
+      .range([height - margin.bottom, margin.top])
+      .clamp(true)
+      .nice();
+  }, [filteredDataSet, height, margin, yAxisDomain]);
 
   const xScale = useMemo(() => {
     if (xAxisDataType === "number") {
+      let minDate = Infinity;
+      let maxDate = -Infinity;
+
+      // Find min and max dates manually with for loops
+      for (let i = 0; i < filteredDataSet.length; i++) {
+        const dataItem = filteredDataSet[i];
+        const series = dataItem.series as DataPoint[];
+        for (let j = 0; j < series.length; j++) {
+          const point = series[j] as DataPoint;
+          const dateValue = Number(point.date);
+          minDate = Math.min(minDate, dateValue);
+          maxDate = Math.max(maxDate, dateValue);
+        }
+      }
+
+      // Handle edge cases
+      if (minDate === Infinity) minDate = 0;
+      if (maxDate === -Infinity) maxDate = 1;
+
       return d3
         .scaleLinear()
-        .domain([
-          d3.min(filteredDataSet.flatMap(item => item.series.map(d => d.date as number))) || 0,
-          d3.max(filteredDataSet.flatMap(item => item.series.map(d => d.date as number))) || 1,
-        ])
+        .domain([minDate, maxDate])
         .range([margin.left, width - margin.right])
         .clamp(true)
         .nice();
     }
 
     if (xAxisDataType === "date_annual") {
-      // sometimes the first tick is missing, so do a hack here
-      const minDate = d3.min(
-        filteredDataSet.flatMap(item => item.series.map(d => new Date(`${d.date}-01-01`)))
-      );
-      const maxDate = d3.max(
-        filteredDataSet.flatMap(item => item.series.map(d => new Date(`${d.date}`)))
-      );
+      let minDate = new Date("9999-12-31");
+      let maxDate = new Date("0000-01-01");
+
+      // Find min and max dates manually
+      for (let i = 0; i < filteredDataSet.length; i++) {
+        const dataItem = filteredDataSet[i];
+        const series = dataItem.series as DataPoint[];
+        for (let j = 0; j < series.length; j++) {
+          const point = series[j] as DataPoint;
+          const dateStr = String(point.date);
+          const date = new Date(`${dateStr}-01-01`);
+          if (date < minDate) minDate = date;
+          if (date > maxDate) maxDate = date;
+        }
+      }
+
+      // Handle edge cases
+      if (minDate.getFullYear() === 9999) minDate = new Date();
+      if (maxDate.getFullYear() === 0) maxDate = new Date();
 
       return d3
         .scaleTime()
-        .domain([minDate || 0, maxDate || 1])
+        .domain([minDate, maxDate])
         .range([margin.left, width - margin.right]);
     }
 
-    const minDate = d3.min(filteredDataSet.flatMap(item => item.series.map(d => new Date(d.date))));
-    const maxDate = d3.max(filteredDataSet.flatMap(item => item.series.map(d => new Date(d.date))));
+    let minDate = new Date("9999-12-31");
+    let maxDate = new Date("0000-01-01");
+
+    // Find min and max dates manually
+    for (let i = 0; i < filteredDataSet.length; i++) {
+      const dataItem = filteredDataSet[i];
+      const series = dataItem.series as DataPoint[];
+      for (let j = 0; j < series.length; j++) {
+        const point = series[j] as DataPoint;
+        const dateStr = String(point.date);
+        const date = new Date(dateStr);
+        if (date < minDate) minDate = date;
+        if (date > maxDate) maxDate = date;
+      }
+    }
+
+    // Handle edge cases
+    if (minDate.getFullYear() === 9999) minDate = new Date();
+    if (maxDate.getFullYear() === 0) maxDate = new Date();
 
     return d3
       .scaleTime()
-      .domain([minDate || 0, maxDate || 1])
+      .domain([minDate, maxDate])
       .range([margin.left, width - margin.right]);
   }, [filteredDataSet, width, margin, xAxisDataType]);
 
   const getYValueAtX = useCallback((series: DataPoint[], x: number | Date): number | undefined => {
     if (x instanceof Date) {
-      const dataPoint = series.find(d => new Date(d.date).getTime() === x.getTime());
-      return dataPoint ? dataPoint.value : undefined;
+      const xTime = x.getTime();
+      for (let i = 0; i < series.length; i++) {
+        const point = series[i];
+        const pointDate = new Date(point.date);
+        if (pointDate.getTime() === xTime) {
+          return point.value;
+        }
+      }
+      return undefined;
     }
 
-    const dataPoint = series.find(d => Number(d.date) === x);
-    return dataPoint ? dataPoint.value : undefined;
+    for (let i = 0; i < series.length; i++) {
+      const point = series[i];
+      if (Number(point.date) === x) {
+        return point.value;
+      }
+    }
+    return undefined;
   }, []);
 
   const getPathLengthAtX = useCallback((path: SVGPathElement, x: number) => {
@@ -303,7 +429,13 @@ const LineChart: FC<LineChartProps> = ({
       xScale: ScaleLinear<number, number> | ScaleTime<number, number>
     ) => {
       const totalLength = pathNode.getTotalLength();
-      const lengths = series.map(d => getPathLengthAtX(pathNode, xScale(new Date(d.date))));
+
+      // Use for loop instead of map
+      const lengths = [];
+      for (let i = 0; i < series.length; i++) {
+        const point = series[i];
+        lengths.push(getPathLengthAtX(pathNode, xScale(new Date(point.date))));
+      }
 
       const dashArray = [];
 
@@ -311,7 +443,7 @@ const LineChart: FC<LineChartProps> = ({
         const segmentLength =
           i === series.length - 1 ? totalLength - lengths[i - 1] : lengths[i] - lengths[i - 1];
 
-        if (!series[i]?.certainty) {
+        if (i < series.length && !series[i]?.certainty) {
           const dashes = Math.floor(segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH));
           const remainder = Math.ceil(
             segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH)
@@ -334,7 +466,7 @@ const LineChart: FC<LineChartProps> = ({
       }
       return dashArray.join(",");
     };
-  }, [DASH_LENGTH, DASH_SEPARATOR_LENGTH]);
+  }, [DASH_LENGTH, DASH_SEPARATOR_LENGTH, getPathLengthAtX]);
 
   const line = useCallback(
     ({ d, curve }: { d: Iterable<DataPoint>; curve: string }) => {
@@ -371,15 +503,15 @@ const LineChart: FC<LineChartProps> = ({
   const prevColorsMapping = useRef<{ [key: string]: string }>({});
 
   // Update context refs without triggering effects
-  useEffect(() => {
+  useLayoutEffect(() => {
     prevHighlightItems.current = highlightItems;
   }, [highlightItems]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     prevDisabledItems.current = disabledItems;
   }, [disabledItems]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     prevColorsMapping.current = colorsMapping;
   }, [colorsMapping]);
 
@@ -485,7 +617,7 @@ const LineChart: FC<LineChartProps> = ({
   }, [TRANSITION_DURATION]);
 
   // Separate data processing effect that doesn't show loading overlay
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Process data changes without showing loading overlay
     // Internal-only state for cleanup and synchronization
     const processingTimer = setTimeout(() => {
@@ -504,7 +636,7 @@ const LineChart: FC<LineChartProps> = ({
   }, [filteredDataSet]);
 
   // Ensure we have clean data point removal when filter changes
-  useEffect(() => {
+  useLayoutEffect(() => {
     // This effect specifically runs when filter or dataset changes
     // It ensures all old data points are properly removed
 
@@ -576,8 +708,89 @@ const LineChart: FC<LineChartProps> = ({
     [onHighlightItem]
   );
 
+  const handleHover = useCallback(
+    (event: MouseEvent) => {
+      if (!svgRef.current || !tooltipRef.current) return;
+
+      const [x, y] = d3.pointer(event, event.currentTarget as SVGElement);
+      const xValue = xScale.invert(x);
+
+      const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
+
+      // Replace map with for loop for better performance
+      let tooltipContent = "";
+      for (let i = 0; i < filteredDataSet.length; i++) {
+        const data = filteredDataSet[i];
+        const yValue = getYValueAtX(data.series, xValue);
+        tooltipContent += `<div>${data.label}: ${yValue ?? "N/A"}</div>`;
+      }
+
+      const tooltip = tooltipRef.current;
+      tooltip.innerHTML = `<div style="background: #fff; padding: 5px">${tooltipTitle}${tooltipContent}</div>`;
+
+      // Make tooltip visible to calculate its dimensions
+      tooltip.style.opacity = "1";
+      tooltip.style.visibility = "visible";
+      tooltip.style.pointerEvents = "auto";
+
+      // Get dimensions to check for overflow
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const svgRect = svgRef.current.getBoundingClientRect();
+
+      // Check for right edge overflow
+      if (x + tooltipRect.width > svgRect.width - margin.right) {
+        tooltip.style.left = x - tooltipRect.width - 10 + "px";
+      } else {
+        tooltip.style.left = x + 10 + "px";
+      }
+
+      // Check for top/bottom edge overflow
+      if (y - tooltipRect.height < margin.top) {
+        tooltip.style.top = y + 10 + "px";
+      } else {
+        tooltip.style.top = y - tooltipRect.height - 5 + "px";
+      }
+
+      const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
+      const hoverLine = hoverLinesGroup.select(".hover-line");
+      const xPosition = xScale(xValue);
+
+      hoverLine
+        .attr("x1", xPosition)
+        .attr("x2", xPosition)
+        .attr("y1", MARGIN.top)
+        .attr("y2", HEIGHT - MARGIN.bottom + 20)
+        .style("display", "block");
+
+      hoverLinesGroup.style("display", "block");
+    },
+    [xScale, filteredDataSet, getYValueAtX, margin]
+  );
+
+  const handleCombinedMouseOut = useCallback(() => {
+    if (!tooltipRef.current || !svgRef.current) return;
+
+    const tooltip = tooltipRef.current;
+    tooltip.style.visibility = "hidden";
+    tooltip.style.opacity = "0";
+    tooltip.innerHTML = "";
+
+    const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
+    const hoverLine = hoverLinesGroup.select(".hover-line");
+
+    hoverLinesGroup.style("display", "none");
+    hoverLine.style("display", "none");
+  }, []);
+
+  const displayIsNodata = useDisplayIsNodata({
+    dataSet: dataSet,
+    isLoading: isLoading,
+    isNodataComponent: isNodataComponent,
+    isNodata: isNodata,
+  });
+
   // Main rendering effect
-  useEffect(() => {
+  useLayoutEffect(() => {
     const svg = d3.select(svgRef.current);
 
     // Instead of removing all lines, use D3 update pattern
@@ -1019,78 +1232,6 @@ const LineChart: FC<LineChartProps> = ({
     }
   }, [highlightItems]);
 
-  const handleHover = useCallback(
-    (event: MouseEvent) => {
-      if (!svgRef.current || !tooltipRef.current) return;
-
-      const [x, y] = d3.pointer(event, event.currentTarget as SVGElement);
-      const xValue = xScale.invert(x);
-
-      const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
-      const tooltipContent = filteredDataSet
-        .map(data => {
-          const yValue = getYValueAtX(data.series, xValue);
-          return `<div>${data.label}: ${yValue ?? "N/A"}</div>`;
-        })
-        .join("");
-
-      const tooltip = tooltipRef.current;
-      tooltip.innerHTML = `<div style="background: #fff; padding: 5px">${tooltipTitle}${tooltipContent}</div>`;
-
-      // Make tooltip visible to calculate its dimensions
-      tooltip.style.opacity = "1";
-      tooltip.style.visibility = "visible";
-      tooltip.style.pointerEvents = "auto";
-
-      // Get dimensions to check for overflow
-      const tooltipRect = tooltip.getBoundingClientRect();
-      const svgRect = svgRef.current.getBoundingClientRect();
-
-      // Check for right edge overflow
-      if (x + tooltipRect.width > svgRect.width - margin.right) {
-        tooltip.style.left = x - tooltipRect.width - 10 + "px";
-      } else {
-        tooltip.style.left = x + 10 + "px";
-      }
-
-      // Check for top/bottom edge overflow
-      if (y - tooltipRect.height < margin.top) {
-        tooltip.style.top = y + 10 + "px";
-      } else {
-        tooltip.style.top = y - tooltipRect.height - 5 + "px";
-      }
-
-      const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
-      const hoverLine = hoverLinesGroup.select(".hover-line");
-      const xPosition = xScale(xValue);
-
-      hoverLine
-        .attr("x1", xPosition)
-        .attr("x2", xPosition)
-        .attr("y1", MARGIN.top)
-        .attr("y2", HEIGHT - MARGIN.bottom + 20)
-        .style("display", "block");
-
-      hoverLinesGroup.style("display", "block");
-    },
-    [xScale, filteredDataSet, getYValueAtX, margin]
-  );
-
-  const handleCombinedMouseOut = useCallback(() => {
-    if (!tooltipRef.current || !svgRef.current) return;
-
-    const tooltip = tooltipRef.current;
-    tooltip.style.visibility = "hidden";
-    tooltip.style.opacity = "0";
-    tooltip.innerHTML = "";
-
-    const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
-    const hoverLine = hoverLinesGroup.select(".hover-line");
-
-    hoverLinesGroup.style("display", "none");
-    hoverLine.style("display", "none");
-  }, []);
-
   useLayoutEffect(() => {
     if (!showCombined || !svgRef.current) return;
 
@@ -1125,64 +1266,112 @@ const LineChart: FC<LineChartProps> = ({
     };
   }, [showCombined, width, height, handleHover, handleCombinedMouseOut]);
 
-  const displayIsNodata = useDisplayIsNodata({
-    dataSet: dataSet,
-    isLoading: isLoading,
-    isNodataComponent: isNodataComponent,
-    isNodata: isNodata,
-  });
-
   useLayoutEffect(() => {
     renderCompleteRef.current = true;
   }, []);
 
   useLayoutEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
-      // Extract all dates from all series
-      const allDates = dataSet.flatMap(set =>
-        set.series.map(point => (xAxisDataType === "number" ? point.date : String(point.date)))
-      );
+      // Extract all dates from all series using for loops instead of flatMap
+      const allDates = [];
+      for (let i = 0; i < dataSet.length; i++) {
+        const series = dataSet[i].series;
+        for (let j = 0; j < series.length; j++) {
+          const point = series[j];
+          allDates.push(xAxisDataType === "number" ? point.date : String(point.date));
+        }
+      }
 
       // Create unique dates array
       const uniqueDates = [...new Set(allDates)];
 
       // Sort and filter series based on values at the filter date if filter exists
-      let visibleSeries = dataSet.map(d => d.label);
+      // Create visibleSeries using for loop instead of map
+      const visibleSeries = [];
+      for (let i = 0; i < dataSet.length; i++) {
+        visibleSeries.push(dataSet[i].label);
+      }
+
       if (filter?.date) {
-        visibleSeries = visibleSeries.sort((a, b) => {
-          const aData = dataSet.find(d => d.label === a);
-          const bData = dataSet.find(d => d.label === b);
-          const aValue =
-            aData?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
-          const bValue =
-            bData?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
+        visibleSeries.sort((a, b) => {
+          let aData = null;
+          let bData = null;
+
+          // Find data items with for loops instead of find
+          for (let i = 0; i < dataSet.length; i++) {
+            if (dataSet[i].label === a) aData = dataSet[i];
+            if (dataSet[i].label === b) bData = dataSet[i];
+            // Exit early if both found
+            if (aData && bData) break;
+          }
+
+          let aValue = 0;
+          let bValue = 0;
+
+          // Find specific data points with for loops instead of find
+          if (aData) {
+            for (let i = 0; i < aData.series.length; i++) {
+              if (String(aData.series[i].date) === String(filter.date)) {
+                aValue = aData.series[i].value || 0;
+                break;
+              }
+            }
+          }
+
+          if (bData) {
+            for (let i = 0; i < bData.series.length; i++) {
+              if (String(bData.series[i].date) === String(filter.date)) {
+                bValue = bData.series[i].value || 0;
+                break;
+              }
+            }
+          }
+
           return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
         });
 
         // Apply limit if specified
         if (filter.limit) {
-          visibleSeries = visibleSeries.slice(0, filter.limit);
+          visibleSeries.splice(filter.limit);
+        }
+      }
+
+      const filteredVisibleItems = [];
+      // Filter with for loop instead of filter method
+      for (let i = 0; i < visibleSeries.length; i++) {
+        const label = visibleSeries[i];
+        let shouldInclude = !disabledItems.includes(label);
+
+        if (shouldInclude) {
+          let foundWithSeries = false;
+          for (let j = 0; j < dataSet.length; j++) {
+            if (dataSet[j].label === label && dataSet[j].series.length > 0) {
+              foundWithSeries = true;
+              break;
+            }
+          }
+          shouldInclude = foundWithSeries;
+        }
+
+        if (shouldInclude) {
+          filteredVisibleItems.push(label);
+        }
+      }
+
+      // Build renderedData with for loops instead of reduce
+      const renderedData: { [key: string]: DataPoint[] } = {};
+      for (let i = 0; i < lineData.length; i++) {
+        const item = lineData[i];
+        if (item.points.length > 0 && visibleSeries.includes(item.label)) {
+          renderedData[item.label] = item.points;
         }
       }
 
       const currentMetadata: ChartMetadata = {
         xAxisDomain: uniqueDates.map(String),
         yAxisDomain: yScale.domain() as [number, number],
-        visibleItems: visibleSeries.filter(
-          label =>
-            !disabledItems.includes(label) &&
-            dataSet.find(d => d.label === label)?.series.length > 0
-        ),
-        renderedData: lineData.reduce(
-          (acc, item) => {
-            // Only include data for visible series
-            if (item.points.length > 0 && visibleSeries.includes(item.label)) {
-              acc[item.label] = item.points;
-            }
-            return acc;
-          },
-          {} as { [key: string]: DataPoint[] }
-        ),
+        visibleItems: filteredVisibleItems,
+        renderedData: renderedData,
         chartType: "line-chart",
       };
 
