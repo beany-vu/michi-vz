@@ -41,7 +41,7 @@ export const Primary = {
         seriesKey: "Africa",
         seriesKeyAbbreviation: "Africa",
         series: [
-          { date: "2001", Africa: "666" },
+          { date: "2001", Africa: "666",  },
           { date: "2002", Africa: "777" },
           { date: "2003", Africa: "989" },
         ],

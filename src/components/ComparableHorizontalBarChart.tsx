@@ -1,5 +1,6 @@
 import * as d3 from "d3";
-import React, { useEffect, useMemo, useRef, useCallback, useLayoutEffect } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useCallback } from "react";
+import isEqual from "lodash/isEqual";
 import Title from "../components/shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
@@ -7,6 +8,18 @@ import { useChartContext } from "../components/MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import useDeepCompareEffect from "use-deep-compare-effect";
+import styled from "styled-components";
+
+const ComparableHorizontalBarChartStyled = styled.div`
+  position: relative;
+  rect {
+    transition:
+      fill 0.1s ease-out,
+      opacity 0.1s ease-out,
+      width 0.1s ease-out,
+      height 0.1s ease-out;
+  }
+`;
 
 interface DataPoint {
   label: string;
@@ -61,7 +74,7 @@ interface ChartMetadata {
   yAxisDomain: [number, number];
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
-  chartType: "comparable-horizontal-bar-chart";
+  chartType: "comparable-horizontal-bar-chart" | "";
 }
 
 const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
@@ -115,6 +128,25 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     () => filteredDataSet.filter(d => !disabledItems.includes(d?.label))?.map(d => d?.label),
     [filteredDataSet, disabledItems]
   );
+
+  // Memoize visible items
+  const visibleItemsList = useMemo(() => {
+    return filteredDataSet
+      .filter(d => !disabledItems.includes(d?.label) && visibleItems.includes(d?.label))
+      .map(d => d.label);
+  }, [filteredDataSet, disabledItems, visibleItems]);
+
+  // Memoize rendered data
+  const renderedData = useMemo(() => {
+    const uniqueLabels = [...new Set(yAxisDomain)];
+    return uniqueLabels.reduce(
+      (acc, label) => {
+        acc[label] = filteredDataSet.filter(d => d.label === label);
+        return acc;
+      },
+      {} as { [key: string]: DataPoint[] }
+    );
+  }, [yAxisDomain, filteredDataSet]);
 
   // Memoize xAxisRange
   const xAxisRange = useMemo(() => {
@@ -211,7 +243,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   }, [onHighlightItem]);
 
   // Update bar opacity based on highlightItems
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (svgRef.current) {
       d3.select(svgRef.current).select(".bar").attr("opacity", 0.3);
       highlightItems.forEach(item => {
@@ -264,7 +296,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   y={y + (standardHeight - 30) / 2}
                   width={Math.max(width2, 3)}
                   height={30}
-                  fill={colorsMapping[d?.label] ?? d.color}
+                  fill={colorsMapping[d?.label] ?? d.color ?? "transparent"}
                   opacity={0.9}
                   rx={5}
                   ry={5}
@@ -279,7 +311,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   y={y + (standardHeight - 30) / 2}
                   width={Math.max(width1, 3)}
                   height={30}
-                  fill={colorsBasedMapping[d?.label] ?? d?.color}
+                  fill={colorsBasedMapping[d?.label] ?? d?.color ?? "transparent"}
                   rx={5}
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event, "based")}
@@ -297,7 +329,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   y={y + (standardHeight - 30) / 2}
                   width={Math.max(width1, 3)}
                   height={30}
-                  fill={colorsBasedMapping[d?.label] ?? d?.color}
+                  fill={colorsBasedMapping[d?.label] ?? d?.color ?? "transparent"}
                   rx={5}
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event, "based")}
@@ -312,7 +344,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   y={y + (standardHeight - 30) / 2}
                   width={Math.max(width2, 3)}
                   height={30}
-                  fill={colorsMapping[d?.label] ?? d.color}
+                  fill={colorsMapping[d?.label] ?? d.color ?? "transparent"}
                   opacity={0.9}
                   rx={5}
                   ry={5}
@@ -346,53 +378,62 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     renderCompleteRef.current = true;
   }, []);
 
-  // Replace useEffect with useDeepCompareEffect for metadata comparison
   useDeepCompareEffect(() => {
-    if (renderCompleteRef.current && onChartDataProcessed) {
+    if (onChartDataProcessed && renderCompleteRef.current) {
       // Ensure unique labels
       const uniqueLabels = [...new Set(yAxisDomain)];
 
-      const currentMetadata: ChartMetadata = {
-        xAxisDomain: uniqueLabels,
-        yAxisDomain: [Number(yAxisScale.domain()[0]), Number(yAxisScale.domain()[1])],
-        visibleItems: filteredDataSet
-          .filter(d => !disabledItems.includes(d?.label) && visibleItems.includes(d?.label))
-          .map(d => d.label),
-        renderedData: {
-          [uniqueLabels[0]]: filteredDataSet,
-        },
-        chartType: "comparable-horizontal-bar-chart",
-      };
+      // Only proceed if we have valid data
+      if (uniqueLabels.length > 0) {
+        const domain = yAxisScale.domain();
+        const yMin = Number(domain[0]);
+        const yMax = Number(domain[1]);
 
-      // Check if data has actually changed
-      const hasChanged =
-        !prevChartDataRef.current ||
-        JSON.stringify(prevChartDataRef.current.yAxisDomain) !==
-          JSON.stringify(currentMetadata.yAxisDomain) ||
-        JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
-          JSON.stringify(currentMetadata.xAxisDomain) ||
-        JSON.stringify(prevChartDataRef.current.visibleItems) !==
-          JSON.stringify(currentMetadata.visibleItems) ||
-        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
-          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
+        const currentMetadata: ChartMetadata = {
+          xAxisDomain: uniqueLabels,
+          yAxisDomain: [yMin, yMax],
+          visibleItems: visibleItemsList,
+          renderedData,
+          chartType: "comparable-horizontal-bar-chart",
+        };
 
-      // Only call callback if data has changed
-      if (hasChanged) {
-        // Update ref before calling callback
-        prevChartDataRef.current = currentMetadata;
+        // Check individual changes
+        const yAxisDomainChanged = !isEqual(
+          prevChartDataRef.current?.yAxisDomain,
+          currentMetadata.yAxisDomain
+        );
+        const xAxisDomainChanged = !isEqual(
+          prevChartDataRef.current?.xAxisDomain,
+          currentMetadata.xAxisDomain
+        );
+        const visibleItemsChanged = !isEqual(
+          prevChartDataRef.current?.visibleItems,
+          currentMetadata.visibleItems
+        );
+        const renderedDataKeysChanged = !isEqual(
+          Object.keys(prevChartDataRef.current?.renderedData || {}).sort(),
+          Object.keys(currentMetadata.renderedData).sort()
+        );
 
-        // Call callback with slight delay to ensure DOM updates are complete
-        const timeoutId = setTimeout(() => {
+        // Check if data has actually changed
+        const hasChanged =
+          !prevChartDataRef.current ||
+          yAxisDomainChanged ||
+          xAxisDomainChanged ||
+          visibleItemsChanged ||
+          renderedDataKeysChanged;
+
+        // Only call callback if data has changed
+        if (hasChanged) {
           onChartDataProcessed(currentMetadata);
-        }, 0);
-
-        return () => clearTimeout(timeoutId);
+          prevChartDataRef.current = { ...currentMetadata };
+        }
       }
     }
-  }, [yAxisDomain, xAxisDomain, visibleItems, filteredDataSet, onChartDataProcessed]);
+  }, [yAxisDomain, xAxisDomain, visibleItemsList, renderedData, onChartDataProcessed, yAxisScale]);
 
   return (
-    <div style={{ position: "relative" }}>
+    <ComparableHorizontalBarChartStyled>
       <svg
         width={width}
         height={height}
@@ -442,7 +483,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
       {displayIsNodata && <>{isNodataComponent}</>}
-    </div>
+    </ComparableHorizontalBarChartStyled>
   );
 };
 

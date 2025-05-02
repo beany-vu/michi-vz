@@ -2,7 +2,7 @@ import React from "react";
 import LineChartComponent from "../src/components/LineChart";
 import { Meta } from "@storybook/react";
 import { fn } from "@storybook/test";
-import { MichiVzProvider } from "../src/components/MichiVzProvider";
+import { MichiVzProvider, useChartContext } from "../src/components/MichiVzProvider";
 
 // Define the default metadata for the component
 export default {
@@ -90,7 +90,7 @@ const singleSeriesData = [
 const multiSeriesData = [
   {
     label: "Item 1",
-    shape: "circle",
+    shape: "triangle",
     curve: "curveLinear",
     series: [
       { year: 2016, date: "2016", value: 101, certainty: true },
@@ -100,7 +100,7 @@ const multiSeriesData = [
   },
   {
     label: "Item 2",
-    shape: "square",
+    shape: "triangle",
     curve: "curveLinear",
     series: [
       { year: 2016, date: "2016", value: 102, certainty: true },
@@ -882,9 +882,57 @@ export const CombinedView = {
 export const DifferentShapesAndCurves = {
   args: {
     ...commonProps,
-    dataSet: multiSeriesData,
+    dataSet: [
+      {
+        label: "Circle Series",
+        shape: "circle",
+        curve: "curveLinear",
+        color: "#4287f5",
+        series: [
+          { date: "2016", value: 100, certainty: true },
+          { date: "2017", value: 150, certainty: true },
+          { date: "2018", value: 120, certainty: true },
+          { date: "2019", value: 180, certainty: true },
+          { date: "2020", value: 140, certainty: true },
+        ],
+      },
+      {
+        label: "Square Series",
+        shape: "square",
+        curve: "curveBumpX",
+        color: "#f54242",
+        series: [
+          { date: "2016", value: 80, certainty: true },
+          { date: "2017", value: 130, certainty: true },
+          { date: "2018", value: 100, certainty: true },
+          { date: "2019", value: 160, certainty: true },
+          { date: "2020", value: 120, certainty: true },
+        ],
+      },
+      {
+        label: "Triangle Series",
+        shape: "triangle",
+        curve: "curveLinear",
+        color: "#42f554",
+        series: [
+          { date: "2016", value: 60, certainty: true },
+          { date: "2017", value: 110, certainty: true },
+          { date: "2018", value: 80, certainty: true },
+          { date: "2019", value: 140, certainty: true },
+          { date: "2020", value: 100, certainty: true },
+        ],
+      },
+    ],
     title: "Different Shapes and Curves",
     filter: null,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This example shows different marker shapes (circle, square, triangle) with different curve types (linear and bumpX).",
+      },
+    },
   },
 };
 
@@ -1005,5 +1053,421 @@ export const ManyTicks = {
           "This example demonstrates how the chart renders when a high number of ticks is requested for the x-axis. This can be useful for testing label overlap and tick density.",
       },
     },
+  },
+};
+
+// Add a new story for triangle shapes
+export const TriangleShapes = {
+  args: {
+    ...commonProps,
+    dataSet: [
+      {
+        label: "Triangle Series 1",
+        shape: "triangle",
+        curve: "curveLinear",
+        color: "#FF5733",
+        series: [
+          { date: "2016", value: 50, certainty: true },
+          { date: "2017", value: 75, certainty: true },
+          { date: "2018", value: 60, certainty: true },
+          { date: "2019", value: 85, certainty: true },
+          { date: "2020", value: 70, certainty: true },
+        ],
+      },
+      {
+        label: "Triangle Series 2",
+        shape: "triangle",
+        curve: "curveBumpX",
+        color: "#33FF57",
+        series: [
+          { date: "2016", value: 30, certainty: true },
+          { date: "2017", value: 45, certainty: true },
+          { date: "2018", value: 35, certainty: true },
+          { date: "2019", value: 55, certainty: true },
+          { date: "2020", value: 40, certainty: true },
+        ],
+      },
+      {
+        label: "Circle Reference",
+        shape: "circle",
+        curve: "curveLinear",
+        color: "#3357FF",
+        series: [
+          { date: "2016", value: 40, certainty: true },
+          { date: "2017", value: 60, certainty: true },
+          { date: "2018", value: 45, certainty: true },
+          { date: "2019", value: 70, certainty: true },
+          { date: "2020", value: 55, certainty: true },
+        ],
+      },
+    ],
+    title: "Triangle Shape Test",
+    filter: null,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This example demonstrates the triangle shape markers with different curves and colors. Includes a circle series for comparison.",
+      },
+    },
+  },
+};
+
+// Add a new story for button hover interaction
+export const ButtonHoverInteraction = {
+  args: {
+    ...commonProps,
+    filterLimit: 5,
+    dataSet: [
+      {
+        label: "Performance",
+        shape: "circle",
+        curve: "curveLinear",
+        color: "#2196F3",
+        series: [
+          { date: "2019", value: 75, certainty: true },
+          { date: "2020", value: 82, certainty: true },
+          { date: "2021", value: 90, certainty: true },
+          { date: "2022", value: 85, certainty: false },
+        ],
+      },
+      {
+        label: "Efficiency",
+        shape: "square",
+        curve: "curveLinear",
+        color: "#4CAF50",
+        series: [
+          { date: "2019", value: 60, certainty: true },
+          { date: "2020", value: 75, certainty: true },
+          { date: "2021", value: 85, certainty: true },
+          { date: "2022", value: 80, certainty: false },
+        ],
+      },
+      {
+        label: "Quality",
+        shape: "triangle",
+        curve: "curveBumpX",
+        color: "#FF9800",
+        series: [
+          { date: "2019", value: 85, certainty: true },
+          { date: "2020", value: 88, certainty: true },
+          { date: "2021", value: 92, certainty: true },
+          { date: "2022", value: 95, certainty: false },
+        ],
+      },
+      {
+        label: "Innovation",
+        shape: "circle",
+        curve: "curveLinear",
+        color: "#9C27B0",
+        series: [
+          { date: "2019", value: 45, certainty: true },
+          { date: "2020", value: 52, certainty: true },
+          { date: "2021", value: 68, certainty: true },
+          { date: "2022", value: 72, certainty: false },
+        ],
+      },
+      {
+        label: "Customer Satisfaction",
+        shape: "square",
+        curve: "curveLinear",
+        color: "#FF5722",
+        series: [
+          { date: "2019", value: 80, certainty: true },
+          { date: "2020", value: 78, certainty: true },
+          { date: "2021", value: 82, certainty: true },
+          { date: "2022", value: 88, certainty: false },
+        ],
+      },
+    ],
+    title: "Interactive Button Hover Example",
+    filter: {
+      limit: 5,
+      date: "2021",
+      criteria: "value",
+      sortingDir: "desc",
+    },
+  },
+  argTypes: {
+    filterLimit: {
+      control: { type: "range", min: 1, max: 5, step: 1 },
+      description: "Number of items to show",
+    },
+  },
+  render: args => {
+    const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
+    const [filterDate, setFilterDate] = React.useState("2021");
+
+    // Get all available dates from the dataset
+    const availableDates = React.useMemo(() => {
+      const dates = new Set<string>();
+      args.dataSet.forEach(item => {
+        item.series.forEach(point => {
+          dates.add(point.date.toString());
+        });
+      });
+      return Array.from(dates).sort();
+    }, [args.dataSet]);
+
+    // Create filtered dataset based on limit and date
+    const filteredDataSet = React.useMemo(() => {
+      return {
+        ...args,
+        filter: {
+          limit: args.filterLimit || 5,
+          date: filterDate,
+          criteria: "value",
+          sortingDir: "desc",
+        },
+      };
+    }, [args, filterDate]);
+
+    // Style for the controls container
+    const controlsContainerStyle = {
+      display: "flex",
+      gap: "20px",
+      marginBottom: "20px",
+      alignItems: "center",
+    };
+
+    // Style for the select controls
+    const selectStyle = {
+      padding: "8px 12px",
+      borderRadius: "4px",
+      border: "1px solid #ccc",
+      fontSize: "14px",
+      minWidth: "120px",
+    };
+
+    // Style for the button container
+    const buttonContainerStyle = {
+      display: "flex",
+      gap: "10px",
+      marginBottom: "20px",
+      flexWrap: "wrap" as const,
+    };
+
+    // Style for individual buttons
+    const buttonStyle = (label: string) => ({
+      padding: "8px 16px",
+      border: "2px solid",
+      borderColor: args.dataSet.find(d => d.label === label)?.color || "#ccc",
+      borderRadius: "4px",
+      background: currentHighlight.includes(label)
+        ? args.dataSet.find(d => d.label === label)?.color
+        : "white",
+      color: currentHighlight.includes(label)
+        ? "white"
+        : args.dataSet.find(d => d.label === label)?.color,
+      cursor: "pointer",
+      transition: "all 0.3s ease",
+      fontWeight: 500,
+    });
+
+    // Style for labels
+    const labelStyle = {
+      fontSize: "14px",
+      fontWeight: 500,
+    };
+
+    return (
+      <MichiVzProvider
+        colorsMapping={args.dataSet.reduce(
+          (acc, item) => ({
+            ...acc,
+            [item.label]: item.color,
+          }),
+          {}
+        )}
+        highlightItems={currentHighlight}
+      >
+        <div>
+          <div style={controlsContainerStyle}>
+            <div>
+              <label style={labelStyle}>Reference Date: </label>
+              <select
+                value={filterDate}
+                onChange={e => setFilterDate(e.target.value)}
+                style={selectStyle}
+              >
+                {availableDates.map(date => (
+                  <option key={date} value={date}>
+                    {date}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div style={buttonContainerStyle}>
+            {filteredDataSet.dataSet.map(item => (
+              <button
+                key={item.label}
+                style={buttonStyle(item.label)}
+                onMouseEnter={() => setCurrentHighlight([item.label])}
+                onMouseLeave={() => setCurrentHighlight([])}
+              >
+                {item.label}
+              </button>
+            ))}
+            <button
+              style={{
+                padding: "8px 16px",
+                border: "2px solid #666",
+                borderRadius: "4px",
+                background: currentHighlight.length === args.filterLimit ? "#666" : "white",
+                color: currentHighlight.length === args.filterLimit ? "white" : "#666",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                fontWeight: 500,
+              }}
+              onMouseEnter={() => setCurrentHighlight(filteredDataSet.dataSet.map(d => d.label))}
+              onMouseLeave={() => setCurrentHighlight([])}
+            >
+              Show All
+            </button>
+          </div>
+          <LineChartComponent {...filteredDataSet} />
+        </div>
+      </MichiVzProvider>
+    );
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This example demonstrates button-based hover interaction with the line chart using the MichiVzProvider context. Use the slider in the controls panel to adjust how many lines to show, and select which date to use as reference for the filtering. Hover over the buttons to highlight corresponding lines and data points. The 'Show All' button highlights all visible series simultaneously.",
+      },
+    },
+  },
+};
+
+// Add a new story for testing same data-label with different shapes
+export const SameDataLabelDifferentShapes = {
+  args: {
+    ...commonProps,
+    dataSet: [
+      {
+        label: "Performance Metrics",
+        shape: "circle",
+        curve: "curveLinear",
+        color: "#2196F3",
+        series: [
+          { date: "2019", value: 75, certainty: true },
+          { date: "2020", value: 82, certainty: true },
+          { date: "2021", value: 90, certainty: true },
+          { date: "2022", value: 85, certainty: false },
+        ],
+      },
+      {
+        label: "Performance Metrics", // Same label
+        shape: "triangle", // Different shape
+        curve: "curveLinear",
+        color: "#4CAF50", // Different color
+        series: [
+          { date: "2019", value: 65, certainty: true },
+          { date: "2020", value: 72, certainty: true },
+          { date: "2021", value: 80, certainty: true },
+          { date: "2022", value: 75, certainty: false },
+        ],
+      },
+      {
+        label: "Other Metric",
+        shape: "square",
+        curve: "curveLinear",
+        color: "#FF9800",
+        series: [
+          { date: "2019", value: 45, certainty: true },
+          { date: "2020", value: 52, certainty: true },
+          { date: "2021", value: 58, certainty: true },
+          { date: "2022", value: 62, certainty: false },
+        ],
+      },
+    ],
+    title: "Same Label Different Shapes Test",
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This example demonstrates how the chart handles multiple datasets with the same label but different shapes and colors. When hovering over a line or shape, all elements with the same data-label should be highlighted together.",
+      },
+    },
+  },
+  render: args => {
+    const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
+
+    // Style for the button container
+    const buttonContainerStyle = {
+      display: "flex",
+      gap: "10px",
+      marginBottom: "20px",
+      flexWrap: "wrap" as const,
+    };
+
+    // Style for individual buttons
+    const buttonStyle = (label: string) => ({
+      padding: "8px 16px",
+      border: "2px solid",
+      borderColor: args.dataSet.find(d => d.label === label)?.color || "#ccc",
+      borderRadius: "4px",
+      background: currentHighlight.includes(label)
+        ? args.dataSet.find(d => d.label === label)?.color
+        : "white",
+      color: currentHighlight.includes(label)
+        ? "white"
+        : args.dataSet.find(d => d.label === label)?.color,
+      cursor: "pointer",
+      transition: "all 0.3s ease",
+      fontWeight: 500,
+    });
+
+    // Get unique labels with proper typing
+    const uniqueLabels = Array.from(new Set(args.dataSet.map(d => d.label as string))) as string[];
+
+    return (
+      <MichiVzProvider
+        colorsMapping={args.dataSet.reduce(
+          (acc, item) => ({
+            ...acc,
+            [item.label]: item.color,
+          }),
+          {} as Record<string, string>
+        )}
+        highlightItems={currentHighlight}
+      >
+        <div>
+          <div style={buttonContainerStyle}>
+            {uniqueLabels.map(label => (
+              <button
+                key={label}
+                style={buttonStyle(label)}
+                onMouseEnter={() => setCurrentHighlight([label])}
+                onMouseLeave={() => setCurrentHighlight([])}
+              >
+                {label}
+              </button>
+            ))}
+            <button
+              style={{
+                padding: "8px 16px",
+                border: "2px solid #666",
+                borderRadius: "4px",
+                background: currentHighlight.length === uniqueLabels.length ? "#666" : "white",
+                color: currentHighlight.length === uniqueLabels.length ? "white" : "#666",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                fontWeight: 500,
+              }}
+              onMouseEnter={() => setCurrentHighlight(uniqueLabels)}
+              onMouseLeave={() => setCurrentHighlight([])}
+            >
+              Show All
+            </button>
+          </div>
+          <LineChartComponent {...args} />
+        </div>
+      </MichiVzProvider>
+    );
   },
 };

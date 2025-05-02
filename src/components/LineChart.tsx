@@ -2,7 +2,6 @@ import React, {
   useEffect,
   useMemo,
   useRef,
-  Suspense,
   useCallback,
   useLayoutEffect,
   FC,
@@ -69,6 +68,12 @@ const LineChartContainer = styled.div`
     /* Always ensure it's visible for hover but transparent visually */
     opacity: 0.05 !important;
   }
+
+  /* Hide domain line consistently */
+  .domain {
+    stroke-opacity: 0 !important;
+    opacity: 0 !important;
+  }
 `;
 
 interface LineChartProps {
@@ -130,6 +135,8 @@ interface ChartMetadata {
   chartType: "line-chart";
 }
 
+const TRANSITION_DURATION = 400;
+
 const LineChart: FC<LineChartProps> = ({
   dataSet,
   filter,
@@ -159,10 +166,6 @@ const LineChart: FC<LineChartProps> = ({
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const isInitialMount = useRef(true); // Track initial mount
-
-  // Animation constants
-  const TRANSITION_DURATION = 400;
-  const TRANSITION_EASE = d3.easeQuadOut;
 
   // Use this constant for the fallback semi-transparent color
   const FALLBACK_COLOR = "rgba(253, 253, 253, 0.5)";
@@ -522,24 +525,36 @@ const LineChart: FC<LineChartProps> = ({
 
     // When no items are highlighted, all items should be fully visible
     if (highlightItems.length === 0) {
-      svg.selectAll(".data-group").transition().duration(300).style("opacity", 1);
+      svg.selectAll(".data-group").transition().duration(TRANSITION_DURATION).style("opacity", 1);
       // Ensure line-overlays are always 0.05 opacity
-      svg.selectAll(".line-overlay").transition().duration(300).style("opacity", 0.05);
+      svg
+        .selectAll(".line-overlay")
+        .transition()
+        .duration(TRANSITION_DURATION)
+        .style("opacity", 0.05);
     } else {
       // First set all groups to low opacity
-      svg.selectAll(".data-group").transition().duration(300).style("opacity", 0.05);
+      svg
+        .selectAll(".data-group")
+        .transition()
+        .duration(TRANSITION_DURATION)
+        .style("opacity", 0.05);
 
       // Then highlight all elements with the selected labels
       highlightItems.forEach(label => {
         svg
           .selectAll(`[data-label="${label}"]:not(.line-overlay)`)
           .transition()
-          .duration(300)
+          .duration(TRANSITION_DURATION)
           .style("opacity", 1);
       });
 
       // Ensure line-overlays are always 0.05 opacity
-      svg.selectAll(".line-overlay").transition().duration(300).style("opacity", 0.05);
+      svg
+        .selectAll(".line-overlay")
+        .transition()
+        .duration(TRANSITION_DURATION)
+        .style("opacity", 0.05);
     }
   }, [highlightItems, svgRef]);
 
@@ -549,60 +564,32 @@ const LineChart: FC<LineChartProps> = ({
       // Direct DOM manipulation for immediate visual feedback
       const svg = d3.select(svgRef.current);
       if (svg.node() && labels.length > 0) {
-        // First fade ALL elements - both lines and points
-        svg.selectAll(".data-group").transition().duration(200).style("opacity", 0.05);
-        svg
-          .selectAll("circle, rect, path.data-point")
-          .transition()
-          .duration(200)
-          .style("opacity", 0.05);
-
-        // Then highlight all elements with the specified labels (except line-overlays)
-        labels.forEach(label => {
-          svg
-            .selectAll(`[data-label="${label}"]:not(.line-overlay)`)
+        // Select all shape groups and update opacity based on data-label attribute
+        svg.selectAll<SVGGElement, unknown>(".shape-group").each(function () {
+          const element = d3.select(this);
+          const dataLabel = element.attr("data-label");
+          element
             .transition()
-            .duration(200)
-            .style("opacity", 1);
-          // Explicitly target all shapes by type to ensure nothing is missed
-          svg
-            .selectAll(
-              `circle[data-label="${label}"], rect[data-label="${label}"], path.data-point[data-label="${label}"]`
-            )
-            .transition()
-            .duration(200)
-            .style("opacity", 1);
+            .duration(100)
+            .style("opacity", labels.includes(dataLabel) ? 1 : 0.05);
         });
-
-        // Ensure line-overlays are always 0.05 opacity
-        svg.selectAll(".line-overlay").transition().duration(200).style("opacity", 0.05);
       } else if (svg.node()) {
         // Reset all opacities when no items are highlighted
-        svg.selectAll(".data-group").transition().duration(200).style("opacity", 1);
         svg
-          .selectAll("circle, rect, path.data-point")
+          .selectAll(".shape-group")
           .transition()
-          .duration(200)
+          .duration(TRANSITION_DURATION)
           .style("opacity", 1);
-
-        // Ensure line-overlays are always 0.05 opacity
-        svg.selectAll(".line-overlay").transition().duration(200).style("opacity", 0.05);
       }
 
       onHighlightItem(labels);
-
-      // Reset hover state after a delay to allow for normal processing later
-      clearTimeout(window.hoverResetTimer);
-      window.hoverResetTimer = window.setTimeout(() => {
-        // setIsHovering(false);
-      }, 1000); // 1 second delay to ensure hover state is fully complete
     },
     [onHighlightItem, svgRef]
   );
 
   // Only show loading state during initial component mount or when explicitly isLoading is true
   // Process data changes internally without showing loading overlay
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Only show processing indicator on initial mount, not on subsequent data changes
     if (isInitialMount.current) {
       setIsProcessing(true);
@@ -617,7 +604,7 @@ const LineChart: FC<LineChartProps> = ({
   }, [TRANSITION_DURATION]);
 
   // Separate data processing effect that doesn't show loading overlay
-  useLayoutEffect(() => {
+  useEffect(() => {
     // Process data changes without showing loading overlay
     // Internal-only state for cleanup and synchronization
     const processingTimer = setTimeout(() => {
@@ -664,9 +651,13 @@ const LineChart: FC<LineChartProps> = ({
       const svg = d3.select(svgRef.current);
       if (svg.node()) {
         // Reset all groups to full opacity
-        svg.selectAll(".data-group").transition().duration(300).style("opacity", 1);
+        svg.selectAll(".data-group").transition().duration(TRANSITION_DURATION).style("opacity", 1);
         // Ensure line-overlays are always 0.05 opacity
-        svg.selectAll(".line-overlay").transition().duration(300).style("opacity", 0.05);
+        svg
+          .selectAll(".line-overlay")
+          .transition()
+          .duration(TRANSITION_DURATION)
+          .style("opacity", 0.05);
       }
 
       // Clear highlight in context
@@ -675,11 +666,6 @@ const LineChart: FC<LineChartProps> = ({
       if (tooltipRef?.current) {
         tooltipRef.current.style.visibility = "hidden";
       }
-
-      // Reset hover state after a small delay
-      setTimeout(() => {
-        // setIsHovering(false);
-      }, 300);
     },
     [onHighlightItem, svgRef]
   );
@@ -708,89 +694,8 @@ const LineChart: FC<LineChartProps> = ({
     [onHighlightItem]
   );
 
-  const handleHover = useCallback(
-    (event: MouseEvent) => {
-      if (!svgRef.current || !tooltipRef.current) return;
-
-      const [x, y] = d3.pointer(event, event.currentTarget as SVGElement);
-      const xValue = xScale.invert(x);
-
-      const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
-
-      // Replace map with for loop for better performance
-      let tooltipContent = "";
-      for (let i = 0; i < filteredDataSet.length; i++) {
-        const data = filteredDataSet[i];
-        const yValue = getYValueAtX(data.series, xValue);
-        tooltipContent += `<div>${data.label}: ${yValue ?? "N/A"}</div>`;
-      }
-
-      const tooltip = tooltipRef.current;
-      tooltip.innerHTML = `<div style="background: #fff; padding: 5px">${tooltipTitle}${tooltipContent}</div>`;
-
-      // Make tooltip visible to calculate its dimensions
-      tooltip.style.opacity = "1";
-      tooltip.style.visibility = "visible";
-      tooltip.style.pointerEvents = "auto";
-
-      // Get dimensions to check for overflow
-      const tooltipRect = tooltip.getBoundingClientRect();
-      const svgRect = svgRef.current.getBoundingClientRect();
-
-      // Check for right edge overflow
-      if (x + tooltipRect.width > svgRect.width - margin.right) {
-        tooltip.style.left = x - tooltipRect.width - 10 + "px";
-      } else {
-        tooltip.style.left = x + 10 + "px";
-      }
-
-      // Check for top/bottom edge overflow
-      if (y - tooltipRect.height < margin.top) {
-        tooltip.style.top = y + 10 + "px";
-      } else {
-        tooltip.style.top = y - tooltipRect.height - 5 + "px";
-      }
-
-      const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
-      const hoverLine = hoverLinesGroup.select(".hover-line");
-      const xPosition = xScale(xValue);
-
-      hoverLine
-        .attr("x1", xPosition)
-        .attr("x2", xPosition)
-        .attr("y1", MARGIN.top)
-        .attr("y2", HEIGHT - MARGIN.bottom + 20)
-        .style("display", "block");
-
-      hoverLinesGroup.style("display", "block");
-    },
-    [xScale, filteredDataSet, getYValueAtX, margin]
-  );
-
-  const handleCombinedMouseOut = useCallback(() => {
-    if (!tooltipRef.current || !svgRef.current) return;
-
-    const tooltip = tooltipRef.current;
-    tooltip.style.visibility = "hidden";
-    tooltip.style.opacity = "0";
-    tooltip.innerHTML = "";
-
-    const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
-    const hoverLine = hoverLinesGroup.select(".hover-line");
-
-    hoverLinesGroup.style("display", "none");
-    hoverLine.style("display", "none");
-  }, []);
-
-  const displayIsNodata = useDisplayIsNodata({
-    dataSet: dataSet,
-    isLoading: isLoading,
-    isNodataComponent: isNodataComponent,
-    isNodata: isNodata,
-  });
-
   // Main rendering effect
-  useLayoutEffect(() => {
+  useEffect(() => {
     const svg = d3.select(svgRef.current);
 
     // Instead of removing all lines, use D3 update pattern
@@ -800,329 +705,193 @@ const LineChart: FC<LineChartProps> = ({
     // Line paths - main paths
     const linePaths = svg.selectAll(".line").data(visibleDataSets, keyFn);
 
-    // Exit - remove lines that no longer exist
-    linePaths.exit().remove();
+    // Within each group, create/update the line path
+    dataGroups.each(function (data) {
+      const group = d3.select(this);
 
-    // Update - update existing lines
-    linePaths
-      .attr("d", d =>
-        line({
-          d: d.series,
-          curve: d?.curve ?? "curveBumpX",
-        })
-      )
-      .each(function (d) {
+      // Create a specific group for lines
+      const lineGroup = group
+        .selectAll(".line-group")
+        .data([data])
+        .join("g")
+        .attr("class", "line-group")
+        .attr("data-label", data.label);
+
+      // Main line path in line group
+      const linePath = lineGroup
+        .selectAll(".line")
+        .data([data])
+        .join("path")
+        .attr("class", (d, i) => `line line-${i}`)
+        .attr("d", d =>
+          line({
+            d: d.series,
+            curve: d?.curve ?? "curveBumpX",
+          })
+        )
+        .attr("stroke", d => getColor(colorsMapping[d.label], d.color))
+        .attr("stroke-width", 2.5)
+        .attr("fill", "none")
+        .attr("pointer-events", "none");
+
+      // Set dash array for the line
+      linePath.each(function () {
         const pathNode = this as SVGPathElement;
-        const dashArray = getDashArrayMemoized(d.series, pathNode, xScale);
+        const dashArray = getDashArrayMemoized(data.series, pathNode, xScale);
         d3.select(this).attr("stroke-dasharray", dashArray);
       });
 
-    // Enter - add new lines
-    linePaths
-      .enter()
-      .append("path")
-      .attr("class", (d, i) => `line line-${i} data-group data-group-${i}`)
-      .attr("data-label", d => d.label)
-      .attr("data-label-safe", d => sanitizeForClassName(d.label))
-      .attr("d", d =>
-        line({
-          d: d.series,
-          curve: d?.curve ?? "curveBumpX",
-        })
-      )
-      .attr("stroke", "transparent")
-      .attr("stroke-width", 2.5)
-      .attr("fill", "none")
-      .attr("pointer-events", "none")
-      .attr("transition", "stroke 0.5s ease-out, opacity 0.5s ease-out")
-      .attr("stroke", d => getColor(colorsMapping[d.label], d.color))
-      .attr("opacity", 0)
-      .each(function (d) {
-        const pathNode = this as SVGPathElement;
-        const dashArray = getDashArrayMemoized(d.series, pathNode, xScale);
-        d3.select(this).attr("stroke-dasharray", dashArray);
-      })
-      .transition()
-      .duration(TRANSITION_DURATION)
-      .ease(TRANSITION_EASE)
-      .attr("stroke", d => getColor(colorsMapping[d.label], d.color))
-      .attr("opacity", 1);
-
-    // Line overlays - handle similarly
-    const lineOverlays = svg.selectAll(".line-overlay").data(visibleDataSets, keyFn);
-
-    // Exit - remove overlays that no longer exist
-    lineOverlays.exit().remove();
-
-    // Update - update existing overlays
-    lineOverlays.attr("d", d =>
-      line({
-        d: d.series,
-        curve: d?.curve ?? "curveBumpX",
-      })
-    );
-
-    // Enter - add new overlays
-    const enterOverlays = lineOverlays
-      .enter()
-      .append("path")
-      .attr("class", (d, i) => {
-        const safeLabelClass = sanitizeForClassName(d.label);
-        return `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${safeLabelClass} line-group-overlay-${safeLabelClass}`;
-      })
-      .attr("data-label", d => d.label)
-      .attr("data-label-safe", d => sanitizeForClassName(d.label))
-      .attr("d", d =>
-        line({
-          d: d.series,
-          curve: d?.curve ?? "curveBumpX",
-        })
-      )
-      .attr("stroke", d => getColor(colorsMapping[d.label], d.color))
-      .attr("stroke-width", 6)
-      .attr("fill", "none")
-      .attr("pointer-events", "stroke")
-      .style("opacity", 0.05); // Use style instead of attr for consistency with transitions
-
-    enterOverlays
-      .transition()
-      .duration(TRANSITION_DURATION)
-      .ease(TRANSITION_EASE)
-      .attr("stroke", d => getColor(colorsMapping[d.label], d.color))
-      // Do not change the opacity for overlays
-      .on("end", function (/* d */) {
-        // Remove unused 'd'
-        // After transition completes, add event listeners
-        d3.select(this)
-          .on("mouseenter", function (/* event */) {
-            // Remove unused 'event'
-            // Updated to directly use handleItemHighlight for consistency
-            const label = d3.select(this).attr("data-label");
+      // Line overlay in line group
+      lineGroup
+        .selectAll(".line-overlay")
+        .data([data])
+        .join("path")
+        .attr("class", (d, i) => `line-overlay line-overlay-${i}`)
+        .attr("d", d =>
+          line({
+            d: d.series,
+            curve: d?.curve ?? "curveBumpX",
+          })
+        )
+        .attr("stroke", d => getColor(colorsMapping[d.label], d.color))
+        .attr("stroke-width", 6)
+        .attr("fill", "none")
+        .attr("pointer-events", "stroke")
+        .style("opacity", 0.05)
+        .on("mouseenter", function (this: SVGPathElement) {
+          const parent = this.closest(".dataset-container");
+          if (parent) {
+            const label = d3.select(parent).attr("data-label");
             if (label) {
-              // Get all SVG elements
-              const svg = d3.select(svgRef.current);
+              // Fade all line groups and shape groups
+              svgSelection.selectAll<SVGGElement, unknown>(".line-group").each(function () {
+                const element = d3.select(this);
+                const dataLabel = element.attr("data-label");
+                element
+                  .transition()
+                  .duration(TRANSITION_DURATION)
+                  .style("opacity", dataLabel === label ? 1 : 0.05);
+              });
 
-              // IMMEDIATELY fade all points and lines with no transition
-              svg.selectAll(".data-group").style("opacity", 0.05);
-              svg.selectAll("circle, rect, path.data-point").style("opacity", 0.05);
+              // Keep shapes with matching data-label visible
+              svgSelection.selectAll<SVGGElement, unknown>(".shape-group").each(function () {
+                const element = d3.select(this);
+                const dataLabel = element.attr("data-label");
+                element
+                  .transition()
+                  .duration(TRANSITION_DURATION)
+                  .style("opacity", dataLabel === label ? 1 : 0.05);
+              });
 
-              // IMMEDIATELY highlight only points and lines with matching data-label
-              svg.selectAll(`[data-label="${label}"]:not(.line-overlay)`).style("opacity", 1);
-              // Double-ensure all shapes are explicitly targeted
-              svg
-                .selectAll(
-                  `circle[data-label="${label}"], rect[data-label="${label}"], path.data-point[data-label="${label}"]`
-                )
-                .style("opacity", 1);
-
-              // Keep line-overlays at consistent opacity
-              svg.selectAll(".line-overlay").style("opacity", 0.05);
-
-              // Use the standard highlight function after direct DOM manipulation
               handleItemHighlight([label]);
             }
-          })
-          .on("mouseout", handleMouseOut);
-      });
+          }
+        })
+        .on("mouseout", function (event) {
+          // Reset all opacities
+          svgSelection.selectAll(".line-group, .shape-group").style("opacity", 1);
+          handleMouseOut(event);
+        });
 
-    // Update existing overlays event handlers too
-    lineOverlays
-      .on("mouseenter", function (/* event, d */) {
-        // Remove unused 'event' and 'd'
-        // Get all SVG elements
-        const svg = d3.select(svgRef.current);
-        const label = d3.select(this).attr("data-label");
+      // Create a specific group for shapes
+      const shapeGroup = group
+        .selectAll(".shape-group")
+        .data([data])
+        .join("g")
+        .attr("class", "shape-group")
+        .attr("data-label", data.label);
 
-        if (label) {
-          // IMMEDIATELY fade all points and lines with no transition
-          svg.selectAll(".data-group").style("opacity", 0.05);
-          svg.selectAll("circle, rect, path.data-point").style("opacity", 0.05);
-
-          // IMMEDIATELY highlight only points and lines with matching data-label
-          svg.selectAll(`[data-label="${label}"]:not(.line-overlay)`).style("opacity", 1);
-          // Double-ensure all shapes are explicitly targeted
-          svg
-            .selectAll(
-              `circle[data-label="${label}"], rect[data-label="${label}"], path.data-point[data-label="${label}"]`
-            )
-            .style("opacity", 1);
-
-          // Keep line-overlays at consistent opacity
-          svg.selectAll(".line-overlay").style("opacity", 0.05);
-
-          // Use the standard highlight function after direct DOM manipulation
-          handleItemHighlight([label]);
-        }
-      })
-      .on("mouseout", handleMouseOut);
-
-    // First remove any existing data points that don't belong to currently filtered datasets
-    svg
-      .selectAll(".data-group:not(.line):not(.line-overlay)")
-      .filter(function () {
-        const dataLabel = (this as SVGElement).getAttribute("data-label");
-        return !visibleDataSets.some(d => d.label === dataLabel);
-      })
-      .remove();
-
-    // Now draw points ONLY for the same datasets that have visible paths
-    for (let i = 0; i < visibleDataSets.length; i++) {
-      const data = visibleDataSets[i];
+      // Add shapes based on the shape type
       const shape = data.shape || "circle";
       const circleSize = 5;
       const squareSize = 6;
-      const triangleSize = 8;
+      const triangleSize = 16;
       const color = getColor(colorsMapping[data.label], data.color);
-      const safeLabelClass = sanitizeForClassName(data.label);
-
-      // Use a composite key that includes both dataset label and point date to ensure uniqueness
-      const pointKeyFn = (d: DataPoint) => `${data.label}-${d.date}`;
 
       if (shape === "circle") {
-        // Select existing circles - use sanitized class names for selectors
-        const circles = svg
-          .selectAll(`.data-point-${i}[data-label="${data.label}"]`)
-          .data(data.series, pointKeyFn);
-
-        // Remove circles that no longer exist
-        circles.exit().remove();
-
-        // Update existing circles
-        circles
+        shapeGroup
+          .selectAll(".data-point")
+          .data(data.series)
+          .join("circle")
+          .attr("class", "data-point")
           .attr("cx", d => xScale(new Date(d.date)))
           .attr("cy", d => yScale(d.value))
-          .attr("fill", color);
-
-        // Add new circles
-        circles
-          .enter()
-          .append("circle")
-          .attr(
-            "class",
-            `data-group data-point data-group-${i} data-group-${safeLabelClass} data-point-${i}`
-          )
-          .attr("data-label", data.label)
-          .attr("data-label-safe", safeLabelClass)
-          .attr("cx", d => xScale(new Date(d.date)))
-          .attr("cy", d => yScale(d.value))
-          .attr("r", circleSize) // Set final size immediately
+          .attr("r", circleSize)
           .attr("fill", color)
           .attr("stroke", "#fdfdfd")
           .attr("stroke-width", 2)
-          .attr("cursor", "crosshair")
-          .style("opacity", 0) // Start with opacity 0
-          .transition()
-          .duration(TRANSITION_DURATION)
-          .ease(TRANSITION_EASE)
-          .style("opacity", 1); // Only transition opacity to 1
+          .attr("cursor", "pointer");
       } else if (shape === "square") {
-        // Select existing squares
-        const squares = svg
-          .selectAll(`.data-point-${i}[data-label="${data.label}"]`)
-          .data(data.series, pointKeyFn);
-
-        // Remove squares that no longer exist
-        squares.exit().remove();
-
-        // Update existing squares
-        squares
+        shapeGroup
+          .selectAll(".data-point")
+          .data(data.series)
+          .join("rect")
+          .attr("class", "data-point")
           .attr("x", d => xScale(new Date(d.date)) - squareSize)
           .attr("y", d => yScale(d.value) - squareSize)
-          .attr("fill", color);
-
-        // Add new squares
-        squares
-          .enter()
-          .append("rect")
-          .attr(
-            "class",
-            `data-group data-point data-group-${i} data-group-${safeLabelClass} data-point-${i}`
-          )
-          .attr("data-label", data.label)
-          .attr("data-label-safe", safeLabelClass)
-          .attr("x", d => xScale(new Date(d.date)) - squareSize)
-          .attr("y", d => yScale(d.value) - squareSize)
-          .attr("width", squareSize * 2) // Set final size immediately
-          .attr("height", squareSize * 2) // Set final size immediately
+          .attr("width", squareSize * 2)
+          .attr("height", squareSize * 2)
           .attr("fill", color)
           .attr("stroke", "#fdfdfd")
           .attr("stroke-width", 2)
-          .attr("cursor", "crosshair")
-          .style("opacity", 0) // Start with opacity 0
-          .transition()
-          .duration(TRANSITION_DURATION)
-          .ease(TRANSITION_EASE)
-          .style("opacity", 1); // Only transition opacity to 1
+          .attr("cursor", "pointer");
       } else if (shape === "triangle") {
-        // Select existing triangles
-        const triangles = svg
-          .selectAll(`.data-point-${i}[data-label="${data.label}"]`)
-          .data(data.series, pointKeyFn);
-
-        // Remove triangles that no longer exist
-        triangles.exit().remove();
-
-        // Update existing triangles
-        triangles
+        shapeGroup
+          .selectAll(".data-point")
+          .data(data.series)
+          .join("path")
+          .attr("class", "data-point")
           .attr("d", d => {
             const x = xScale(new Date(d.date));
             const y = yScale(d.value);
-            return `M${x},${y - triangleSize} L${x + triangleSize},${y + triangleSize} L${x - triangleSize},${y + triangleSize} Z`;
-          })
-          .attr("fill", color);
-
-        // Add new triangles - scale from center for animation
-        triangles
-          .enter()
-          .append("path")
-          .attr(
-            "class",
-            `data-group data-point data-group-${i} data-group-${safeLabelClass} data-point-${i} data-point`
-          )
-          .attr("data-label", data.label)
-          .attr("data-label-safe", safeLabelClass)
-          .attr("d", d => {
-            const x = xScale(new Date(d.date));
-            const y = yScale(d.value);
-            return `M${x},${y} L${x},${y} L${x},${y} Z`; // Start as a point
+            const height = (triangleSize * Math.sqrt(3)) / 2;
+            return `M ${x} ${y - height * 0.7} L ${x + triangleSize / 2} ${y + height * 0.3} L ${x - triangleSize / 2} ${y + height * 0.3} Z`;
           })
           .attr("fill", color)
           .attr("stroke", "#fdfdfd")
           .attr("stroke-width", 2)
-          .attr("cursor", "crosshair")
-          .style("opacity", 0) // Start with opacity 0
-          .transition()
-          .duration(TRANSITION_DURATION)
-          .ease(TRANSITION_EASE)
-          .style("opacity", 1); // Only transition opacity to 1
+          .attr("cursor", "pointer");
       }
 
-      // Add event listeners to all data points after they've been created or updated
-      svg
-        .selectAll(`.data-point-${i}[data-label="${data.label}"]`)
-        .on("mouseenter", (event, d: DataPoint) => {
-          event.preventDefault();
+      // Add shape-level event handlers
+      shapeGroup
+        .selectAll(".data-point")
+        .on("mouseenter", function (event, d) {
           event.stopPropagation();
+          const label = data.label;
 
-          handleItemHighlight([data.label]);
+          // Fade other line groups
+          svgSelection.selectAll<SVGGElement, unknown>(".data-group").each(function () {
+            const element = d3.select(this);
+            const dataLabel = element.attr("data-label");
+            element
+              .transition()
+              .duration(TRANSITION_DURATION)
+              .style("opacity", dataLabel === label ? 1 : 0.05);
+          });
 
-          const tooltipContent = tooltipFormatter(
-            {
-              ...d,
-              label: data.label,
-            } as DataPoint,
-            data.series,
-            filteredDataSet
-          );
+          // Show tooltip
+          if (tooltipRef?.current && svg) {
+            const dataPoint = d as DataPoint;
+            const tooltipContent = tooltipFormatter(
+              {
+                date: dataPoint.date,
+                value: dataPoint.value,
+                certainty: dataPoint.certainty,
+                label: data.label,
+              } as DataPoint,
+              data.series,
+              filteredDataSet
+            );
 
-          if (tooltipRef?.current && svgRef.current) {
-            const [mouseX, mouseY] = d3.pointer(event, event.currentTarget);
-            const svgRect = svgRef.current.getBoundingClientRect();
             const tooltip = tooltipRef.current;
+            const [mouseX, mouseY] = d3.pointer(event, svg);
 
             tooltip.style.visibility = "visible";
             tooltip.innerHTML = tooltipContent;
+
             const tooltipRect = tooltip.getBoundingClientRect();
+            const svgRect = svg.getBoundingClientRect();
 
             const xPosition = mouseX + 10;
             const yPosition = mouseY - 25;
@@ -1140,23 +909,36 @@ const LineChart: FC<LineChartProps> = ({
             }
           }
         })
-        .on("mouseout", event => {
-          event.preventDefault();
+        .on("mouseleave", function (event) {
           event.stopPropagation();
+          // Reset all opacities
+          svgSelection.selectAll(".line-group, .shape-group").style("opacity", 1);
 
-          const relatedTarget = event.relatedTarget;
-          const isMouseOverLine =
-            relatedTarget &&
-            (relatedTarget.classList.contains("line") ||
-              relatedTarget.classList.contains("line-overlay"));
-
-          if (!isMouseOverLine) {
-            handleItemHighlight([]);
-            if (tooltipRef?.current) {
-              tooltipRef.current.style.visibility = "hidden";
-            }
+          // Hide tooltip
+          if (tooltipRef?.current) {
+            tooltipRef.current.style.visibility = "hidden";
           }
         });
+    });
+
+    // Update opacity based on highlightItems
+    if (highlightItems.length > 0) {
+      // Fade line groups based on highlight
+      svgSelection
+        .selectAll(".line-group")
+        .style("opacity", (d: (typeof visibleDataSets)[0]) =>
+          highlightItems.includes(d.label) ? 1 : 0.05
+        );
+      // Keep shapes visible for highlighted items
+      svgSelection.selectAll<SVGGElement, unknown>(".shape-group").style("opacity", function () {
+        const element = d3.select(this);
+        const parent = element.node()?.parentElement;
+        const parentLabel = parent && d3.select(parent).attr("data-label");
+        return parentLabel && highlightItems.includes(parentLabel) ? 1 : 0.05;
+      });
+    } else {
+      // Reset all opacities when no highlights
+      svgSelection.selectAll(".line-group, .shape-group").style("opacity", 1);
     }
   }, [
     filteredDataSet,
@@ -1177,13 +959,12 @@ const LineChart: FC<LineChartProps> = ({
     svgRef,
     getColor,
     sanitizeForClassName,
-    TRANSITION_DURATION,
-    TRANSITION_EASE,
+    highlightItems,
   ]);
 
   useLayoutEffect(() => {
     const svg = d3.select(svgRef.current);
-    const TRANSITION_DURATION = 400; // Consistent duration
+    const TRANSITION_DURATION = 100; // Consistent duration
 
     // Use for loop instead of forEach for better performance
     for (const key of Object.keys(colorsMapping)) {
@@ -1400,41 +1181,32 @@ const LineChart: FC<LineChartProps> = ({
   return (
     <LineChartContainer>
       <div style={{ position: "relative", width: width, height: height }}>
-        {/* Always render the SVG, but optionally overlay the loading indicator */}
-        <Suspense fallback={<LoadingIndicator />}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            ref={svgRef}
-            width={width}
-            height={height}
-            onMouseOut={handleChartMouseOut}
-          >
-            {children}
-            <Title x={width / 2} y={margin.top / 2}>
-              {title}
-            </Title>
-            {filteredDataSet.length > 0 && (
-              <>
-                <XaxisLinear
-                  xScale={xScale}
-                  height={height}
-                  margin={margin}
-                  xAxisFormat={xAxisFormat}
-                  xAxisDataType={xAxisDataType}
-                  ticks={ticks}
-                />
-                <YaxisLinear
-                  yScale={yScale}
-                  width={width}
-                  height={height}
-                  margin={margin}
-                  highlightZeroLine={true}
-                  yAxisFormat={yAxisFormat}
-                />
-              </>
-            )}
-          </svg>
-        </Suspense>
+        <svg xmlns="http://www.w3.org/2000/svg" ref={svgRef} width={width} height={height}>
+          {children}
+          <Title x={width / 2} y={margin.top / 2}>
+            {title}
+          </Title>
+          {filteredDataSet.length > 0 && (
+            <>
+              <XaxisLinear
+                xScale={xScale}
+                height={height}
+                margin={margin}
+                xAxisFormat={xAxisFormat}
+                xAxisDataType={xAxisDataType}
+                ticks={ticks}
+              />
+              <YaxisLinear
+                yScale={yScale}
+                width={width}
+                height={height}
+                margin={margin}
+                highlightZeroLine={true}
+                yAxisFormat={yAxisFormat}
+              />
+            </>
+          )}
+        </svg>
 
         {/* Show loading indicator as an overlay when loading */}
         {showLoadingIndicator && (

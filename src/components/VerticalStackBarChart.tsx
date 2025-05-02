@@ -83,6 +83,7 @@ export interface RectData {
   seriesKeyAbbreviation: string;
   value: number | null;
   date: number;
+  code?: string;
 }
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
@@ -124,7 +125,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
         dataSet
           .map(ds => ds.series.map(s => Object.keys(s)))
           .flat(2)
-          .filter(d => d !== "date")
+          .filter(d => d !== "date" && d !== "code")
       )
     );
   }, [dataSet]);
@@ -134,7 +135,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
     return allKeys.filter(key => !disabledItems.includes(key));
   }, [allKeys, disabledItems]);
 
-  // NEW: compute filteredDataSet from the entire dataSet by summing all numeric properties (except "date")
+  // NEW: compute filteredDataSet from the entire dataSet by summing all numeric properties (except "date" and "code")
   const filteredDataSet = useMemo(() => {
     if (!filter) return dataSet;
     // For each DataSet, compute total sum over its series
@@ -144,7 +145,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
         return (
           sum +
           Object.entries(dp).reduce((acc, [key, value]) => {
-            return key !== "date" ? acc + Number(value || 0) : acc;
+            return key !== "date" && key !== "code" ? acc + Number(value || 0) : acc;
           }, 0)
         );
       }, 0);
@@ -163,7 +164,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
         dataSet
           .map(ds => ds.series.map(s => Object.keys(s)))
           .flat(2)
-          .filter(d => d !== "date")
+          .filter(d => d !== "date" && d !== "code")
       )
     );
   }, [dataSet]);
@@ -300,6 +301,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                   seriesKeyAbbreviation: dataItem.seriesKeyAbbreviation,
                   value: numericValue,
                   date: yearData.date,
+                  code: yearData.code,
                 };
                 y0 = y1;
                 stackedData[key].push(rectData as unknown as RectData);
@@ -341,7 +343,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                 <div style="background: #fff; padding: 5px">
                     <p>${data.date} - ${seriesKey}</p>
                     ${Object.keys(data)
-                      .filter(key => key !== "date")
+                      .filter(key => key !== "date" && key !== "code")
                       .sort()
                       .map(
                         key =>
@@ -381,6 +383,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
               label: item.key,
               value: item.value ?? null,
               date: item.date,
+              code: item.code,
             })) as unknown as DataPoint[]
         );
       }
@@ -531,6 +534,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                         rx={2}
                         stroke={"#fff"}
                         className={`bar`}
+                        data-value-zero={d.value === 0}
                         opacity={
                           highlightItems.length === 0 || highlightItems.includes(key) ? 1 : 0.2
                         }

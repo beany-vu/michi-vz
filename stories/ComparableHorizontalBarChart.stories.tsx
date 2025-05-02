@@ -12,12 +12,12 @@ export default {
     Story => (
       <MichiVzProvider
         colorsMapping={{
-          Congo: "red",
-          "Congo, Democratic Republic of": "blue",
+          Africa: "red",
+          "Congo": "blue",
           Egypt: "green",
           Madagascar: "yellow",
         }}
-        visibleItems={["Congo", "Congo, Democratic Republic of", "Egypt", "Madagascar"]}
+        visibleItems={["Africa", "Congo", "Egypt", "Madagascar"]}
       >
         <Story />
       </MichiVzProvider>
@@ -28,20 +28,25 @@ export default {
 // Create a default story using the template
 export const Primary = {
   args: {
-    onChartDataProcessed: processData => {
-      console.log({ processData });
+    onChartDataProcessed: (metadata: any) => {
+      console.log({ metadata });
     },
     isNoDataComponent: <div>No data</div>,
     dataSet: [
       {
         label: "Africa",
         valueBased: 100,
-        valueCompared: 54.50999999999999,
+        valueCompared: 55,
       },
       {
-        label: "Rest of the World",
+        label: "Egypt",
+        valueBased: -23.06,
+        valueCompared: -49.59,
+      },
+      {
+        label: "Congo",
         valueBased: 100,
-        valueCompared: 49.59,
+        valueCompared: 55,
       },
     ],
     width: 900,
@@ -50,8 +55,10 @@ export const Primary = {
       top: 50,
       right: 50,
       bottom: 50,
-      left: 50,
+      left: 150,
     },
+
+    xAxisPredefinedDomain: [-100, 100],
     showCombined: false,
     xAisFormat: d => `${d}`, // Example: format values as percentages
     yAxisFormat: d => `${d}`, // Example: format values as percentages

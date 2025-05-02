@@ -59,7 +59,8 @@ const YaxisBand: FC<Props> = ({ yScale, width, margin, yAxisFormat, showGrid }) 
       .attr("width", 100)
       .attr("height", 20)
       .html(
-        d => `<div style="display:flex;align-items:center;height:100%" title="${d}"><span>${d}</span></div>`
+        d =>
+          `<div style="display:flex;align-items:center;height:100%" title="${d}"><span>${d}</span></div>`
       );
 
     // Add dashed lines on each tick

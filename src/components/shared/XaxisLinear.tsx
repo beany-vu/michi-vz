@@ -76,46 +76,51 @@ const XaxisLinear: FC<Props> = ({
     const domain = xScale.domain();
     const first = domain[0];
     const last = domain[1];
+    const domainStart = +first;
+    const domainEnd = +last;
 
-    // Calculate total available width
+    // For non-time scales, generate nice round numbers for ticks
+    if (!isTimeScale) {
+      const tickCount = Math.min(ticks, 10); // Ensure we don't generate too many ticks
+      const range = domainEnd - domainStart;
+      const step = range / (tickCount - 1);
+
+      // Generate initial ticks
+      const initialTicks = [];
+      for (let i = 0; i < tickCount; i++) {
+        const value = domainStart + step * i;
+        initialTicks.push(value);
+      }
+
+      // Ensure 0 is included if it's within the domain
+      if (domainStart <= 0 && domainEnd >= 0 && !initialTicks.includes(0)) {
+        initialTicks.push(0);
+      }
+
+      // Sort ticks and ensure first and last domain values are included
+      const result = Array.from(new Set([domainStart, ...initialTicks, domainEnd])).sort(
+        (a, b) => a - b
+      );
+
+      return result;
+    }
+
+    // For time scales, use the original logic
     const availableWidth = xScale.range()[1] - xScale.range()[0];
-
-    // Estimate space needed per tick (average label width + padding)
-    const estimatedTickWidth = 80; // Base estimate in pixels
-
-    // Calculate how many ticks can fit
+    const estimatedTickWidth = 80;
     const maxFittingTicks = Math.floor(availableWidth / estimatedTickWidth);
-
-    // Use the smaller of maxFittingTicks or requested ticks
     const effectiveTicks = Math.max(2, Math.min(maxFittingTicks, ticks));
 
     if (effectiveTicks <= 2) {
       return [first, last];
     }
 
-    // Generate evenly spaced tick values
     const result = [];
-    const domainStart = +first;
-    const domainEnd = +last;
     const step = (domainEnd - domainStart) / (effectiveTicks - 1);
 
     for (let i = 0; i < effectiveTicks; i++) {
       const value = domainStart + step * i;
-
-      // Convert value back to appropriate type
-      let tickValue;
-      if (isTimeScale) {
-        tickValue = new Date(value);
-      } else {
-        tickValue = value;
-      }
-
-      result.push(tickValue);
-    }
-
-    // Ensure the last value is exactly the domain end
-    if (result.length > 0) {
-      result[result.length - 1] = last;
+      result.push(isTimeScale ? new Date(value) : value);
     }
 
     return result;
@@ -148,17 +153,17 @@ const XaxisLinear: FC<Props> = ({
       .delay(150)
       .duration(400)
       .call(axisBottom)
-      .call(g => g.select(".domain").attr("stroke-opacity", 0))
-      .call(g => g.select(".domain").remove())
-      .call(g => g.selectAll("line").attr("stroke-opacity", 0))
-      .call(g => g.selectAll("line").remove());
+      .call(g => g.select(".domain").attr("stroke-opacity", 0)) // Make domain line visible
+      .call(g => g.selectAll("line").attr("stroke-opacity", 0)) // Make tick lines visible
+      .call(g => g.selectAll("text").attr("fill", "currentColor")); // Ensure text is visible
 
     // Keep labels horizontal by default
     g.selectAll(".tick text")
       .attr("transform", "rotate(0)")
       .style("text-anchor", "middle")
       .attr("dx", "0")
-      .attr("dy", "0.71em");
+      .attr("dy", "0.71em")
+      .style("font-size", "12px"); // Ensure text size is readable
 
     // Remove existing tick lines before adding new ones
     g.selectAll(".tick-line").remove();
