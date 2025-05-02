@@ -13,6 +13,7 @@ interface Props {
   position?: "top" | "bottom";
   isLoading?: boolean;
   isEmpty?: boolean;
+  tickValues?: (number | Date)[]; // <-- new prop
 }
 
 const checkIsTimeScale = (
@@ -47,6 +48,7 @@ const XaxisLinear: FC<Props> = ({
   position = "bottom",
   isLoading = false,
   isEmpty = false,
+  tickValues: tickValuesProp, // <-- new prop
 }) => {
   const ref = useRef<SVGGElement>(null);
   const isTimeScale = checkIsTimeScale(xScale, xAxisDataType);
@@ -68,6 +70,8 @@ const XaxisLinear: FC<Props> = ({
 
   // Generate evenly spaced tick values that always include first and last
   const tickValues = useMemo(() => {
+    if (tickValuesProp) return tickValuesProp;
+
     // Don't generate ticks if loading or empty
     if (isLoading || isEmpty) {
       return [];
@@ -124,7 +128,7 @@ const XaxisLinear: FC<Props> = ({
     }
 
     return result;
-  }, [xScale, ticks, isTimeScale, isLoading, isEmpty]);
+  }, [xScale, ticks, isTimeScale, isLoading, isEmpty, tickValuesProp]);
 
   useLayoutEffect(() => {
     const g = d3.select(ref.current);

@@ -1471,3 +1471,54 @@ export const SameDataLabelDifferentShapes = {
     );
   },
 };
+
+export const Monthly = {
+  args: {
+    dataSet: [
+      {
+        label: "Monthly Sales",
+        series: [
+          { date: "2023-01-01", value: 100, certainty: true },
+          { date: "2023-02-01", value: 120, certainty: true },
+          { date: "2023-03-01", value: 90, certainty: true },
+          { date: "2023-04-01", value: 130, certainty: true },
+          { date: "2023-05-01", value: 110, certainty: true },
+        ],
+      },
+    ],
+    width: 700,
+    height: 400,
+    margin: { top: 50, right: 50, bottom: 50, left: 50 },
+    showCombined: false,
+    yAxisFormat: (d: any) => `${d}`,
+    xAxisDataType: "date_monthly",
+    title: "Monthly Data (Small Range)",
+    tooltipFormatter: (dataSet: any, d: any) => JSON.stringify(d),
+  },
+};
+
+export const ManyMonths = {
+  args: {
+    dataSet: [
+      {
+        label: "Long Monthly Series",
+        series: Array.from({ length: 36 }, (_, i) => {
+          const date = new Date(2021, i, 1);
+          return {
+            date: date.toISOString().slice(0, 10),
+            value: 100 + Math.round(Math.sin(i / 3) * 30 + Math.random() * 20),
+            certainty: true,
+          };
+        }),
+      },
+    ],
+    width: 700,
+    height: 400,
+    margin: { top: 50, right: 50, bottom: 50, left: 50 },
+    showCombined: false,
+    yAxisFormat: (d: any) => `${d}`,
+    xAxisDataType: "date_monthly",
+    title: "Monthly Data (Many Months)",
+    tooltipFormatter: (dataSet: any, d: any) => JSON.stringify(d),
+  },
+};
