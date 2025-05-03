@@ -56,14 +56,30 @@ const XaxisLinear: FC<Props> = ({
   // Memoize the default formatter
   const defaultFormatter = useCallback(
     (d: number | Date | { valueOf(): number }) => {
-      const value = d instanceof Date ? d : new Date(d.valueOf());
       if (isTimeScale) {
-        const month = value.toLocaleString("en-US", { month: "2-digit" });
-        const year = value.getFullYear();
-        return xAxisDataType === "date_annual" ? `${year}` : `${month}-${year}`;
-      } else {
-        return String(d.valueOf());
+        const value = d instanceof Date ? d : new Date(d.valueOf());
+
+        // Format specifically for annual data
+        if (xAxisDataType === "date_annual") {
+          return `${value.getFullYear()}`;
+        }
+
+        // Format for monthly data
+        if (xAxisDataType === "date_monthly") {
+          const month = value.toLocaleString("en-US", { month: "short" });
+          const year = value.getFullYear();
+          return `${month} ${year}`;
+        }
+
+        // Default date formatting
+        return value.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+        });
       }
+
+      // For numeric values
+      return String(d.valueOf());
     },
     [isTimeScale, xAxisDataType]
   );
@@ -80,59 +96,77 @@ const XaxisLinear: FC<Props> = ({
     const domain = xScale.domain();
     const first = domain[0];
     const last = domain[1];
-    const domainStart = +first;
-    const domainEnd = +last;
 
-    // For non-time scales, generate nice round numbers for ticks
-    if (!isTimeScale) {
-      const tickCount = Math.min(ticks, 10); // Ensure we don't generate too many ticks
-      const range = domainEnd - domainStart;
-      const step = range / (tickCount - 1);
+    // Always include first and last
+    const result = [];
 
-      // Generate initial ticks
-      const initialTicks = [];
-      for (let i = 0; i < tickCount; i++) {
-        const value = domainStart + step * i;
-        initialTicks.push(value);
+    // Limit to exactly 5 ticks (or fewer if domain is smaller)
+    const targetTickCount = Math.min(5, ticks);
+
+    if (targetTickCount <= 2) {
+      return [first, last];
+    }
+
+    // For annual dates, handle specially to ensure years align properly
+    if (isTimeScale && xAxisDataType === "date_annual") {
+      const firstYear =
+        first instanceof Date ? first.getFullYear() : new Date(+first).getFullYear();
+      const lastYear = last instanceof Date ? last.getFullYear() : new Date(+last).getFullYear();
+      const yearCount = lastYear - firstYear + 1;
+
+      // If we have a reasonable number of years, show all of them
+      if (yearCount <= 10) {
+        for (let year = firstYear; year <= lastYear; year++) {
+          result.push(new Date(`${year}-01-01`));
+        }
+        return result;
       }
 
-      // Ensure 0 is included if it's within the domain
-      if (domainStart <= 0 && domainEnd >= 0 && !initialTicks.includes(0)) {
-        initialTicks.push(0);
+      // For many years, pick a sensible spacing
+      // Always include first and last years
+      result.push(new Date(`${firstYear}-01-01`));
+
+      // Calculate step size based on available space
+      const stepSize = Math.max(1, Math.ceil(yearCount / 10));
+
+      // Add intermediate years at regular intervals
+      for (let year = firstYear + stepSize; year < lastYear; year += stepSize) {
+        result.push(new Date(`${year}-01-01`));
       }
 
-      // Sort ticks and ensure first and last domain values are included
-      const result = Array.from(new Set([domainStart, ...initialTicks, domainEnd])).sort(
-        (a, b) => a - b
-      );
+      // Add the last year if not already included
+      if (result[result.length - 1].getFullYear() !== lastYear) {
+        result.push(new Date(`${lastYear}-01-01`));
+      }
 
       return result;
     }
 
-    // For time scales, use the original logic
-    const availableWidth = xScale.range()[1] - xScale.range()[0];
-    const estimatedTickWidth = 80;
-    const maxFittingTicks = Math.floor(availableWidth / estimatedTickWidth);
-    const effectiveTicks = Math.max(2, Math.min(maxFittingTicks, ticks));
+    // For numeric scales or other time scales
+    result.push(first);
 
-    if (effectiveTicks <= 2) {
-      return [first, last];
+    const valueRange = +last - +first;
+    const step = valueRange / (targetTickCount - 1);
+
+    for (let i = 1; i < targetTickCount - 1; i++) {
+      const value = +first + i * step;
+      if (isTimeScale) {
+        result.push(new Date(value));
+      } else {
+        result.push(value);
+      }
     }
 
-    const result = [];
-    const step = (domainEnd - domainStart) / (effectiveTicks - 1);
-
-    for (let i = 0; i < effectiveTicks; i++) {
-      const value = domainStart + step * i;
-      result.push(isTimeScale ? new Date(value) : value);
-    }
-
+    result.push(last);
     return result;
-  }, [xScale, ticks, isTimeScale, isLoading, isEmpty, tickValuesProp]);
+  }, [xScale, ticks, isTimeScale, isLoading, isEmpty, tickValuesProp, xAxisDataType]);
 
   useLayoutEffect(() => {
     const g = d3.select(ref.current);
     if (!g) return;
+
+    // Clear any existing axis elements to prevent duplicates
+    g.selectAll("*").remove();
 
     // Create the axis and use our calculated tickValues
     const axisBottom = d3
@@ -142,70 +176,67 @@ const XaxisLinear: FC<Props> = ({
         xAxisFormat
           ? xAxisFormat(domainValue instanceof Date ? domainValue : domainValue.valueOf())
           : defaultFormatter(domainValue)
-      );
+      )
+      .tickSize(6); // Control tick size
 
     // Initial setup
     g.attr("class", "x-axis x-axis-linear").attr(
       "style",
       position === "top"
-        ? `transform:translate(${margin.left}px, ${margin.top - 15}px)`
-        : `transform:translate(0,${height - margin.bottom + 15}px)`
+        ? `transform:translate(0, ${margin.top}px)`
+        : `transform:translate(0, ${height - margin.bottom}px)`
     );
 
-    // Add transition for axis updates
-    g.transition()
-      .delay(150)
-      .duration(400)
-      .call(axisBottom)
-      .call(g => g.select(".domain").attr("stroke-opacity", 0)) // Make domain line visible
-      .call(g => g.selectAll("line").attr("stroke-opacity", 0)) // Make tick lines visible
-      .call(g => g.selectAll("text").attr("fill", "currentColor")); // Ensure text is visible
+    // Call the axis
+    g.call(axisBottom)
+      // Style the domain line (horizontal axis line)
+      .call(g => g.select(".domain").attr("stroke", "lightgray").attr("stroke-width", 1))
+      // Style the tick lines
+      .call(g => g.selectAll(".tick line").attr("stroke", "lightgray").attr("stroke-opacity", 0.5))
+      // Style the text
+      .call(g =>
+        g
+          .selectAll(".tick text")
+          .attr("fill", "#666")
+          .attr("font-size", "12px")
+          .attr("text-anchor", "middle")
+          .attr("dy", "1em")
+      );
 
-    // Keep labels horizontal by default
-    g.selectAll(".tick text")
-      .attr("transform", "rotate(0)")
-      .style("text-anchor", "middle")
-      .attr("dx", "0")
-      .attr("dy", "0.71em")
-      .style("font-size", "12px"); // Ensure text size is readable
+    // Ensure the first and last ticks align with data points by moving them to exact edge positions
+    if (tickValues.length >= 2) {
+      const range = xScale.range();
+      const firstTickSelector = g.select(".tick:first-child");
+      const lastTickSelector = g.select(".tick:last-child");
 
-    // Remove existing tick lines before adding new ones
-    g.selectAll(".tick-line").remove();
+      if (!firstTickSelector.empty()) {
+        firstTickSelector.attr("transform", `translate(${range[0]}, 0)`);
+      }
 
-    // Add vertical dashed lines with transition
-    g.selectAll(".tick")
-      .append("line")
-      .attr("class", "tick-line")
-      .attr("x1", 0)
-      .attr("y1", position === "top" ? height - margin.bottom - margin.top : -15)
-      .attr("x2", 0)
-      .attr("y2", position === "top" ? margin.top - 15 : -height + margin.bottom + margin.top - 15)
-      .style("stroke-dasharray", "3,3")
-      .style("stroke", showGrid ? "lightgray" : "transparent")
-      .attr("pointer-events", "none")
-      .style("opacity", 1)
-      .transition()
-      .duration(750)
-      .attr("x2", 0)
-      .attr("y2", position === "top" ? margin.top - 15 : -height + margin.bottom + margin.top - 15);
+      if (!lastTickSelector.empty()) {
+        lastTickSelector.attr("transform", `translate(${range[1]}, 0)`);
+      }
+    }
 
-    // Update or add dots
-    const dots = g.selectAll(".tick").selectAll(".tickValueDot").data([0]); // One dot per tick
-
-    // Enter new dots
-    dots
-      .enter()
-      .append("circle")
-      .attr("class", "tickValueDot")
-      .merge(dots as d3.Selection<SVGCircleElement, number, SVGGElement, unknown>)
-      .attr("cx", 0)
-      .attr("cy", 0)
-      .attr("r", 2)
-      .attr("fill", "lightgray")
-      .style("opacity", 1);
-
-    // Remove old dots
-    dots.exit().remove();
+    // Add grid lines if requested
+    if (showGrid) {
+      g.selectAll(".tick")
+        .append("line")
+        .attr("class", "grid-line")
+        .attr("x1", 0)
+        .attr("y1", 0)
+        .attr("x2", 0)
+        .attr(
+          "y2",
+          position === "top"
+            ? height - margin.top - margin.bottom
+            : -(height - margin.top - margin.bottom)
+        )
+        .attr("stroke", "lightgray")
+        .attr("stroke-width", 0.5)
+        .attr("stroke-dasharray", "3,3")
+        .attr("opacity", 0.5);
+    }
 
     // Cleanup function
     return () => {
