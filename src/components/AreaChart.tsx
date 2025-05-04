@@ -11,8 +11,6 @@ import styled from "styled-components";
 
 const AreaChartContainer = styled.div`
   position: relative;
-  contain: layout paint;
-  content-visibility: auto;
   path {
     transition: fill 0.1s ease-out;
     will-change: fill;

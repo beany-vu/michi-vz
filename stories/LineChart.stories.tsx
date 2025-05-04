@@ -904,7 +904,7 @@ export const DifferentShapesAndCurves = {
         series: [
           { date: "2016", value: 80, certainty: true },
           { date: "2017", value: 130, certainty: true },
-          { date: "2018", value: 100, certainty: true },
+          { date: "2018", value: 200, certainty: true },
           { date: "2019", value: 160, certainty: true },
           { date: "2020", value: 120, certainty: true },
         ],
