@@ -963,7 +963,7 @@ const LineChart: FC<LineChartProps> = ({
 
       if (shape === "circle") {
         // Select existing circles - use sanitized class names for selectors
-        const circles = group.selectAll(`.data-point-${i}`).data(data.series, pointKeyFn);
+        const circles = group.selectAll(".data-point").data(data.series, pointKeyFn);
 
         // Remove circles that no longer exist
         circles.exit().remove();
@@ -998,7 +998,7 @@ const LineChart: FC<LineChartProps> = ({
           .style("opacity", OPACITY_DEFAULT); // Only transition opacity to 1
       } else if (shape === "square") {
         // Select existing squares
-        const squares = group.selectAll(`.data-point-${i}`).data(data.series, pointKeyFn);
+        const squares = group.selectAll(".data-point").data(data.series, pointKeyFn);
 
         // Remove squares that no longer exist
         squares.exit().remove();
@@ -1034,7 +1034,7 @@ const LineChart: FC<LineChartProps> = ({
           .style("opacity", OPACITY_HIGHLIGHTED); // Only transition opacity to 1
       } else if (shape === "triangle") {
         // Select existing triangles
-        const triangles = group.selectAll(`.data-point-${i}`).data(data.series, pointKeyFn);
+        const triangles = group.selectAll(".data-point").data(data.series, pointKeyFn);
 
         // Remove triangles that no longer exist
         triangles.exit().remove();
