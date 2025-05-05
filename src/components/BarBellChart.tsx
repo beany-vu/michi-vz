@@ -4,7 +4,7 @@ import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
 import { scaleBand, scaleLinear } from "d3";
 import YaxisBand from "./shared/YaxisBand";
-import XaxisLinear from "./shared/XaxisLinear";
+import XaxisLinear from "./shared/XaxisLinnearBarBellChart";
 import { useChartContext } from "./MichiVzProvider";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import LoadingIndicator from "./shared/LoadingIndicator";
@@ -17,7 +17,7 @@ interface ChartMetadata {
   xAxisDomain: string[];
   yAxisDomain: [number, number];
   visibleItems: string[];
-  renderedData: { [key: string]: DataPoint[] };
+  renderedData: string[];
   chartType: "bar-bell-chart";
 }
 
@@ -62,7 +62,6 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   showGrid = defaultConf.SHOW_GRID,
   onChartDataProcessed,
   onHighlightItem,
-  filter,
 }) => {
   const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
@@ -108,36 +107,53 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     }
   };
 
-  const yValues = dataSet.map(d => d.date).map(date => date);
+  const yValues = useMemo(() => dataSet.map(d => d.date).map(date => date), [dataSet]);
 
-  const yScale = scaleBand()
-    .domain(
-      yValues.map(value => {
-        return `${value}`;
-      })
-    )
-    .range([margin.top + 20, height - margin.bottom]);
+  const yScale = useMemo(
+    () =>
+      scaleBand()
+        .domain(
+          yValues.map(value => {
+            return `${value}`;
+          })
+        )
+        .range([margin.top + 20, height - margin.bottom]),
+    [yValues, margin.top, margin.bottom, height]
+  );
 
   // xValues is the sum of all values which their key is not "date"
-  const xValues = dataSet.map(d => {
-    let sum = 0;
-    for (const key in d) {
-      if (key !== "date" && disabledItems.includes(key) === false) {
-        sum += d[key] || 0;
-      }
-    }
-    return sum;
-  });
+  const xValues = useMemo(
+    () =>
+      dataSet.map(d => {
+        let sum = 0;
+        for (const key in d) {
+          if (key !== "date" && disabledItems.includes(key) === false) {
+            sum += d[key] || 0;
+          }
+        }
+        return sum;
+      }),
+    [dataSet, disabledItems]
+  );
 
-  const maxValueX = Math.max(...xValues) === 0 ? 1 : Math.max(...xValues);
+  const maxValueX = useMemo(
+    () => (Math.max(...xValues) === 0 ? 1 : Math.max(...xValues)),
+    [xValues]
+  );
 
-  const xScale = scaleLinear()
-    .domain([0, maxValueX])
-    .range([0, width - margin.left - margin.right])
-    .nice()
-    .clamp(true);
+  const xScale = useMemo(
+    () =>
+      scaleLinear()
+        .domain([0, maxValueX])
+        .range([0, width - margin.left - margin.right])
+        .nice()
+        .clamp(true),
+    [maxValueX, width, margin.left, margin.right]
+  );
 
-  useEffect(() => {
+  const isEmpty = useMemo(() => dataSet.length === 0, [dataSet]);
+
+  useLayoutEffect(() => {
     const svg = d3.select(ref.current);
     if (highlightItems.length > 0) {
       svg.selectAll(".bar-data").style("opacity", 0.1);
@@ -151,7 +167,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     }
   }, [highlightItems, disabledItems]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const svg = d3.select(ref.current);
     svg.selectAll(".bar-data-point").raise();
   }, [dataSet, xValues]);
@@ -163,34 +179,13 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     isNodata: isNodata,
   });
 
-  const filteredDataSet = useMemo(() => {
-    // First filter out disabled items
-    let result = dataSet.filter(d => !disabledItems.includes(String(d.label)));
-
-    // Then apply filter logic if filter exists
-    if (filter) {
-      result = result
-        .slice()
-        .sort((a, b) => {
-          const aVal = a[filter.criteria] ?? 0;
-          const bVal = b[filter.criteria] ?? 0;
-          return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
-        })
-        .slice(0, filter.limit);
-    }
-
-    return result;
-  }, [dataSet, filter, disabledItems]);
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       const currentMetadata: ChartMetadata = {
         xAxisDomain: xValues.map(String),
         yAxisDomain: [0, maxValueX],
         visibleItems: keys.filter(key => !disabledItems.includes(key)),
-        renderedData: {
-          [keys[0]]: dataSet,
-        },
+        renderedData: keys,
         chartType: "bar-bell-chart",
       };
 
@@ -247,6 +242,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
           showGrid={showGrid?.x || false}
           position={"top"}
           ticks={12}
+          isEmpty={isEmpty}
         />
         {dataSet.map((d, i) => {
           let cumulativeX = margin.left; // Initialize cumulativeX for each row
