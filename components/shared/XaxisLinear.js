@@ -1,0 +1,197 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+const jsx_runtime_1 = require("react/jsx-runtime");
+const react_1 = require("react");
+const d3 = __importStar(require("d3"));
+const checkIsTimeScale = (scale, xAxisDataType) => {
+    if (xAxisDataType === "date_annual" || xAxisDataType === "date_monthly") {
+        return true;
+    }
+    if ("ticks" in scale && "domain" in scale && "range" in scale) {
+        const timeScale = scale;
+        return (timeScale.ticks !== undefined &&
+            timeScale.domain instanceof Array &&
+            timeScale.range instanceof Array &&
+            ((typeof timeScale.domain[0] === "number" && typeof timeScale.range[0] === "number") ||
+                (timeScale.domain[0] instanceof Date && timeScale.range[0] instanceof Date)));
+    }
+    return false;
+};
+const XaxisLinear = ({ xScale = d3.scaleLinear().domain([0, 100]), height, margin, xAxisFormat, xAxisDataType = "number", ticks = 5, showGrid = false, position = "bottom", isLoading = false, isEmpty = false, tickValues: tickValuesProp, // <-- new prop
+ }) => {
+    const ref = (0, react_1.useRef)(null);
+    const isTimeScale = checkIsTimeScale(xScale, xAxisDataType);
+    // Memoize the default formatter
+    const defaultFormatter = (0, react_1.useCallback)((d) => {
+        const value = d instanceof Date ? d : new Date(d.valueOf());
+        if (isTimeScale) {
+            const month = value.toLocaleString("en-US", { month: "2-digit" });
+            const year = value.getFullYear();
+            return xAxisDataType === "date_annual" ? `${year}` : `${month}-${year}`;
+        }
+        else {
+            return String(d.valueOf());
+        }
+    }, [isTimeScale, xAxisDataType]);
+    // Generate evenly spaced tick values that always include first and last
+    const tickValues = (0, react_1.useMemo)(() => {
+        if (tickValuesProp)
+            return tickValuesProp;
+        // Don't generate ticks if loading or empty
+        if (isLoading || isEmpty) {
+            return [];
+        }
+        const domain = xScale.domain();
+        const first = domain[0];
+        const last = domain[1];
+        const domainStart = +first;
+        const domainEnd = +last;
+        // For non-time scales, generate nice round numbers for ticks
+        if (!isTimeScale) {
+            const tickCount = Math.min(ticks, 10); // Ensure we don't generate too many ticks
+            const range = domainEnd - domainStart;
+            const step = range / (tickCount - 1);
+            // Generate initial ticks
+            const initialTicks = [];
+            for (let i = 0; i < tickCount; i++) {
+                const value = domainStart + step * i;
+                initialTicks.push(value);
+            }
+            // Ensure 0 is included if it's within the domain
+            if (domainStart <= 0 && domainEnd >= 0 && !initialTicks.includes(0)) {
+                initialTicks.push(0);
+            }
+            // Sort ticks and ensure first and last domain values are included
+            const result = Array.from(new Set([domainStart, ...initialTicks, domainEnd])).sort((a, b) => a - b);
+            return result;
+        }
+        // For time scales, use the original logic
+        const availableWidth = xScale.range()[1] - xScale.range()[0];
+        const estimatedTickWidth = 80;
+        const maxFittingTicks = Math.floor(availableWidth / estimatedTickWidth);
+        const effectiveTicks = Math.max(2, Math.min(maxFittingTicks, ticks));
+        if (effectiveTicks <= 2) {
+            return [first, last];
+        }
+        const result = [];
+        const step = (domainEnd - domainStart) / (effectiveTicks - 1);
+        for (let i = 0; i < effectiveTicks; i++) {
+            const value = domainStart + step * i;
+            result.push(isTimeScale ? new Date(value) : value);
+        }
+        return result;
+    }, [xScale, ticks, isTimeScale, isLoading, isEmpty, tickValuesProp]);
+    (0, react_1.useLayoutEffect)(() => {
+        const g = d3.select(ref.current);
+        if (!g)
+            return;
+        // Create the axis and use our calculated tickValues
+        const axisBottom = d3
+            .axisBottom(xScale)
+            .tickValues(tickValues)
+            .tickFormat((domainValue) => xAxisFormat
+            ? xAxisFormat(domainValue instanceof Date ? domainValue : domainValue.valueOf())
+            : defaultFormatter(domainValue));
+        // Initial setup
+        g.attr("class", "x-axis x-axis-linear").attr("style", position === "top"
+            ? `transform:translate(${margin.left}px, ${margin.top - 15}px)`
+            : `transform:translate(0,${height - margin.bottom + 15}px)`);
+        // Add transition for axis updates
+        g.transition()
+            .delay(150)
+            .duration(400)
+            .call(axisBottom)
+            .call(g => g.select(".domain").attr("stroke-opacity", 0)) // Make domain line visible
+            .call(g => g.selectAll("line").attr("stroke-opacity", 0)) // Make tick lines visible
+            .call(g => g.selectAll("text").attr("fill", "currentColor")); // Ensure text is visible
+        // Keep labels horizontal by default
+        g.selectAll(".tick text")
+            .attr("transform", "rotate(0)")
+            .style("text-anchor", "middle")
+            .attr("dx", "0")
+            .attr("dy", "0.71em")
+            .style("font-size", "12px"); // Ensure text size is readable
+        // Remove existing tick lines before adding new ones
+        g.selectAll(".tick-line").remove();
+        // Add vertical dashed lines with transition
+        g.selectAll(".tick")
+            .append("line")
+            .attr("class", "tick-line")
+            .attr("x1", 0)
+            .attr("y1", position === "top" ? height - margin.bottom - margin.top : -15)
+            .attr("x2", 0)
+            .attr("y2", position === "top" ? margin.top - 15 : -height + margin.bottom + margin.top - 15)
+            .style("stroke-dasharray", "3,3")
+            .style("stroke", showGrid ? "lightgray" : "transparent")
+            .attr("pointer-events", "none")
+            .style("opacity", 1)
+            .transition()
+            .duration(750)
+            .attr("x2", 0)
+            .attr("y2", position === "top" ? margin.top - 15 : -height + margin.bottom + margin.top - 15);
+        // Update or add dots
+        const dots = g.selectAll(".tick").selectAll(".tickValueDot").data([0]); // One dot per tick
+        // Enter new dots
+        dots
+            .enter()
+            .append("circle")
+            .attr("class", "tickValueDot")
+            .merge(dots)
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", 2)
+            .attr("fill", "lightgray")
+            .style("opacity", 1);
+        // Remove old dots
+        dots.exit().remove();
+        // Cleanup function
+        return () => {
+            g.selectAll("*").interrupt();
+        };
+    }, [
+        xScale,
+        height,
+        margin,
+        xAxisFormat,
+        xAxisDataType,
+        tickValues,
+        defaultFormatter,
+        position,
+        showGrid,
+    ]);
+    return (0, jsx_runtime_1.jsx)("g", { className: "x-axis-container", ref: ref });
+};
+exports.default = XaxisLinear;
