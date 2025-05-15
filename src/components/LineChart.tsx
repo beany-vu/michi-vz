@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useCallback, useLayoutEffect, FC } from "react";
+import React, { useMemo, useRef, useCallback, useLayoutEffect, FC } from "react";
 import * as d3 from "d3";
 import { DataPoint } from "../types/data";
 import Title from "./shared/Title";
@@ -31,6 +31,8 @@ declare global {
 export const DEFAULT_MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const DEFAULT_WIDTH = 900 - DEFAULT_MARGIN.left - DEFAULT_MARGIN.right;
 const DEFAULT_HEIGHT = 480 - DEFAULT_MARGIN.top - DEFAULT_MARGIN.bottom;
+const OPACITY_DEFAULT = 1;
+const OPACITY_NOT_HIGHLIGHTED = 0.05;
 
 const LineChartContainer = styled.div`
   position: relative;
@@ -288,23 +290,21 @@ const LineChart: FC<LineChartProps> = ({
     // Clear highlight
     onHighlightItem([]);
 
-      // Ensure hover state is set
-      // setIsHovering(true);
+    // Ensure hover state is set
+    // setIsHovering(true);
 
-      // Clear highlight
-      onHighlightItem([]);
+    // Clear highlight
+    onHighlightItem([]);
 
-      if (tooltipRef?.current) {
-        tooltipRef.current.style.visibility = "hidden";
-      }
+    if (tooltipRef?.current) {
+      tooltipRef.current.style.visibility = "hidden";
+    }
 
-      // Reset hover state after a small delay
-      setTimeout(() => {
-        // setIsHovering(false);
-      }, 200);
-    },
-    [onHighlightItem]
-  );
+    // Reset hover state after a small delay
+    setTimeout(() => {
+      // setIsHovering(false);
+    }, 200);
+  }, [onHighlightItem]);
 
   useLineChartPathsShapesRendering(
     filteredDataSet,
