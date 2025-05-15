@@ -691,11 +691,11 @@ const commonProps = {
 export const Primary = {
   args: {
     ...commonProps,
-    dataSet: singleSeriesData,
-    title: "Single Series Line Chart",
-    series: [
+    dataSet: [
       {
         label: "Africa",
+        shape: "circle",
+        color: "#4287f5",
         series: [
           {
             year: 2015,
@@ -750,6 +750,8 @@ export const Primary = {
       },
       {
         label: "Rest of the World",
+        shape: "square",
+        color: "#42f554",
         series: [
           {
             year: 2015,

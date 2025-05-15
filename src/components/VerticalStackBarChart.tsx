@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useCallback, useLayoutEffect } from "react";
 import * as d3 from "d3";
+import isEqual from "lodash/isEqual";
 import Title from "./shared/Title";
 import XaxisBand from "./shared/XaxisBand";
 import YaxisLinear from "./shared/YaxisLinear";
@@ -89,6 +90,10 @@ export interface RectData {
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900;
 const HEIGHT = 480;
+
+// const reducer = (state, action) => {
+//   if (action.type ===)
+// }
 
 const VerticalStackBarChart: React.FC<Props> = ({
   dataSet,
@@ -457,17 +462,15 @@ const VerticalStackBarChart: React.FC<Props> = ({
         visibleItems: renderedKeys,
         renderedData: allRenderedData,
         chartType: "vertical-stack-bar-chart",
-      };
-
-      // Check if the data has actually changed
+      }; // Check if the data has actually changed
       const hasChanged =
         !prevChartDataRef.current ||
-        JSON.stringify(prevChartDataRef.current.xAxisDomain) !==
-          JSON.stringify(currentMetadata.xAxisDomain) ||
-        JSON.stringify(prevChartDataRef.current.visibleItems) !==
-          JSON.stringify(currentMetadata.visibleItems) ||
-        JSON.stringify(Object.keys(prevChartDataRef.current.renderedData).sort()) !==
-          JSON.stringify(Object.keys(currentMetadata.renderedData).sort());
+        !isEqual(prevChartDataRef.current.xAxisDomain, currentMetadata.xAxisDomain) ||
+        !isEqual(prevChartDataRef.current.visibleItems, currentMetadata.visibleItems) ||
+        !isEqual(
+          Object.keys(prevChartDataRef.current.renderedData).sort(),
+          Object.keys(currentMetadata.renderedData).sort()
+        );
 
       // Always update the ref with latest metadata
       prevChartDataRef.current = currentMetadata;

@@ -1,0 +1,69 @@
+import { useCallback } from "react";
+import { Margin } from "src/types/data";
+import { pointer } from "d3";
+
+export const useTooltip = (
+  xScale,
+  filteredDataSet,
+  getYValueAtX,
+  margin: Margin,
+  svgRef,
+  tooltipRef
+) => {
+  return useCallback(
+    (event: MouseEvent) => {
+      if (!svgRef.current || !tooltipRef.current) return;
+
+      const [x, y] = pointer(event, event.currentTarget as SVGElement);
+      const xValue = xScale.invert(x);
+
+      const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
+      const tooltipContent = filteredDataSet
+        .map(data => {
+          const yValue = getYValueAtX(data.series, xValue);
+          return `<div>${data.label}: ${yValue ?? "N/A"}</div>`;
+        })
+        .join("");
+
+      const tooltip = tooltipRef.current;
+      tooltip.innerHTML = `<div style="background: #fff; padding: 5px">${tooltipTitle}${tooltipContent}</div>`;
+
+      // Make tooltip visible to calculate its dimensions
+      tooltip.style.opacity = "1";
+      tooltip.style.visibility = "visible";
+      tooltip.style.pointerEvents = "auto";
+
+      // Get dimensions to check for overflow
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const svgRect = svgRef.current.getBoundingClientRect();
+
+      // Check for right edge overflow
+      if (x + tooltipRect.width > svgRect.width - margin.right) {
+        tooltip.style.left = x - tooltipRect.width - 10 + "px";
+      } else {
+        tooltip.style.left = x + 10 + "px";
+      }
+
+      // Check for top/bottom edge overflow
+      if (y - tooltipRect.height < margin.top) {
+        tooltip.style.top = y + 10 + "px";
+      } else {
+        tooltip.style.top = y - tooltipRect.height - 5 + "px";
+      }
+
+      const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
+      const hoverLine = hoverLinesGroup.select(".hover-line");
+      const xPosition = xScale(xValue);
+
+      hoverLine
+        .attr("x1", xPosition)
+        .attr("x2", xPosition)
+        .attr("y1", MARGIN.top)
+        .attr("y2", HEIGHT - MARGIN.bottom + 20)
+        .style("display", "block");
+
+      hoverLinesGroup.style("display", "block");
+    },
+    [xScale, filteredDataSet, getYValueAtX, margin, svgRef, tooltipRef]
+  );
+};
