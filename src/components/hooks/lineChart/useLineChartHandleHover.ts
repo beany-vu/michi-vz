@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import d3 from "d3";
+import { DEFAULT_HEIGHT, DEFAULT_MARGIN } from "src/components/LineChart";
 
 const useLineChartHandleHover = (
   svgRef,
@@ -60,8 +61,8 @@ const useLineChartHandleHover = (
       hoverLine
         .attr("x1", xPosition)
         .attr("x2", xPosition)
-        .attr("y1", MARGIN.top)
-        .attr("y2", HEIGHT - MARGIN.bottom + 20)
+        .attr("y1", DEFAULT_MARGIN.top)
+        .attr("y2", DEFAULT_HEIGHT - DEFAULT_MARGIN.bottom + 20)
         .style("display", "block");
 
       hoverLinesGroup.style("display", "block");

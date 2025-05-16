@@ -1,3 +1,4 @@
+import { select } from "d3";
 import { useLayoutEffect } from "react";
 
 const useLineChartMouseInteractionCombinedMode = (
@@ -11,7 +12,7 @@ const useLineChartMouseInteractionCombinedMode = (
   useLayoutEffect(() => {
     if (!showCombined || !svgRef.current) return;
 
-    const svg = d3.select(svgRef.current);
+    const svg = select(svgRef.current);
     const hoverLinesGroup = svg.append("g").attr("class", "hover-lines").style("display", "none");
 
     // Add the hover line to group and use it in callback

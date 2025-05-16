@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { pointer, select, ScaleLinear, ScaleTime, easeQuadOut } from "d3";
 import { DataPoint, LineChartDataItem } from "src/types/data";
 
@@ -19,7 +19,6 @@ const useLineChartPathsShapesRendering = (
   xScale: ScaleLinear<number, number> | ScaleTime<number, number>,
   yScale: ScaleLinear<number, number>,
   handleItemHighlight: (labels: string[]) => void,
-  handleMouseOut: (event: React.MouseEvent) => void,
   tooltipFormatter: (point: DataPoint, series: DataPoint[], dataset: LineChartDataItem[]) => string,
   tooltipRef: React.RefObject<HTMLDivElement>,
   svgRef: React.RefObject<SVGSVGElement>,
@@ -28,6 +27,38 @@ const useLineChartPathsShapesRendering = (
   TRANSITION_DURATION: number,
   TRANSITION_EASE: typeof easeQuadOut
 ) => {
+  const handleMouseEnter = useCallback(
+    (
+      event: React.MouseEvent,
+      svgRef: React.RefObject<SVGSVGElement>,
+      groupSelector: string,
+      opacityUnhighlighted: number,
+      opacityHighlighted: number
+    ) => {
+      const svg = select(svgRef.current);
+
+      if (!svg.node()) return;
+
+      const dataLabel = (event.currentTarget as SVGElement).dataset.label;
+
+      svg.selectAll(groupSelector).style("opacity", opacityUnhighlighted);
+      svg.selectAll(`[data-label="${dataLabel}"]`).style("opacity", opacityHighlighted);
+
+      handleItemHighlight([dataLabel]);
+    },
+    [handleItemHighlight]
+  );
+
+  const handleMouseOut = useCallback(
+    svgRef => {
+      const svg = select(svgRef.current);
+      if (!svg.node()) return;
+      svg.selectAll(".data-group").style("opacity", 1);
+      handleItemHighlight([]);
+    },
+    [handleItemHighlight]
+  );
+
   useEffect(() => {
     if (!svgRef.current) return;
 
@@ -98,7 +129,7 @@ const useLineChartPathsShapesRendering = (
       .append("path")
       .attr("class", (d, i) => {
         const safeLabelClass = sanitizeForClassName(d.label);
-        return `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group-overlay-${safeLabelClass} line-group-overlay-${safeLabelClass}`;
+        return `line-overlay line-overlay-${i} data-group data-group-overlay data-group-${i} data-group-overlay-${safeLabelClass} line-group-overlay-${safeLabelClass}`;
       })
       .attr("data-label", d => d.label)
       .attr("data-label-safe", d => sanitizeForClassName(d.label))
@@ -117,25 +148,10 @@ const useLineChartPathsShapesRendering = (
     // Add event handlers to both new and existing overlays
     svg
       .selectAll(".line-overlay")
-      .on("mouseenter", (event, d: LineChartDataItem) => {
-        // Get all SVG elements
-        const svg = select(svgRef.current);
-        if (!svg.node()) return;
-
-        // IMMEDIATELY fade all points and lines with no transition
-        svg.selectAll(".data-group").style("opacity", 0.05);
-        svg.selectAll("circle, rect, path").style("opacity", 0.05);
-
-        // IMMEDIATELY highlight only points and lines with matching data-label
-        svg.selectAll(`[data-label="${d.label}"]:not(.line-overlay)`).style("opacity", 1);
-
-        // Keep line-overlays at consistent opacity
-        svg.selectAll(".line-overlay").style("opacity", 0.05);
-
-        // Use the standard highlight function after direct DOM manipulation
-        handleItemHighlight([d.label]);
+      .on("mouseenter", event => {
+        handleMouseEnter(event, svgRef, ".data-group", 0.05, 1);
       })
-      .on("mouseout", handleMouseOut);
+      .on("mouseout", () => handleMouseOut(svgRef));
 
     // Remove old overlays
     lineOverlays.exit().remove();
@@ -149,8 +165,7 @@ const useLineChartPathsShapesRendering = (
       })
       .remove();
 
-    console.log({ visibleDataSets });
-    // Now draw points ONLY for the same datasets that have visible paths
+    // Now draw all elements for each series inside a <g>
     for (let i = 0; i < visibleDataSets.length; i++) {
       const data = visibleDataSets[i];
       const shape = data.shape || "circle";
@@ -163,29 +178,76 @@ const useLineChartPathsShapesRendering = (
       // Use a composite key that includes both dataset label and point date to ensure uniqueness
       const pointKeyFn = (d: DataPoint) => `${data.label}-${d.date}`;
 
-      // Select all existing points for this dataset
-      const points = svg
-        .selectAll(`.data-point-${i}[data-label="${data.label}"]`)
-        .data(data.series, pointKeyFn);
+      // --- GROUP ---
+      // Select or create a <g> for this series
+      let group = svg.select(`g.series-group[data-label='${data.label}']`);
+      if (group.empty()) {
+        group = svg
+          .append("g")
+          .attr("class", `data-group series-group series-group-${i} series-group-${safeLabelClass}`)
+          .attr("data-label", data.label)
+          .attr("data-label-safe", safeLabelClass);
+      }
 
+      // --- LINE ---
+      let linePath = group.select(".line");
+      if (linePath.empty()) {
+        linePath = group.append("path").attr("class", `line line-${i} data-group data-group-${i}`);
+      }
+      linePath
+        .attr("data-label", data.label)
+        .attr("data-label-safe", safeLabelClass)
+        .attr("d", line({ d: data.series, curve: data?.curve ?? "curveBumpX" }))
+        .attr("stroke-width", 2.5)
+        .attr("pointer-events", "none")
+        .attr("stroke", color)
+        .attr("fill", "none")
+        .attr("opacity", 1)
+        .each(function () {
+          const pathNode = this as SVGPathElement;
+          const dashArray = getDashArrayMemoized(data.series, pathNode, xScale);
+          select(this).attr("stroke-dasharray", dashArray);
+        });
+
+      // --- LINE OVERLAY ---
+      let overlayPath = group.select(".line-overlay");
+      if (overlayPath.empty()) {
+        overlayPath = group
+          .append("path")
+          .attr(
+            "class",
+            `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group data-group-overlay-${safeLabelClass} line-group-overlay-${safeLabelClass}`
+          );
+      }
+      overlayPath
+        .attr("data-label", data.label)
+        .attr("data-label-safe", safeLabelClass)
+        .attr("d", line({ d: data.series, curve: data?.curve ?? "curveBumpX" }))
+        .attr("stroke", color)
+        .attr("stroke-width", 6)
+        .attr("fill", "none")
+        .attr("pointer-events", "stroke")
+        .style("opacity", 0.05)
+        .on("mouseenter", event => {
+          handleMouseEnter(event, svgRef, ".data-group", 0.05, 1);
+        })
+        .on("mouseout", () => handleMouseOut(svgRef));
+
+      // --- POINTS ---
       // Remove old points
-      points.exit().remove();
+      group.selectAll(".data-point").data(data.series, pointKeyFn).exit().remove();
 
-      console.log({ points, color });
-      // Update existing points
+      // Update and enter points
+      const points = group.selectAll(`.data-point`).data(data.series, pointKeyFn);
       if (shape === "circle") {
         points
           .attr("cx", d => xScale(new Date(d.date)))
           .attr("cy", d => yScale(d.value))
           .attr("fill", color);
-
-        // Add new circles
-        const newPoints = points.enter().append("circle");
-        newPoints
-          .attr(
-            "class",
-            `data-group data-point data-group-${i} data-group-${safeLabelClass} data-point-${i}`
-          )
+        points
+          .enter()
+          .append("circle")
+          .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
           .attr("data-label", data.label)
           .attr("data-label-safe", safeLabelClass)
           .attr("cx", d => xScale(new Date(d.date)))
@@ -201,14 +263,10 @@ const useLineChartPathsShapesRendering = (
           .attr("x", d => xScale(new Date(d.date)) - squareSize)
           .attr("y", d => yScale(d.value) - squareSize)
           .attr("fill", color);
-
-        // Add new squares
-        const newPoints = points.enter().append("rect");
-        newPoints
-          .attr(
-            "class",
-            `data-group data-point data-group-${i} data-group-${safeLabelClass} data-point-${i}`
-          )
+        points
+          .enter()
+          .append("rect")
+          .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
           .attr("data-label", data.label)
           .attr("data-label-safe", safeLabelClass)
           .attr("x", d => xScale(new Date(d.date)) - squareSize)
@@ -221,12 +279,10 @@ const useLineChartPathsShapesRendering = (
           .attr("cursor", "crosshair")
           .style("opacity", 1);
       } else if (shape === "triangle") {
-        // Helper function to generate triangle path
         const generateTrianglePath = (x: number, y: number, size: number = triangleSize) => {
           const height = (size * Math.sqrt(3)) / 2;
           return `M ${x} ${y - height * 0.7} L ${x + size / 2} ${y + height * 0.3} L ${x - size / 2} ${y + height * 0.3} Z`;
         };
-
         points
           .attr("d", d => {
             const x = xScale(new Date(d.date));
@@ -234,14 +290,10 @@ const useLineChartPathsShapesRendering = (
             return generateTrianglePath(x, y);
           })
           .attr("fill", color);
-
-        // Add new triangles
-        const newPoints = points.enter().append("path");
-        newPoints
-          .attr(
-            "class",
-            `data-group data-point data-group-${i} data-group-${safeLabelClass} data-point-${i}`
-          )
+        points
+          .enter()
+          .append("path")
+          .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
           .attr("data-label", data.label)
           .attr("data-label-safe", safeLabelClass)
           .attr("d", d => {
@@ -257,15 +309,10 @@ const useLineChartPathsShapesRendering = (
       }
 
       // Add event listeners to all data points after they've been created or updated
-      const allDataPoints = svg.selectAll(`.data-point-${i}[data-label="${data.label}"]`);
-
-      // Add new listeners for data points
-      allDataPoints
+      group
+        .selectAll(`.data-point`)
         .on("mouseenter", (event, d: DataPoint) => {
-          event.preventDefault();
-          event.stopPropagation();
-
-          handleItemHighlight([data.label]);
+          handleMouseEnter(event, svgRef, ".data-group", 0.05, 1);
 
           const tooltipContent = tooltipFormatter(
             {
@@ -301,22 +348,8 @@ const useLineChartPathsShapesRendering = (
             }
           }
         })
-        .on("mouseout", event => {
-          event.preventDefault();
-          event.stopPropagation();
-
-          const relatedTarget = event.relatedTarget as Element;
-          const isMouseOverLine =
-            relatedTarget &&
-            (relatedTarget.classList.contains("line") ||
-              relatedTarget.classList.contains("line-overlay"));
-
-          if (!isMouseOverLine) {
-            handleItemHighlight([]);
-            if (tooltipRef?.current) {
-              tooltipRef.current.style.visibility = "hidden";
-            }
-          }
+        .on("mouseout", () => {
+          handleMouseOut(svgRef);
         });
     }
   }, [
@@ -332,7 +365,6 @@ const useLineChartPathsShapesRendering = (
     xScale,
     yScale,
     handleItemHighlight,
-    handleMouseOut,
     tooltipFormatter,
     tooltipRef,
     svgRef,

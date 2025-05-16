@@ -29,10 +29,10 @@ declare global {
 }
 
 export const DEFAULT_MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
-const DEFAULT_WIDTH = 900 - DEFAULT_MARGIN.left - DEFAULT_MARGIN.right;
-const DEFAULT_HEIGHT = 480 - DEFAULT_MARGIN.top - DEFAULT_MARGIN.bottom;
-const OPACITY_DEFAULT = 1;
-const OPACITY_NOT_HIGHLIGHTED = 0.05;
+export const DEFAULT_WIDTH = 900 - DEFAULT_MARGIN.left - DEFAULT_MARGIN.right;
+export const DEFAULT_HEIGHT = 480 - DEFAULT_MARGIN.top - DEFAULT_MARGIN.bottom;
+export const OPACITY_DEFAULT = 1;
+export const OPACITY_NOT_HIGHLIGHTED = 0.05;
 
 const LineChartContainer = styled.div`
   position: relative;
@@ -252,39 +252,6 @@ const LineChart: FC<LineChartProps> = ({
     // The main rendering effect will then add the correct points back
   }, [filter, dataSet]); // Only run when filter or dataset changes
 
-  // Also update the handleMouseOut to restore opacity directly
-  const handleMouseOut = useCallback(
-    (event: React.MouseEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      // Directly manage opacity through D3 before clearing highlight
-      const svg = d3.select(svgRef.current);
-      if (svg.node()) {
-        // Reset all groups to full opacity
-        svg
-          .selectAll(".data-group, .data-series-group")
-          .transition()
-          .duration(TRANSITION_DURATION)
-          .style("opacity", OPACITY_DEFAULT);
-        // Ensure line-overlays are always 0.05 opacity
-        svg
-          .selectAll(".line-overlay")
-          .transition()
-          .duration(TRANSITION_DURATION)
-          .style("opacity", OPACITY_NOT_HIGHLIGHTED);
-      }
-
-      // Clear highlight in context
-      onHighlightItem([]);
-
-      if (tooltipRef?.current) {
-        tooltipRef.current.style.visibility = "hidden";
-      }
-    },
-    [onHighlightItem, svgRef]
-  );
-
   // Reset hover state on mouse out from the chart
   const handleChartMouseOut = useCallback(() => {
     // Clear highlight
@@ -319,7 +286,6 @@ const LineChart: FC<LineChartProps> = ({
     xScale,
     yScale,
     onHighlightItem,
-    handleMouseOut,
     tooltipFormatter,
     tooltipRef,
     svgRef,
@@ -330,8 +296,6 @@ const LineChart: FC<LineChartProps> = ({
   );
 
   useLineChartColorMapping(colorsMapping, getColor, svgRef, TRANSITION_DURATION);
-
-  useLineChartHighlighItems(onHighlightItem, svgRef, tooltipRef, tooltipFormatter, filteredDataSet);
 
   const handleHover = useCallback(
     (event: MouseEvent) => {
