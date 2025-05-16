@@ -13,13 +13,13 @@
     "declaration": true,
     "isolatedModules": true,
     "module": "commonjs",
-    "baseUrl": "./",
-    "paths": {
-      "src/*": ["./src/*"]
-    },
     "target": "ES2019", // Set your desired target version
     "downlevelIteration": true, // Enable downlevel iteration
-    "allowJs": true
+    "allowJs": true,
+    "baseUrl": ".",
+    "paths": {
+      "src/*": ["src/*"]
+    }
   },
   "include": ["src/**/*", "src/**/*.ts", "src/**/*.tsx", "**/*.test.ts", "**/*.test.tsx"],
   "exclude": ["node_modules", "build", "dist", "stories"]

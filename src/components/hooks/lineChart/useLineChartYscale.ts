@@ -1,7 +1,13 @@
 import { scaleLinear, min, max } from "d3";
 import { useMemo } from "react";
+import { LineChartDataItem, DataPoint } from "src/types/data";
 
-const useLineChartYscale = (filteredDataSet, yAxisDomain, height, margin) => {
+const useLineChartYscale = (
+  filteredDataSet: LineChartDataItem[],
+  yAxisDomain: [number, number] | undefined,
+  height: number,
+  margin: { top: number; bottom: number }
+) => {
   return useMemo(
     () =>
       scaleLinear()
@@ -10,12 +16,16 @@ const useLineChartYscale = (filteredDataSet, yAxisDomain, height, margin) => {
             ? yAxisDomain
             : [
                 min(
-                  filteredDataSet.flatMap(({ series }) => series.filter(dd => dd.value !== null)),
-                  d => d.value
+                  filteredDataSet.flatMap(({ series }) =>
+                    series.filter((dd: DataPoint) => dd.value !== null)
+                  ),
+                  (d: DataPoint) => d.value
                 ) || 0,
                 max(
-                  filteredDataSet.flatMap(({ series }) => series.filter(dd => dd.value !== null)),
-                  d => d.value
+                  filteredDataSet.flatMap(({ series }) =>
+                    series.filter((dd: DataPoint) => dd.value !== null)
+                  ),
+                  (d: DataPoint) => d.value
                 ) || 1,
               ]
         )

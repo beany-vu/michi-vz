@@ -1,12 +1,13 @@
 import { useCallback } from "react";
 import { Margin } from "src/types/data";
-import { pointer } from "d3";
+import { pointer, select } from "d3";
 
 export const useTooltip = (
   xScale,
   filteredDataSet,
   getYValueAtX,
   margin: Margin,
+  height: number,
   svgRef,
   tooltipRef
 ) => {
@@ -51,19 +52,19 @@ export const useTooltip = (
         tooltip.style.top = y - tooltipRect.height - 5 + "px";
       }
 
-      const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
+      const hoverLinesGroup = select(svgRef.current).select(".hover-lines");
       const hoverLine = hoverLinesGroup.select(".hover-line");
       const xPosition = xScale(xValue);
 
       hoverLine
         .attr("x1", xPosition)
         .attr("x2", xPosition)
-        .attr("y1", MARGIN.top)
-        .attr("y2", HEIGHT - MARGIN.bottom + 20)
+        .attr("y1", margin.top)
+        .attr("y2", height - margin.bottom + 20)
         .style("display", "block");
 
       hoverLinesGroup.style("display", "block");
     },
-    [xScale, filteredDataSet, getYValueAtX, margin, svgRef, tooltipRef]
+    [xScale, filteredDataSet, getYValueAtX, margin, height, svgRef, tooltipRef]
   );
 };

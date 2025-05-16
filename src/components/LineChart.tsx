@@ -15,7 +15,6 @@ import useLineChartXtickValues from "./hooks/lineChart/useXtickValues";
 import useLineChartPathsShapesRendering from "./hooks/lineChart/useLineChartPathsShapesRendering";
 import useLineChartMouseInteractionCombinedMode from "./hooks/lineChart/useLineChartMouseInteractionCombinedMode";
 import useLineChartMetadataExpose from "./hooks/lineChart/useLineChartMetadataExpose";
-import useLineChartHighlighItems from "./hooks/lineChart/useLineChartHighlighItems";
 import useLineChartColorMapping from "./hooks/lineChart/useColorMapping";
 import { useLineChartRefsAndState } from "./hooks/lineChart/useLineChartRefsAndState";
 import { sanitizeForClassName, getColor } from "./hooks/lineChart/lineChartUtils";
@@ -157,15 +156,8 @@ const LineChart: FC<LineChartProps> = ({
   const { colorsMapping, highlightItems, disabledItems } = useChartContext();
 
   // Use the new hook for refs and state
-  const {
-    svgRef,
-    tooltipRef,
-    renderCompleteRef,
-    prevChartDataRef,
-    isProcessing,
-    setIsProcessing,
-    isInitialMount,
-  } = useLineChartRefsAndState();
+  const { svgRef, tooltipRef, renderCompleteRef, prevChartDataRef, isInitialMount } =
+    useLineChartRefsAndState();
 
   // Animation constants
   const TRANSITION_DURATION = 100;
@@ -201,64 +193,18 @@ const LineChart: FC<LineChartProps> = ({
     prevColorsMapping.current = colorsMapping;
   }, [colorsMapping]);
 
-  // Only show loading state during initial component mount or when explicitly isLoading is true
-  // Process data changes internally without showing loading overlay
-  useLayoutEffect(() => {
-    // Only show processing indicator on initial mount, not on subsequent data changes
-    if (isInitialMount.current) {
-      setIsProcessing(true);
-
-      const initialTimer = setTimeout(() => {
-        setIsProcessing(false);
-        isInitialMount.current = false;
-      }, TRANSITION_DURATION);
-
-      return () => clearTimeout(initialTimer);
-    }
-  }, [TRANSITION_DURATION]);
-
-  // // Separate data processing effect that doesn't show loading overlay
-  // useLayoutEffect(() => {
-  //   // Process data changes without showing loading overlay
-  //   // Internal-only state for cleanup and synchronization
-  //   const processingTimer = setTimeout(() => {
-  //     // This just manages cleanup timing, doesn't affect UI
-  //   }, TRANSITION_DURATION);
-
-  //   return () => clearTimeout(processingTimer);
-  // }, [dataSet, filter, width, height, TRANSITION_DURATION]);
-
   // Calculate whether to show the loading indicator
   // Only show on initial load or explicit isLoading
-  const showLoadingIndicator = isLoading || (isProcessing && isInitialMount.current);
+  const showLoadingIndicator = isLoading || !isInitialMount.current;
 
   const visibleDataSets = useMemo(() => {
     return filteredDataSet.filter(d => d.series.length > 1);
   }, [filteredDataSet]);
 
-  // Ensure we have clean data point removal when filter changes
-  useLayoutEffect(() => {
-    // This effect specifically runs when filter or dataset changes
-    // It ensures all old data points are properly removed
-
-    const svg = d3.select(svgRef.current);
-    if (!svg.node()) return;
-
-    // First, remove all existing data points before any new ones are rendered
-    // Use a more aggressive selector to ensure all old points are removed
-    svg.selectAll(".data-group:not(.line):not(.line-overlay)").remove();
-
-    // This ensures a clean slate for new data points to be rendered
-    // The main rendering effect will then add the correct points back
-  }, [filter, dataSet]); // Only run when filter or dataset changes
-
   // Reset hover state on mouse out from the chart
   const handleChartMouseOut = useCallback(() => {
     // Clear highlight
     onHighlightItem([]);
-
-    // Ensure hover state is set
-    // setIsHovering(true);
 
     // Clear highlight
     onHighlightItem([]);
@@ -266,11 +212,6 @@ const LineChart: FC<LineChartProps> = ({
     if (tooltipRef?.current) {
       tooltipRef.current.style.visibility = "hidden";
     }
-
-    // Reset hover state after a small delay
-    setTimeout(() => {
-      // setIsHovering(false);
-    }, 200);
   }, [onHighlightItem]);
 
   useLineChartPathsShapesRendering(
@@ -292,7 +233,9 @@ const LineChart: FC<LineChartProps> = ({
     getColor,
     sanitizeForClassName,
     TRANSITION_DURATION,
-    TRANSITION_EASE
+    TRANSITION_EASE,
+    highlightItems,
+    onHighlightItem
   );
 
   useLineChartColorMapping(colorsMapping, getColor, svgRef, TRANSITION_DURATION);

@@ -1,5 +1,5 @@
 import { useLayoutEffect } from "react";
-import { DataPoint } from "src/types/data";
+import { DataPoint, ChartMetadata } from "src/types/data";
 
 const useLineChartMetadataExpose = (
   dataSet,

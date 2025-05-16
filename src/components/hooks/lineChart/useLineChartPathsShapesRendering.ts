@@ -25,7 +25,9 @@ const useLineChartPathsShapesRendering = (
   getColor: (color: string | undefined, fallback: string | null) => string,
   sanitizeForClassName: (str: string) => string,
   TRANSITION_DURATION: number,
-  TRANSITION_EASE: typeof easeQuadOut
+  TRANSITION_EASE: typeof easeQuadOut,
+  highlightItems: string[],
+  onHighlightItem?: (labels: string[]) => void
 ) => {
   const handleMouseEnter = useCallback(
     (
@@ -33,16 +35,28 @@ const useLineChartPathsShapesRendering = (
       svgRef: React.RefObject<SVGSVGElement>,
       groupSelector: string,
       opacityUnhighlighted: number,
-      opacityHighlighted: number
+      opacityHighlighted: number,
+      highlightItems: string[] = []
     ) => {
       const svg = select(svgRef.current);
 
       if (!svg.node()) return;
 
-      const dataLabel = (event.currentTarget as SVGElement).dataset.label;
+      const dataLabel = event ? (event.currentTarget as SVGElement).dataset.label : null;
 
       svg.selectAll(groupSelector).style("opacity", opacityUnhighlighted);
-      svg.selectAll(`[data-label="${dataLabel}"]`).style("opacity", opacityHighlighted);
+
+      console.log({ dataLabel });
+
+      if (dataLabel) {
+        svg.selectAll(`[data-label="${dataLabel}"]`).style("opacity", opacityHighlighted);
+      }
+
+      if (highlightItems.length > 0) {
+        highlightItems.forEach(item => {
+          svg.selectAll(`[data-label="${item}"]`).style("opacity", opacityHighlighted);
+        });
+      }
 
       handleItemHighlight([dataLabel]);
     },
@@ -60,16 +74,32 @@ const useLineChartPathsShapesRendering = (
   );
 
   useEffect(() => {
+    // This effect specifically runs when filter or dataset changes
+    // It ensures all old data points are properly removed
+
+    const svg = select(svgRef.current);
+    if (!svg.node()) return;
+
+    // First, remove all existing data points before any new ones are rendered
+    // Use a more aggressive selector to ensure all old points are removed
+    svg.selectAll(".data-group:not(.line):not(.line-overlay)").remove();
+  }, [filteredDataSet, visibleDataSets]); // Only run when filter or dataset changes
+
+  useEffect(() => {
+    if (!svgRef.current) return;
+    handleMouseEnter(null, svgRef, ".data-group", 0.05, 1, highlightItems);
+    if (onHighlightItem) {
+      onHighlightItem(highlightItems);
+    }
+  }, [highlightItems, onHighlightItem]);
+
+  useEffect(() => {
     if (!svgRef.current) return;
 
     const svg = select(svgRef.current);
 
-    // Instead of removing all lines, use D3 update pattern
-    // Create a key function that uniquely identifies each dataset
-    const keyFn = (d: LineChartDataItem) => d.label;
-
     // Line paths - main paths
-    const linePaths = svg.selectAll(".line").data(visibleDataSets, keyFn);
+    const linePaths = svg.selectAll(".line").data(visibleDataSets);
 
     // Update - update existing lines
     linePaths
@@ -89,7 +119,7 @@ const useLineChartPathsShapesRendering = (
     linePaths
       .enter()
       .append("path")
-      .attr("class", (d, i) => `line line-${i} data-group data-group-${i}`)
+      .attr("class", (_, i) => `line line-${i} data-group data-group-${i}`)
       .attr("data-label", d => d.label)
       .attr("data-label-safe", d => sanitizeForClassName(d.label))
       .attr("d", d =>
@@ -113,7 +143,7 @@ const useLineChartPathsShapesRendering = (
     linePaths.exit().remove();
 
     // Line overlays - handle similarly
-    const lineOverlays = svg.selectAll(".line-overlay").data(visibleDataSets, keyFn);
+    const lineOverlays = svg.selectAll(".line-overlay").data(visibleDataSets);
 
     // Update - update existing overlays
     lineOverlays.attr("d", d =>
@@ -370,6 +400,8 @@ const useLineChartPathsShapesRendering = (
     svgRef,
     getColor,
     sanitizeForClassName,
+    highlightItems,
+    onHighlightItem,
     TRANSITION_DURATION,
     TRANSITION_EASE,
   ]);

@@ -1,11 +1,10 @@
-import { useRef, useState } from 'react';
+import { useRef } from "react";
 
 export function useLineChartRefsAndState() {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<any>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const isInitialMount = useRef(true);
 
   return {
@@ -13,8 +12,6 @@ export function useLineChartRefsAndState() {
     tooltipRef,
     renderCompleteRef,
     prevChartDataRef,
-    isProcessing,
-    setIsProcessing,
     isInitialMount,
   };
-} 
+}

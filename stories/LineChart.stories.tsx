@@ -37,7 +37,7 @@ export default {
           Africa: "red",
           "Rest of the World": "blue",
         }}
-        // highlightItems={["Item 1"]}
+        highlightItems={["Africa"]}
       >
         <Story />
       </MichiVzProvider>
@@ -1363,7 +1363,7 @@ export const SameDataLabelDifferentShapes = {
       },
       {
         label: "Performance Metrics", // Same label
-        shape: "triangle", // Different shape
+        shape: "circle", // Different shape
         curve: "curveLinear",
         color: "#4CAF50", // Different color
         series: [
