@@ -46,8 +46,6 @@ const useLineChartPathsShapesRendering = (
 
       svg.selectAll(groupSelector).style("opacity", opacityUnhighlighted);
 
-      console.log({ dataLabel });
-
       if (dataLabel) {
         svg.selectAll(`[data-label="${dataLabel}"]`).style("opacity", opacityHighlighted);
       }
@@ -69,8 +67,11 @@ const useLineChartPathsShapesRendering = (
       if (!svg.node()) return;
       svg.selectAll(".data-group").style("opacity", 1);
       handleItemHighlight([]);
+      if (tooltipRef.current) {
+        tooltipRef.current.style.visibility = "hidden";
+      }
     },
-    [handleItemHighlight]
+    [handleItemHighlight, tooltipRef]
   );
 
   useEffect(() => {
@@ -83,7 +84,7 @@ const useLineChartPathsShapesRendering = (
     // First, remove all existing data points before any new ones are rendered
     // Use a more aggressive selector to ensure all old points are removed
     svg.selectAll(".data-group:not(.line):not(.line-overlay)").remove();
-  }, [filteredDataSet, visibleDataSets]); // Only run when filter or dataset changes
+  }, [filteredDataSet, visibleDataSets]);
 
   useEffect(() => {
     if (!svgRef.current) return;

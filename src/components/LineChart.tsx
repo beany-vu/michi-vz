@@ -150,9 +150,6 @@ const LineChart: FC<LineChartProps> = ({
   onHighlightItem,
   ticks = 5,
 }) => {
-  const prevHighlightItems = useRef<string[]>([]);
-  const prevDisabledItems = useRef<string[]>([]);
-  const prevColorsMapping = useRef<{ [key: string]: string }>({});
   const { colorsMapping, highlightItems, disabledItems } = useChartContext();
 
   // Use the new hook for refs and state
@@ -169,29 +166,14 @@ const LineChart: FC<LineChartProps> = ({
 
   const xScale = useLineChartXscale(filteredDataSet, width, margin, xAxisDataType);
 
-  // Compute unique sorted x values for axis ticks
-  const xTickValues = useLineChartXtickValues(filteredDataSet, xAxisDataType, width, margin);
+  useLineChartXtickValues(filteredDataSet, xAxisDataType, width, margin);
 
-  // Use the new hook for line/path utilities
   const { getYValueAtX, getDashArrayMemoized, line, lineData } = useLineChartGeometry({
     dataSet,
     xAxisDataType,
     xScale,
     yScale,
   });
-
-  // Update context refs without triggering effects
-  useLayoutEffect(() => {
-    prevHighlightItems.current = highlightItems;
-  }, [highlightItems]);
-
-  useLayoutEffect(() => {
-    prevDisabledItems.current = disabledItems;
-  }, [disabledItems]);
-
-  useLayoutEffect(() => {
-    prevColorsMapping.current = colorsMapping;
-  }, [colorsMapping]);
 
   // Calculate whether to show the loading indicator
   // Only show on initial load or explicit isLoading
@@ -200,19 +182,6 @@ const LineChart: FC<LineChartProps> = ({
   const visibleDataSets = useMemo(() => {
     return filteredDataSet.filter(d => d.series.length > 1);
   }, [filteredDataSet]);
-
-  // Reset hover state on mouse out from the chart
-  const handleChartMouseOut = useCallback(() => {
-    // Clear highlight
-    onHighlightItem([]);
-
-    // Clear highlight
-    onHighlightItem([]);
-
-    if (tooltipRef?.current) {
-      tooltipRef.current.style.visibility = "hidden";
-    }
-  }, [onHighlightItem]);
 
   useLineChartPathsShapesRendering(
     filteredDataSet,
@@ -350,13 +319,7 @@ const LineChart: FC<LineChartProps> = ({
     <LineChartContainer>
       <div style={{ position: "relative", width: width, height: height }}>
         {/* Always render the SVG, but optionally overlay the loading indicator */}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          ref={svgRef}
-          width={width}
-          height={height}
-          onMouseOut={handleChartMouseOut}
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" ref={svgRef} width={width} height={height}>
           {children}
           <Title x={width / 2} y={margin.top / 2}>
             {title}
@@ -383,7 +346,6 @@ const LineChart: FC<LineChartProps> = ({
           )}
         </svg>
 
-        {/* Show loading indicator as an overlay when loading */}
         {showLoadingIndicator && (
           <div
             style={{
