@@ -204,19 +204,21 @@ const useLineChartPathsShapesRendering = (
       const triangleSize = 16;
       const color = getColor(colorsMapping[data.label], data.color);
       const safeLabelClass = sanitizeForClassName(data.label);
+      const uniqueKey = `${data.label}__${i}`;
 
       // Use a composite key that includes both dataset label and point date to ensure uniqueness
-      const pointKeyFn = (d: DataPoint) => `${data.label}-${d.date}`;
+      const pointKeyFn = (d: DataPoint) => `${uniqueKey}-${d.date}`;
 
       // --- GROUP ---
       // Select or create a <g> for this series
-      let group = svg.select(`g.series-group[data-label='${data.label}']`);
+      let group = svg.select(`g.series-group[data-key='${uniqueKey}']`);
       if (group.empty()) {
         group = svg
           .append("g")
           .attr("class", `data-group series-group series-group-${i} series-group-${safeLabelClass}`)
           .attr("data-label", data.label)
-          .attr("data-label-safe", safeLabelClass);
+          .attr("data-label-safe", safeLabelClass)
+          .attr("data-key", uniqueKey);
       }
 
       // --- LINE ---
@@ -227,6 +229,7 @@ const useLineChartPathsShapesRendering = (
       linePath
         .attr("data-label", data.label)
         .attr("data-label-safe", safeLabelClass)
+        .attr("data-key", uniqueKey)
         .attr("d", line({ d: data.series, curve: data?.curve ?? "curveBumpX" }))
         .attr("stroke-width", 2.5)
         .attr("pointer-events", "none")
@@ -252,6 +255,7 @@ const useLineChartPathsShapesRendering = (
       overlayPath
         .attr("data-label", data.label)
         .attr("data-label-safe", safeLabelClass)
+        .attr("data-key", uniqueKey)
         .attr("d", line({ d: data.series, curve: data?.curve ?? "curveBumpX" }))
         .attr("stroke", color)
         .attr("stroke-width", 6)
@@ -280,6 +284,7 @@ const useLineChartPathsShapesRendering = (
           .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
           .attr("data-label", data.label)
           .attr("data-label-safe", safeLabelClass)
+          .attr("data-key", uniqueKey)
           .attr("cx", d => xScale(new Date(d.date)))
           .attr("cy", d => yScale(d.value))
           .attr("r", circleSize)
@@ -299,6 +304,7 @@ const useLineChartPathsShapesRendering = (
           .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
           .attr("data-label", data.label)
           .attr("data-label-safe", safeLabelClass)
+          .attr("data-key", uniqueKey)
           .attr("x", d => xScale(new Date(d.date)) - squareSize)
           .attr("y", d => yScale(d.value) - squareSize)
           .attr("width", squareSize * 2)
@@ -326,6 +332,7 @@ const useLineChartPathsShapesRendering = (
           .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
           .attr("data-label", data.label)
           .attr("data-label-safe", safeLabelClass)
+          .attr("data-key", uniqueKey)
           .attr("d", d => {
             const x = xScale(new Date(d.date));
             const y = yScale(d.value);

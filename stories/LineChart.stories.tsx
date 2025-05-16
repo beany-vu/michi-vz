@@ -1127,6 +1127,7 @@ export const ButtonHoverInteraction = {
         shape: "circle",
         curve: "curveLinear",
         color: "#2196F3",
+        index: 0,
         series: [
           { date: "2019", value: 75, certainty: true },
           { date: "2020", value: 82, certainty: true },
@@ -1139,6 +1140,7 @@ export const ButtonHoverInteraction = {
         shape: "square",
         curve: "curveLinear",
         color: "#4CAF50",
+        index: 1,
         series: [
           { date: "2019", value: 60, certainty: true },
           { date: "2020", value: 75, certainty: true },
@@ -1151,6 +1153,7 @@ export const ButtonHoverInteraction = {
         shape: "triangle",
         curve: "curveBumpX",
         color: "#FF9800",
+        index: 2,
         series: [
           { date: "2019", value: 85, certainty: true },
           { date: "2020", value: 88, certainty: true },
@@ -1163,6 +1166,7 @@ export const ButtonHoverInteraction = {
         shape: "circle",
         curve: "curveLinear",
         color: "#9C27B0",
+        index: 3,
         series: [
           { date: "2019", value: 45, certainty: true },
           { date: "2020", value: 52, certainty: true },
@@ -1175,6 +1179,7 @@ export const ButtonHoverInteraction = {
         shape: "square",
         curve: "curveLinear",
         color: "#FF5722",
+        index: 4,
         series: [
           { date: "2019", value: 80, certainty: true },
           { date: "2020", value: 78, certainty: true },
@@ -1354,6 +1359,7 @@ export const SameDataLabelDifferentShapes = {
         shape: "circle",
         curve: "curveLinear",
         color: "#2196F3",
+        index: 0,
         series: [
           { date: "2019", value: 75, certainty: true },
           { date: "2020", value: 82, certainty: true },
@@ -1363,9 +1369,10 @@ export const SameDataLabelDifferentShapes = {
       },
       {
         label: "Performance Metrics", // Same label
-        shape: "circle", // Different shape
+        shape: "triangle", // Different shape
         curve: "curveLinear",
         color: "#4CAF50", // Different color
+        index: 1,
         series: [
           { date: "2019", value: 65, certainty: true },
           { date: "2020", value: 72, certainty: true },
@@ -1378,6 +1385,7 @@ export const SameDataLabelDifferentShapes = {
         shape: "square",
         curve: "curveLinear",
         color: "#FF9800",
+        index: 2,
         series: [
           { date: "2019", value: 45, certainty: true },
           { date: "2020", value: 52, certainty: true },
