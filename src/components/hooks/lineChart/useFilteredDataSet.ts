@@ -35,7 +35,15 @@ const useFilteredDataSet = (
       ...item,
       series: item.series.filter(point => point.value !== null && point.value !== undefined),
     }));
-  }, [dataSet, filter, disabledItems]);
+  }, [
+    dataSet,
+    filter,
+    filter?.limit, // Explicitly track filter.limit to ensure updates when just the limit changes
+    filter?.date,
+    filter?.criteria,
+    filter?.sortingDir,
+    disabledItems,
+  ]);
 };
 
 export default useFilteredDataSet;

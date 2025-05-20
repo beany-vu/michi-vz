@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useCallback, useLayoutEffect, FC } from "react";
-import * as d3 from "d3";
+import React, { useMemo, useCallback, FC, useEffect } from "react";
+import { select } from "d3";
 import { DataPoint } from "../types/data";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
@@ -19,22 +19,24 @@ import useLineChartColorMapping from "./hooks/lineChart/useColorMapping";
 import { useLineChartRefsAndState } from "./hooks/lineChart/useLineChartRefsAndState";
 import { sanitizeForClassName, getColor } from "./hooks/lineChart/lineChartUtils";
 import { useLineChartGeometry } from "./hooks/lineChart/useLineChartGeometry";
-
-// Extend the Window interface for custom properties
-declare global {
-  interface Window {
-    hoverResetTimer?: number; // Add optional timer ID
-  }
-}
+import useLineChartTooltipToggle from "./hooks/lineChart/useLineChartHandleHover";
 
 export const DEFAULT_MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 export const DEFAULT_WIDTH = 900 - DEFAULT_MARGIN.left - DEFAULT_MARGIN.right;
 export const DEFAULT_HEIGHT = 480 - DEFAULT_MARGIN.top - DEFAULT_MARGIN.bottom;
 export const OPACITY_DEFAULT = 1;
 export const OPACITY_NOT_HIGHLIGHTED = 0.05;
+const TRANSITION_DURATION = 100;
 
-const LineChartContainer = styled.div`
+interface LineChartContainerProps {
+  width: number;
+  height: number;
+}
+
+const LineChartContainer = styled.div<LineChartContainerProps>`
   position: relative;
+  width: ${props => `${props.width}px`};
+  height: ${props => `${props.height}px`};
   path {
     transition:
       stroke 0.1s ease-out,
@@ -67,6 +69,33 @@ const LineChartContainer = styled.div`
     /* Always ensure it's visible for hover but transparent visually */
     opacity: 0.05 !important;
   }
+`;
+
+const LoadingIndicatorContainer = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+`;
+
+const TooltipStyled = styled.div`
+  position: absolute;
+  visibility: hidden;
+  transition:
+    visibility 0.1s ease-out,
+    opacity 0.1s ease-out;
+  will-change: visibility, opacity, top, left;
+  z-index: 1000;
+  pointer-events: none;
+  padding: 5px;
+  border-radius: 4px;
+  white-space: nowrap;
 `;
 
 interface LineChartProps {
@@ -156,10 +185,6 @@ const LineChart: FC<LineChartProps> = ({
   const { svgRef, tooltipRef, renderCompleteRef, prevChartDataRef, isInitialMount } =
     useLineChartRefsAndState();
 
-  // Animation constants
-  const TRANSITION_DURATION = 100;
-  const TRANSITION_EASE = d3.easeQuadOut;
-
   const filteredDataSet = useFilteredDataSet(dataSet, filter, disabledItems);
 
   const yScale = useLineChartYscale(filteredDataSet, yAxisDomain, height, margin);
@@ -175,8 +200,6 @@ const LineChart: FC<LineChartProps> = ({
     yScale,
   });
 
-  // Calculate whether to show the loading indicator
-  // Only show on initial load or explicit isLoading
   const showLoadingIndicator = isLoading || !isInitialMount.current;
 
   const visibleDataSets = useMemo(() => {
@@ -201,73 +224,20 @@ const LineChart: FC<LineChartProps> = ({
     svgRef,
     getColor,
     sanitizeForClassName,
-    TRANSITION_DURATION,
-    TRANSITION_EASE,
     highlightItems,
     onHighlightItem
   );
 
   useLineChartColorMapping(colorsMapping, getColor, svgRef, TRANSITION_DURATION);
 
-  const handleHover = useCallback(
-    (event: MouseEvent) => {
-      if (!svgRef.current || !tooltipRef.current) return;
-
-      const [x, y] = d3.pointer(event, event.currentTarget as SVGElement);
-      const xValue = xScale.invert(x);
-
-      const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
-
-      // Replace map with for loop for better performance
-      let tooltipContent = "";
-      for (let i = 0; i < filteredDataSet.length; i++) {
-        const data = filteredDataSet[i];
-        const yValue = getYValueAtX(data.series, xValue);
-        tooltipContent += `<div>${data.label}: ${yValue ?? "N/A"}</div>`;
-      }
-
-      const tooltip = tooltipRef.current;
-      tooltip.innerHTML = `<div style="background: #fff; padding: 5px">${tooltipTitle}${tooltipContent}</div>`;
-
-      // Make tooltip visible to calculate its dimensions
-      tooltip.style.opacity = "1";
-      tooltip.style.visibility = "visible";
-      tooltip.style.pointerEvents = "auto";
-
-      // Get dimensions to check for overflow
-      const tooltipRect = tooltip.getBoundingClientRect();
-      const svgRect = svgRef.current.getBoundingClientRect();
-
-      // Check for right edge overflow
-      if (x + tooltipRect.width > svgRect.width - margin.right) {
-        tooltip.style.left = x - tooltipRect.width - 10 + "px";
-      } else {
-        tooltip.style.left = x + 10 + "px";
-      }
-
-      // Check for top/bottom edge overflow
-      if (y - tooltipRect.height < margin.top) {
-        tooltip.style.top = y + 10 + "px";
-      } else {
-        tooltip.style.top = y - tooltipRect.height - 5 + "px";
-      }
-
-      const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
-      const hoverLine = hoverLinesGroup.select(".hover-line");
-      const xPosition = xScale(xValue);
-
-      hoverLine
-        .attr("x1", xPosition)
-        .attr("x2", xPosition)
-        .attr("y1", DEFAULT_MARGIN.top)
-        .attr("y2", DEFAULT_HEIGHT - DEFAULT_MARGIN.bottom + 20)
-        .style("display", "block");
-
-      hoverLinesGroup.style("display", "block");
-    },
-    [xScale, filteredDataSet, getYValueAtX, margin]
+  const handleTooltipToggle = useLineChartTooltipToggle(
+    xScale,
+    filteredDataSet,
+    getYValueAtX,
+    margin,
+    svgRef,
+    tooltipRef
   );
-
   const handleCombinedMouseOut = useCallback(() => {
     if (!tooltipRef.current || !svgRef.current) return;
 
@@ -276,7 +246,7 @@ const LineChart: FC<LineChartProps> = ({
     tooltip.style.opacity = "0";
     tooltip.innerHTML = "";
 
-    const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
+    const hoverLinesGroup = select(svgRef.current).select(".hover-lines");
     const hoverLine = hoverLinesGroup.select(".hover-line");
 
     hoverLinesGroup.style("display", "none");
@@ -287,7 +257,7 @@ const LineChart: FC<LineChartProps> = ({
     showCombined,
     width,
     height,
-    handleHover,
+    handleTooltipToggle,
     handleCombinedMouseOut,
     svgRef
   );
@@ -311,77 +281,56 @@ const LineChart: FC<LineChartProps> = ({
     prevChartDataRef
   );
 
-  useLayoutEffect(() => {
+  useEffect(() => {
+    // Set render complete flag
     renderCompleteRef.current = true;
+    console.log("LineChart: Setting renderCompleteRef to true");
+
+    return () => {
+      // Clean up when component unmounts
+      renderCompleteRef.current = false;
+      console.log("LineChart: Setting renderCompleteRef to false (cleanup)");
+    };
   }, []);
 
   return (
-    <LineChartContainer>
-      <div style={{ position: "relative", width: width, height: height }}>
-        {/* Always render the SVG, but optionally overlay the loading indicator */}
-        <svg xmlns="http://www.w3.org/2000/svg" ref={svgRef} width={width} height={height}>
-          {children}
-          <Title x={width / 2} y={margin.top / 2}>
-            {title}
-          </Title>
-          {filteredDataSet.length > 0 && (
-            <>
-              <XaxisLinear
-                xScale={xScale}
-                height={height}
-                margin={margin}
-                xAxisFormat={xAxisFormat}
-                xAxisDataType={xAxisDataType}
-                ticks={ticks}
-              />
-              <YaxisLinear
-                yScale={yScale}
-                width={width}
-                height={height}
-                margin={margin}
-                highlightZeroLine={true}
-                yAxisFormat={yAxisFormat}
-              />
-            </>
-          )}
-        </svg>
-
-        {showLoadingIndicator && (
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              background: "rgba(255, 255, 255, 0.7)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 10,
-            }}
-          >
-            {isLoadingComponent || <LoadingIndicator />}
-          </div>
+    <LineChartContainer width={width} height={height}>
+      <svg xmlns="http://www.w3.org/2000/svg" ref={svgRef} width={width} height={height}>
+        {children}
+        <Title x={width / 2} y={margin.top / 2}>
+          {title}
+        </Title>
+        {filteredDataSet.length > 0 && (
+          <>
+            <XaxisLinear
+              xScale={xScale}
+              height={height}
+              margin={margin}
+              xAxisFormat={xAxisFormat}
+              xAxisDataType={xAxisDataType}
+              ticks={ticks}
+            />
+            <YaxisLinear
+              yScale={yScale}
+              width={width}
+              height={height}
+              margin={margin}
+              highlightZeroLine={true}
+              yAxisFormat={yAxisFormat}
+            />
+          </>
         )}
+      </svg>
 
-        <div
-          ref={tooltipRef}
-          className="tooltip"
-          style={{
-            position: "absolute",
-            visibility: "hidden",
-            transition: "visibility 0.1s ease-out, opacity 0.1s ease-out",
-            willChange: "visibility, opacity, top, left",
-            zIndex: 1000,
-            pointerEvents: "none",
-            padding: "5px",
-            borderRadius: "4px",
-            whiteSpace: "nowrap",
-          }}
-        />
-        {displayIsNodata && <>{isNodataComponent}</>}
-      </div>
+      {showLoadingIndicator && (
+        <LoadingIndicatorContainer>
+          {isLoadingComponent || <LoadingIndicator />}
+        </LoadingIndicatorContainer>
+      )}
+
+      <TooltipStyled ref={tooltipRef} />
+
+      {displayIsNodata && <>{isNodataComponent}</>}
     </LineChartContainer>
   );
 };

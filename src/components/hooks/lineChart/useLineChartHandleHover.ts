@@ -1,23 +1,20 @@
 import { useCallback } from "react";
-import d3 from "d3";
+import { pointer, select } from "d3";
 import { DEFAULT_HEIGHT, DEFAULT_MARGIN } from "src/components/LineChart";
 
-const useLineChartHandleHover = (
-  svgRef,
-  hoverLinesGroup,
-  hoverLine,
-  overlay,
+const useLineChartTooltipToggle = (
   xScale,
   filteredDataSet,
   getYValueAtX,
   margin,
+  svgRef,
   tooltipRef
 ) => {
   return useCallback(
     (event: MouseEvent) => {
       if (!svgRef.current || !tooltipRef.current) return;
 
-      const [x, y] = d3.pointer(event, event.currentTarget as SVGElement);
+      const [x, y] = pointer(event, event.currentTarget as SVGElement);
       const xValue = xScale.invert(x);
 
       const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
@@ -54,7 +51,7 @@ const useLineChartHandleHover = (
         tooltip.style.top = y - tooltipRect.height - 5 + "px";
       }
 
-      const hoverLinesGroup = d3.select(svgRef.current).select(".hover-lines");
+      const hoverLinesGroup = select(svgRef.current).select(".hover-lines");
       const hoverLine = hoverLinesGroup.select(".hover-line");
       const xPosition = xScale(xValue);
 
@@ -71,4 +68,4 @@ const useLineChartHandleHover = (
   );
 };
 
-export default useLineChartHandleHover;
+export default useLineChartTooltipToggle;

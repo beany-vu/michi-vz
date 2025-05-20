@@ -4,6 +4,7 @@ import { Meta } from "@storybook/react";
 import { fn } from "@storybook/test";
 import { MichiVzProvider, useChartContext } from "../src/components/MichiVzProvider";
 
+
 // Define the default metadata for the component
 export default {
   title: "Charts/Line Chart",
@@ -37,7 +38,7 @@ export default {
           Africa: "red",
           "Rest of the World": "blue",
         }}
-        highlightItems={["Africa"]}
+        highlightItems={["Africa", "Performance Metrics"]}
       >
         <Story />
       </MichiVzProvider>
@@ -997,9 +998,9 @@ export const InteractiveFilterLimit = {
   // Use render function to dynamically create the component with the slider value
   render: args => {
     const { filterLimit, ...rest } = args;
-
     return (
       <LineChartComponent
+        key={`chart-${filterLimit}`} // Add a key that changes with filterLimit to force full re-render
         {...rest}
         filter={{
           limit: filterLimit,

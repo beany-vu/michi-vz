@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { pointer, select, ScaleLinear, ScaleTime, easeQuadOut } from "d3";
 import { DataPoint, LineChartDataItem } from "src/types/data";
 
@@ -24,8 +24,6 @@ const useLineChartPathsShapesRendering = (
   svgRef: React.RefObject<SVGSVGElement>,
   getColor: (color: string | undefined, fallback: string | null) => string,
   sanitizeForClassName: (str: string) => string,
-  TRANSITION_DURATION: number,
-  TRANSITION_EASE: typeof easeQuadOut,
   highlightItems: string[],
   onHighlightItem?: (labels: string[]) => void
 ) => {
@@ -44,28 +42,42 @@ const useLineChartPathsShapesRendering = (
 
       const dataLabel = event ? (event.currentTarget as SVGElement).dataset.label : null;
 
-      svg.selectAll(groupSelector).style("opacity", opacityUnhighlighted);
-
       if (dataLabel) {
-        svg.selectAll(`[data-label="${dataLabel}"]`).style("opacity", opacityHighlighted);
+        svg.selectAll(`${groupSelector}`).style("opacity", `${opacityUnhighlighted}`);
+        svg
+          .selectAll(`${groupSelector}[data-label="${dataLabel}"]`)
+          .style("opacity", opacityHighlighted);
+        return;
       }
 
       if (highlightItems.length > 0) {
+        svg.selectAll(`${groupSelector}`).style("opacity", `${opacityUnhighlighted}`);
+
         highlightItems.forEach(item => {
-          svg.selectAll(`[data-label="${item}"]`).style("opacity", opacityHighlighted);
+          svg
+            .selectAll(`${groupSelector}[data-label="${item}"]`)
+            .style("opacity", opacityHighlighted);
         });
+      } else {
+        svg.selectAll(`${groupSelector}`).style("opacity", `${opacityHighlighted}`);
       }
 
       handleItemHighlight([dataLabel]);
     },
-    [handleItemHighlight]
+    [handleItemHighlight, svgRef]
   );
 
   const handleMouseOut = useCallback(
     svgRef => {
       const svg = select(svgRef.current);
       if (!svg.node()) return;
+
+      // Reset opacity for all elements to ensure proper visibility
       svg.selectAll(".data-group").style("opacity", 1);
+      svg.selectAll(".series-group").style("opacity", 1);
+      svg.selectAll(".line").style("opacity", 1);
+      svg.selectAll(".data-point").style("opacity", 1);
+
       handleItemHighlight([]);
       if (tooltipRef.current) {
         tooltipRef.current.style.visibility = "hidden";
@@ -74,127 +86,31 @@ const useLineChartPathsShapesRendering = (
     [handleItemHighlight, tooltipRef]
   );
 
-  useEffect(() => {
-    // This effect specifically runs when filter or dataset changes
-    // It ensures all old data points are properly removed
-
-    const svg = select(svgRef.current);
-    if (!svg.node()) return;
-
-    // First, remove all existing data points before any new ones are rendered
-    // Use a more aggressive selector to ensure all old points are removed
-    svg.selectAll(".data-group:not(.line):not(.line-overlay)").remove();
-  }, [filteredDataSet, visibleDataSets]);
-
-  useEffect(() => {
-    if (!svgRef.current) return;
-    handleMouseEnter(null, svgRef, ".data-group", 0.05, 1, highlightItems);
-    if (onHighlightItem) {
-      onHighlightItem(highlightItems);
+  useLayoutEffect(() => {
+    // Only apply highlighting when there are items to highlight
+    if (highlightItems.length > 0) {
+      handleMouseEnter(null, svgRef, "g.data-group", 0.05, 1, highlightItems);
+      if (onHighlightItem) {
+        onHighlightItem(highlightItems);
+      }
+    } else {
+      // Reset all items to fully visible when nothing is highlighted
+      const svg = select(svgRef.current);
+      if (svg.node()) {
+        svg.selectAll("g.data-group").style("opacity", 1);
+      }
     }
-  }, [highlightItems, onHighlightItem]);
+  }, [highlightItems, onHighlightItem, svgRef, visibleDataSets, handleMouseEnter]);
 
   useEffect(() => {
     if (!svgRef.current) return;
 
     const svg = select(svgRef.current);
 
-    // Line paths - main paths
-    const linePaths = svg.selectAll(".line").data(visibleDataSets);
-
-    // Update - update existing lines
-    linePaths
-      .attr("d", d =>
-        line({
-          d: d.series,
-          curve: d?.curve ?? "curveBumpX",
-        })
-      )
-      .each(function (d) {
-        const pathNode = this as SVGPathElement;
-        const dashArray = getDashArrayMemoized(d.series, pathNode, xScale);
-        select(this).attr("stroke-dasharray", dashArray);
-      });
-
-    // Enter - add new lines
-    linePaths
-      .enter()
-      .append("path")
-      .attr("class", (_, i) => `line line-${i} data-group data-group-${i}`)
-      .attr("data-label", d => d.label)
-      .attr("data-label-safe", d => sanitizeForClassName(d.label))
-      .attr("d", d =>
-        line({
-          d: d.series,
-          curve: d?.curve ?? "curveBumpX",
-        })
-      )
-      .attr("stroke-width", 2.5)
-      .attr("pointer-events", "none")
-      .each(function (d) {
-        const pathNode = this as SVGPathElement;
-        const dashArray = getDashArrayMemoized(d.series, pathNode, xScale);
-        select(this).attr("stroke-dasharray", dashArray);
-      })
-      .attr("stroke", d => getColor(colorsMapping[d.label], d.color))
-      .attr("fill", "none")
-      .attr("opacity", 1);
-
-    // Remove old lines
-    linePaths.exit().remove();
-
-    // Line overlays - handle similarly
-    const lineOverlays = svg.selectAll(".line-overlay").data(visibleDataSets);
-
-    // Update - update existing overlays
-    lineOverlays.attr("d", d =>
-      line({
-        d: d.series,
-        curve: d?.curve ?? "curveBumpX",
-      })
-    );
-
-    // Enter - add new overlays
-    lineOverlays
-      .enter()
-      .append("path")
-      .attr("class", (d, i) => {
-        const safeLabelClass = sanitizeForClassName(d.label);
-        return `line-overlay line-overlay-${i} data-group data-group-overlay data-group-${i} data-group-overlay-${safeLabelClass} line-group-overlay-${safeLabelClass}`;
-      })
-      .attr("data-label", d => d.label)
-      .attr("data-label-safe", d => sanitizeForClassName(d.label))
-      .attr("d", d =>
-        line({
-          d: d.series,
-          curve: d?.curve ?? "curveBumpX",
-        })
-      )
-      .attr("stroke", d => getColor(colorsMapping[d.label], d.color))
-      .attr("stroke-width", 6)
-      .attr("fill", "none")
-      .attr("pointer-events", "stroke")
-      .style("opacity", 0.05);
-
-    // Add event handlers to both new and existing overlays
-    svg
-      .selectAll(".line-overlay")
-      .on("mouseenter", event => {
-        handleMouseEnter(event, svgRef, ".data-group", 0.05, 1);
-      })
-      .on("mouseout", () => handleMouseOut(svgRef));
-
-    // Remove old overlays
-    lineOverlays.exit().remove();
-
-    // First remove any existing data points that don't belong to currently filtered datasets
-    svg
-      .selectAll(".data-group:not(.line):not(.line-overlay)")
-      .filter(function () {
-        const dataLabel = (this as SVGElement).getAttribute("data-label");
-        return !visibleDataSets.some(d => d.label === dataLabel);
-      })
-      .remove();
+    // IMPORTANT: Clear everything and redraw from scratch on every render
+    // This ensures we don't have any stale elements lingering around
+    // when the filter changes
+    svg.selectAll(".data-point, .line, .line-overlay, .series-group").remove();
 
     // Now draw all elements for each series inside a <g>
     for (let i = 0; i < visibleDataSets.length; i++) {
@@ -223,10 +139,15 @@ const useLineChartPathsShapesRendering = (
       }
 
       // --- LINE ---
-      let linePath = group.select(".line");
-      if (linePath.empty()) {
-        linePath = group.append("path").attr("class", `line line-${i} data-group data-group-${i}`);
-      }
+      // Clear old paths first if they exist to ensure proper redrawing
+      group.selectAll(".line").remove();
+      group.selectAll(".line-overlay").remove();
+
+      // Create new line path with updated data
+      const linePath = group
+        .append("path")
+        .attr("class", `line line-${i} data-group data-group-${i}`);
+
       linePath
         .attr("data-label", data.label)
         .attr("data-label-safe", safeLabelClass)
@@ -236,7 +157,6 @@ const useLineChartPathsShapesRendering = (
         .attr("pointer-events", "none")
         .attr("stroke", color)
         .attr("fill", "none")
-        .attr("opacity", 1)
         .each(function () {
           const pathNode = this as SVGPathElement;
           const dashArray = getDashArrayMemoized(data.series, pathNode, xScale);
@@ -244,15 +164,13 @@ const useLineChartPathsShapesRendering = (
         });
 
       // --- LINE OVERLAY ---
-      let overlayPath = group.select(".line-overlay");
-      if (overlayPath.empty()) {
-        overlayPath = group
-          .append("path")
-          .attr(
-            "class",
-            `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group data-group-overlay-${safeLabelClass} line-group-overlay-${safeLabelClass}`
-          );
-      }
+      const overlayPath = group
+        .append("path")
+        .attr(
+          "class",
+          `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group data-group-overlay-${safeLabelClass} line-group-overlay-${safeLabelClass}`
+        );
+
       overlayPath
         .attr("data-label", data.label)
         .attr("data-label-safe", safeLabelClass)
@@ -264,16 +182,17 @@ const useLineChartPathsShapesRendering = (
         .attr("pointer-events", "stroke")
         .style("opacity", 0.05)
         .on("mouseenter", event => {
-          handleMouseEnter(event, svgRef, ".data-group", 0.05, 1);
+          handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1);
         })
         .on("mouseout", () => handleMouseOut(svgRef));
 
       // --- POINTS ---
-      // Remove old points
-      group.selectAll(".data-point").data(data.series, pointKeyFn).exit().remove();
-
       // Update and enter points
       const points = group.selectAll(`.data-point`).data(data.series, pointKeyFn);
+
+      // Handle the exit selection - remove points that no longer exist in the data
+      points.exit().remove();
+
       if (shape === "circle") {
         points
           .attr("cx", d => xScale(new Date(d.date)))
@@ -292,8 +211,7 @@ const useLineChartPathsShapesRendering = (
           .attr("fill", color)
           .attr("stroke", "#fdfdfd")
           .attr("stroke-width", 2)
-          .attr("cursor", "crosshair")
-          .style("opacity", 1);
+          .attr("cursor", "crosshair");
       } else if (shape === "square") {
         points
           .attr("x", d => xScale(new Date(d.date)) - squareSize)
@@ -313,8 +231,7 @@ const useLineChartPathsShapesRendering = (
           .attr("fill", color)
           .attr("stroke", "#fdfdfd")
           .attr("stroke-width", 2)
-          .attr("cursor", "crosshair")
-          .style("opacity", 1);
+          .attr("cursor", "crosshair");
       } else if (shape === "triangle") {
         const generateTrianglePath = (x: number, y: number, size: number = triangleSize) => {
           const height = (size * Math.sqrt(3)) / 2;
@@ -342,15 +259,14 @@ const useLineChartPathsShapesRendering = (
           .attr("fill", color)
           .attr("stroke", "#fdfdfd")
           .attr("stroke-width", 2)
-          .attr("cursor", "crosshair")
-          .style("opacity", 1);
+          .attr("cursor", "crosshair");
       }
 
       // Add event listeners to all data points after they've been created or updated
       group
         .selectAll(`.data-point`)
         .on("mouseenter", (event, d: DataPoint) => {
-          handleMouseEnter(event, svgRef, ".data-group", 0.05, 1);
+          handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1);
 
           const tooltipContent = tooltipFormatter(
             {
@@ -408,10 +324,7 @@ const useLineChartPathsShapesRendering = (
     svgRef,
     getColor,
     sanitizeForClassName,
-    highlightItems,
     onHighlightItem,
-    TRANSITION_DURATION,
-    TRANSITION_EASE,
   ]);
 };
 

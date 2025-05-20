@@ -1,6 +1,8 @@
-import { useLayoutEffect } from "react";
+import { useEffect, useRef } from "react";
 import { DataPoint, ChartMetadata } from "src/types/data";
+import { CHART_EVENTS } from "src/types/events";
 
+// We'll use the project's built-in event system
 const useLineChartMetadataExpose = (
   dataSet,
   xAxisDataType,
@@ -10,10 +12,22 @@ const useLineChartMetadataExpose = (
   filter,
   onChartDataProcessed,
   renderCompleteRef,
-  prevChartDataRef
+  prevChartDataRef,
+  chartId?: string // Optional chartId to identify which chart emitted the event
 ) => {
-  useLayoutEffect(() => {
-    if (renderCompleteRef.current && onChartDataProcessed) {
+  // Keep track of the chart ID
+  const chartIdRef = useRef(chartId || `chart-${Math.random().toString(36).substring(2, 9)}`);
+  // Track if we've dispatched our first event
+  const firstEventDispatchedRef = useRef(false);
+
+  useEffect(() => {
+    // Log whether render is complete for debugging
+    console.log(
+      "useLineChartMetadataExpose: renderCompleteRef.current =",
+      renderCompleteRef.current
+    );
+
+    if (renderCompleteRef.current) {
       // Extract all dates from all series
       const allDates = dataSet.flatMap(set =>
         set.series.map(point => (xAxisDataType === "number" ? point.date : String(point.date)))
@@ -77,9 +91,40 @@ const useLineChartMetadataExpose = (
       // Always update the ref with latest metadata
       prevChartDataRef.current = currentMetadata;
 
-      // Only call callback if data has changed
-      if (hasChanged) {
-        onChartDataProcessed(currentMetadata);
+      // Only emit event/call callback if data has changed
+      // Also always emit on first render when data is available
+      if (hasChanged || !firstEventDispatchedRef.current) {
+        firstEventDispatchedRef.current = true;
+
+        // Call the callback if it exists (for backward compatibility)
+        if (onChartDataProcessed) {
+          onChartDataProcessed(currentMetadata);
+        }
+
+        // Use the project's native event system only
+        try {
+          console.log("Creating chart metadata event:", CHART_EVENTS.METADATA_CHANGED);
+
+          // Create and dispatch the native event
+          const event = new CustomEvent(CHART_EVENTS.METADATA_CHANGED, {
+            bubbles: true,
+            cancelable: true,
+            detail: {
+              chartId: chartIdRef.current,
+              metadata: currentMetadata,
+            },
+          });
+
+          // Dispatch event from document
+          console.log("Dispatching native event with data:", {
+            chartId: chartIdRef.current,
+            metadata: JSON.stringify(currentMetadata).substring(0, 100) + "...",
+          });
+          const dispatchResult = document.dispatchEvent(event);
+          console.log("Event dispatched, result:", dispatchResult);
+        } catch (error) {
+          console.error("Error dispatching chart metadata event:", error);
+        }
       }
     }
   }, [
