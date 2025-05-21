@@ -10,6 +10,7 @@ interface Props {
   xAxisDataType?: "number" | "date_annual" | "date_monthly";
   ticks?: number;
   showGrid?: boolean;
+  showZeroLine?: boolean;
   position?: "top" | "bottom";
   isLoading?: boolean;
   isEmpty?: boolean;
@@ -45,6 +46,7 @@ const XaxisLinear: FC<Props> = ({
   xAxisDataType = "number",
   ticks = 5,
   showGrid = false,
+  showZeroLine = false,
   position = "bottom",
   isLoading = false,
   isEmpty = false,
@@ -158,8 +160,20 @@ const XaxisLinear: FC<Props> = ({
     }
 
     result.push(last);
+
+    if (
+      !isTimeScale &&
+      showZeroLine &&
+      !result.includes(0) &&
+      ((+first < 0 && 0 < +last) || (+last < 0 && 0 < +first))
+      // Ensure 0 is included if it's within the domain
+    ) {
+      result.push(0);
+      result.sort((a, b) => b - a);
+    }
+
     return result;
-  }, [xScale, ticks, isTimeScale, isLoading, isEmpty, tickValuesProp, xAxisDataType]);
+  }, [xScale, ticks, isTimeScale, isLoading, isEmpty, tickValuesProp, xAxisDataType, showZeroLine]);
 
   useLayoutEffect(() => {
     const g = d3.select(ref.current);
