@@ -67,6 +67,8 @@ interface LineChartProps {
   };
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
+  showGrid?: boolean;
+  showZeroLineForXAxis?: boolean;
 }
 
 interface ChartMetadata {
@@ -96,6 +98,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   isNodata,
   onChartDataProcessed,
   onHighlightItem,
+  showGrid = false,
+  showZeroLineForXAxis = false,
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
@@ -455,6 +459,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           margin={margin}
           xAxisFormat={xAxisFormat}
           xAxisDataType={xAxisDataType}
+          showGrid={showGrid}
+          showZeroLine={showZeroLineForXAxis}
         />
         {memoizedYaxisBand}
         {renderBars}
