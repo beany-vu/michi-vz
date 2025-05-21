@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { DataPoint, ChartMetadata } from "src/types/data";
-import { CHART_EVENTS } from "src/types/events";
 
 // We'll use the project's built-in event system
 const useLineChartMetadataExpose = (
@@ -100,31 +99,6 @@ const useLineChartMetadataExpose = (
         if (onChartDataProcessed) {
           onChartDataProcessed(currentMetadata);
         }
-
-        // Use the project's native event system only
-        try {
-          console.log("Creating chart metadata event:", CHART_EVENTS.METADATA_CHANGED);
-
-          // Create and dispatch the native event
-          const event = new CustomEvent(CHART_EVENTS.METADATA_CHANGED, {
-            bubbles: true,
-            cancelable: true,
-            detail: {
-              chartId: chartIdRef.current,
-              metadata: currentMetadata,
-            },
-          });
-
-          // Dispatch event from document
-          console.log("Dispatching native event with data:", {
-            chartId: chartIdRef.current,
-            metadata: JSON.stringify(currentMetadata).substring(0, 100) + "...",
-          });
-          const dispatchResult = document.dispatchEvent(event);
-          console.log("Event dispatched, result:", dispatchResult);
-        } catch (error) {
-          console.error("Error dispatching chart metadata event:", error);
-        }
       }
     }
   }, [
@@ -136,6 +110,7 @@ const useLineChartMetadataExpose = (
     filter,
     onChartDataProcessed,
     prevChartDataRef,
+    chartIdRef,
   ]);
 };
 

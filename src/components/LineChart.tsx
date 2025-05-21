@@ -27,6 +27,18 @@ export const DEFAULT_HEIGHT = 480 - DEFAULT_MARGIN.top - DEFAULT_MARGIN.bottom;
 export const OPACITY_DEFAULT = 1;
 export const OPACITY_NOT_HIGHLIGHTED = 0.05;
 const TRANSITION_DURATION = 100;
+const DEFAULT_COLORS = [
+  "#1f77b4",
+  "#ff7f0e",
+  "#2ca02c",
+  "#d62728",
+  "#9467bd",
+  "#8c564b",
+  "#e377c2",
+  "#7f7f7f",
+  "#bcbd22",
+  "#17becf",
+];
 
 interface LineChartContainerProps {
   width: number;
@@ -55,7 +67,7 @@ const LineChartContainer = styled.div<LineChartContainerProps>`
     will-change: fill, stroke, opacity;
   }
 
-  .data-group {
+  .data-group-wrapper {
     transition: opacity 0.1s ease-out;
   }
 
@@ -144,9 +156,15 @@ interface LineChartProps {
     criteria: string;
     sortingDir: "asc" | "desc";
   };
+  ticks?: number;
+  // colors is the color palette for the chart for new generated colors
+  colors?: string[];
+  // colorsMapping is the color mapping for the chart for existing colors
+  // the purpose is to share the same color mapping between charts
+  colorsMapping?: { [key: string]: string };
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem: (labels: string[]) => void;
-  ticks?: number;
+  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
 }
 
 interface ChartMetadata {
@@ -175,11 +193,14 @@ const LineChart: FC<LineChartProps> = ({
   isLoadingComponent,
   isNodataComponent,
   isNodata,
+  ticks = 5,
+  colors = DEFAULT_COLORS,
+  colorsMapping = {},
   onChartDataProcessed,
   onHighlightItem,
-  ticks = 5,
+  onColorMappingGenerated,
 }) => {
-  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
+  const { highlightItems, disabledItems } = useChartContext();
 
   // Use the new hook for refs and state
   const { svgRef, tooltipRef, renderCompleteRef, prevChartDataRef, isInitialMount } =
@@ -214,6 +235,7 @@ const LineChart: FC<LineChartProps> = ({
     margin,
     xAxisDataType,
     getDashArrayMemoized,
+    colors,
     colorsMapping,
     line,
     xScale,
@@ -225,7 +247,8 @@ const LineChart: FC<LineChartProps> = ({
     getColor,
     sanitizeForClassName,
     highlightItems,
-    onHighlightItem
+    onHighlightItem,
+    onColorMappingGenerated
   );
 
   useLineChartColorMapping(colorsMapping, getColor, svgRef, TRANSITION_DURATION);

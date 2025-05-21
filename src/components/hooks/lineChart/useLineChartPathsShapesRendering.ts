@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
-import { pointer, select, ScaleLinear, ScaleTime, easeQuadOut } from "d3";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { pointer, select, ScaleLinear, ScaleTime } from "d3";
 import { DataPoint, LineChartDataItem } from "src/types/data";
+import { OPACITY_DEFAULT, OPACITY_NOT_HIGHLIGHTED } from "src/components/LineChart";
 
 const useLineChartPathsShapesRendering = (
   filteredDataSet: LineChartDataItem[],
@@ -14,6 +15,7 @@ const useLineChartPathsShapesRendering = (
     pathNode: SVGPathElement,
     xScale: ScaleLinear<number, number> | ScaleTime<number, number>
   ) => string,
+  colors: string[],
   colorsMapping: { [key: string]: string },
   line: (options: { d: DataPoint[]; curve: string }) => string,
   xScale: ScaleLinear<number, number> | ScaleTime<number, number>,
@@ -25,8 +27,50 @@ const useLineChartPathsShapesRendering = (
   getColor: (color: string | undefined, fallback: string | null) => string,
   sanitizeForClassName: (str: string) => string,
   highlightItems: string[],
-  onHighlightItem?: (labels: string[]) => void
+  onHighlightItem?: (labels: string[]) => void,
+  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void
 ) => {
+  // Use state instead of ref for color mapping to ensure re-renders
+  const [internalColorsMapping, setInternalColorsMapping] = useState<{ [key: string]: string }>({});
+  const colorsIndex = useRef(0);
+  const filteredDataSetLabels = useMemo(() => {
+    return visibleDataSets.map(d => d.label);
+  }, [visibleDataSets]);
+
+  useEffect(() => {
+    const newColorsMapping = { ...internalColorsMapping };
+    let hasChanges = false;
+    for (const label of filteredDataSetLabels) {
+      if (!newColorsMapping[label]) {
+        hasChanges = true;
+        if (colorsMapping[label]) {
+          newColorsMapping[label] = colorsMapping[label];
+        } else {
+          newColorsMapping[label] = colors[colorsIndex.current];
+          colorsIndex.current = (colorsIndex.current + 1) % colors.length;
+        }
+      }
+    }
+    if (hasChanges) {
+      setInternalColorsMapping(newColorsMapping);
+      if (onColorMappingGenerated) {
+        onColorMappingGenerated(newColorsMapping);
+      }
+    }
+    // Important: Do NOT include highlightItems in dependencies
+  }, [
+    colors,
+    filteredDataSetLabels,
+    colorsMapping,
+    setInternalColorsMapping,
+    onColorMappingGenerated,
+  ]);
+
+  // Memoize colors to ensure they don't change when only highlighting changes
+  const memoizedColors = useMemo(() => {
+    return { ...internalColorsMapping };
+  }, [internalColorsMapping]);
+
   const handleMouseEnter = useCallback(
     (
       event: React.MouseEvent,
@@ -37,34 +81,37 @@ const useLineChartPathsShapesRendering = (
       highlightItems: string[] = []
     ) => {
       const svg = select(svgRef.current);
-
       if (!svg.node()) return;
 
       const dataLabel = event ? (event.currentTarget as SVGElement).dataset.label : null;
 
+      // First set all items to faded state
+      svg.selectAll(`${groupSelector}`).style("opacity", opacityUnhighlighted);
+
       if (dataLabel) {
-        svg.selectAll(`${groupSelector}`).style("opacity", `${opacityUnhighlighted}`);
+        // Highlight the hovered item
         svg
           .selectAll(`${groupSelector}[data-label="${dataLabel}"]`)
-          .style("opacity", opacityHighlighted);
-        return;
-      }
-
-      if (highlightItems.length > 0) {
-        svg.selectAll(`${groupSelector}`).style("opacity", `${opacityUnhighlighted}`);
-
+          .style("opacity", opacityHighlighted)
+          .raise();
+      } else if (highlightItems.length > 0) {
+        // Highlight items from the highlightItems array
         highlightItems.forEach(item => {
           svg
             .selectAll(`${groupSelector}[data-label="${item}"]`)
-            .style("opacity", opacityHighlighted);
+            .style("opacity", opacityHighlighted)
+            .raise();
         });
       } else {
-        svg.selectAll(`${groupSelector}`).style("opacity", `${opacityHighlighted}`);
+        // If no highlighting, set all to default opacity
+        svg.selectAll(`${groupSelector}`).style("opacity", OPACITY_DEFAULT);
       }
 
-      handleItemHighlight([dataLabel]);
+      if (dataLabel) {
+        handleItemHighlight([dataLabel]);
+      }
     },
-    [handleItemHighlight, svgRef]
+    [handleItemHighlight]
   );
 
   const handleMouseOut = useCallback(
@@ -72,11 +119,8 @@ const useLineChartPathsShapesRendering = (
       const svg = select(svgRef.current);
       if (!svg.node()) return;
 
-      // Reset opacity for all elements to ensure proper visibility
-      svg.selectAll(".data-group").style("opacity", 1);
-      svg.selectAll(".series-group").style("opacity", 1);
-      svg.selectAll(".line").style("opacity", 1);
-      svg.selectAll(".data-point").style("opacity", 1);
+      // Reset opacity for all group elements to ensure proper visibility
+      svg.selectAll("g.data-group-wrapper").style("opacity", OPACITY_DEFAULT);
 
       handleItemHighlight([]);
       if (tooltipRef.current) {
@@ -86,21 +130,31 @@ const useLineChartPathsShapesRendering = (
     [handleItemHighlight, tooltipRef]
   );
 
-  useLayoutEffect(() => {
-    // Only apply highlighting when there are items to highlight
+  useEffect(() => {
+    const svg = select(svgRef.current);
+    if (!svg.node()) return;
+
     if (highlightItems.length > 0) {
-      handleMouseEnter(null, svgRef, "g.data-group", 0.05, 1, highlightItems);
+      // First set ALL items to faded state
+      svg.selectAll("g.data-group-wrapper").style("opacity", OPACITY_NOT_HIGHLIGHTED);
+
+      // Then highlight only the selected items
+      highlightItems.forEach(item => {
+        // Use more specific selector to ensure we get all elements with this label
+        svg
+          .selectAll(`g.data-group-wrapper[data-label="${item}"]`)
+          .style("opacity", OPACITY_DEFAULT)
+          .raise(); // Bring highlighted items to front
+      });
+
       if (onHighlightItem) {
         onHighlightItem(highlightItems);
       }
     } else {
-      // Reset all items to fully visible when nothing is highlighted
-      const svg = select(svgRef.current);
-      if (svg.node()) {
-        svg.selectAll("g.data-group").style("opacity", 1);
-      }
+      // Reset all items to default opacity when no highlighting
+      svg.selectAll("g.data-group-wrapper").style("opacity", OPACITY_DEFAULT);
     }
-  }, [highlightItems, onHighlightItem, svgRef, visibleDataSets, handleMouseEnter]);
+  }, [highlightItems, onHighlightItem]);
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -110,7 +164,7 @@ const useLineChartPathsShapesRendering = (
     // IMPORTANT: Clear everything and redraw from scratch on every render
     // This ensures we don't have any stale elements lingering around
     // when the filter changes
-    svg.selectAll(".data-point, .line, .line-overlay, .series-group").remove();
+    svg.selectAll("g.data-group-wrapper").remove();
 
     // Now draw all elements for each series inside a <g>
     for (let i = 0; i < visibleDataSets.length; i++) {
@@ -119,7 +173,7 @@ const useLineChartPathsShapesRendering = (
       const circleSize = 5;
       const squareSize = 6;
       const triangleSize = 16;
-      const color = getColor(colorsMapping[data.label], data.color);
+      const color = memoizedColors[data.label]; // Use memoized colors instead of direct lookup
       const safeLabelClass = sanitizeForClassName(data.label);
       const uniqueKey = `${data.label}__${i}`;
 
@@ -132,10 +186,19 @@ const useLineChartPathsShapesRendering = (
       if (group.empty()) {
         group = svg
           .append("g")
-          .attr("class", `data-group series-group series-group-${i} series-group-${safeLabelClass}`)
+          .attr(
+            "class",
+            `data-group-wrapper series-group series-group-${i} series-group-${safeLabelClass}`
+          )
           .attr("data-label", data.label)
           .attr("data-label-safe", safeLabelClass)
-          .attr("data-key", uniqueKey);
+          .attr("data-key", uniqueKey)
+          .attr(
+            "opacity",
+            highlightItems.includes(data.label) || highlightItems.length === 0
+              ? OPACITY_DEFAULT
+              : OPACITY_NOT_HIGHLIGHTED
+          );
       }
 
       // --- LINE ---
@@ -182,7 +245,7 @@ const useLineChartPathsShapesRendering = (
         .attr("pointer-events", "stroke")
         .style("opacity", 0.05)
         .on("mouseenter", event => {
-          handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1);
+          handleMouseEnter(event, svgRef, "g.data-group-wrapper", 0.05, 1);
         })
         .on("mouseout", () => handleMouseOut(svgRef));
 
@@ -266,7 +329,7 @@ const useLineChartPathsShapesRendering = (
       group
         .selectAll(`.data-point`)
         .on("mouseenter", (event, d: DataPoint) => {
-          handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1);
+          handleMouseEnter(event, svgRef, "g.data-group-wrapper", 0.05, 1);
 
           const tooltipContent = tooltipFormatter(
             {
@@ -314,17 +377,16 @@ const useLineChartPathsShapesRendering = (
     margin,
     xAxisDataType,
     getDashArrayMemoized,
-    colorsMapping,
     line,
     xScale,
     yScale,
     handleItemHighlight,
     tooltipFormatter,
-    tooltipRef,
-    svgRef,
     getColor,
     sanitizeForClassName,
     onHighlightItem,
+    memoizedColors,
+    highlightItems,
   ]);
 };
 

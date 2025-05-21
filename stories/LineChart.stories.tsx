@@ -4,45 +4,15 @@ import { Meta } from "@storybook/react";
 import { fn } from "@storybook/test";
 import { MichiVzProvider, useChartContext } from "../src/components/MichiVzProvider";
 
-
 // Define the default metadata for the component
 export default {
   title: "Charts/Line Chart",
   component: LineChartComponent,
   tags: ["autodocs"],
   decorators: [
-    Story => (
-      <MichiVzProvider
-        colorsMapping={{
-          "Country 1": "green",
-          "Item 1": "red",
-          "Item 2": "purple",
-          "Item 3": "orange",
-          "Item 4": "green",
-          "Item 5": "blue",
-          "Item 6": "yellow",
-          "Item 7": "brown",
-          "Item 8": "pink",
-          "Item 9": "cyan",
-          "Item 10": "magenta",
-          "Item 11": "gray",
-          "Item 12": "black",
-          "Item 13": "red",
-          "Item 14": "purple",
-          "Item 15": "orange",
-          "Item 16": "green",
-          "Item 17": "blue",
-          "Item 18": "yellow",
-          "Item 19": "brown",
-          "Item 20": "pink",
-          Africa: "red",
-          "Rest of the World": "blue",
-        }}
-        highlightItems={["Africa", "Performance Metrics"]}
-      >
-        <Story />
-      </MichiVzProvider>
-    ),
+    Story => {
+      return <Story />;
+    },
   ],
   argTypes: {
     // Add specific controls for our interactive examples
@@ -675,6 +645,7 @@ const commonProps = {
   },
   onChartDataProcessed: fn(),
   onHighlightItem: fn(),
+  onColorMappingGenerated: fn(),
   yAxisFormat: d => `${d}%`,
   xAxisDataType: "date_annual",
   tooltipFormatter: (d, series, dataSet) => {
@@ -1121,7 +1092,7 @@ export const TriangleShapes = {
 export const ButtonHoverInteraction = {
   args: {
     ...commonProps,
-    filterLimit: 5,
+    filterLimit: 3,
     dataSet: [
       {
         label: "Performance",
@@ -1204,7 +1175,9 @@ export const ButtonHoverInteraction = {
     },
   },
   render: args => {
-    const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
+    const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([
+      "Performance Metrics",
+    ]);
     const [filterDate, setFilterDate] = React.useState("2021");
 
     // Get all available dates from the dataset
@@ -1230,6 +1203,15 @@ export const ButtonHoverInteraction = {
         },
       };
     }, [args, filterDate]);
+
+    // Create a fixed colors mapping that won't change with highlighting
+    const fixedColorsMapping = React.useMemo(() => {
+      const mapping = {};
+      filteredDataSet.dataSet.forEach(item => {
+        mapping[item.label] = item.color || "#ccc";
+      });
+      return mapping;
+    }, [filteredDataSet.dataSet]);
 
     // Style for the controls container
     const controlsContainerStyle = {
@@ -1260,14 +1242,10 @@ export const ButtonHoverInteraction = {
     const buttonStyle = (label: string) => ({
       padding: "8px 16px",
       border: "2px solid",
-      borderColor: args.dataSet.find(d => d.label === label)?.color || "#ccc",
+      borderColor: fixedColorsMapping[label] || "#ccc",
       borderRadius: "4px",
-      background: currentHighlight.includes(label)
-        ? args.dataSet.find(d => d.label === label)?.color
-        : "white",
-      color: currentHighlight.includes(label)
-        ? "white"
-        : args.dataSet.find(d => d.label === label)?.color,
+      background: currentHighlight.includes(label) ? fixedColorsMapping[label] : "white",
+      color: currentHighlight.includes(label) ? "white" : fixedColorsMapping[label],
       cursor: "pointer",
       transition: "all 0.3s ease",
       fontWeight: 500,
@@ -1280,16 +1258,7 @@ export const ButtonHoverInteraction = {
     };
 
     return (
-      <MichiVzProvider
-        colorsMapping={args.dataSet.reduce(
-          (acc, item) => ({
-            ...acc,
-            [item.label]: item.color,
-          }),
-          {}
-        )}
-        highlightItems={currentHighlight}
-      >
+      <MichiVzProvider highlightItems={currentHighlight} colorsMapping={fixedColorsMapping}>
         <div>
           <div style={controlsContainerStyle}>
             <div>
@@ -1359,7 +1328,6 @@ export const SameDataLabelDifferentShapes = {
         label: "Performance Metrics",
         shape: "circle",
         curve: "curveLinear",
-        color: "#2196F3",
         index: 0,
         series: [
           { date: "2019", value: 75, certainty: true },
@@ -1372,7 +1340,6 @@ export const SameDataLabelDifferentShapes = {
         label: "Performance Metrics", // Same label
         shape: "triangle", // Different shape
         curve: "curveLinear",
-        color: "#4CAF50", // Different color
         index: 1,
         series: [
           { date: "2019", value: 65, certainty: true },
@@ -1385,7 +1352,6 @@ export const SameDataLabelDifferentShapes = {
         label: "Other Metric",
         shape: "square",
         curve: "curveLinear",
-        color: "#FF9800",
         index: 2,
         series: [
           { date: "2019", value: 45, certainty: true },
@@ -1406,7 +1372,9 @@ export const SameDataLabelDifferentShapes = {
     },
   },
   render: args => {
-    const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
+    const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([
+      "Performance Metrics",
+    ]);
 
     // Style for the button container
     const buttonContainerStyle = {
@@ -1420,14 +1388,7 @@ export const SameDataLabelDifferentShapes = {
     const buttonStyle = (label: string) => ({
       padding: "8px 16px",
       border: "2px solid",
-      borderColor: args.dataSet.find(d => d.label === label)?.color || "#ccc",
       borderRadius: "4px",
-      background: currentHighlight.includes(label)
-        ? args.dataSet.find(d => d.label === label)?.color
-        : "white",
-      color: currentHighlight.includes(label)
-        ? "white"
-        : args.dataSet.find(d => d.label === label)?.color,
       cursor: "pointer",
       transition: "all 0.3s ease",
       fontWeight: 500,
@@ -1437,16 +1398,7 @@ export const SameDataLabelDifferentShapes = {
     const uniqueLabels = Array.from(new Set(args.dataSet.map(d => d.label as string))) as string[];
 
     return (
-      <MichiVzProvider
-        colorsMapping={args.dataSet.reduce(
-          (acc, item) => ({
-            ...acc,
-            [item.label]: item.color,
-          }),
-          {} as Record<string, string>
-        )}
-        highlightItems={currentHighlight}
-      >
+      <MichiVzProvider highlightItems={currentHighlight}>
         <div>
           <div style={buttonContainerStyle}>
             {uniqueLabels.map(label => (
