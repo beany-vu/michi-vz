@@ -342,6 +342,6 @@ Primary.args = {
   isLoading: false,
   isNodataComponent: <>ddd</>,
   onHighlightItem: (labels: string[]) => {
-    console.log(labels);
+    // console.log(labels);
   },
 };

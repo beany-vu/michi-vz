@@ -74,7 +74,7 @@ export const Primary = {
     title: "Top DataSet by Total Value",
     filter: { limit: 2, sortingDir: "desc", date: "2003" },
     onChartDataProcessed: data => {
-      console.log({ data });
+      // console.log({ data });
     },
   },
 };
@@ -111,7 +111,7 @@ export const WithDataCallback = () => {
         margin={{ top: 50, right: 50, bottom: 50, left: 50 }}
         title="Chart with Data Callback"
         onChartDataProcessed={metadata => {
-          console.log(metadata);
+          // console.log(metadata);
           setChartData(metadata);
         }}
       />

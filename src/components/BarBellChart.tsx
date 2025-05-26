@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useLayoutEffect, useMemo } from "react";
+import React, { useRef, useLayoutEffect, useMemo, useState, useCallback, useEffect } from "react";
 import Title from "./shared/Title";
 import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
@@ -68,6 +68,11 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   const refTooltip = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
+  const [hoveredYItem, setHoveredYItem] = useState<string | null>(null);
+
+  const handleYAxisHover = useCallback((item: string | null) => {
+    setHoveredYItem(item);
+  }, []);
 
   useLayoutEffect(() => {
     renderCompleteRef.current = true;
@@ -232,6 +237,8 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
           margin={margin}
           yAxisFormat={yAxisFormat}
           showGrid={showGrid?.y || false}
+          onHover={handleYAxisHover}
+          hoveredItem={hoveredYItem}
         />
         <XaxisLinear
           xScale={xScale}
@@ -259,7 +266,16 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                   const shapeStyle = {
                     "--data-color": colorsMapping?.[key],
                     transition: "all 0.1s ease-out",
-                    opacity: disabledItems.includes(key) ? 0.1 : 0.9,
+                    opacity:
+                      hoveredYItem !== null
+                        ? hoveredYItem === `${d?.date}`
+                          ? disabledItems.includes(key)
+                            ? 0.1
+                            : 0.9
+                          : 0.3
+                        : disabledItems.includes(key)
+                          ? 0.1
+                          : 0.9,
                     background: colorsMapping?.[key],
                     borderRadius: "50%",
                     width: "12px",
@@ -281,7 +297,16 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                           fill={colorsMapping?.[key]}
                           style={{
                             transition: "all 0.1s ease-out",
-                            opacity: disabledItems.includes(key) ? 0.1 : 0.9,
+                            opacity:
+                              hoveredYItem !== null
+                                ? hoveredYItem === `${d?.date}`
+                                  ? disabledItems.includes(key)
+                                    ? 0.1
+                                    : 0.9
+                                  : 0.3
+                                : disabledItems.includes(key)
+                                  ? 0.1
+                                  : 0.9,
                           }}
                           onMouseEnter={event => {
                             onHighlightItem([key]);

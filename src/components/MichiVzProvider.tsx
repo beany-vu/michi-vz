@@ -61,11 +61,7 @@ export const MichiVzProvider: React.FC<MichiVzProps> = ({
     availableItems,
   };
 
-  return (
-    <MichiVzContext.Provider value={contextValue}>
-      {children}
-    </MichiVzContext.Provider>
-  );
+  return <MichiVzContext.Provider value={contextValue}>{children}</MichiVzContext.Provider>;
 };
 
 // 4. Create a custom hook for easier access

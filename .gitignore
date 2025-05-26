@@ -3,3 +3,5 @@ node_modules/
 dist/
 .idea/
 storybook-static/
+src/screenshots
+CLAUDE.md

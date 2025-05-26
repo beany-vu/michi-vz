@@ -8,9 +8,19 @@ interface Props {
   margin: { top: number; right: number; bottom: number; left: number };
   yAxisFormat?: (d: number | string) => string;
   showGrid?: boolean;
+  onHover?: (label: string | null) => void;
+  hoveredItem?: string | null;
 }
 
-const YaxisBand: FC<Props> = ({ yScale, width, margin, yAxisFormat, showGrid }) => {
+const YaxisBand: FC<Props> = ({
+  yScale,
+  width,
+  margin,
+  yAxisFormat,
+  showGrid,
+  onHover,
+  hoveredItem,
+}) => {
   const ref = useRef<SVGGElement>(null);
   const renderedRef = useRef(false);
 
@@ -60,8 +70,18 @@ const YaxisBand: FC<Props> = ({ yScale, width, margin, yAxisFormat, showGrid }) 
       .attr("height", 20)
       .html(
         d =>
-          `<div style="display:flex;align-items:center;height:100%" title="${d}"><span>${d}</span></div>`
-      );
+          `<div style="display:flex;align-items:center;height:100%;cursor:pointer" title="${d}"><span>${d}</span></div>`
+      )
+      .on("mouseenter", function (event, d) {
+        if (onHover) {
+          onHover(d as string);
+        }
+      })
+      .on("mouseleave", function () {
+        if (onHover) {
+          onHover(null);
+        }
+      });
 
     // Add dashed lines on each tick
     g.selectAll(".tick")
@@ -73,7 +93,7 @@ const YaxisBand: FC<Props> = ({ yScale, width, margin, yAxisFormat, showGrid }) 
       .attr("y2", 0)
       .style("stroke-dasharray", "1.5")
       .style("stroke", showGrid ? "lightgray" : "transparent");
-  }, [axisGenerator, margin.left, showGrid, gridWidth]);
+  }, [axisGenerator, margin.left, showGrid, gridWidth, onHover]);
 
   useLayoutEffect(() => {
     if (!renderedRef.current) {
@@ -86,6 +106,19 @@ const YaxisBand: FC<Props> = ({ yScale, width, margin, yAxisFormat, showGrid }) 
     }
     updateAxis();
   }, [updateAxis]);
+
+  // Separate effect for hover state changes
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const g = d3.select(ref.current);
+    
+    g.selectAll(".tick-html").each(function(d) {
+      const element = d3.select(this);
+      const opacity = hoveredItem === null ? 1 : d === hoveredItem ? 1 : 0.3;
+      element.style("opacity", opacity);
+      element.style("transition", "opacity 0.2s ease-in-out");
+    });
+  }, [hoveredItem]);
 
   return <g ref={ref} />;
 };

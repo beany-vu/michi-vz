@@ -284,12 +284,10 @@ const LineChart: FC<LineChartProps> = ({
   useEffect(() => {
     // Set render complete flag
     renderCompleteRef.current = true;
-    console.log("LineChart: Setting renderCompleteRef to true");
 
     return () => {
       // Clean up when component unmounts
       renderCompleteRef.current = false;
-      console.log("LineChart: Setting renderCompleteRef to false (cleanup)");
     };
   }, []);
 
