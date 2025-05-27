@@ -243,6 +243,26 @@ export const WithColorMapping: Story = {
   },
 };
 
+export const WithShapeBasedColors: Story = {
+  args: {
+    ...Default.args,
+    title: "Shape-Based Color Assignment",
+    colorMode: "shape",
+    shapeColorsMapping: {
+      value1: "#3b82f6", // Blue for 2019 values
+      value2: "#10b981", // Green for 2023 values
+      gap: "#f59e0b", // Orange for gap bars
+    },
+    shapeValue1: "square",
+    shapeValue2: "circle",
+    shapesLabelsMapping: {
+      value1: "2019 Arrivals (Blue)",
+      value2: "2023 Arrivals (Green)",
+      gap: "Recovery Gap (Orange)"
+    },
+  },
+};
+
 export const WithHighlightedItems: Story = {
   args: {
     ...Default.args,
@@ -394,6 +414,65 @@ export const ComplexScenario: Story = {
       limit: 20,
       date: "2024",
       criteria: "value1",
+      sortingDir: "desc",
+    },
+  },
+};
+
+export const ColorModesComparison: Story = {
+  render: (args) => {
+    const sharedData = generateSampleData().slice(0, 10);
+    
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "40px" }}>
+        <div>
+          <h3 style={{ marginBottom: "20px" }}>Label-Based Coloring (Default)</h3>
+          <GapChart
+            {...args}
+            dataSet={sharedData}
+            title="Countries Colored by Label"
+            colorMode="label"
+            height={400}
+          />
+        </div>
+        
+        <div>
+          <h3 style={{ marginBottom: "20px" }}>Shape-Based Coloring</h3>
+          <GapChart
+            {...args}
+            dataSet={sharedData}
+            title="Shapes Colored by Type"
+            colorMode="shape"
+            shapeColorsMapping={{
+              value1: "#dc2626", // Red for all value1 shapes
+              value2: "#059669", // Green for all value2 shapes
+              gap: "#7c3aed", // Purple for all gap bars
+            }}
+            height={400}
+          />
+        </div>
+      </div>
+    );
+  },
+  args: {
+    colors: ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4"],
+    shapeValue1: "triangle",
+    shapeValue2: "circle",
+    shapesLabelsMapping: {
+      value1: "2019 Arrivals",
+      value2: "2023 Arrivals",
+      gap: "Recovery Gap"
+    },
+    xAxisDataType: "number",
+    xAxisFormat: (d: number) => `${d}mn`,
+    width: 1000,
+    margin: { top: 50, right: 150, bottom: 100, left: 150 },
+    onHighlightItem: action("onHighlightItem"),
+    onChartDataProcessed: action("onChartDataProcessed"),
+    filter: {
+      limit: 10,
+      date: "2024",
+      criteria: "difference",
       sortingDir: "desc",
     },
   },

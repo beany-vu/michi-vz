@@ -431,7 +431,6 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
       // If we have a filter date and limit, sort and limit the keys
       if (filter?.date && filter?.limit) {
-
         renderedKeys = renderedKeys
           .sort((a, b) => {
             const aData = stackedRectData[a]?.find(d => String(d.date) === String(filter.date));
@@ -439,11 +438,9 @@ const VerticalStackBarChart: React.FC<Props> = ({
             const aValue = aData?.value ?? 0;
             const bValue = bData?.value ?? 0;
 
-
             return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
           })
           .slice(0, filter.limit);
-
       }
 
       // Create the current metadata with filtered data and UNIQUE xAxisDomain

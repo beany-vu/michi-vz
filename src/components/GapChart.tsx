@@ -1,4 +1,12 @@
-import React, { FC, useRef, useState, useCallback, useLayoutEffect, useMemo } from "react";
+import React, {
+  FC,
+  useRef,
+  useState,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useEffect,
+} from "react";
 import * as d3 from "d3";
 import styled from "styled-components";
 import { ChartMetadata, DataPoint } from "src/types/data";
@@ -42,6 +50,14 @@ const GapChartStyled = styled.div`
     pointer-events: none;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     font-size: 12px;
+    z-index: 10;
+
+    &.sticky {
+      pointer-events: auto;
+      cursor: default;
+      border-color: #666;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
   }
 `;
 
@@ -66,9 +82,15 @@ interface GapChartProps {
   title: string;
   colors: string[];
   colorsMapping?: Record<string, string>; // predefined colors mapping for specific labels, if not defined, the colors array will be to use generated colors, and generated colors will be cached so that the color of a specific label will not change between renders
+  colorMode?: "label" | "shape"; // whether to assign colors by label (default) or by shape
+  shapeColorsMapping?: {
+    value1?: string;
+    value2?: string;
+    gap?: string;
+  }; // explicit color mapping for shapes when colorMode is "shape"
   highlightItems?: string[]; // items to highlight, if not defined, all items will be highlighted
   disabledItems?: string[]; // items to disable (not being rendered), if not defined, all items will be showed
-  tooltipFormatter?: () => string;
+  tooltipFormatter?: (data: DataItem) => string;
   filter: Filter | undefined;
   shapeValue1: "circle" | "square" | "triangle";
   shapeValue2: "circle" | "square" | "triangle";
@@ -99,6 +121,8 @@ const GapChart: FC<GapChartProps> = ({
   title,
   colors,
   colorsMapping,
+  colorMode = "label",
+  shapeColorsMapping,
   highlightItems: propsHighlightItems,
   disabledItems: propsDisabledItems,
   tooltipFormatter,
@@ -121,10 +145,12 @@ const GapChart: FC<GapChartProps> = ({
   isLoadingComponent,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
     data: DataItem;
+    isSticky?: boolean;
   } | null>(null);
   const [hoveredYItem, setHoveredYItem] = useState<string | null>(null);
 
@@ -151,17 +177,52 @@ const GapChart: FC<GapChartProps> = ({
   );
 
   // Get color function
-  const { getColor } = useGapChartColors(yAxisDomain, colors, colorsMapping);
+  const { getColor, getShapeColor } = useGapChartColors(
+    yAxisDomain,
+    colors,
+    colorsMapping,
+    colorMode,
+    shapeColorsMapping
+  );
 
   // Handle mouse events
   const handleMouseOver = useCallback(
     (d: DataItem, event: React.MouseEvent<SVGElement>) => {
+      // Don't update tooltip if it's sticky
+      if (tooltip?.isSticky) return;
+
       if (svgRef.current) {
         const [mouseX, mouseY] = d3.pointer(event.nativeEvent, svgRef.current);
         setTooltip({
           x: mouseX,
           y: mouseY,
           data: d,
+          isSticky: false,
+        });
+        onHighlightItem?.(d);
+      }
+    },
+    [onHighlightItem, tooltip?.isSticky]
+  );
+
+  const handleMouseOut = useCallback(() => {
+    // Don't hide tooltip if it's sticky
+    if (!tooltip?.isSticky) {
+      setTooltip(null);
+    }
+  }, [tooltip?.isSticky]);
+
+  // Handle click on chart elements (bars and shapes) to make tooltip sticky
+  const handleChartElementClick = useCallback(
+    (d: DataItem, event: React.MouseEvent<SVGElement>) => {
+      event.stopPropagation();
+      if (svgRef.current) {
+        const [mouseX, mouseY] = d3.pointer(event.nativeEvent, svgRef.current);
+        setTooltip({
+          x: mouseX,
+          y: mouseY,
+          data: d,
+          isSticky: true,
         });
         onHighlightItem?.(d);
       }
@@ -169,9 +230,62 @@ const GapChart: FC<GapChartProps> = ({
     [onHighlightItem]
   );
 
-  const handleMouseOut = useCallback(() => {
-    setTooltip(null);
-  }, []);
+  // Handle tooltip click to make it sticky
+  const handleTooltipClick = useCallback(
+    (event: React.MouseEvent) => {
+      event.stopPropagation();
+      if (tooltip && !tooltip.isSticky) {
+        setTooltip({ ...tooltip, isSticky: true });
+      }
+    },
+    [tooltip]
+  );
+
+  // Handle click outside to close sticky tooltip
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tooltip?.isSticky) {
+        const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
+        if (!tooltipElement) {
+          setTooltip(null);
+        }
+      }
+    };
+
+    if (tooltip?.isSticky) {
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
+  }, [tooltip?.isSticky]);
+
+  // Update tooltip position on scroll/resize
+  useEffect(() => {
+    if (!tooltip?.isSticky || !svgRef.current) return;
+
+    const updateTooltipPosition = () => {
+      if (svgRef.current && tooltip) {
+        const containerRect = containerRef.current?.getBoundingClientRect();
+
+        if (containerRect) {
+          // Recalculate position relative to the container
+          const newX = tooltip.x;
+          const newY = tooltip.y;
+
+          setTooltip(prev => (prev ? { ...prev, x: newX, y: newY } : null));
+        }
+      }
+    };
+
+    window.addEventListener("resize", updateTooltipPosition);
+    window.addEventListener("scroll", updateTooltipPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateTooltipPosition);
+      window.removeEventListener("scroll", updateTooltipPosition, true);
+    };
+  }, [tooltip]);
 
   // Check if no data
   const displayIsNodata = useDisplayIsNodata({
@@ -212,7 +326,13 @@ const GapChart: FC<GapChartProps> = ({
     return processedDataSet.map((d, i) => {
       const y = yScale(d.label) || 0;
       const barHeight = yScale.bandwidth();
-      const color = getColor(d.label);
+
+      // Get colors based on color mode
+      const gapColor = colorMode === "shape" ? getShapeColor("gap", d.label) : getColor(d.label);
+      const value1Color =
+        colorMode === "shape" ? getShapeColor("value1", d.label) : getColor(d.label);
+      const value2Color =
+        colorMode === "shape" ? getShapeColor("value2", d.label) : getColor(d.label);
 
       // Calculate positions
       const x1 = xScale(Math.min(d.value1, d.value2));
@@ -246,12 +366,14 @@ const GapChart: FC<GapChartProps> = ({
             y={y + barHeight * 0.25}
             width={barWidth}
             height={barHeight * 0.5}
-            fill={color}
+            fill={gapColor}
             opacity={barOpacity}
             rx={4}
             ry={4}
             onMouseOver={e => handleMouseOver(d, e)}
             onMouseOut={handleMouseOut}
+            onClick={e => handleChartElementClick(d, e)}
+            style={{ cursor: "pointer" }}
           />
 
           {/* Connecting line */}
@@ -271,12 +393,14 @@ const GapChart: FC<GapChartProps> = ({
             className="gap-marker value1-marker"
             d={getShapePath(shapeValue1) || ""}
             transform={`translate(${xScale(d.value1)}, ${y + barHeight / 2})`}
-            fill={color}
+            fill={value1Color}
             stroke="white"
             strokeWidth={2}
             opacity={markerOpacity}
             onMouseOver={e => handleMouseOver(d, e)}
             onMouseOut={handleMouseOut}
+            onClick={e => handleChartElementClick(d, e)}
+            style={{ cursor: "pointer" }}
           />
 
           {/* Value2 marker */}
@@ -285,11 +409,13 @@ const GapChart: FC<GapChartProps> = ({
             d={getShapePath(shapeValue2) || ""}
             transform={`translate(${xScale(d.value2)}, ${y + barHeight / 2})`}
             fill="white"
-            stroke={color}
+            stroke={value2Color}
             strokeWidth={2}
             opacity={markerOpacity}
             onMouseOver={e => handleMouseOver(d, e)}
             onMouseOut={handleMouseOut}
+            onClick={e => handleChartElementClick(d, e)}
+            style={{ cursor: "pointer" }}
           />
         </g>
       );
@@ -299,11 +425,14 @@ const GapChart: FC<GapChartProps> = ({
     xScale,
     yScale,
     getColor,
+    getShapeColor,
+    colorMode,
     highlightItems,
     shapeValue1,
     shapeValue2,
     handleMouseOver,
     handleMouseOut,
+    handleChartElementClick,
     hoveredYItem,
     getShapePath,
   ]);
@@ -344,7 +473,7 @@ const GapChart: FC<GapChartProps> = ({
   }, [processedDataSet, xAxisDomain, onChartDataProcessed]);
 
   return (
-    <GapChartStyled>
+    <GapChartStyled ref={containerRef}>
       <svg ref={svgRef} width={width} height={height} style={{ overflow: "visible" }}>
         <Title x={width / 2} y={margin.top / 2}>
           {title}
@@ -382,7 +511,6 @@ const GapChart: FC<GapChartProps> = ({
               const itemWidth = 180;
               const itemSpacing = 40;
               const shapeOffset = 15;
-              const legendHeight = 30;
 
               // Calculate total width needed
               const activeItems = [
@@ -510,14 +638,15 @@ const GapChart: FC<GapChartProps> = ({
 
       {tooltip && (
         <div
-          className="tooltip"
+          className={`tooltip ${tooltip.isSticky ? "sticky" : ""}`}
           style={{
             left: `${tooltip.x + 10}px`,
             top: `${tooltip.y - 10}px`,
           }}
+          onClick={handleTooltipClick}
         >
           {tooltipFormatter ? (
-            tooltipFormatter()
+            tooltipFormatter(tooltip.data)
           ) : (
             <div>
               <strong>{tooltip.data.label}</strong>
@@ -527,6 +656,11 @@ const GapChart: FC<GapChartProps> = ({
               Value 2: {tooltip.data.value2}
               <br />
               Difference: {tooltip.data.difference}
+            </div>
+          )}
+          {!tooltip.isSticky && (
+            <div style={{ fontSize: "10px", marginTop: "4px", color: "#666", fontStyle: "italic" }}>
+              Click chart or tooltip to pin
             </div>
           )}
         </div>

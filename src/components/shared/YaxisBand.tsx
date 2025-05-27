@@ -111,8 +111,8 @@ const YaxisBand: FC<Props> = ({
   useLayoutEffect(() => {
     if (!ref.current) return;
     const g = d3.select(ref.current);
-    
-    g.selectAll(".tick-html").each(function(d) {
+
+    g.selectAll(".tick-html").each(function (d) {
       const element = d3.select(this);
       const opacity = hoveredItem === null ? 1 : d === hoveredItem ? 1 : 0.3;
       element.style("opacity", opacity);

@@ -44,4 +44,3 @@ export const useGapChartScales = (
 
   return { xScale, yScale };
 };
-
