@@ -25,11 +25,11 @@ const DEFAULT_WIDTH = 1000;
 const DEFAULT_HEIGHT = 500;
 const DEFAULT_MARGIN = { top: 50, right: 150, bottom: 100, left: 150 };
 
-const GapChartStyled = styled.div`
+const GapChartStyled = styled.div<{ $enableTransitions: boolean }>`
   position: relative;
 
   .gap-bar {
-    transition: opacity 0.2s ease-out;
+    ${props => props.$enableTransitions && "transition: opacity 0.2s ease-out;"}
   }
 
   .gap-line {
@@ -38,7 +38,7 @@ const GapChartStyled = styled.div`
   }
 
   .gap-marker {
-    transition: opacity 0.2s ease-out;
+    ${props => props.$enableTransitions && "transition: opacity 0.2s ease-out;"}
   }
 
   .tooltip {
@@ -77,10 +77,18 @@ interface Filter {
   sortingDir: "asc" | "desc";
 }
 
+interface LegendItem {
+  type: "value1" | "value2" | "gap";
+  label: string;
+  color?: string;
+  shape?: "circle" | "square" | "triangle";
+  visible?: boolean;
+}
+
 interface GapChartProps {
   dataSet: DataItem[];
   title: string;
-  colors: string[];
+  colors?: string[];
   colorsMapping?: Record<string, string>; // predefined colors mapping for specific labels, if not defined, the colors array will be to use generated colors, and generated colors will be cached so that the color of a specific label will not change between renders
   colorMode?: "label" | "shape"; // whether to assign colors by label (default) or by shape
   shapeColorsMapping?: {
@@ -99,6 +107,7 @@ interface GapChartProps {
     value2?: string;
     gap?: string;
   };
+  legendFormatter?: (items: LegendItem[]) => LegendItem[];
   xAxisDataType: "number" | "date_annual" | "date_monthly";
   yAxisFormat?: (d: number) => string;
   xAxisFormat?: (d: number) => string;
@@ -106,6 +115,7 @@ interface GapChartProps {
   width: number;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
+  tickHtmlWidth?: number;
   onHighlightItem?: (item: DataItem) => void;
   onDisabledItem?: (item: DataItem) => void;
   onColorChange?: (item: DataItem, color: string) => void;
@@ -114,12 +124,25 @@ interface GapChartProps {
   isNodataComponent?: React.ReactNode;
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
+  enableTransitions?: boolean;
+  legendAlign?: "left" | "center" | "right";
 }
 
 const GapChart: FC<GapChartProps> = ({
   dataSet,
   title,
-  colors,
+  colors = [
+    "#1f77b4",
+    "#ff7f0e",
+    "#2ca02c",
+    "#d62728",
+    "#9467bd",
+    "#8c564b",
+    "#e377c2",
+    "#7f7f7f",
+    "#bcbd22",
+    "#17becf",
+  ],
   colorsMapping,
   colorMode = "label",
   shapeColorsMapping,
@@ -130,6 +153,7 @@ const GapChart: FC<GapChartProps> = ({
   shapeValue1,
   shapeValue2,
   shapesLabelsMapping,
+  legendFormatter,
   xAxisDataType,
   yAxisFormat,
   xAxisFormat,
@@ -137,12 +161,15 @@ const GapChart: FC<GapChartProps> = ({
   width = DEFAULT_WIDTH,
   height = DEFAULT_HEIGHT,
   margin = DEFAULT_MARGIN,
+  tickHtmlWidth,
   onHighlightItem,
   onChartDataProcessed,
   isNodata,
   isNodataComponent,
   isLoading,
   isLoadingComponent,
+  enableTransitions = true,
+  legendAlign = "left",
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -153,6 +180,7 @@ const GapChart: FC<GapChartProps> = ({
     isSticky?: boolean;
   } | null>(null);
   const [hoveredYItem, setHoveredYItem] = useState<string | null>(null);
+  const [isRendering, setIsRendering] = useState(false);
 
   const { highlightItems: contextHighlightItems, disabledItems: contextDisabledItems } =
     useChartContext();
@@ -184,6 +212,17 @@ const GapChart: FC<GapChartProps> = ({
     colorMode,
     shapeColorsMapping
   );
+
+  // Track when data is being re-rendered
+  useEffect(() => {
+    setIsRendering(true);
+    // Set a small delay to ensure the axis hides before shapes start rendering
+    const timer = setTimeout(() => {
+      setIsRendering(false);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [processedDataSet, xScale, yScale, yAxisFormat]);
 
   // Handle mouse events
   const handleMouseOver = useCallback(
@@ -299,10 +338,11 @@ const GapChart: FC<GapChartProps> = ({
   const getShapePath = useCallback((shape: string, size: number = 14) => {
     switch (shape) {
       case "circle":
+        // Make circle smaller - use 0.8x the size to match square visually
         return d3
           .symbol()
           .type(d3.symbolCircle)
-          .size(size * size)();
+          .size(size * 0.8 * (size * 0.8))();
       case "square":
         return d3
           .symbol()
@@ -317,13 +357,13 @@ const GapChart: FC<GapChartProps> = ({
         return d3
           .symbol()
           .type(d3.symbolCircle)
-          .size(size * size)();
+          .size(size * 0.8 * (size * 0.8))();
     }
   }, []);
 
-  // Render gap bars
+  // Render gap bars and shapes in layers
   const renderGapBars = useMemo(() => {
-    return processedDataSet.map((d, i) => {
+    const elements = processedDataSet.map((d, i) => {
       const y = yScale(d.label) || 0;
       const barHeight = yScale.bandwidth();
 
@@ -357,69 +397,141 @@ const GapChart: FC<GapChartProps> = ({
       const markerOpacity =
         hoveredYItem !== null ? (hoveredYItem === d.label ? 1 : 0.3) : isHighlighted ? 1 : 0.3;
 
-      return (
-        <g key={`gap-${i}`} className="gap-group">
-          {/* Gap bar */}
-          <rect
-            className="gap-bar"
-            x={x1}
-            y={y + barHeight * 0.25}
-            width={barWidth}
-            height={barHeight * 0.5}
-            fill={gapColor}
-            opacity={barOpacity}
-            rx={4}
-            ry={4}
-            onMouseOver={e => handleMouseOver(d, e)}
-            onMouseOut={handleMouseOut}
-            onClick={e => handleChartElementClick(d, e)}
-            style={{ cursor: "pointer" }}
-          />
-
-          {/* Connecting line */}
-          <line
-            className="gap-line"
-            x1={x1}
-            y1={y + barHeight / 2}
-            x2={x2}
-            y2={y + barHeight / 2}
-            stroke="white"
-            strokeDasharray={d.difference < 0 ? "4,2" : "0"}
-            opacity={markerOpacity}
-          />
-
-          {/* Value1 marker */}
-          <path
-            className="gap-marker value1-marker"
-            d={getShapePath(shapeValue1) || ""}
-            transform={`translate(${xScale(d.value1)}, ${y + barHeight / 2})`}
-            fill={value1Color}
-            stroke="white"
-            strokeWidth={2}
-            opacity={markerOpacity}
-            onMouseOver={e => handleMouseOver(d, e)}
-            onMouseOut={handleMouseOut}
-            onClick={e => handleChartElementClick(d, e)}
-            style={{ cursor: "pointer" }}
-          />
-
-          {/* Value2 marker */}
-          <path
-            className="gap-marker value2-marker"
-            d={getShapePath(shapeValue2) || ""}
-            transform={`translate(${xScale(d.value2)}, ${y + barHeight / 2})`}
-            fill="white"
-            stroke={value2Color}
-            strokeWidth={2}
-            opacity={markerOpacity}
-            onMouseOver={e => handleMouseOver(d, e)}
-            onMouseOut={handleMouseOut}
-            onClick={e => handleChartElementClick(d, e)}
-            style={{ cursor: "pointer" }}
-          />
-        </g>
-      );
+      return {
+        d,
+        i,
+        y,
+        barHeight,
+        gapColor,
+        value1Color,
+        value2Color,
+        x1,
+        x2,
+        barWidth,
+        barOpacity,
+        markerOpacity,
+      };
     });
+
+    // Separate shapes by type for layering
+    const squares: typeof elements = [];
+    const nonSquares: typeof elements = [];
+
+    elements.forEach(element => {
+      const hasSquareValue1 = shapeValue1 === "square";
+      const hasSquareValue2 = shapeValue2 === "square";
+
+      if (hasSquareValue1 || hasSquareValue2) {
+        squares.push(element);
+      }
+      if (!hasSquareValue1 || !hasSquareValue2) {
+        nonSquares.push(element);
+      }
+    });
+
+    return (
+      <>
+        {/* First layer: Render all gap bars and lines */}
+        {elements.map(
+          ({ d, i, y, barHeight, gapColor, x1, x2, barWidth, barOpacity, markerOpacity }) => (
+            <g key={`gap-base-${i}`}>
+              {/* Gap bar */}
+              <rect
+                className="gap-bar"
+                x={x1}
+                y={y + barHeight / 2 - 4}
+                width={barWidth}
+                height={8}
+                fill={gapColor}
+                opacity={barOpacity}
+                rx={4}
+                ry={4}
+                onMouseOver={e => handleMouseOver(d, e)}
+                onMouseOut={handleMouseOut}
+                onClick={e => handleChartElementClick(d, e)}
+                style={{ cursor: "pointer" }}
+              />
+
+              {/* Connecting line */}
+              <line
+                className="gap-line"
+                x1={x1}
+                y1={y + barHeight / 2}
+                x2={x2}
+                y2={y + barHeight / 2}
+                stroke="white"
+                strokeDasharray={d.difference < 0 ? "4,2" : "0"}
+                opacity={markerOpacity}
+              />
+            </g>
+          )
+        )}
+
+        {/* Second layer: Render all square shapes */}
+        {squares.map(({ d, i, y, barHeight, value1Color, value2Color, markerOpacity }) => (
+          <g key={`gap-squares-${i}`}>
+            {shapeValue1 === "square" && (
+              <path
+                className="gap-marker value1-marker"
+                d={getShapePath(shapeValue1) || ""}
+                transform={`translate(${xScale(d.value1)}, ${y + barHeight / 2})`}
+                fill={value1Color}
+                opacity={markerOpacity}
+                onMouseOver={e => handleMouseOver(d, e)}
+                onMouseOut={handleMouseOut}
+                onClick={e => handleChartElementClick(d, e)}
+                style={{ cursor: "pointer" }}
+              />
+            )}
+            {shapeValue2 === "square" && (
+              <path
+                className="gap-marker value2-marker"
+                d={getShapePath(shapeValue2) || ""}
+                transform={`translate(${xScale(d.value2)}, ${y + barHeight / 2})`}
+                fill={value2Color}
+                opacity={markerOpacity}
+                onMouseOver={e => handleMouseOver(d, e)}
+                onMouseOut={handleMouseOut}
+                onClick={e => handleChartElementClick(d, e)}
+                style={{ cursor: "pointer" }}
+              />
+            )}
+          </g>
+        ))}
+
+        {/* Third layer: Render all circle and triangle shapes */}
+        {nonSquares.map(({ d, i, y, barHeight, value1Color, value2Color, markerOpacity }) => (
+          <g key={`gap-nonSquares-${i}`}>
+            {shapeValue1 !== "square" && (
+              <path
+                className="gap-marker value1-marker"
+                d={getShapePath(shapeValue1) || ""}
+                transform={`translate(${xScale(d.value1)}, ${y + barHeight / 2})`}
+                fill={value1Color}
+                opacity={markerOpacity}
+                onMouseOver={e => handleMouseOver(d, e)}
+                onMouseOut={handleMouseOut}
+                onClick={e => handleChartElementClick(d, e)}
+                style={{ cursor: "pointer" }}
+              />
+            )}
+            {shapeValue2 !== "square" && (
+              <path
+                className="gap-marker value2-marker"
+                d={getShapePath(shapeValue2) || ""}
+                transform={`translate(${xScale(d.value2)}, ${y + barHeight / 2})`}
+                fill={value2Color}
+                opacity={markerOpacity}
+                onMouseOver={e => handleMouseOver(d, e)}
+                onMouseOut={handleMouseOut}
+                onClick={e => handleChartElementClick(d, e)}
+                style={{ cursor: "pointer" }}
+              />
+            )}
+          </g>
+        ))}
+      </>
+    );
   }, [
     processedDataSet,
     xScale,
@@ -473,7 +585,7 @@ const GapChart: FC<GapChartProps> = ({
   }, [processedDataSet, xAxisDomain, onChartDataProcessed]);
 
   return (
-    <GapChartStyled ref={containerRef}>
+    <GapChartStyled ref={containerRef} $enableTransitions={enableTransitions}>
       <svg ref={svgRef} width={width} height={height} style={{ overflow: "visible" }}>
         <Title x={width / 2} y={margin.top / 2}>
           {title}
@@ -498,137 +610,155 @@ const GapChart: FC<GapChartProps> = ({
           showGrid={true}
           onHover={setHoveredYItem}
           hoveredItem={hoveredYItem}
+          tickHtmlWidth={tickHtmlWidth}
+          enableTransitions={enableTransitions}
+          isRendering={isRendering}
         />
 
-        {renderGapBars}
+        <g className="gap-chart-content">{renderGapBars}</g>
 
         {/* Legend */}
         {shapesLabelsMapping && (
-          <g transform={`translate(${width / 2}, ${height - margin.bottom / 2 + 20})`}>
+          <g transform={`translate(${
+            legendAlign === "left" 
+              ? margin.left 
+              : legendAlign === "right" 
+                ? width - margin.right 
+                : width / 2
+          }, ${height - margin.bottom / 2 + 20})`}>
             {/* Create a flex-like layout for legend items */}
             {(() => {
+              // Prepare default legend items
+              const defaultLegendItems: LegendItem[] = [];
+
+              if (shapesLabelsMapping.value1) {
+                defaultLegendItems.push({
+                  type: "value1",
+                  label: shapesLabelsMapping.value1,
+                  shape: shapeValue1,
+                  color:
+                    colorMode === "shape" && shapeColorsMapping?.value1
+                      ? shapeColorsMapping.value1
+                      : "#666",
+                  visible: true,
+                });
+              }
+
+              if (shapesLabelsMapping.gap) {
+                defaultLegendItems.push({
+                  type: "gap",
+                  label: shapesLabelsMapping.gap,
+                  color:
+                    colorMode === "shape" && shapeColorsMapping?.gap
+                      ? shapeColorsMapping.gap
+                      : "#999",
+                  visible: true,
+                });
+              }
+
+              if (shapesLabelsMapping.value2) {
+                defaultLegendItems.push({
+                  type: "value2",
+                  label: shapesLabelsMapping.value2,
+                  shape: shapeValue2,
+                  color:
+                    colorMode === "shape" && shapeColorsMapping?.value2
+                      ? shapeColorsMapping.value2
+                      : "#666",
+                  visible: true,
+                });
+              }
+
+              // Apply formatter if provided
+              const legendItems = legendFormatter
+                ? legendFormatter(defaultLegendItems).filter(item => item.visible !== false)
+                : defaultLegendItems;
+
               const items = [];
               const itemWidth = 180;
               const itemSpacing = 40;
               const shapeOffset = 15;
 
               // Calculate total width needed
-              const activeItems = [
-                shapesLabelsMapping.value1 ? 1 : 0,
-                shapesLabelsMapping.gap ? 1 : 0,
-                shapesLabelsMapping.value2 ? 1 : 0,
-              ].reduce((sum, val) => sum + val, 0);
+              const activeItems = legendItems.length;
 
               const totalWidth = activeItems * itemWidth + (activeItems - 1) * itemSpacing;
-              let currentX = -totalWidth / 2;
+              let currentX = legendAlign === "left" 
+                ? 0 
+                : legendAlign === "right" 
+                  ? -totalWidth 
+                  : -totalWidth / 2;
 
-              // Value1 Legend Item
-              if (shapesLabelsMapping.value1) {
-                items.push(
-                  <g key="value1" transform={`translate(${currentX}, 0)`}>
-                    <path
-                      d={getShapePath(shapeValue1, 12) || ""}
-                      fill="#666"
-                      stroke="white"
-                      strokeWidth={1}
-                    />
-                    <foreignObject
-                      x={shapeOffset}
-                      y={-10}
-                      width={itemWidth - shapeOffset - 5}
-                      height={20}
-                    >
-                      <div
-                        style={{
-                          fontSize: "12px",
-                          color: "#666",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          paddingLeft: "5px",
-                        }}
-                        title={shapesLabelsMapping.value1}
+              // Render legend items based on the processed array
+              legendItems.forEach(legendItem => {
+                if (legendItem.type === "gap") {
+                  items.push(
+                    <g key={legendItem.type} transform={`translate(${currentX}, 0)`}>
+                      <rect
+                        x={-10}
+                        y={-5}
+                        width={20}
+                        height={10}
+                        fill={legendItem.color || "#999"}
+                        opacity={0.7}
+                        rx={2}
+                        ry={2}
+                      />
+                      <foreignObject
+                        x={shapeOffset + 5}
+                        y={-10}
+                        width={itemWidth - shapeOffset - 10}
+                        height={20}
                       >
-                        {shapesLabelsMapping.value1}
-                      </div>
-                    </foreignObject>
-                  </g>
-                );
+                        <div
+                          style={{
+                            fontSize: "12px",
+                            color: legendItem.color || "#666",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            paddingLeft: "5px",
+                          }}
+                          title={legendItem.label}
+                        >
+                          {legendItem.label}
+                        </div>
+                      </foreignObject>
+                    </g>
+                  );
+                } else {
+                  // Value1 or Value2 shape items
+                  items.push(
+                    <g key={legendItem.type} transform={`translate(${currentX}, 0)`}>
+                      <path
+                        d={getShapePath(legendItem.shape || shapeValue1, 12) || ""}
+                        fill={legendItem.color || "#666"}
+                      />
+                      <foreignObject
+                        x={shapeOffset}
+                        y={-10}
+                        width={itemWidth - shapeOffset - 5}
+                        height={20}
+                      >
+                        <div
+                          style={{
+                            fontSize: "12px",
+                            color: legendItem.color || "#666",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            paddingLeft: "5px",
+                          }}
+                          title={legendItem.label}
+                        >
+                          {legendItem.label}
+                        </div>
+                      </foreignObject>
+                    </g>
+                  );
+                }
                 currentX += itemWidth + itemSpacing;
-              }
-
-              // Gap Legend Item
-              if (shapesLabelsMapping.gap) {
-                items.push(
-                  <g key="gap" transform={`translate(${currentX}, 0)`}>
-                    <rect
-                      x={-10}
-                      y={-5}
-                      width={20}
-                      height={10}
-                      fill="#999"
-                      opacity={0.7}
-                      rx={2}
-                      ry={2}
-                    />
-                    <foreignObject
-                      x={shapeOffset + 5}
-                      y={-10}
-                      width={itemWidth - shapeOffset - 10}
-                      height={20}
-                    >
-                      <div
-                        style={{
-                          fontSize: "12px",
-                          color: "#666",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          paddingLeft: "5px",
-                        }}
-                        title={shapesLabelsMapping.gap}
-                      >
-                        {shapesLabelsMapping.gap}
-                      </div>
-                    </foreignObject>
-                  </g>
-                );
-                currentX += itemWidth + itemSpacing;
-              }
-
-              // Value2 Legend Item
-              if (shapesLabelsMapping.value2) {
-                items.push(
-                  <g key="value2" transform={`translate(${currentX}, 0)`}>
-                    <path
-                      d={getShapePath(shapeValue2, 12) || ""}
-                      fill="white"
-                      stroke="#666"
-                      strokeWidth={2}
-                    />
-                    <foreignObject
-                      x={shapeOffset}
-                      y={-10}
-                      width={itemWidth - shapeOffset - 5}
-                      height={20}
-                    >
-                      <div
-                        style={{
-                          fontSize: "12px",
-                          color: "#666",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          paddingLeft: "5px",
-                        }}
-                        title={shapesLabelsMapping.value2}
-                      >
-                        {shapesLabelsMapping.value2}
-                      </div>
-                    </foreignObject>
-                  </g>
-                );
-              }
+              });
 
               return items;
             })()}

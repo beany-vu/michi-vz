@@ -10,6 +10,9 @@ interface Props {
   showGrid?: boolean;
   onHover?: (label: string | null) => void;
   hoveredItem?: string | null;
+  tickHtmlWidth?: number;
+  enableTransitions?: boolean;
+  isRendering?: boolean;
 }
 
 const YaxisBand: FC<Props> = ({
@@ -20,6 +23,9 @@ const YaxisBand: FC<Props> = ({
   showGrid,
   onHover,
   hoveredItem,
+  tickHtmlWidth = 100,
+  enableTransitions = true,
+  isRendering = false,
 }) => {
   const ref = useRef<SVGGElement>(null);
   const renderedRef = useRef(false);
@@ -66,13 +72,13 @@ const YaxisBand: FC<Props> = ({
       .attr("class", "tick-html")
       .attr("x", -100)
       .attr("y", -10)
-      .attr("width", 100)
+      .attr("width", tickHtmlWidth)
       .attr("height", 20)
       .html(
         d =>
           `<div style="display:flex;align-items:center;height:100%;cursor:pointer" title="${d}"><span>${d}</span></div>`
       )
-      .on("mouseenter", function (event, d) {
+      .on("mouseenter", function (_, d) {
         if (onHover) {
           onHover(d as string);
         }
@@ -98,27 +104,34 @@ const YaxisBand: FC<Props> = ({
   useLayoutEffect(() => {
     if (!renderedRef.current) {
       // First render with transition
-      if (ref.current) {
+      if (ref.current && enableTransitions) {
         const g = d3.select(ref.current);
         g.selectAll(".tick").attr("opacity", 0).transition().duration(500).attr("opacity", 1);
       }
       renderedRef.current = true;
     }
     updateAxis();
-  }, [updateAxis]);
+  }, [updateAxis, enableTransitions]);
 
-  // Separate effect for hover state changes
+  // Separate effect for hover state changes and rendering state
   useLayoutEffect(() => {
     if (!ref.current) return;
     const g = d3.select(ref.current);
 
     g.selectAll(".tick-html").each(function (d) {
       const element = d3.select(this);
-      const opacity = hoveredItem === null ? 1 : d === hoveredItem ? 1 : 0.3;
+      let opacity = 0;
+
+      if (!isRendering) {
+        opacity = hoveredItem === null ? 1 : d === hoveredItem ? 1 : 0.3;
+      }
+
       element.style("opacity", opacity);
-      element.style("transition", "opacity 0.2s ease-in-out");
+      if (enableTransitions) {
+        element.style("transition", "opacity 0.2s ease-in-out");
+      }
     });
-  }, [hoveredItem]);
+  }, [hoveredItem, isRendering, enableTransitions]);
 
   return <g ref={ref} />;
 };

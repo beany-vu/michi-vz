@@ -328,6 +328,28 @@ export const NoLegend: Story = {
   },
 };
 
+export const WithoutColors: Story = {
+  args: {
+    dataSet: generateSampleData().slice(0, 10),
+    title: "Gap Chart Using Default Color Palette",
+    // Note: colors prop is not provided, will use default palette
+    shapeValue1: "circle",
+    shapeValue2: "square",
+    shapesLabelsMapping: {
+      value1: "2019 Arrivals",
+      value2: "2023 Arrivals",
+      gap: "Recovery Gap"
+    },
+    xAxisDataType: "number",
+    xAxisFormat: (d: number) => `${d}mn`,
+    width: 1000,
+    height: 500,
+    margin: { top: 50, right: 150, bottom: 100, left: 150 },
+    onHighlightItem: action("onHighlightItem"),
+    onChartDataProcessed: action("onChartDataProcessed"),
+  },
+};
+
 export const PositiveGrowthOnly: Story = {
   args: {
     dataSet: generateSampleData().filter(d => d.value2 > d.value1),

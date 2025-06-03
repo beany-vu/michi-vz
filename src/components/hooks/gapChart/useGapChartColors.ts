@@ -2,7 +2,7 @@ import { useMemo, useRef } from "react";
 
 export const useGapChartColors = (
   _labels: string[],
-  colors: string[],
+  colors: string[] = [],
   colorsMapping?: Record<string, string>,
   colorMode: "label" | "shape" = "label",
   shapeColorsMapping?: {
@@ -14,11 +14,20 @@ export const useGapChartColors = (
   // Cache for generated colors
   const colorCacheRef = useRef<Record<string, string>>({});
 
+  // Default color palette if none provided
+  const defaultColors = [
+    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+    "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"
+  ];
+
   const getColor = useMemo(() => {
     return (label: string) => {
+      // Use provided colors or default colors
+      const colorPalette = colors.length > 0 ? colors : defaultColors;
+
       // In shape mode with explicit shape colors, use the first color as default
       if (colorMode === "shape" && shapeColorsMapping) {
-        return shapeColorsMapping.gap || colors[0];
+        return shapeColorsMapping.gap || colorPalette[0];
       }
 
       // First check if there's a predefined color mapping
@@ -32,8 +41,8 @@ export const useGapChartColors = (
       }
 
       // Generate new color from the colors array
-      const colorIndex = Object.keys(colorCacheRef.current).length % colors.length;
-      const color = colors[colorIndex];
+      const colorIndex = Object.keys(colorCacheRef.current).length % colorPalette.length;
+      const color = colorPalette[colorIndex];
 
       // Cache the color
       colorCacheRef.current[label] = color;
@@ -44,6 +53,9 @@ export const useGapChartColors = (
 
   const getShapeColor = useMemo(() => {
     return (shapeType: "value1" | "value2" | "gap", label?: string) => {
+      // Use provided colors or default colors
+      const colorPalette = colors.length > 0 ? colors : defaultColors;
+
       // In shape mode, use shape-specific colors
       if (colorMode === "shape") {
         if (shapeColorsMapping && shapeColorsMapping[shapeType]) {
@@ -52,13 +64,13 @@ export const useGapChartColors = (
         // Default colors for shapes if not explicitly mapped
         switch (shapeType) {
           case "value1":
-            return colors[0];
+            return colorPalette[0];
           case "value2":
-            return colors[1];
+            return colorPalette[1] || colorPalette[0];
           case "gap":
-            return colors[2] || colors[0];
+            return colorPalette[2] || colorPalette[0];
           default:
-            return colors[0];
+            return colorPalette[0];
         }
       }
 
@@ -67,7 +79,7 @@ export const useGapChartColors = (
         return getColor(label);
       }
 
-      return colors[0];
+      return colorPalette[0];
     };
   }, [colorMode, shapeColorsMapping, colors, getColor]);
 

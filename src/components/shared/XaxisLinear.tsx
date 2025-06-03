@@ -215,7 +215,16 @@ const XaxisLinear: FC<Props> = ({
           .attr("font-size", "12px")
           .attr("text-anchor", "middle")
           .attr("dy", "1em")
-      );
+      )
+      // Add class for tick at 0
+      .call(g => {
+        g.selectAll(".tick").each(function(d) {
+          const tickValue = d instanceof Date ? d.valueOf() : +d;
+          if (tickValue === 0) {
+            d3.select(this).classed("tick-zero", true);
+          }
+        });
+      });
 
     // Ensure the first and last ticks align with data points by moving them to exact edge positions
     if (tickValues.length >= 2) {

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
-import { pointer, select, ScaleLinear, ScaleTime, easeQuadOut } from "d3";
+import { useCallback, useEffect, useLayoutEffect } from "react";
+import { pointer, select, ScaleLinear, ScaleTime } from "d3";
 import { DataPoint, LineChartDataItem } from "src/types/data";
 
 const useLineChartPathsShapesRendering = (
@@ -45,7 +45,7 @@ const useLineChartPathsShapesRendering = (
       if (dataLabel) {
         svg.selectAll(`${groupSelector}`).style("opacity", `${opacityUnhighlighted}`);
         svg
-          .selectAll(`${groupSelector}[data-label="${dataLabel}"]`)
+          .selectAll(`${groupSelector}[data-label="${CSS.escape(dataLabel)}"]`)
           .style("opacity", opacityHighlighted);
         return;
       }
@@ -55,7 +55,7 @@ const useLineChartPathsShapesRendering = (
 
         highlightItems.forEach(item => {
           svg
-            .selectAll(`${groupSelector}[data-label="${item}"]`)
+            .selectAll(`${groupSelector}[data-label="${CSS.escape(item)}"]`)
             .style("opacity", opacityHighlighted);
         });
       } else {
@@ -68,7 +68,7 @@ const useLineChartPathsShapesRendering = (
   );
 
   const handleMouseOut = useCallback(
-    svgRef => {
+    (svgRef: React.RefObject<SVGSVGElement>) => {
       const svg = select(svgRef.current);
       if (!svg.node()) return;
 
@@ -128,7 +128,9 @@ const useLineChartPathsShapesRendering = (
 
       // --- GROUP ---
       // Select or create a <g> for this series
-      let group = svg.select(`g.series-group[data-key='${uniqueKey}']`);
+      // Escape the uniqueKey for use in CSS selector
+      const escapedKey = CSS.escape(uniqueKey);
+      let group = svg.select(`g.series-group[data-key='${escapedKey}']`);
       if (group.empty()) {
         group = svg
           .append("g")

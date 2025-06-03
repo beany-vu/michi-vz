@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect, useMemo, useState, useCallback, useEffect } from "react";
+import React, { useRef, useLayoutEffect, useMemo, useState, useCallback } from "react";
 import Title from "./shared/Title";
 import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
@@ -41,6 +41,7 @@ interface BarBellChartProps {
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
   filter?: { limit: number; criteria: string; sortingDir: string };
+  tickHtmlWidth?: number;
 }
 
 const BarBellChart: React.FC<BarBellChartProps> = ({
@@ -62,6 +63,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   showGrid = defaultConf.SHOW_GRID,
   onChartDataProcessed,
   onHighlightItem,
+  tickHtmlWidth,
 }) => {
   const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
@@ -231,26 +233,31 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
         <Title x={width / 2} y={margin.top / 2}>
           {title}
         </Title>
-        <YaxisBand
-          yScale={yScale}
-          width={width}
-          margin={margin}
-          yAxisFormat={yAxisFormat}
-          showGrid={showGrid?.y || false}
-          onHover={handleYAxisHover}
-          hoveredItem={hoveredYItem}
-        />
-        <XaxisLinear
-          xScale={xScale}
-          height={height}
-          margin={margin}
-          xAxisFormat={xAxisFormat}
-          xAxisDataType={xAxisDataType}
-          showGrid={showGrid?.x || false}
-          position={"top"}
-          ticks={12}
-          isEmpty={isEmpty}
-        />
+        {!isEmpty && !isLoading && (
+          <>
+            <YaxisBand
+              yScale={yScale}
+              width={width}
+              margin={margin}
+              yAxisFormat={yAxisFormat}
+              showGrid={showGrid?.y || false}
+              onHover={handleYAxisHover}
+              hoveredItem={hoveredYItem}
+              tickHtmlWidth={tickHtmlWidth}
+            />
+            <XaxisLinear
+              xScale={xScale}
+              height={height}
+              margin={margin}
+              xAxisFormat={xAxisFormat}
+              xAxisDataType={xAxisDataType}
+              showGrid={showGrid?.x || false}
+              position={"top"}
+              ticks={12}
+              isEmpty={isEmpty}
+            />
+          </>
+        )}
         {dataSet.map((d, i) => {
           let cumulativeX = margin.left; // Initialize cumulativeX for each row
 

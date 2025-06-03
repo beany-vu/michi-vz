@@ -69,6 +69,7 @@ interface LineChartProps {
   onHighlightItem?: (labels: string[]) => void;
   showGrid?: boolean;
   showZeroLineForXAxis?: boolean;
+  tickHtmlWidth?: number;
 }
 
 interface ChartMetadata {
@@ -100,6 +101,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   onHighlightItem,
   showGrid = false,
   showZeroLineForXAxis = false,
+  tickHtmlWidth,
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
@@ -211,9 +213,15 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   // Memoize the YaxisBand component
   const memoizedYaxisBand = useMemo(() => {
     return (
-      <YaxisBand yScale={yAxisScale} width={width} margin={margin} yAxisFormat={yAxisFormat} />
+      <YaxisBand
+        yScale={yAxisScale}
+        width={width}
+        margin={margin}
+        yAxisFormat={yAxisFormat}
+        tickHtmlWidth={tickHtmlWidth}
+      />
     );
-  }, [yAxisScale, width, margin, yAxisFormat]);
+  }, [yAxisScale, width, margin, yAxisFormat, tickHtmlWidth]);
 
   // Memoize event handlers
   const handleMouseOver = useCallback(
@@ -453,16 +461,20 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         <Title x={width / 2} y={margin.top / 2}>
           {title}
         </Title>
-        <XaxisLinear
-          xScale={xAxisScale}
-          height={height}
-          margin={margin}
-          xAxisFormat={xAxisFormat}
-          xAxisDataType={xAxisDataType}
-          showGrid={showGrid}
-          showZeroLine={showZeroLineForXAxis}
-        />
-        {memoizedYaxisBand}
+        {filteredDataSet.length > 0 && !isLoading && (
+          <>
+            <XaxisLinear
+              xScale={xAxisScale}
+              height={height}
+              margin={margin}
+              xAxisFormat={xAxisFormat}
+              xAxisDataType={xAxisDataType}
+              showGrid={showGrid}
+              showZeroLine={showZeroLineForXAxis}
+            />
+            {memoizedYaxisBand}
+          </>
+        )}
         {renderBars}
       </svg>
       {tooltip && (

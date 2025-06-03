@@ -48,6 +48,7 @@ interface LineChartProps {
   };
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
+  tickHtmlWidth?: number;
 }
 
 interface ChartMetadata {
@@ -76,20 +77,15 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
   isNodata,
   onChartDataProcessed,
   onHighlightItem,
+  tickHtmlWidth,
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
     y: number;
     data: DataPoint;
   } | null>(null);
-  const {
-    colorsMapping,
-    colorsBasedMapping,
-    highlightItems,
-    disabledItems,
-    hiddenItems,
-    visibleItems,
-  } = useChartContext();
+  const { colorsMapping, colorsBasedMapping, highlightItems, disabledItems, visibleItems } =
+    useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
@@ -253,21 +249,31 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
         <Title x={width / 2} y={margin.top / 2}>
           {title}
         </Title>
-        <XaxisLinear
-          xScale={xAxis1Scale}
-          height={height}
-          margin={margin}
-          xAxisFormat={xAxisFormat}
-          xAxisDataType={xAxisDataType}
-        />
-        <XaxisLinear
-          xScale={xAxis2Scale}
-          height={height}
-          margin={margin}
-          xAxisFormat={xAxisFormat}
-          xAxisDataType={xAxisDataType}
-        />
-        <YaxisBand yScale={yAxisScale} width={width} margin={margin} yAxisFormat={yAxisFormat} />
+        {filteredDataSet.length > 0 && !isLoading && (
+          <>
+            <XaxisLinear
+              xScale={xAxis1Scale}
+              height={height}
+              margin={margin}
+              xAxisFormat={xAxisFormat}
+              xAxisDataType={xAxisDataType}
+            />
+            <XaxisLinear
+              xScale={xAxis2Scale}
+              height={height}
+              margin={margin}
+              xAxisFormat={xAxisFormat}
+              xAxisDataType={xAxisDataType}
+            />
+            <YaxisBand
+              yScale={yAxisScale}
+              width={width}
+              margin={margin}
+              yAxisFormat={yAxisFormat}
+              tickHtmlWidth={tickHtmlWidth}
+            />
+          </>
+        )}
         {filteredDataSet
           .filter(d => !disabledItems.includes(d.label))
           .map((d, i) => {

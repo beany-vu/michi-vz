@@ -503,34 +503,38 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                   </text>
                 </g>
               )}
-              {xAxisDataType === "number" ||
-              xAxisDataType === "date_annual" ||
-              xAxisDataType === "date_monthly" ? (
-                <XaxisLinear
-                  xScale={xScale as d3.ScaleLinear<number, number> | d3.ScaleTime<number, number>}
-                  height={height}
-                  margin={margin}
-                  xAxisFormat={xAxisFormat}
-                  xAxisDataType={xAxisDataType}
-                  ticks={5}
-                  showGrid={showGrid?.x || false}
-                />
-              ) : (
-                <XaxisBand
-                  xScale={xScale as d3.ScaleBand<string>}
-                  height={height}
-                  margin={margin}
-                  xAxisFormat={xAxisFormat}
-                />
+              {filteredDataSet.length > 0 && !isLoading && (
+                <>
+                  {xAxisDataType === "number" ||
+                  xAxisDataType === "date_annual" ||
+                  xAxisDataType === "date_monthly" ? (
+                    <XaxisLinear
+                      xScale={xScale as d3.ScaleLinear<number, number> | d3.ScaleTime<number, number>}
+                      height={height}
+                      margin={margin}
+                      xAxisFormat={xAxisFormat}
+                      xAxisDataType={xAxisDataType}
+                      ticks={5}
+                      showGrid={showGrid?.x || false}
+                    />
+                  ) : (
+                    <XaxisBand
+                      xScale={xScale as d3.ScaleBand<string>}
+                      height={height}
+                      margin={margin}
+                      xAxisFormat={xAxisFormat}
+                    />
+                  )}
+                  <YaxisLinear
+                    yScale={yScale}
+                    width={width}
+                    height={height}
+                    margin={margin}
+                    yAxisFormat={yAxisFormat}
+                    yTicksQty={yTicksQty}
+                  />
+                </>
               )}
-              <YaxisLinear
-                yScale={yScale}
-                width={width}
-                height={height}
-                margin={margin}
-                yAxisFormat={yAxisFormat}
-                yTicksQty={yTicksQty}
-              />
             </svg>
           </Suspense>
         )}
