@@ -29,7 +29,7 @@ export default {
 export const Primary = {
   args: {
     onChartDataProcessed: (metadata: any) => {
-      console.log({ metadata });
+      // console.log({ metadata });
     },
     isNoDataComponent: <div>No data</div>,
     dataSet: [

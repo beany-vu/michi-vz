@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useLayoutEffect, useMemo } from "react";
+import React, { useRef, useLayoutEffect, useMemo, useState, useCallback } from "react";
 import Title from "./shared/Title";
 import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
@@ -41,6 +41,7 @@ interface BarBellChartProps {
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
   filter?: { limit: number; criteria: string; sortingDir: string };
+  tickHtmlWidth?: number;
 }
 
 const BarBellChart: React.FC<BarBellChartProps> = ({
@@ -62,12 +63,18 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   showGrid = defaultConf.SHOW_GRID,
   onChartDataProcessed,
   onHighlightItem,
+  tickHtmlWidth,
 }) => {
   const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const refTooltip = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
+  const [hoveredYItem, setHoveredYItem] = useState<string | null>(null);
+
+  const handleYAxisHover = useCallback((item: string | null) => {
+    setHoveredYItem(item);
+  }, []);
 
   useLayoutEffect(() => {
     renderCompleteRef.current = true;
@@ -226,24 +233,31 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
         <Title x={width / 2} y={margin.top / 2}>
           {title}
         </Title>
-        <YaxisBand
-          yScale={yScale}
-          width={width}
-          margin={margin}
-          yAxisFormat={yAxisFormat}
-          showGrid={showGrid?.y || false}
-        />
-        <XaxisLinear
-          xScale={xScale}
-          height={height}
-          margin={margin}
-          xAxisFormat={xAxisFormat}
-          xAxisDataType={xAxisDataType}
-          showGrid={showGrid?.x || false}
-          position={"top"}
-          ticks={12}
-          isEmpty={isEmpty}
-        />
+        {!isEmpty && !isLoading && (
+          <>
+            <YaxisBand
+              yScale={yScale}
+              width={width}
+              margin={margin}
+              yAxisFormat={yAxisFormat}
+              showGrid={showGrid?.y || false}
+              onHover={handleYAxisHover}
+              hoveredItem={hoveredYItem}
+              tickHtmlWidth={tickHtmlWidth}
+            />
+            <XaxisLinear
+              xScale={xScale}
+              height={height}
+              margin={margin}
+              xAxisFormat={xAxisFormat}
+              xAxisDataType={xAxisDataType}
+              showGrid={showGrid?.x || false}
+              position={"top"}
+              ticks={12}
+              isEmpty={isEmpty}
+            />
+          </>
+        )}
         {dataSet.map((d, i) => {
           let cumulativeX = margin.left; // Initialize cumulativeX for each row
 
@@ -259,7 +273,16 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                   const shapeStyle = {
                     "--data-color": colorsMapping?.[key],
                     transition: "all 0.1s ease-out",
-                    opacity: disabledItems.includes(key) ? 0.1 : 0.9,
+                    opacity:
+                      hoveredYItem !== null
+                        ? hoveredYItem === `${d?.date}`
+                          ? disabledItems.includes(key)
+                            ? 0.1
+                            : 0.9
+                          : 0.3
+                        : disabledItems.includes(key)
+                          ? 0.1
+                          : 0.9,
                     background: colorsMapping?.[key],
                     borderRadius: "50%",
                     width: "12px",
@@ -281,7 +304,16 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                           fill={colorsMapping?.[key]}
                           style={{
                             transition: "all 0.1s ease-out",
-                            opacity: disabledItems.includes(key) ? 0.1 : 0.9,
+                            opacity:
+                              hoveredYItem !== null
+                                ? hoveredYItem === `${d?.date}`
+                                  ? disabledItems.includes(key)
+                                    ? 0.1
+                                    : 0.9
+                                  : 0.3
+                                : disabledItems.includes(key)
+                                  ? 0.1
+                                  : 0.9,
                           }}
                           onMouseEnter={event => {
                             onHighlightItem([key]);

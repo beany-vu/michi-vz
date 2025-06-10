@@ -431,15 +431,6 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
       // If we have a filter date and limit, sort and limit the keys
       if (filter?.date && filter?.limit) {
-        console.log("Filtering with date:", filter.date);
-        console.log("Available dates in data:", [
-          ...new Set(
-            Object.values(stackedRectData)
-              .flat()
-              .map(d => d.date)
-          ),
-        ]);
-
         renderedKeys = renderedKeys
           .sort((a, b) => {
             const aData = stackedRectData[a]?.find(d => String(d.date) === String(filter.date));
@@ -447,13 +438,9 @@ const VerticalStackBarChart: React.FC<Props> = ({
             const aValue = aData?.value ?? 0;
             const bValue = bData?.value ?? 0;
 
-            console.log(`Comparing ${a} (${aValue}) and ${b} (${bValue}) at date ${filter.date}`);
-
             return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
           })
           .slice(0, filter.limit);
-
-        console.log("Final sorted and limited keys:", renderedKeys);
       }
 
       // Create the current metadata with filtered data and UNIQUE xAxisDomain
@@ -512,15 +499,19 @@ const VerticalStackBarChart: React.FC<Props> = ({
         <Title x={width / 2} y={MARGIN.top / 2}>
           {title}
         </Title>
-        <XaxisBand xScale={xScale} height={height} margin={margin} xAxisFormat={xAxisFormat} />
-        <YaxisLinear
-          yScale={yScale}
-          width={width}
-          height={height}
-          margin={margin}
-          highlightZeroLine={true}
-          yAxisFormat={yAxisFormat}
-        />
+        {filteredDataSet.length > 0 && !isLoading && (
+          <>
+            <XaxisBand xScale={xScale} height={height} margin={margin} xAxisFormat={xAxisFormat} />
+            <YaxisLinear
+              yScale={yScale}
+              width={width}
+              height={height}
+              margin={margin}
+              highlightZeroLine={true}
+              yAxisFormat={yAxisFormat}
+            />
+          </>
+        )}
         <g>
           {keys.map(key => {
             return (

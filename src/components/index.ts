@@ -9,4 +9,5 @@ export { default as ComparableHorizontalBarChart } from "./ComparableHorizontalB
 export { default as DualHorizontalBarChart } from "./DualHorizontalBarChart";
 export { default as RangeChart } from "./RangeChart";
 export { default as ScatterPlotChart } from "./ScatterPlotChart";
+export { default as GapChart } from "./GapChart";
 export { default as LoadingIndicator } from "./shared/LoadingIndicator";

@@ -65,5 +65,10 @@
         "peerDependencies": false
       }
     ]
+  },
+  "settings": {
+    "react": {
+      "version": "19.0"
+    }
   }
 }

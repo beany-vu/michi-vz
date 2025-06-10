@@ -11,20 +11,14 @@ const useLineChartMetadataExpose = (
   filter,
   onChartDataProcessed,
   renderCompleteRef,
-  prevChartDataRef,
-  chartId?: string // Optional chartId to identify which chart emitted the event
+  prevChartDataRef
 ) => {
   // Keep track of the chart ID
-  const chartIdRef = useRef(chartId || `chart-${Math.random().toString(36).substring(2, 9)}`);
   // Track if we've dispatched our first event
   const firstEventDispatchedRef = useRef(false);
 
   useEffect(() => {
     // Log whether render is complete for debugging
-    console.log(
-      "useLineChartMetadataExpose: renderCompleteRef.current =",
-      renderCompleteRef.current
-    );
 
     if (renderCompleteRef.current) {
       // Extract all dates from all series

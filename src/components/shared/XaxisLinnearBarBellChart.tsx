@@ -165,7 +165,16 @@ const XaxisLinear: FC<Props> = ({
       .call(axisBottom)
       .call(g => g.select(".domain").attr("stroke-opacity", 0)) // Make domain line visible
       .call(g => g.selectAll("line").attr("stroke-opacity", 0)) // Make tick lines visible
-      .call(g => g.selectAll("text").attr("fill", "currentColor")); // Ensure text is visible
+      .call(g => g.selectAll("text").attr("fill", "currentColor")) // Ensure text is visible
+      // Add class for tick at 0
+      .call(g => {
+        g.selectAll(".tick").each(function (d) {
+          const tickValue = d instanceof Date ? d.valueOf() : +d;
+          if (tickValue === 0) {
+            d3.select(this).classed("tick-zero", true);
+          }
+        });
+      });
 
     // Keep labels horizontal by default
     g.selectAll(".tick text")

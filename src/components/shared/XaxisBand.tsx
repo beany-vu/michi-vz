@@ -208,4 +208,4 @@ const XaxisBand: FC<Props> = ({
   return <g ref={ref} className="x-axis x-axis-band" />;
 };
 
-export default React.memo(XaxisBand);
+export default XaxisBand;

@@ -20,7 +20,9 @@ declare global {
 // Mock for ResizeObserver
 class ResizeObserverMock {
   observe() {}
+
   unobserve() {}
+
   disconnect() {}
 }
 
@@ -36,7 +38,9 @@ const mockSVGFunctions = () => {
   // Define baseVal and other SVG properties
   class SVGAnimatedString {
     baseVal: string = "";
+
     animVal: string = "";
+
     constructor(value: string) {
       this.baseVal = value;
       this.animVal = value;

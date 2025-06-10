@@ -278,15 +278,19 @@ const RibbonChart: React.FC<Props> = ({
         <Title x={width / 2} y={MARGIN.top / 2}>
           {title}
         </Title>
-        <XaxisBand xScale={xScale} height={height} margin={margin} xAxisFormat={xAxisFormat} />
-        <YaxisLinear
-          yScale={yScale}
-          width={width}
-          height={height}
-          margin={margin}
-          highlightZeroLine={true}
-          yAxisFormat={yAxisFormat}
-        />
+        {filteredDataSet.length > 0 && !isLoading && (
+          <>
+            <XaxisBand xScale={xScale} height={height} margin={margin} xAxisFormat={xAxisFormat} />
+            <YaxisLinear
+              yScale={yScale}
+              width={width}
+              height={height}
+              margin={margin}
+              highlightZeroLine={true}
+              yAxisFormat={yAxisFormat}
+            />
+          </>
+        )}
         <g>
           {keys
             .filter(key => !disabledItems.includes(key))
