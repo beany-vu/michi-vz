@@ -2,6 +2,11 @@ import React, { FC, useRef, useMemo, useLayoutEffect } from "react";
 import { ScaleLinear } from "d3-scale";
 import * as d3 from "d3";
 
+// Simple text width estimation (average character width ~7px for 12px font)
+const estimateTextWidth = (text: string): number => {
+  return text.length * 7;
+};
+
 interface Props {
   yScale: ScaleLinear<number, number>;
   width: number;
@@ -64,6 +69,18 @@ const YaxisLinear: FC<Props> = ({
     // Update transitions
     g.selectAll(".tick text").transition().duration(750).style("opacity", 1);
 
+    // Calculate dynamic tick line length based on label width
+    const tickData = g.selectAll(".tick").data();
+    const maxLabelWidth = Math.max(
+      ...tickData.map(d => {
+        const formatValue = yAxisFormat ? yAxisFormat(d as number) : String(d);
+        return estimateTextWidth(formatValue);
+      })
+    );
+
+    // Use full grid width for horizontal lines to reach chart edge
+    const fullGridWidth = width - margin.right - margin.left;
+
     // Only animate tick lines if y-scale changed
     const tickLines = g
       .selectAll(".tick")
@@ -81,7 +98,7 @@ const YaxisLinear: FC<Props> = ({
       tickLines
         .transition()
         .duration(750)
-        .attr("x2", width - margin.right - margin.left)
+        .attr("x2", fullGridWidth)
         .each(function (d) {
           if (d === 0) {
             d3.select(this)
@@ -91,7 +108,7 @@ const YaxisLinear: FC<Props> = ({
           }
         });
     } else {
-      tickLines.attr("x2", width - margin.right - margin.left).each(function (d) {
+      tickLines.attr("x2", fullGridWidth).each(function (d) {
         if (d === 0) {
           d3.select(this)
             .classed("zero-line", true)
@@ -105,4 +122,4 @@ const YaxisLinear: FC<Props> = ({
   return <g ref={ref}></g>;
 };
 
-export default React.memo(YaxisLinear);
+export default YaxisLinear;

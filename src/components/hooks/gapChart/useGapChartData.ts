@@ -52,12 +52,16 @@ export const useGapChartData = (
   const yAxisDomain = useMemo(() => processedDataSet.map(d => d.label), [processedDataSet]);
 
   // Calculate x-axis domain (min and max values)
-  const xAxisDomain = useMemo(() => {
+  const xAxisDomain = useMemo((): [number, number] => {
     if (processedDataSet.length === 0) return [0, 0];
 
     const allValues = processedDataSet.flatMap(d => [d.value1, d.value2]);
-    const min = Math.min(...allValues, 0);
-    const max = Math.max(...allValues);
+    const dataMin = Math.min(...allValues);
+    const dataMax = Math.max(...allValues);
+    
+    // If all values are positive, start at 0. If there are negative values, include them.
+    const min = dataMin < 0 ? dataMin * 1.05 : 0;  // Start at 0 for positive data
+    const max = dataMax * 1.05;  // Add 5% padding to the maximum
 
     return [min, max];
   }, [processedDataSet]);

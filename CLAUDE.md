@@ -56,3 +56,6 @@ The `MichiVzProvider` component provides theme and color configuration context t
 - Library builds to `dist/` with TypeScript declarations
 - Entry point: `dist/index.js`
 - All components are exported from `src/components/index.ts`
+
+### Note for development
+- On adding new features, remember to has default value if needed to avoid breaking other parts of the lib

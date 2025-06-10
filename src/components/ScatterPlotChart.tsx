@@ -509,7 +509,9 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                   xAxisDataType === "date_annual" ||
                   xAxisDataType === "date_monthly" ? (
                     <XaxisLinear
-                      xScale={xScale as d3.ScaleLinear<number, number> | d3.ScaleTime<number, number>}
+                      xScale={
+                        xScale as d3.ScaleLinear<number, number> | d3.ScaleTime<number, number>
+                      }
                       height={height}
                       margin={margin}
                       xAxisFormat={xAxisFormat}

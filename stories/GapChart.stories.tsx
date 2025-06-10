@@ -27,7 +27,7 @@ The GapChart component visualizes the difference between two values for multiple
     },
   },
   decorators: [
-    (Story) => (
+    Story => (
       <MichiVzProvider colors={["#2563eb", "#dc2626", "#16a34a", "#ca8a04", "#9333ea", "#0891b2"]}>
         <Story />
       </MichiVzProvider>
@@ -42,6 +42,10 @@ The GapChart component visualizes the difference between two values for multiple
     shapesLabelsMapping: {
       description: "Labels for the legend explaining what each shape and the gap represent",
       control: "object",
+    },
+    squareRadius: {
+      description: "Border radius for square shapes (default: 2)",
+      control: { type: "range", min: 0, max: 10, step: 1 },
     },
     shapeValue1: {
       description: "Shape for the first value marker",
@@ -243,6 +247,36 @@ export const WithColorMapping: Story = {
   },
 };
 
+export const WithCustomSquareRadius: Story = {
+  args: {
+    ...Default.args,
+    title: "Custom Square Border Radius",
+    shapeValue1: "square",
+    shapeValue2: "square",
+    squareRadius: 0,
+    shapesLabelsMapping: {
+      value1: "Target (Sharp Square)",
+      value2: "Actual (Sharp Square)",
+      gap: "Performance Gap",
+    },
+  },
+};
+
+export const WithRoundedSquares: Story = {
+  args: {
+    ...Default.args,
+    title: "Rounded Square Shapes",
+    shapeValue1: "square",
+    shapeValue2: "square",
+    squareRadius: 4,
+    shapesLabelsMapping: {
+      value1: "Previous Year (Rounded)",
+      value2: "Current Year (Rounded)",
+      gap: "Year-over-Year Change",
+    },
+  },
+};
+
 export const WithShapeBasedColors: Story = {
   args: {
     ...Default.args,
@@ -360,7 +394,7 @@ export const PositiveGrowthOnly: Story = {
     shapesLabelsMapping: {
       value1: "2019 Baseline",
       value2: "2023 Recovery",
-      gap: "Growth"
+      gap: "Growth",
     },
     xAxisDataType: "number",
     xAxisFormat: (d: number) => `${d}mn`,
@@ -369,6 +403,7 @@ export const PositiveGrowthOnly: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
     onHighlightItem: action("onHighlightItem"),
     onChartDataProcessed: action("onChartDataProcessed"),
+    tickHtmlWidth: 150,
     filter: {
       limit: 20,
       date: "2024",
@@ -743,6 +778,410 @@ export const AdvancedInteractive: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
     onHighlightItem: action("onHighlightItem"),
     onChartDataProcessed: action("onChartDataProcessed"),
+  },
+};
+
+export const AnimatedDataChanges: Story = {
+  render: args => {
+    const [dataVersion, setDataVersion] = React.useState(0);
+
+    const animatedData = React.useMemo(() => {
+      const baseData = generateSampleData();
+
+      // Version 0: Original data
+      if (dataVersion === 0) {
+        return baseData.slice(0, 15);
+      }
+
+      // Version 1: Remove some items
+      if (dataVersion === 1) {
+        return baseData.filter((_, index) => index % 2 === 0).slice(0, 10);
+      }
+
+      // Version 2: Add new items and modify existing
+      if (dataVersion === 2) {
+        const modifiedData = baseData.slice(0, 8).map(item => ({
+          ...item,
+          value1: item.value1 * (0.8 + Math.random() * 0.4),
+          value2: item.value2 * (0.8 + Math.random() * 0.4),
+          difference: 0, // Will be recalculated
+        }));
+
+        // Add some new items
+        const newItems = [
+          {
+            label: "New Country 1",
+            value1: 15,
+            value2: 18,
+            difference: -3,
+            date: "2024",
+          },
+          {
+            label: "New Country 2",
+            value1: 22,
+            value2: 12,
+            difference: 10,
+            date: "2024",
+          },
+          {
+            label: "New Country 3",
+            value1: 8,
+            value2: 14,
+            difference: -6,
+            date: "2024",
+          },
+        ];
+
+        const combined = [...modifiedData, ...newItems];
+        // Recalculate differences
+        return combined.map(item => ({
+          ...item,
+          difference: item.value1 - item.value2,
+        }));
+      }
+
+      // Version 3: Reorder items
+      if (dataVersion === 3) {
+        return [...baseData.slice(0, 12)].sort(() => Math.random() - 0.5);
+      }
+
+      return baseData;
+    }, [dataVersion]);
+
+    return (
+      <div>
+        <div
+          style={{
+            marginBottom: 20,
+            display: "flex",
+            gap: "10px",
+            padding: "20px",
+            backgroundColor: "#f3f4f6",
+            borderRadius: "8px",
+          }}
+        >
+          <button
+            onClick={() => setDataVersion(0)}
+            style={{
+              padding: "10px 20px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              backgroundColor: dataVersion === 0 ? "#3b82f6" : "white",
+              color: dataVersion === 0 ? "white" : "black",
+              cursor: "pointer",
+              fontWeight: "500",
+            }}
+          >
+            Original Data (15 items)
+          </button>
+          <button
+            onClick={() => setDataVersion(1)}
+            style={{
+              padding: "10px 20px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              backgroundColor: dataVersion === 1 ? "#ef4444" : "white",
+              color: dataVersion === 1 ? "white" : "black",
+              cursor: "pointer",
+              fontWeight: "500",
+            }}
+          >
+            Remove Items (10 items)
+          </button>
+          <button
+            onClick={() => setDataVersion(2)}
+            style={{
+              padding: "10px 20px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              backgroundColor: dataVersion === 2 ? "#10b981" : "white",
+              color: dataVersion === 2 ? "white" : "black",
+              cursor: "pointer",
+              fontWeight: "500",
+            }}
+          >
+            Add & Modify (11 items)
+          </button>
+          <button
+            onClick={() => setDataVersion(3)}
+            style={{
+              padding: "10px 20px",
+              borderRadius: "6px",
+              border: "1px solid #d1d5db",
+              backgroundColor: dataVersion === 3 ? "#f59e0b" : "white",
+              color: dataVersion === 3 ? "white" : "black",
+              cursor: "pointer",
+              fontWeight: "500",
+            }}
+          >
+            Reorder (12 items)
+          </button>
+        </div>
+
+        <div
+          style={{
+            marginBottom: "10px",
+            padding: "10px",
+            backgroundColor: "#eff6ff",
+            borderRadius: "4px",
+            fontSize: "14px",
+          }}
+        >
+          <strong>Animation Note:</strong> Watch how items smoothly enter, exit, and transition when
+          data changes. New items fade in, removed items fade out, and existing items smoothly move
+          to their new positions.
+        </div>
+
+        <GapChart
+          {...args}
+          dataSet={animatedData}
+          title="Animated Gap Chart - Data Changes with Enter/Exit Transitions"
+          enableTransitions={true}
+        />
+      </div>
+    );
+  },
+  args: {
+    colors: ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4"],
+    shapeValue1: "circle",
+    shapeValue2: "triangle",
+    shapesLabelsMapping: {
+      value1: "2019 Arrivals",
+      value2: "2023 Arrivals",
+      gap: "Recovery Gap",
+    },
+    xAxisDataType: "number",
+    xAxisFormat: (d: number) => `${d}mn`,
+    width: 1000,
+    height: 600,
+    margin: { top: 50, right: 150, bottom: 100, left: 150 },
+    filter: {
+      limit: 20,
+      date: "2024",
+      criteria: "difference",
+      sortingDir: "desc",
+    },
+    onHighlightItem: action("onHighlightItem"),
+    onChartDataProcessed: action("onChartDataProcessed"),
+  },
+};
+
+// Test story for X-axis zero positioning with all positive values
+export const AllPositiveValues: Story = {
+  args: {
+    dataSet: [
+      { label: "United States", value1: 120, value2: 150, difference: -30, date: "2024" },
+      { label: "China", value1: 180, value2: 200, difference: -20, date: "2024" },
+      { label: "Germany", value1: 80, value2: 95, difference: -15, date: "2024" },
+      { label: "France", value1: 60, value2: 85, difference: -25, date: "2024" },
+      { label: "Japan", value1: 50, value2: 70, difference: -20, date: "2024" },
+      { label: "United Kingdom", value1: 45, value2: 65, difference: -20, date: "2024" },
+      { label: "Italy", value1: 40, value2: 60, difference: -20, date: "2024" },
+      { label: "Canada", value1: 35, value2: 55, difference: -20, date: "2024" },
+      { label: "South Korea", value1: 30, value2: 50, difference: -20, date: "2024" },
+      { label: "Australia", value1: 25, value2: 45, difference: -20, date: "2024" },
+    ],
+    title: "All Positive Values - Zero Should Be at Left Edge",
+    colors: ["#3b82f6", "#10b981", "#f59e0b"],
+    shapeValue1: "circle",
+    shapeValue2: "circle",
+    shapesLabelsMapping: {
+      value1: "Q1 2024",
+      value2: "Q2 2024",
+      gap: "Growth",
+    },
+    xAxisDataType: "number",
+    xAxisFormat: (d: number) => `$${d}M`,
+    yAxisFormat: (d: string) => d,
+    width: 1000,
+    height: 500,
+    margin: { top: 50, right: 150, bottom: 100, left: 80 },  // Reduced left margin for shorter labels
+    onHighlightItem: action("onHighlightItem"),
+    onChartDataProcessed: action("onChartDataProcessed"),
+    filter: undefined,
+    ticks: 5,
+  },
+};
+
+// Test story with values very close to zero
+export const ValuesNearZero: Story = {
+  args: {
+    dataSet: [
+      { label: "Product A", value1: 2.5, value2: 3.2, difference: -0.7, date: "2024" },
+      { label: "Product B", value1: 1.8, value2: 2.1, difference: -0.3, date: "2024" },
+      { label: "Product C", value1: 0.5, value2: 1.2, difference: -0.7, date: "2024" },
+      { label: "Product D", value1: 3.2, value2: 2.8, difference: 0.4, date: "2024" },
+      { label: "Product E", value1: 1.5, value2: 2.0, difference: -0.5, date: "2024" },
+      { label: "Product F", value1: 0.8, value2: 1.5, difference: -0.7, date: "2024" },
+    ],
+    title: "Values Near Zero - Zero Should Still Be at Left Edge",
+    colors: ["#ef4444", "#10b981"],
+    shapeValue1: "square",
+    shapeValue2: "square",
+    shapesLabelsMapping: {
+      value1: "Expected",
+      value2: "Actual",
+      gap: "Variance",
+    },
+    xAxisDataType: "number",
+    xAxisFormat: (d: number) => d.toFixed(1),
+    width: 1000,
+    height: 400,
+    margin: { top: 50, right: 150, bottom: 100, left: 150 },
+    onHighlightItem: action("onHighlightItem"),
+    onChartDataProcessed: action("onChartDataProcessed"),
+    filter: undefined,
+  },
+};
+
+// Test story with larger positive values
+export const LargePositiveValues: Story = {
+  args: {
+    dataSet: [
+      { label: "Company A", value1: 850000, value2: 920000, difference: -70000, date: "2024" },
+      { label: "Company B", value1: 720000, value2: 780000, difference: -60000, date: "2024" },
+      { label: "Company C", value1: 650000, value2: 700000, difference: -50000, date: "2024" },
+      { label: "Company D", value1: 580000, value2: 620000, difference: -40000, date: "2024" },
+      { label: "Company E", value1: 450000, value2: 480000, difference: -30000, date: "2024" },
+      { label: "Company F", value1: 320000, value2: 350000, difference: -30000, date: "2024" },
+      { label: "Company G", value1: 280000, value2: 300000, difference: -20000, date: "2024" },
+      { label: "Company H", value1: 150000, value2: 180000, difference: -30000, date: "2024" },
+    ],
+    title: "Large Positive Values - $0 Should Be at Left Edge",
+    colors: ["#8b5cf6", "#06b6d4", "#10b981"],
+    shapeValue1: "triangle",
+    shapeValue2: "circle",
+    shapesLabelsMapping: {
+      value1: "FY2023 Revenue",
+      value2: "FY2024 Revenue",
+      gap: "YoY Growth",
+    },
+    xAxisDataType: "number",
+    xAxisFormat: (d: number) => `$${(d / 1000).toFixed(0)}K`,
+    width: 1200,
+    height: 500,
+    margin: { top: 50, right: 180, bottom: 100, left: 180 },
+    onHighlightItem: action("onHighlightItem"),
+    onChartDataProcessed: action("onChartDataProcessed"),
+    filter: {
+      limit: 8,
+      date: "2024",
+      criteria: "value2",
+      sortingDir: "desc",
+    },
+  },
+};
+
+// Test story with mixed positive and negative values
+// Story demonstrating shadow effects
+export const WithShadowEffects: Story = {
+  args: {
+    dataSet: [
+      { label: "Product A", value1: 45, value2: 60, difference: -15, date: "2024" },
+      { label: "Product B", value1: 38, value2: 52, difference: -14, date: "2024" },
+      { label: "Product C", value1: 42, value2: 48, difference: -6, date: "2024" },
+      { label: "Product D", value1: 55, value2: 45, difference: 10, date: "2024" },
+      { label: "Product E", value1: 35, value2: 42, difference: -7, date: "2024" },
+      { label: "Product F", value1: 48, value2: 58, difference: -10, date: "2024" },
+    ],
+    title: "Gap Chart with Shadow Effects",
+    colors: ["#3b82f6", "#10b981", "#f59e0b"],
+    shapeValue1: "circle",
+    shapeValue2: "square",
+    shapesLabelsMapping: {
+      value1: "Target",
+      value2: "Actual",
+      gap: "Variance",
+    },
+    enableShadow: true,
+    shadowConfig: {
+      blur: 4,
+      dx: 2,
+      dy: 3,
+      opacity: 0.3,
+      color: "#000000",
+    },
+    xAxisDataType: "number",
+    xAxisFormat: (d: number) => `${d}`,
+    width: 1000,
+    height: 400,
+    margin: { top: 50, right: 150, bottom: 100, left: 100 },
+    onHighlightItem: action("onHighlightItem"),
+    onChartDataProcessed: action("onChartDataProcessed"),
+    filter: undefined,
+  },
+};
+
+// Story with colored shadows
+export const WithColoredShadows: Story = {
+  args: {
+    dataSet: [
+      { label: "Team Alpha", value1: 85, value2: 92, difference: -7, date: "2024" },
+      { label: "Team Beta", value1: 78, value2: 88, difference: -10, date: "2024" },
+      { label: "Team Gamma", value1: 92, value2: 85, difference: 7, date: "2024" },
+      { label: "Team Delta", value1: 70, value2: 82, difference: -12, date: "2024" },
+      { label: "Team Epsilon", value1: 88, value2: 91, difference: -3, date: "2024" },
+    ],
+    title: "Performance Metrics with Blue Shadow",
+    colors: ["#3b82f6", "#ef4444"],
+    shapeValue1: "triangle",
+    shapeValue2: "circle",
+    shapesLabelsMapping: {
+      value1: "Q3 Performance",
+      value2: "Q4 Performance",
+      gap: "Improvement",
+    },
+    enableShadow: true,
+    shadowConfig: {
+      blur: 5,
+      dx: 0,
+      dy: 4,
+      opacity: 0.4,
+      color: "#3b82f6", // Blue shadow
+    },
+    xAxisDataType: "number",
+    xAxisFormat: (d: number) => `${d}%`,
+    width: 1000,
+    height: 450,
+    margin: { top: 50, right: 150, bottom: 100, left: 120 },
+    onHighlightItem: action("onHighlightItem"),
+    onChartDataProcessed: action("onChartDataProcessed"),
+    filter: {
+      limit: 5,
+      date: "2024",
+      criteria: "difference",
+      sortingDir: "desc",
+    },
+  },
+};
+
+export const MixedPositiveNegativeValues: Story = {
+  args: {
+    dataSet: [
+      { label: "Metric A", value1: -20, value2: 30, difference: -50, date: "2024" },
+      { label: "Metric B", value1: -10, value2: 15, difference: -25, date: "2024" },
+      { label: "Metric C", value1: 5, value2: -10, difference: 15, date: "2024" },
+      { label: "Metric D", value1: -5, value2: 20, difference: -25, date: "2024" },
+      { label: "Metric E", value1: 15, value2: -5, difference: 20, date: "2024" },
+      { label: "Metric F", value1: -15, value2: 10, difference: -25, date: "2024" },
+    ],
+    title: "Mixed Positive/Negative - Zero Line Should Be Visible",
+    colors: ["#dc2626", "#10b981", "#3b82f6"],
+    shapeValue1: "circle",
+    shapeValue2: "triangle",
+    shapesLabelsMapping: {
+      value1: "Baseline",
+      value2: "Current",
+      gap: "Change",
+    },
+    xAxisDataType: "number",
+    xAxisFormat: (d: number) => (d >= 0 ? `+${d}` : `${d}`),
+    width: 1000,
+    height: 400,
+    margin: { top: 50, right: 150, bottom: 100, left: 150 },
+    onHighlightItem: action("onHighlightItem"),
+    onChartDataProcessed: action("onChartDataProcessed"),
+    filter: undefined,
   },
 };
 

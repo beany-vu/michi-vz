@@ -168,7 +168,7 @@ const XaxisLinear: FC<Props> = ({
       .call(g => g.selectAll("text").attr("fill", "currentColor")) // Ensure text is visible
       // Add class for tick at 0
       .call(g => {
-        g.selectAll(".tick").each(function(d) {
+        g.selectAll(".tick").each(function (d) {
           const tickValue = d instanceof Date ? d.valueOf() : +d;
           if (tickValue === 0) {
             d3.select(this).classed("tick-zero", true);

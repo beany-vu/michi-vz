@@ -10,12 +10,12 @@ export const useGapChartScales = (
   xAxisDataType: "number" | "date_annual" | "date_monthly"
 ) => {
   const xScale = useMemo(() => {
+    // Use margin.left directly - it already provides space for Y-axis labels
     if (xAxisDataType === "number") {
       return d3
         .scaleLinear()
-        .domain(xAxisDomain)
-        .range([margin.left, width - margin.right])
-        .nice();
+        .domain(xAxisDomain as [number, number])
+        .range([margin.left, width - margin.right]);
     } else if (xAxisDataType === "date_annual") {
       const [min, max] = xAxisDomain;
       return d3

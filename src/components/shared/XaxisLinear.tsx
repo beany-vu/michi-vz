@@ -144,32 +144,47 @@ const XaxisLinear: FC<Props> = ({
       return result;
     }
 
-    // For numeric scales or other time scales
-    result.push(first);
-
-    const valueRange = +last - +first;
-    const step = valueRange / (targetTickCount - 1);
-
-    for (let i = 1; i < targetTickCount - 1; i++) {
-      const value = +first + i * step;
-      if (isTimeScale) {
-        result.push(new Date(value));
-      } else {
+    // For numeric scales, ensure 0 is the first tick if domain starts at 0
+    if (!isTimeScale && +first === 0) {
+      result.push(0);  // Start with 0
+      
+      const valueRange = +last - +first;
+      const step = valueRange / (targetTickCount - 1);
+      
+      for (let i = 1; i < targetTickCount - 1; i++) {
+        const value = i * step;
         result.push(value);
       }
-    }
+      
+      result.push(last);
+    } else {
+      // For other cases, use the standard approach
+      result.push(first);
 
-    result.push(last);
+      const valueRange = +last - +first;
+      const step = valueRange / (targetTickCount - 1);
 
-    if (
-      !isTimeScale &&
-      showZeroLine &&
-      !result.includes(0) &&
-      ((+first < 0 && 0 < +last) || (+last < 0 && 0 < +first))
-      // Ensure 0 is included if it's within the domain
-    ) {
-      result.push(0);
-      result.sort((a, b) => b - a);
+      for (let i = 1; i < targetTickCount - 1; i++) {
+        const value = +first + i * step;
+        if (isTimeScale) {
+          result.push(new Date(value));
+        } else {
+          result.push(value);
+        }
+      }
+
+      result.push(last);
+
+      if (
+        !isTimeScale &&
+        showZeroLine &&
+        !result.includes(0) &&
+        (+first <= 0 && 0 <= +last)
+        // Ensure 0 is included if it's within the domain (including at boundaries)
+      ) {
+        result.push(0);
+        result.sort((a, b) => a - b);  // Sort ascending for proper order
+      }
     }
 
     return result;
@@ -203,22 +218,22 @@ const XaxisLinear: FC<Props> = ({
 
     // Call the axis
     g.call(axisBottom)
-      // Style the domain line (horizontal axis line)
-      .call(g => g.select(".domain").attr("stroke", "lightgray").attr("stroke-width", 1))
-      // Style the tick lines
-      .call(g => g.selectAll(".tick line").attr("stroke", "lightgray").attr("stroke-opacity", 0.5))
-      // Style the text
+      // Remove the domain line (horizontal axis line)
+      .call(g => g.select(".domain").remove())
+      // Remove the default tick lines
+      .call(g => g.selectAll(".tick line").remove())
+      // Style the text (moved down to align with circles)
       .call(g =>
         g
           .selectAll(".tick text")
           .attr("fill", "#666")
           .attr("font-size", "12px")
           .attr("text-anchor", "middle")
-          .attr("dy", "1em")
+          .attr("dy", "1.8em")
       )
       // Add class for tick at 0
       .call(g => {
-        g.selectAll(".tick").each(function(d) {
+        g.selectAll(".tick").each(function (d) {
           const tickValue = d instanceof Date ? d.valueOf() : +d;
           if (tickValue === 0) {
             d3.select(this).classed("tick-zero", true);
@@ -241,25 +256,36 @@ const XaxisLinear: FC<Props> = ({
       }
     }
 
-    // Add grid lines if requested
+    // Add grid lines if requested (stop short of axis line to avoid touching circles)
     if (showGrid) {
       g.selectAll(".tick")
         .append("line")
         .attr("class", "grid-line")
         .attr("x1", 0)
-        .attr("y1", 0)
+        .attr("y1", -11) // Start 8px above axis line to avoid touching circles
         .attr("x2", 0)
-        .attr(
-          "y2",
-          position === "top"
-            ? height - margin.top - margin.bottom
-            : -(height - margin.top - margin.bottom)
-        )
-        .attr("stroke", "lightgray")
-        .attr("stroke-width", 0.5)
-        .attr("stroke-dasharray", "3,3")
+        .attr("y2", -(height - margin.top - margin.bottom - 10)) // Extend upward through chart
+        .attr("stroke", "gray")
+        .attr("stroke-width", 1)
+        .attr("stroke-dasharray", "1,3")
         .attr("opacity", 0.5);
     }
+
+    // Add circles/dots instead of tick lines (moved down 8px to avoid grid overlap)
+    g.selectAll(".tick")
+      .append("circle")
+      .attr("class", "tick-dot")
+      .attr("cx", 0)
+      .attr("cy", 8)
+      .attr("r", 2)
+      .attr("fill", "lightgray")
+      .style("opacity", 1)
+      .on("mouseover", function () {
+        d3.select(this).attr("r", 4).attr("fill", "#666");
+      })
+      .on("mouseout", function () {
+        d3.select(this).attr("r", 2).attr("fill", "lightgray");
+      });
 
     // Cleanup function
     return () => {

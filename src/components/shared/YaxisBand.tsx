@@ -2,6 +2,11 @@ import React, { FC, useLayoutEffect, useRef, useMemo, useCallback } from "react"
 import { ScaleBand } from "d3-scale";
 import * as d3 from "d3";
 
+// Simple text width estimation (average character width ~7px for 12px font)
+const estimateTextWidth = (text: string): number => {
+  return text.length * 7;
+};
+
 interface Props {
   yScale: ScaleBand<string>;
   width: number;
@@ -38,10 +43,29 @@ const YaxisBand: FC<Props> = ({
       .tickSize(0);
   }, [yScale, yAxisFormat]);
 
-  // Memoize the grid width calculation
+  // Memoize the grid width calculation with dynamic adjustment
   const gridWidth = useMemo(() => {
-    return width - margin.left - margin.right;
-  }, [width, margin]);
+    // Calculate the maximum label width
+    const domain = yScale.domain();
+    const maxLabelWidth = Math.max(
+      ...domain.map(d => {
+        const formatValue = yAxisFormat ? yAxisFormat(d) : String(d);
+        return estimateTextWidth(formatValue);
+      })
+    );
+
+    // Calculate adjusted grid width: full width minus label overlap
+    const labelOverlapBuffer = 10; // 10px buffer
+    const adjustedGridWidth = Math.max(
+      width -
+        margin.left -
+        margin.right -
+        Math.max(0, maxLabelWidth - tickHtmlWidth + labelOverlapBuffer),
+      50 // Minimum grid line length
+    );
+
+    return adjustedGridWidth;
+  }, [width, margin, yScale, yAxisFormat, tickHtmlWidth]);
 
   const updateAxis = useCallback(() => {
     if (!ref.current) return;
@@ -89,17 +113,19 @@ const YaxisBand: FC<Props> = ({
         }
       });
 
-    // Add dashed lines on each tick
+    // Add dashed lines on each tick (full width from Y-axis to right edge)
+    // Grid lines should start at x=0 (Y-axis position) and extend the full width
+    const fullGridWidth = width - margin.left - margin.right;
     g.selectAll(".tick")
       .append("line")
       .attr("class", "tick-line")
       .attr("x1", 0)
-      .attr("x2", gridWidth)
+      .attr("x2", fullGridWidth)
       .attr("y1", 0)
       .attr("y2", 0)
       .style("stroke-dasharray", "1.5")
       .style("stroke", showGrid ? "lightgray" : "transparent");
-  }, [axisGenerator, margin.left, showGrid, gridWidth, onHover]);
+  }, [axisGenerator, margin.left, showGrid, width, margin.right, onHover, tickHtmlWidth]);
 
   useLayoutEffect(() => {
     if (!renderedRef.current) {
@@ -136,4 +162,4 @@ const YaxisBand: FC<Props> = ({
   return <g ref={ref} />;
 };
 
-export default React.memo(YaxisBand);
+export default YaxisBand;
