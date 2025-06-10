@@ -1,7 +1,7 @@
 import AreaChart from "../src/components/AreaChart";
 import { Meta } from "@storybook/react";
 import { MichiVzProvider } from "../src/components";
-import React from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { fn } from "@storybook/test";
 
 // Define the default metadata for the component
@@ -9,8 +9,86 @@ export default {
   title: "Charts/Area Chart",
   component: AreaChart,
   tags: ["autodocs"],
+  parameters: {
+    docs: {
+      description: {
+        component: `
+# AreaChart - Color Management & Integration Guide
+
+The AreaChart component supports multiple color management patterns and state integration options.
+
+## 🎨 Color Management Features
+
+### 1. Self-Generated Colors (Recommended)
+- **Automatic**: Colors are auto-generated from a palette
+- **Customizable**: Provide your own color palette via \`colors\` prop
+- **Consistent**: Colors remain stable across re-renders
+- **Callback**: Get generated colors via \`onColorMappingGenerated\`
+
+### 2. Explicit Color Mapping
+- **Direct Control**: Specify exact colors for each category
+- **Override**: Takes precedence over auto-generation
+- **Predictable**: Colors are exactly what you specify
+
+### 3. Context-Based (Global State)
+- **Shared**: Colors and highlights shared across multiple charts
+- **Coordinated**: All charts respond to the same interactions
+- **Centralized**: Managed via MichiVzProvider
+
+## 🔗 Redux Integration Pattern
+
+\`\`\`jsx
+// 1. Store generated colors in Redux
+<AreaChart
+  onColorMappingGenerated={(colors) => 
+    dispatch(setColorMapping({ chartId: 'chart1', colors }))
+  }
+/>
+
+// 2. Use stored colors in other charts
+<AreaChart
+  colorsMapping={colorMappings.chart1 || {}}
+/>
+\`\`\`
+
+## 📊 Story Examples
+
+- **Primary**: Basic usage with predefined colors
+- **SelfGeneratedColors**: Automatic color generation
+- **WithCustomColors**: Custom color palette
+- **WithColorMapping**: Explicit color assignments
+- **WithSharedColorMapping**: Color sharing between charts
+- **InteractiveHighlight**: Hover interactions & category toggles
+- **TestHighlighting**: Programmatic highlighting controls
+
+## 🎯 Interactive Features
+
+- **Hover Highlighting**: Mouse over areas to highlight categories
+- **Category Toggle**: Enable/disable categories dynamically  
+- **Cross-Chart Sync**: Synchronize highlights across multiple charts
+- **State Persistence**: Store interactions in Redux/context
+        `
+      }
+    }
+  },
   argTypes: {
     onChartDataProcessed: { action: "onChartDataProcessed" },
+    onColorMappingGenerated: { 
+      action: "onColorMappingGenerated",
+      description: "Callback fired when colors are auto-generated. Use this to store colors in Redux/state management."
+    },
+    onHighlightItem: {
+      action: "onHighlightItem", 
+      description: "Callback fired when user hovers/highlights categories. Use for cross-chart synchronization."
+    },
+    colors: {
+      description: "Custom color palette for auto-generation. Defaults to D3 category colors.",
+      control: { type: "object" }
+    },
+    colorsMapping: {
+      description: "Explicit color mapping for categories. Overrides auto-generation.",
+      control: { type: "object" }
+    }
   },
   decorators: [
     Story => (
@@ -20,7 +98,6 @@ export default {
           "Semi-processed": "purple",
           Raw: "orange",
         }}
-        // highlightItems={["Processed"]}
       >
         <Story />
       </MichiVzProvider>
@@ -32,6 +109,7 @@ export default {
 export const Primary = {
   args: {
     onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
     colorsMapping: {
       Raw: "red",
       "Semi-processed": "blue",
@@ -508,5 +586,597 @@ export const YearlyTicks = {
       return "";
     },
     ticks: 3,
+  },
+};
+
+export const SelfGeneratedColors = {
+  args: {
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
+    // No colorsMapping provided - colors will be auto-generated
+    keys: ["Category A", "Category B", "Category C", "Category D"],
+    series: [
+      {
+        date: "2023-01",
+        "Category A": 25,
+        "Category B": 30,
+        "Category C": 20,
+        "Category D": 25,
+      },
+      {
+        date: "2023-02",
+        "Category A": 30,
+        "Category B": 25,
+        "Category C": 25,
+        "Category D": 20,
+      },
+      {
+        date: "2023-03",
+        "Category A": 20,
+        "Category B": 35,
+        "Category C": 30,
+        "Category D": 15,
+      },
+      {
+        date: "2023-04",
+        "Category A": 35,
+        "Category B": 20,
+        "Category C": 25,
+        "Category D": 20,
+      },
+    ],
+    width: 900,
+    height: 480,
+    margin: {
+      top: 50,
+      right: 70,
+      bottom: 70,
+      left: 70,
+    },
+    yAxisFormat: (d: any) => `${d}%`,
+    title: "Self-Generated Colors Example",
+    yAxisDomain: [0, 100],
+    xAxisDataType: "date_monthly",
+    xAxisFormat: (d: any) => {
+      const date = new Date(d);
+      return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+    },
+    ticks: 4,
+  },
+};
+
+// Interactive story with highlight functionality
+export const InteractiveHighlight = {
+  parameters: {
+    docs: {
+      description: {
+        story: `
+**Interactive Highlighting & State Management**
+
+This story shows how to implement interactive highlighting with category toggles:
+
+\`\`\`jsx
+const [highlightedItems, setHighlightedItems] = useState([]);
+const [disabledItems, setDisabledItems] = useState([]);
+
+<MichiVzProvider highlightItems={highlightedItems} disabledItems={disabledItems}>
+  <AreaChart
+    onHighlightItem={setHighlightedItems}  // Handle hover highlights
+    {...props}
+  />
+</MichiVzProvider>
+\`\`\`
+
+**Features Demonstrated:**
+- **Hover Highlighting**: Mouse over chart areas to highlight categories
+- **Category Toggling**: Click buttons to enable/disable categories  
+- **Real-time Feedback**: Visual display of current highlight state
+- **State Synchronization**: Changes affect all charts in the provider
+
+**Redux Integration:**
+\`\`\`jsx
+// Store interactions in Redux
+onHighlightItem={(items) => dispatch(setHighlightItems(items))}
+
+// Use from Redux state
+const highlightItems = useSelector(state => state.charts.highlightItems);
+\`\`\`
+        `
+      }
+    }
+  },
+  render: (args: any) => {
+    const [highlightedItems, setHighlightedItems] = useState<string[]>([]);
+    const [disabledItems, setDisabledItems] = useState<string[]>([]);
+
+    return (
+      <div>
+        <div style={{ marginBottom: "20px" }}>
+          <h3>Hover over the chart to highlight areas</h3>
+          <p>
+            <strong>Currently highlighted:</strong>{" "}
+            {highlightedItems.length > 0 ? highlightedItems.join(", ") : "None"}
+          </p>
+          <div style={{ marginTop: "10px" }}>
+            <strong>Toggle categories (click to disable/enable):</strong>
+            <div style={{ display: "flex", gap: "10px", marginTop: "5px" }}>
+              {args.keys.map((key: string) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setDisabledItems(prev =>
+                      prev.includes(key)
+                        ? prev.filter(item => item !== key)
+                        : [...prev, key]
+                    );
+                  }}
+                  style={{
+                    padding: "5px 10px",
+                    cursor: "pointer",
+                    backgroundColor: disabledItems.includes(key) ? "#ccc" : "#1f77b4",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    textDecoration: disabledItems.includes(key) ? "line-through" : "none",
+                  }}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <MichiVzProvider highlightItems={highlightedItems} disabledItems={disabledItems}>
+          <AreaChart
+            {...args}
+            onHighlightItem={setHighlightedItems}
+          />
+        </MichiVzProvider>
+      </div>
+    );
+  },
+  args: {
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
+    keys: ["Raw", "Semi-processed", "Processed"],
+    series: Primary.args.series.slice(0, 24), // Use subset of data for cleaner demo
+    width: 900,
+    height: 480,
+    margin: {
+      top: 50,
+      right: 70,
+      bottom: 70,
+      left: 70,
+    },
+    yAxisFormat: (d: any) => `${d}%`,
+    title: "Interactive Area Chart - Hover to Highlight",
+    yAxisDomain: [0, 100],
+    xAxisDataType: "date_monthly",
+    xAxisFormat: (d: any) => {
+      const date = new Date(d);
+      return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+    },
+    ticks: 6,
+  },
+};
+
+// Story with predefined highlights
+export const WithPredefinedHighlight = {
+  render: (args: any) => {
+    return (
+      <div>
+        <div style={{ marginBottom: "20px" }}>
+          <h3>Area Chart with "Processed" Category Pre-highlighted</h3>
+          <p>The "Processed" category is highlighted by default via MichiVzProvider</p>
+        </div>
+        <MichiVzProvider 
+          highlightItems={["Processed"]}
+          colorsMapping={{
+            Raw: "#ff7f0e",
+            "Semi-processed": "#2ca02c",
+            Processed: "#1f77b4",
+          }}
+        >
+          <AreaChart {...args} />
+        </MichiVzProvider>
+      </div>
+    );
+  },
+  args: {
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
+    onHighlightItem: fn(),
+    keys: ["Raw", "Semi-processed", "Processed"],
+    series: Primary.args.series.slice(0, 12), // Use one year of data
+    width: 900,
+    height: 480,
+    margin: {
+      top: 50,
+      right: 70,
+      bottom: 70,
+      left: 70,
+    },
+    yAxisFormat: (d: any) => `${d}%`,
+    title: "Production Data by Processing Stage",
+    yAxisDomain: [0, 100],
+    xAxisDataType: "date_monthly",
+    xAxisFormat: (d: any) => {
+      const date = new Date(d);
+      return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+    },
+    ticks: 6,
+  },
+};
+
+// Story with custom colors array
+export const WithCustomColors = {
+  parameters: {
+    docs: {
+      description: {
+        story: `
+**Custom Color Palette Example**
+
+This story demonstrates how to provide a custom color palette for automatic color generation:
+
+\`\`\`jsx
+<AreaChart
+  colors={["#e91e63", "#9c27b0", "#673ab7", "#3f51b5"]}  // Material Design colors
+  onColorMappingGenerated={(colors) => {
+    // colors = { "Category A": "#e91e63", "Category B": "#9c27b0", ... }
+    console.log("Generated mapping:", colors);
+  }}
+/>
+\`\`\`
+
+**Use Cases:**
+- Brand-specific color schemes
+- Accessibility-compliant palettes  
+- Theme-based color variations
+- Custom color requirements
+        `
+      }
+    }
+  },
+  args: {
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
+    onHighlightItem: fn(),
+    // Custom color palette
+    colors: ["#e91e63", "#9c27b0", "#673ab7", "#3f51b5"],
+    keys: ["Category A", "Category B", "Category C", "Category D"],
+    series: [
+      {
+        date: "2023-Q1",
+        "Category A": 30,
+        "Category B": 25,
+        "Category C": 25,
+        "Category D": 20,
+      },
+      {
+        date: "2023-Q2",
+        "Category A": 25,
+        "Category B": 30,
+        "Category C": 20,
+        "Category D": 25,
+      },
+      {
+        date: "2023-Q3",
+        "Category A": 35,
+        "Category B": 20,
+        "Category C": 30,
+        "Category D": 15,
+      },
+      {
+        date: "2023-Q4",
+        "Category A": 20,
+        "Category B": 35,
+        "Category C": 25,
+        "Category D": 20,
+      },
+    ],
+    width: 900,
+    height: 480,
+    margin: {
+      top: 50,
+      right: 70,
+      bottom: 70,
+      left: 70,
+    },
+    yAxisFormat: (d: any) => `${d}%`,
+    title: "Custom Color Palette Example",
+    yAxisDomain: [0, 100],
+    xAxisDataType: "date_monthly",
+    xAxisFormat: (d: any) => d,
+    ticks: 4,
+  },
+};
+
+// Story with explicit color mapping
+export const WithColorMapping = {
+  args: {
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
+    onHighlightItem: fn(),
+    // Explicit color mapping for each category
+    colorsMapping: {
+      "Sales": "#4caf50",
+      "Marketing": "#ff9800",
+      "Development": "#2196f3",
+      "Support": "#f44336",
+    },
+    keys: ["Sales", "Marketing", "Development", "Support"],
+    series: [
+      {
+        date: 1,
+        "Sales": 45,
+        "Marketing": 20,
+        "Development": 25,
+        "Support": 10,
+      },
+      {
+        date: 2,
+        "Sales": 40,
+        "Marketing": 25,
+        "Development": 20,
+        "Support": 15,
+      },
+      {
+        date: 3,
+        "Sales": 50,
+        "Marketing": 15,
+        "Development": 25,
+        "Support": 10,
+      },
+      {
+        date: 4,
+        "Sales": 35,
+        "Marketing": 30,
+        "Development": 20,
+        "Support": 15,
+      },
+    ],
+    width: 900,
+    height: 480,
+    margin: {
+      top: 50,
+      right: 70,
+      bottom: 70,
+      left: 70,
+    },
+    yAxisFormat: (d: any) => `${d}%`,
+    title: "Department Budget Allocation",
+    yAxisDomain: [0, 100],
+    xAxisDataType: "number",
+    xAxisFormat: (d: any) => {
+      const months = ["Jan", "Feb", "Mar", "Apr"];
+      return months[d - 1] || `Month ${d}`;
+    },
+    ticks: 4,
+  },
+};
+
+// Story demonstrating shared color mapping between charts
+export const WithSharedColorMapping = {
+  parameters: {
+    docs: {
+      description: {
+        story: `
+**Redux Integration Example**
+
+This story demonstrates the complete pattern for sharing colors between charts via state management:
+
+\`\`\`jsx
+// 1. First chart generates colors
+const [generatedColors, setGeneratedColors] = useState({});
+
+<AreaChart
+  onColorMappingGenerated={setGeneratedColors}  // Store generated colors
+  title="Chart 1: Generates Colors"
+/>
+
+// 2. Second chart uses the same colors
+<AreaChart
+  colorsMapping={generatedColors}  // Use stored colors
+  title="Chart 2: Uses Generated Colors" 
+/>
+\`\`\`
+
+**Redux Pattern:**
+\`\`\`jsx
+// Store colors in Redux
+dispatch(setColorMapping({ chartId: 'global', colors }));
+
+// Use colors from Redux
+const globalColors = useSelector(state => state.charts.colorMappings.global);
+<AreaChart colorsMapping={globalColors} />
+\`\`\`
+
+**Benefits:**
+- Consistent colors across all charts
+- Centralized color management
+- Easy to persist/restore color schemes
+- Perfect for dashboards with multiple charts
+        `
+      }
+    }
+  },
+  render: (args: any) => {
+    const [generatedColors, setGeneratedColors] = useState<{ [key: string]: string }>({});
+    
+    // Use useCallback to prevent infinite loops
+    const handleColorMappingGenerated = useCallback((colors: { [key: string]: string }) => {
+      // Only update if colors actually changed
+      if (JSON.stringify(colors) !== JSON.stringify(generatedColors)) {
+        setGeneratedColors(colors);
+      }
+    }, [generatedColors]);
+    
+    // Memoize the modified series to prevent recalculation on every render
+    const modifiedSeries = useMemo(() => 
+      args.series.map((item: any) => ({
+        ...item,
+        "Product A": item["Product A"] * 0.8,
+        "Product B": item["Product B"] * 1.2,
+        "Product C": item["Product C"] * 0.9,
+      })), [args.series]);
+    
+    return (
+      <div>
+        <div style={{ marginBottom: "20px" }}>
+          <h3>Shared Color Mapping Between Charts</h3>
+          <p>Both charts share the same color mapping generated by the first chart</p>
+          <p><strong>Generated colors:</strong> {JSON.stringify(generatedColors)}</p>
+        </div>
+        
+        <div style={{ marginBottom: "40px" }}>
+          <AreaChart
+            {...args}
+            onColorMappingGenerated={handleColorMappingGenerated}
+            title="Chart 1: Generates Colors"
+          />
+        </div>
+        
+        <div>
+          <AreaChart
+            {...args}
+            colorsMapping={generatedColors}
+            onColorMappingGenerated={undefined}
+            title="Chart 2: Uses Generated Colors"
+            series={modifiedSeries}
+          />
+        </div>
+      </div>
+    );
+  },
+  args: {
+    onChartDataProcessed: fn(),
+    onHighlightItem: fn(),
+    keys: ["Product A", "Product B", "Product C"],
+    series: [
+      {
+        date: "2023-01",
+        "Product A": 30,
+        "Product B": 40,
+        "Product C": 30,
+      },
+      {
+        date: "2023-02",
+        "Product A": 35,
+        "Product B": 35,
+        "Product C": 30,
+      },
+      {
+        date: "2023-03",
+        "Product A": 25,
+        "Product B": 45,
+        "Product C": 30,
+      },
+      {
+        date: "2023-04",
+        "Product A": 40,
+        "Product B": 30,
+        "Product C": 30,
+      },
+    ],
+    width: 900,
+    height: 400,
+    margin: {
+      top: 50,
+      right: 70,
+      bottom: 70,
+      left: 70,
+    },
+    yAxisFormat: (d: any) => `${d}%`,
+    yAxisDomain: [0, 100],
+    xAxisDataType: "date_monthly",
+    xAxisFormat: (d: any) => {
+      const date = new Date(d);
+      return date.toLocaleDateString("en-US", { month: "short" });
+    },
+    ticks: 4,
+  },
+};
+
+// Test highlighting functionality
+export const TestHighlighting = {
+  render: (args: any) => {
+    const [highlightedItems, setHighlightedItems] = useState<string[]>(["Beta"]);
+    
+    return (
+      <div>
+        <div style={{ marginBottom: "20px" }}>
+          <h3>Test Highlighting Functionality</h3>
+          <p>Click buttons to highlight different categories</p>
+          <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+            <button onClick={() => setHighlightedItems([])}>Clear All</button>
+            <button onClick={() => setHighlightedItems(["Alpha"])}>Highlight Alpha</button>
+            <button onClick={() => setHighlightedItems(["Beta"])}>Highlight Beta</button>
+            <button onClick={() => setHighlightedItems(["Gamma"])}>Highlight Gamma</button>
+            <button onClick={() => setHighlightedItems(["Alpha", "Gamma"])}>Highlight Alpha & Gamma</button>
+          </div>
+          <p style={{ marginTop: "10px" }}>
+            <strong>Currently highlighted:</strong> {highlightedItems.join(", ") || "None"}
+          </p>
+        </div>
+        
+        <MichiVzProvider highlightItems={highlightedItems}>
+          <AreaChart
+            {...args}
+            onHighlightItem={setHighlightedItems}
+          />
+        </MichiVzProvider>
+      </div>
+    );
+  },
+  args: {
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
+    keys: ["Alpha", "Beta", "Gamma"],
+    series: [
+      {
+        date: 1,
+        "Alpha": 20,
+        "Beta": 50,
+        "Gamma": 30,
+      },
+      {
+        date: 2,
+        "Alpha": 30,
+        "Beta": 40,
+        "Gamma": 30,
+      },
+      {
+        date: 3,
+        "Alpha": 25,
+        "Beta": 45,
+        "Gamma": 30,
+      },
+      {
+        date: 4,
+        "Alpha": 35,
+        "Beta": 35,
+        "Gamma": 30,
+      },
+      {
+        date: 5,
+        "Alpha": 40,
+        "Beta": 30,
+        "Gamma": 30,
+      },
+    ],
+    width: 900,
+    height: 480,
+    margin: {
+      top: 50,
+      right: 70,
+      bottom: 70,
+      left: 70,
+    },
+    yAxisFormat: (d: any) => `${d}%`,
+    title: "Test Highlighting - Click Buttons Above",
+    yAxisDomain: [0, 100],
+    xAxisDataType: "number",
+    xAxisFormat: (d: any) => `Point ${d}`,
+    ticks: 5,
   },
 };

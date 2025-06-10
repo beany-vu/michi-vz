@@ -9,6 +9,19 @@ import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import styled from "styled-components";
 
+const DEFAULT_COLORS = [
+  "#1f77b4",
+  "#ff7f0e",
+  "#2ca02c",
+  "#d62728",
+  "#9467bd",
+  "#8c564b",
+  "#e377c2",
+  "#7f7f7f",
+  "#bcbd22",
+  "#17becf",
+];
+
 const AreaChartContainer = styled.div`
   position: relative;
   path {
@@ -58,6 +71,12 @@ interface Props {
   onHighlightItem?: (labels: string[]) => void;
   filter?: { date: number; sortingDir: "asc" | "desc" };
   ticks?: number;
+  // colors is the color palette for the chart for new generated colors
+  colors?: string[];
+  // colorsMapping is the color mapping for the chart for existing colors
+  // the purpose is to share the same color mapping between charts
+  colorsMapping?: { [key: string]: string };
+  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
 }
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
@@ -85,12 +104,37 @@ const AreaChart: React.FC<Props> = ({
   onHighlightItem,
   filter,
   ticks = 5,
+  colors = DEFAULT_COLORS,
+  colorsMapping = {},
+  onColorMappingGenerated,
 }) => {
-  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
+  const { highlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const [hoveredDate] = useState<number | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
+
+  // Generate colors for keys that don't have colors in colorsMapping
+  const generatedColorsMapping = useMemo(() => {
+    const newMapping = { ...colorsMapping };
+    let colorIndex = Object.keys(colorsMapping).length;
+
+    for (const key of keys) {
+      if (!newMapping[key]) {
+        newMapping[key] = colors[colorIndex % colors.length];
+        colorIndex++;
+      }
+    }
+
+    return newMapping;
+  }, [keys, colorsMapping, colors]);
+
+  // Notify parent about generated color mapping
+  useLayoutEffect(() => {
+    if (onColorMappingGenerated) {
+      onColorMappingGenerated(generatedColorsMapping);
+    }
+  }, [generatedColorsMapping, onColorMappingGenerated]);
 
   const xScale = useMemo(() => {
     if (xAxisDataType === "number") {
@@ -153,7 +197,7 @@ const AreaChart: React.FC<Props> = ({
       return {
         key: keys[index],
         values: keyData,
-        fill: colorsMapping[keys[index]],
+        fill: generatedColorsMapping[keys[index]],
       };
     });
   };
@@ -181,7 +225,7 @@ const AreaChart: React.FC<Props> = ({
     return `
         <div style="background: #fff; padding: 5px">
             <p>${dataPoint.date}</p>
-            <p style="color:${colorsMapping[key]}">${key}: ${dataPoint[key] ?? "N/A"}</p>
+            <p style="color:${generatedColorsMapping[key]}">${key}: ${dataPoint[key] ?? "N/A"}</p>
         </div>`;
   };
 

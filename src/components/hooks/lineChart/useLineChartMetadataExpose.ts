@@ -104,7 +104,6 @@ const useLineChartMetadataExpose = (
     filter,
     onChartDataProcessed,
     prevChartDataRef,
-    chartIdRef,
   ]);
 };
 

@@ -247,7 +247,7 @@ const LineChart: FC<LineChartProps> = ({
     getColor,
     sanitizeForClassName,
     highlightItems,
-    onHighlightItem,
+    undefined,
     onColorMappingGenerated
   );
 

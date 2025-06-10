@@ -14,6 +14,7 @@ const useLineChartPathsShapesRendering = (
     pathNode: SVGPathElement,
     xScale: ScaleLinear<number, number> | ScaleTime<number, number>
   ) => string,
+  colors: string[],
   colorsMapping: { [key: string]: string },
   line: (options: { d: DataPoint[]; curve: string }) => string,
   xScale: ScaleLinear<number, number> | ScaleTime<number, number>,
@@ -25,7 +26,8 @@ const useLineChartPathsShapesRendering = (
   getColor: (color: string | undefined, fallback: string | null) => string,
   sanitizeForClassName: (str: string) => string,
   highlightItems: string[],
-  onHighlightItem?: (labels: string[]) => void
+  onHighlightItem?: (labels: string[]) => void,
+  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void
 ) => {
   const handleMouseEnter = useCallback(
     (
@@ -51,14 +53,19 @@ const useLineChartPathsShapesRendering = (
       }
 
       if (highlightItems.length > 0) {
-        svg.selectAll(`${groupSelector}`).style("opacity", `${opacityUnhighlighted}`);
+        console.log("Setting all items to opacity", opacityUnhighlighted);
+        const allGroups = svg.selectAll(`${groupSelector}`);
+        console.log("Found groups:", allGroups.size());
+        allGroups.style("opacity", `${opacityUnhighlighted}`);
 
         highlightItems.forEach(item => {
-          svg
-            .selectAll(`${groupSelector}[data-label="${CSS.escape(item)}"]`)
-            .style("opacity", opacityHighlighted);
+          console.log("Highlighting item:", item);
+          const highlightedGroups = svg.selectAll(`${groupSelector}[data-label="${CSS.escape(item)}"]`);
+          console.log("Found highlighted groups for", item, ":", highlightedGroups.size());
+          highlightedGroups.style("opacity", opacityHighlighted);
         });
       } else {
+        console.log("Resetting all to opacity", opacityHighlighted);
         svg.selectAll(`${groupSelector}`).style("opacity", `${opacityHighlighted}`);
       }
 
@@ -86,26 +93,29 @@ const useLineChartPathsShapesRendering = (
     [handleItemHighlight, tooltipRef]
   );
 
-  useLayoutEffect(() => {
-    // Only apply highlighting when there are items to highlight
-    if (highlightItems.length > 0) {
-      handleMouseEnter(null, svgRef, "g.data-group", 0.05, 1, highlightItems);
-      if (onHighlightItem) {
-        onHighlightItem(highlightItems);
-      }
-    } else {
-      // Reset all items to fully visible when nothing is highlighted
-      const svg = select(svgRef.current);
-      if (svg.node()) {
-        svg.selectAll("g.data-group").style("opacity", 1);
-      }
-    }
-  }, [highlightItems, onHighlightItem, svgRef, visibleDataSets, handleMouseEnter]);
 
   useEffect(() => {
     if (!svgRef.current) return;
 
     const svg = select(svgRef.current);
+
+    // Generate colors for data sets that don't have colors in colorsMapping
+    const generatedColorsMapping = { ...colorsMapping };
+    let colorIndex = Object.keys(colorsMapping).length;
+    let hasNewColors = false;
+    
+    for (const dataSet of filteredDataSet) {
+      if (!generatedColorsMapping[dataSet.label]) {
+        generatedColorsMapping[dataSet.label] = colors[colorIndex % colors.length];
+        colorIndex++;
+        hasNewColors = true;
+      }
+    }
+    
+    // Notify parent about generated color mapping only if new colors were generated
+    if (onColorMappingGenerated && hasNewColors) {
+      onColorMappingGenerated(generatedColorsMapping);
+    }
 
     // IMPORTANT: Clear everything and redraw from scratch on every render
     // This ensures we don't have any stale elements lingering around
@@ -119,7 +129,7 @@ const useLineChartPathsShapesRendering = (
       const circleSize = 5;
       const squareSize = 6;
       const triangleSize = 16;
-      const color = getColor(colorsMapping[data.label], data.color);
+      const color = getColor(generatedColorsMapping[data.label], data.color);
       const safeLabelClass = sanitizeForClassName(data.label);
       const uniqueKey = `${data.label}__${i}`;
 
@@ -138,6 +148,7 @@ const useLineChartPathsShapesRendering = (
           .attr("data-label", data.label)
           .attr("data-label-safe", safeLabelClass)
           .attr("data-key", uniqueKey);
+        console.log("Created group with data-label:", data.label);
       }
 
       // --- LINE ---
@@ -184,7 +195,7 @@ const useLineChartPathsShapesRendering = (
         .attr("pointer-events", "stroke")
         .style("opacity", 0.05)
         .on("mouseenter", event => {
-          handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1);
+          handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1, highlightItems);
         })
         .on("mouseout", () => handleMouseOut(svgRef));
 
@@ -268,7 +279,7 @@ const useLineChartPathsShapesRendering = (
       group
         .selectAll(`.data-point`)
         .on("mouseenter", (event, d: DataPoint) => {
-          handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1);
+          handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1, highlightItems);
 
           const tooltipContent = tooltipFormatter(
             {
@@ -308,6 +319,22 @@ const useLineChartPathsShapesRendering = (
           handleMouseOut(svgRef);
         });
     }
+    
+    // Apply highlighting AFTER rendering is complete
+    if (highlightItems.length > 0) {
+      console.log("Applying highlighting after render to:", highlightItems);
+      
+      // Set all groups to low opacity
+      svg.selectAll("g.data-group").style("opacity", 0.05);
+      
+      // Set highlighted groups to full opacity
+      highlightItems.forEach(item => {
+        svg.selectAll(`g.data-group[data-label="${CSS.escape(item)}"]`).style("opacity", 1);
+      });
+    } else {
+      // Reset all groups to full opacity
+      svg.selectAll("g.data-group").style("opacity", 1);
+    }
   }, [
     filteredDataSet,
     visibleDataSets,
@@ -316,6 +343,7 @@ const useLineChartPathsShapesRendering = (
     margin,
     xAxisDataType,
     getDashArrayMemoized,
+    colors,
     colorsMapping,
     line,
     xScale,
@@ -326,7 +354,8 @@ const useLineChartPathsShapesRendering = (
     svgRef,
     getColor,
     sanitizeForClassName,
-    onHighlightItem,
+    onColorMappingGenerated,
+    highlightItems,
   ]);
 };
 

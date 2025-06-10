@@ -1175,10 +1175,10 @@ export const ButtonHoverInteraction = {
     },
   },
   render: args => {
-    const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([
-      "Performance Metrics",
-    ]);
+    const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
     const [filterDate, setFilterDate] = React.useState("2021");
+    
+    console.log("Current highlight state:", currentHighlight);
 
     // Get all available dates from the dataset
     const availableDates = React.useMemo(() => {

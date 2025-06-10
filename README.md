@@ -67,6 +67,90 @@
    ```
    - This will generate a coverage report in the `/coverage` directory
 
+# Color Management & State Integration
+
+## Self-Generated Colors
+
+Both `AreaChart` and `LineChart` support automatic color generation:
+
+```jsx
+// Automatic color generation
+<AreaChart
+  keys={["Sales", "Marketing", "Development"]}
+  colors={["#1f77b4", "#ff7f0e", "#2ca02c"]} // Optional custom palette
+  onColorMappingGenerated={(colors) => {
+    // colors = { "Sales": "#1f77b4", "Marketing": "#ff7f0e", "Development": "#2ca02c" }
+    console.log("Generated colors:", colors);
+  }}
+  {...otherProps}
+/>
+```
+
+## Redux Integration Pattern
+
+Use `onColorMappingGenerated` to store colors in Redux for cross-chart synchronization:
+
+```jsx
+// Redux slice
+const chartSlice = createSlice({
+  name: 'charts',
+  initialState: { colorMappings: {}, highlightItems: [] },
+  reducers: {
+    setColorMapping: (state, action) => {
+      const { chartId, colors } = action.payload;
+      state.colorMappings[chartId] = colors;
+    },
+    setHighlightItems: (state, action) => {
+      state.highlightItems = action.payload;
+    }
+  }
+});
+
+// Component usage
+const Dashboard = () => {
+  const dispatch = useDispatch();
+  const { colorMappings, highlightItems } = useSelector(state => state.charts);
+
+  return (
+    <div>
+      {/* Master chart generates colors */}
+      <AreaChart
+        onColorMappingGenerated={(colors) => 
+          dispatch(setColorMapping({ chartId: 'global', colors }))
+        }
+        onHighlightItem={(items) => dispatch(setHighlightItems(items))}
+        {...chart1Props}
+      />
+      
+      {/* Slave charts use generated colors */}
+      <AreaChart
+        colorsMapping={colorMappings.global || {}}
+        {...chart2Props}
+      />
+      <LineChart
+        colorsMapping={colorMappings.global || {}}
+        {...chart3Props}
+      />
+    </div>
+  );
+};
+```
+
+## Color Management Options
+
+1. **Self-Generated (Default)**: Charts automatically assign colors from palette
+2. **Explicit Mapping**: Provide specific colors via `colorsMapping` prop
+3. **Context-Based**: Use `MichiVzProvider` for shared colors across charts
+4. **Hybrid**: Combine context + component-specific overrides
+
+## Interactive Features
+
+- **Highlighting**: Use `onHighlightItem` callback and `highlightItems` prop/context
+- **Disabled Items**: Use `disabledItems` prop/context to hide categories
+- **Cross-Chart Sync**: Store state in Redux/context for synchronized interactions
+
+See Storybook examples for detailed implementation patterns.
+
 # Console commands
 
     - `npm run storybook`: start dev server
