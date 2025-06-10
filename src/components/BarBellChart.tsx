@@ -9,6 +9,19 @@ import { useChartContext } from "./MichiVzProvider";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import LoadingIndicator from "./shared/LoadingIndicator";
 
+const DEFAULT_COLORS = [
+  "#1f77b4",
+  "#ff7f0e",
+  "#2ca02c",
+  "#d62728",
+  "#9467bd",
+  "#8c564b",
+  "#e377c2",
+  "#7f7f7f",
+  "#bcbd22",
+  "#17becf",
+];
+
 interface DataPoint {
   [key: string]: number | undefined;
 }
@@ -42,6 +55,12 @@ interface BarBellChartProps {
   onHighlightItem?: (labels: string[]) => void;
   filter?: { limit: number; criteria: string; sortingDir: string };
   tickHtmlWidth?: number;
+  // colors is the color palette for the chart for new generated colors
+  colors?: string[];
+  // colorsMapping is the color mapping for the chart for existing colors
+  // the purpose is to share the same color mapping between charts
+  colorsMapping?: { [key: string]: string };
+  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
 }
 
 const BarBellChart: React.FC<BarBellChartProps> = ({
@@ -64,13 +83,38 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   onChartDataProcessed,
   onHighlightItem,
   tickHtmlWidth,
+  colors = DEFAULT_COLORS,
+  colorsMapping = {},
+  onColorMappingGenerated,
 }) => {
-  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
+  const { highlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const refTooltip = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
   const [hoveredYItem, setHoveredYItem] = useState<string | null>(null);
+
+  // Generate colors for keys that don't have colors in colorsMapping
+  const generatedColorsMapping = useMemo(() => {
+    const newMapping = { ...colorsMapping };
+    let colorIndex = Object.keys(colorsMapping).length;
+
+    for (const key of keys) {
+      if (!newMapping[key]) {
+        newMapping[key] = colors[colorIndex % colors.length];
+        colorIndex++;
+      }
+    }
+
+    return newMapping;
+  }, [keys, colorsMapping, colors]);
+
+  // Notify parent about generated color mapping
+  useLayoutEffect(() => {
+    if (onColorMappingGenerated) {
+      onColorMappingGenerated(generatedColorsMapping);
+    }
+  }, [generatedColorsMapping, onColorMappingGenerated]);
 
   const handleYAxisHover = useCallback((item: string | null) => {
     setHoveredYItem(item);
@@ -271,7 +315,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                   const width = xScale(value); // Adjust width based on value
 
                   const shapeStyle = {
-                    "--data-color": colorsMapping?.[key],
+                    "--data-color": generatedColorsMapping[key],
                     transition: "all 0.1s ease-out",
                     opacity:
                       hoveredYItem !== null
@@ -283,7 +327,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                         : disabledItems.includes(key)
                           ? 0.1
                           : 0.9,
-                    background: colorsMapping?.[key],
+                    background: generatedColorsMapping[key],
                     borderRadius: "50%",
                     width: "12px",
                     height: "12px",
@@ -301,7 +345,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                           y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 || 0}
                           height={4}
                           width={width}
-                          fill={colorsMapping?.[key]}
+                          fill={generatedColorsMapping[key]}
                           style={{
                             transition: "all 0.1s ease-out",
                             opacity:
@@ -339,7 +383,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                             data-value={value}
                             data-index={j}
                             data-order={keys.indexOf(key) + 1}
-                            data-color={colorsMapping?.[key]}
+                            data-color={generatedColorsMapping[key]}
                             className={`bar-data-point-shape ${value === 0 ? "data-value-zero" : ""}`}
                             style={shapeStyle}
                             onMouseEnter={event => {

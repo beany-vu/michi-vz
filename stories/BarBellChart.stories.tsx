@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { Meta } from "@storybook/react";
+import { fn } from '@storybook/test';
 import BarBellChart from "../src/components/BarBellChart";
 import { MichiVzProvider } from "../src/components";
 
@@ -179,17 +180,208 @@ export const Primary = {
       left: 200,
     },
     title: "BarBell Chart",
-    xAxisFormat: (value: any) => value, // You may need to adjust this based on your actual xAxisFormat function
+    xAxisFormat: (value: any) => value,
     yAxisFormat: (value: any) => {
       return value;
-      // return `${new Date(value).getFullYear()} - ${new Date(value).getMonth() + 1}`;
     },
-    // You may need to adjust this based on your actual yAxisFormat function
-    // tooltipFormat: ({ item, series }) => `<div>${JSON.stringify(item)}</div>`,
     showGrid: {
       x: true,
       y: false,
     },
     children: null,
+    onColorMappingGenerated: fn(),
+  },
+};
+
+export const SimpleData = {
+  args: {
+    dataSet: mockData,
+    keys: ["step1", "step2", "step3"],
+    width: 900,
+    height: 400,
+    margin: {
+      top: 50,
+      right: 50,
+      bottom: 50,
+      left: 100,
+    },
+    title: "Simple BarBell Chart",
+    xAxisFormat: (value: any) => `${value}`,
+    yAxisFormat: (value: any) => value,
+    showGrid: {
+      x: true,
+      y: true,
+    },
+    onColorMappingGenerated: fn(),
+  },
+};
+
+export const TwoStepsOnly = {
+  args: {
+    dataSet: mockData.map(({ step3, ...rest }) => rest),
+    keys: ["step1", "step2"],
+    width: 900,
+    height: 400,
+    margin: {
+      top: 50,
+      right: 50,
+      bottom: 50,
+      left: 100,
+    },
+    title: "Two Steps BarBell Chart",
+    xAxisFormat: (value: any) => `${value}K`,
+    yAxisFormat: (value: any) => value,
+    showGrid: {
+      x: false,
+      y: false,
+    },
+    onColorMappingGenerated: fn(),
+  },
+};
+
+export const LargeDataset = {
+  args: {
+    dataSet: [
+      ...mockData,
+      ...mockData.map((item, index) => ({
+        ...item,
+        date: `2021-${String(index + 1).padStart(2, '0')}`,
+        step1: item.step1 * 1.2,
+        step2: item.step2 * 0.8,
+        step3: item.step3 * 1.5,
+      })),
+      ...mockData.map((item, index) => ({
+        ...item,
+        date: `2022-${String(index + 1).padStart(2, '0')}`,
+        step1: item.step1 * 0.9,
+        step2: item.step2 * 1.3,
+        step3: item.step3 * 0.7,
+      })),
+    ],
+    keys: ["step1", "step2", "step3"],
+    width: 900,
+    height: 800,
+    margin: {
+      top: 50,
+      right: 50,
+      bottom: 50,
+      left: 100,
+    },
+    title: "Large Dataset BarBell Chart",
+    xAxisFormat: (value: any) => `${(value / 1000).toFixed(1)}K`,
+    yAxisFormat: (value: any) => value,
+    showGrid: {
+      x: true,
+      y: false,
+    },
+    onColorMappingGenerated: fn(),
+  },
+};
+
+export const CustomColors = {
+  args: {
+    dataSet: mockData2,
+    keys: ["step1", "step2", "step3"],
+    width: 900,
+    height: 500,
+    margin: {
+      top: 50,
+      right: 50,
+      bottom: 50,
+      left: 200,
+    },
+    title: "Custom Colors BarBell Chart",
+    colors: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7"],
+    xAxisFormat: (value: any) => `${value}`,
+    yAxisFormat: (value: any) => value,
+    showGrid: {
+      x: true,
+      y: false,
+    },
+    onColorMappingGenerated: fn(),
+  },
+  decorators: [
+    (Story) => (
+      <MichiVzProvider>
+        <Story />
+      </MichiVzProvider>
+    ),
+  ],
+};
+
+const InteractiveTemplate = (args: any) => {
+  const [highlightItems, setHighlightItems] = useState<string[]>([]);
+  
+  return (
+    <div>
+      <div style={{ marginBottom: "20px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <h3>Hover Controls:</h3>
+        {args.keys.map((key: string) => (
+          <button
+            key={key}
+            style={{
+              padding: "8px 16px",
+              backgroundColor: highlightItems.includes(key) ? "#007bff" : "#f8f9fa",
+              color: highlightItems.includes(key) ? "white" : "#333",
+              border: "1px solid #dee2e6",
+              borderRadius: "4px",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+            onMouseEnter={() => setHighlightItems([key])}
+            onMouseLeave={() => setHighlightItems([])}
+            onClick={() => {
+              setHighlightItems(prev => 
+                prev.includes(key) ? prev.filter(item => item !== key) : [...prev, key]
+              );
+            }}
+          >
+            {key.charAt(0).toUpperCase() + key.slice(1)}
+          </button>
+        ))}
+        <button
+          style={{
+            padding: "8px 16px",
+            backgroundColor: "#dc3545",
+            color: "white",
+            border: "1px solid #dc3545",
+            borderRadius: "4px",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+          }}
+          onClick={() => setHighlightItems([])}
+        >
+          Clear All
+        </button>
+      </div>
+      
+      <MichiVzProvider highlightItems={highlightItems}>
+        <BarBellChart {...args} onHighlightItem={setHighlightItems} />
+      </MichiVzProvider>
+    </div>
+  );
+};
+
+export const InteractiveHover = {
+  render: InteractiveTemplate,
+  args: {
+    dataSet: mockData2,
+    keys: ["step1", "step2", "step3"],
+    width: 900,
+    height: 500,
+    margin: {
+      top: 50,
+      right: 50,
+      bottom: 50,
+      left: 200,
+    },
+    title: "Interactive Hover BarBell Chart",
+    xAxisFormat: (value: any) => `${value}`,
+    yAxisFormat: (value: any) => value,
+    showGrid: {
+      x: true,
+      y: false,
+    },
+    onColorMappingGenerated: fn(),
   },
 };
