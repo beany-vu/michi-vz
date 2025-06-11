@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { pointer, select, ScaleLinear, ScaleTime } from "d3";
 import { DataPoint, LineChartDataItem } from "src/types/data";
 
@@ -86,22 +86,6 @@ const useLineChartPathsShapesRendering = (
     [handleItemHighlight, tooltipRef]
   );
 
-  useLayoutEffect(() => {
-    // Only apply highlighting when there are items to highlight
-    if (highlightItems.length > 0) {
-      handleMouseEnter(null, svgRef, "g.data-group", 0.05, 1, highlightItems);
-      if (onHighlightItem) {
-        onHighlightItem(highlightItems);
-      }
-    } else {
-      // Reset all items to fully visible when nothing is highlighted
-      const svg = select(svgRef.current);
-      if (svg.node()) {
-        svg.selectAll("g.data-group").style("opacity", 1);
-      }
-    }
-  }, [highlightItems, onHighlightItem, svgRef, visibleDataSets, handleMouseEnter]);
-
   useEffect(() => {
     if (!svgRef.current) return;
 
@@ -184,7 +168,7 @@ const useLineChartPathsShapesRendering = (
         .attr("pointer-events", "stroke")
         .style("opacity", 0.05)
         .on("mouseenter", event => {
-          handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1);
+          handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1, highlightItems);
         })
         .on("mouseout", () => handleMouseOut(svgRef));
 
@@ -268,7 +252,7 @@ const useLineChartPathsShapesRendering = (
       group
         .selectAll(`.data-point`)
         .on("mouseenter", (event, d: DataPoint) => {
-          handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1);
+          handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1, highlightItems);
 
           const tooltipContent = tooltipFormatter(
             {
@@ -308,6 +292,20 @@ const useLineChartPathsShapesRendering = (
           handleMouseOut(svgRef);
         });
     }
+
+    // Apply highlighting AFTER rendering is complete
+    if (highlightItems.length > 0) {
+      // Set all groups to low opacity
+      svg.selectAll("g.data-group").style("opacity", 0.05);
+
+      // Set highlighted groups to full opacity
+      highlightItems.forEach(item => {
+        svg.selectAll(`g.data-group[data-label="${CSS.escape(item)}"]`).style("opacity", 1);
+      });
+    } else {
+      // Reset all groups to full opacity
+      svg.selectAll("g.data-group").style("opacity", 1);
+    }
   }, [
     filteredDataSet,
     visibleDataSets,
@@ -327,6 +325,7 @@ const useLineChartPathsShapesRendering = (
     getColor,
     sanitizeForClassName,
     onHighlightItem,
+    highlightItems,
   ]);
 };
 
