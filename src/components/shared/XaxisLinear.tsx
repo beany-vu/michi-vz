@@ -146,16 +146,16 @@ const XaxisLinear: FC<Props> = ({
 
     // For numeric scales, ensure 0 is the first tick if domain starts at 0
     if (!isTimeScale && +first === 0) {
-      result.push(0);  // Start with 0
-      
+      result.push(0); // Start with 0
+
       const valueRange = +last - +first;
       const step = valueRange / (targetTickCount - 1);
-      
+
       for (let i = 1; i < targetTickCount - 1; i++) {
         const value = i * step;
         result.push(value);
       }
-      
+
       result.push(last);
     } else {
       // For other cases, use the standard approach
@@ -179,11 +179,12 @@ const XaxisLinear: FC<Props> = ({
         !isTimeScale &&
         showZeroLine &&
         !result.includes(0) &&
-        (+first <= 0 && 0 <= +last)
+        +first <= 0 &&
+        0 <= +last
         // Ensure 0 is included if it's within the domain (including at boundaries)
       ) {
         result.push(0);
-        result.sort((a, b) => a - b);  // Sort ascending for proper order
+        result.sort((a, b) => a - b); // Sort ascending for proper order
       }
     }
 
@@ -269,6 +270,10 @@ const XaxisLinear: FC<Props> = ({
         .attr("stroke-width", 1)
         .attr("stroke-dasharray", "1,3")
         .attr("opacity", 0.5);
+
+      if (showZeroLine) {
+        g.selectAll(".tick-zero line").attr("stroke-dasharray", null);
+      }
     }
 
     // Add circles/dots instead of tick lines (moved down 8px to avoid grid overlap)
