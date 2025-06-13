@@ -119,26 +119,26 @@ const XaxisLinear: FC<Props> = ({
       // If we have a reasonable number of years, show all of them
       if (yearCount <= 10) {
         for (let year = firstYear; year <= lastYear; year++) {
-          result.push(new Date(`${year}-01-01`));
+          result.push(new Date(`${year}-01-01T23:59:59Z`));
         }
         return result;
       }
 
       // For many years, pick a sensible spacing
       // Always include first and last years
-      result.push(new Date(`${firstYear}-01-01`));
+      result.push(new Date(`${firstYear}-01-01T23:59:59Z`));
 
       // Calculate step size based on available space
       const stepSize = Math.max(1, Math.ceil(yearCount / 10));
 
       // Add intermediate years at regular intervals
       for (let year = firstYear + stepSize; year < lastYear; year += stepSize) {
-        result.push(new Date(`${year}-01-01`));
+        result.push(new Date(`${year}-01-01T23:59:59Z`));
       }
 
       // Add the last year if not already included
       if (result[result.length - 1].getFullYear() !== lastYear) {
-        result.push(new Date(`${lastYear}-01-01`));
+        result.push(new Date(`${lastYear}-01-01T23:59:59Z`));
       }
 
       return result;
