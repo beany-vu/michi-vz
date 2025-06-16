@@ -93,6 +93,24 @@ const useLineChartPathsShapesRendering = (
     [handleItemHighlight, tooltipRef]
   );
 
+  useLayoutEffect(() => {
+    console.log("LineChart highlightItems changed:", highlightItems);
+    // Only apply highlighting when there are items to highlight
+    if (highlightItems.length > 0) {
+      console.log("Applying highlighting to:", highlightItems);
+      handleMouseEnter(null, svgRef, "g.data-group", 0.05, 1, highlightItems);
+      if (onHighlightItem) {
+        onHighlightItem(highlightItems);
+      }
+    } else {
+      console.log("Resetting all highlighting");
+      // Reset all items to fully visible when nothing is highlighted
+      const svg = select(svgRef.current);
+      if (svg.node()) {
+        svg.selectAll("g.data-group").style("opacity", 1);
+      }
+    }
+  }, [highlightItems, onHighlightItem, svgRef, visibleDataSets, handleMouseEnter]);
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -355,7 +373,6 @@ const useLineChartPathsShapesRendering = (
     getColor,
     sanitizeForClassName,
     onColorMappingGenerated,
-    highlightItems,
   ]);
 };
 
