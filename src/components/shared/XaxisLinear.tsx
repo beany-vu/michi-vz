@@ -6,7 +6,10 @@ interface Props {
   xScale: ScaleTime<number, number> | ScaleLinear<number, number>;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
-  xAxisFormat?: (d: number | { valueOf(): number } | string) => string;
+  xAxisFormat?: (
+    d: number | { valueOf(): number } | string,
+    tickValues?: Array<string | number>
+  ) => string;
   xAxisDataType?: "number" | "date_annual" | "date_monthly";
   ticks?: number;
   showGrid?: boolean;
@@ -119,26 +122,26 @@ const XaxisLinear: FC<Props> = ({
       // If we have a reasonable number of years, show all of them
       if (yearCount <= 10) {
         for (let year = firstYear; year <= lastYear; year++) {
-          result.push(new Date(`${year}-01-01`));
+          result.push(new Date(`${year}-01-01T23:59:59Z`));
         }
         return result;
       }
 
       // For many years, pick a sensible spacing
       // Always include first and last years
-      result.push(new Date(`${firstYear}-01-01`));
+      result.push(new Date(`${firstYear}-01-01T23:59:59Z`));
 
       // Calculate step size based on available space
       const stepSize = Math.max(1, Math.ceil(yearCount / 10));
 
       // Add intermediate years at regular intervals
       for (let year = firstYear + stepSize; year < lastYear; year += stepSize) {
-        result.push(new Date(`${year}-01-01`));
+        result.push(new Date(`${year}-01-01T23:59:59Z`));
       }
 
       // Add the last year if not already included
       if (result[result.length - 1].getFullYear() !== lastYear) {
-        result.push(new Date(`${lastYear}-01-01`));
+        result.push(new Date(`${lastYear}-01-01T23:59:59Z`));
       }
 
       return result;
@@ -146,16 +149,16 @@ const XaxisLinear: FC<Props> = ({
 
     // For numeric scales, ensure 0 is the first tick if domain starts at 0
     if (!isTimeScale && +first === 0) {
-      result.push(0);  // Start with 0
-      
+      result.push(0); // Start with 0
+
       const valueRange = +last - +first;
       const step = valueRange / (targetTickCount - 1);
-      
+
       for (let i = 1; i < targetTickCount - 1; i++) {
         const value = i * step;
         result.push(value);
       }
-      
+
       result.push(last);
     } else {
       // For other cases, use the standard approach
@@ -179,11 +182,12 @@ const XaxisLinear: FC<Props> = ({
         !isTimeScale &&
         showZeroLine &&
         !result.includes(0) &&
-        (+first <= 0 && 0 <= +last)
+        +first <= 0 &&
+        0 <= +last
         // Ensure 0 is included if it's within the domain (including at boundaries)
       ) {
         result.push(0);
-        result.sort((a, b) => a - b);  // Sort ascending for proper order
+        result.sort((a, b) => a - b); // Sort ascending for proper order
       }
     }
 
@@ -203,7 +207,10 @@ const XaxisLinear: FC<Props> = ({
       .tickValues(tickValues)
       .tickFormat((domainValue: number | Date | { valueOf(): number }) =>
         xAxisFormat
-          ? xAxisFormat(domainValue instanceof Date ? domainValue : domainValue.valueOf())
+          ? xAxisFormat(
+              domainValue instanceof Date ? domainValue : domainValue.valueOf(),
+              tickValues
+            )
           : defaultFormatter(domainValue)
       )
       .tickSize(6); // Control tick size
@@ -269,6 +276,10 @@ const XaxisLinear: FC<Props> = ({
         .attr("stroke-width", 1)
         .attr("stroke-dasharray", "1,3")
         .attr("opacity", 0.5);
+
+      if (showZeroLine) {
+        g.selectAll(".tick-zero line").attr("stroke-dasharray", null);
+      }
     }
 
     // Add circles/dots instead of tick lines (moved down 8px to avoid grid overlap)
