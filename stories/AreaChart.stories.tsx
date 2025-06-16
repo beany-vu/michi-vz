@@ -92,13 +92,7 @@ The AreaChart component supports multiple color management patterns and state in
   },
   decorators: [
     Story => (
-      <MichiVzProvider
-        colorsMapping={{
-          Processed: "red",
-          "Semi-processed": "purple",
-          Raw: "orange",
-        }}
-      >
+      <MichiVzProvider>
         <Story />
       </MichiVzProvider>
     ),

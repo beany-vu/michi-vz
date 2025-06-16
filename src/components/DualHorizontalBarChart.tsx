@@ -8,6 +8,19 @@ import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
 import useDeepCompareEffect from "use-deep-compare-effect";
 
+const DEFAULT_COLORS = [
+  "#1f77b4",
+  "#ff7f0e",
+  "#2ca02c",
+  "#d62728",
+  "#9467bd",
+  "#8c564b",
+  "#e377c2",
+  "#7f7f7f",
+  "#bcbd22",
+  "#17becf",
+];
+
 interface DataPoint {
   label: string;
   color?: string;
@@ -49,6 +62,12 @@ interface LineChartProps {
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
   tickHtmlWidth?: number;
+  // colors is the color palette for the chart for new generated colors
+  colors?: string[];
+  // colorsMapping is the color mapping for the chart for existing colors
+  // the purpose is to share the same color mapping between charts
+  colorsMapping?: { [key: string]: string };
+  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
 }
 
 interface ChartMetadata {
@@ -78,17 +97,44 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
   onChartDataProcessed,
   onHighlightItem,
   tickHtmlWidth,
+  colors = DEFAULT_COLORS,
+  colorsMapping = {},
+  onColorMappingGenerated,
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
     y: number;
     data: DataPoint;
   } | null>(null);
-  const { colorsMapping, colorsBasedMapping, highlightItems, disabledItems, visibleItems } =
-    useChartContext();
+  const { highlightItems, disabledItems, visibleItems } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
+
+  // Generate colors for items that don't have colors in colorsMapping
+  const generatedColorsMapping = useMemo(() => {
+    const uniqueLabels = [...new Set(dataSet.map(d => d.label))];
+    const newMapping = { ...colorsMapping };
+    let colorIndex = Object.keys(colorsMapping).length;
+
+    for (const label of uniqueLabels) {
+      if (!newMapping[label]) {
+        newMapping[label] = colors[colorIndex % colors.length];
+        colorIndex++;
+      }
+    }
+
+    return newMapping;
+  }, [dataSet, colorsMapping, colors]);
+
+  // Notify parent about generated color mapping
+  const prevColorsMapping = useRef<{ [key: string]: string }>({});
+  useLayoutEffect(() => {
+    if (onColorMappingGenerated && JSON.stringify(prevColorsMapping.current) !== JSON.stringify(generatedColorsMapping)) {
+      prevColorsMapping.current = generatedColorsMapping;
+      onColorMappingGenerated(generatedColorsMapping);
+    }
+  }, [generatedColorsMapping, onColorMappingGenerated]);
 
   useLayoutEffect(() => {
     renderCompleteRef.current = true;
@@ -298,7 +344,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
                   y={y + (standardHeight - 30) / 2}
                   width={x1}
                   height={30}
-                  fill={colorsBasedMapping[d.label]}
+                  fill={generatedColorsMapping[d.label]}
                   rx={5}
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event)}
@@ -310,7 +356,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
                   y={y + (standardHeight - 30) / 2}
                   width={x2}
                   height={30}
-                  fill={colorsMapping[d.label]}
+                  fill={generatedColorsMapping[d.label]}
                   opacity={0.8}
                   rx={3}
                   ry={3}
@@ -326,7 +372,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
                       y={y + (standardHeight - 30) / 2}
                       width={10}
                       height={30}
-                      fill={colorsBasedMapping[d.label]}
+                      fill={generatedColorsMapping[d.label]}
                       rx={3}
                       ry={3}
                       onMouseOver={event => handleMouseOver(d, event)}

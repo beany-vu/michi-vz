@@ -20,6 +20,26 @@ import styled from "styled-components";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import LoadingIndicator from "./shared/LoadingIndicator";
 
+const DEFAULT_COLORS = [
+  "#1f77b4",
+  "#ff7f0e",
+  "#2ca02c",
+  "#d62728",
+  "#9467bd",
+  "#8c564b",
+  "#e377c2",
+  "#7f7f7f",
+  "#bcbd22",
+  "#17becf",
+];
+
+function getColor(mappedColor?: string, dataColor?: string): string {
+  const FALLBACK_COLOR = "rgba(253, 253, 253, 0.5)";
+  if (mappedColor) return mappedColor;
+  if (dataColor) return dataColor;
+  return FALLBACK_COLOR;
+}
+
 const Styled = styled.div`
   .shape {
     width: 100%;
@@ -124,6 +144,13 @@ interface ScatterPlotChartProps<T extends number | string> {
   };
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
+  // colors is the color palette for new generated colors
+  colors?: string[];
+  // colorsMapping is the color mapping for existing colors
+  // the purpose is to share the same color mapping between charts
+  colorsMapping?: { [key: string]: string };
+  // Callback to notify parent about generated color mapping
+  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
 }
 
 const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
@@ -150,12 +177,41 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   filter,
   onChartDataProcessed,
   onHighlightItem,
+  colors = DEFAULT_COLORS,
+  colorsMapping = {},
+  onColorMappingGenerated,
 }) => {
   const ref = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const svgContainerRef = useRef<HTMLDivElement>(null);
   const [activePoint, setActivePoint] = useState<DataPoint | null>(null);
-  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
+
+  // Generate colors for data points that don't have colors in colorsMapping
+  const generatedColorsMapping = useMemo(() => {
+    const newMapping = { ...colorsMapping };
+    let colorIndex = Object.keys(colorsMapping).length;
+
+    if (filteredDataSet && filteredDataSet.length > 0) {
+      for (const dataPoint of filteredDataSet) {
+        if (!newMapping[dataPoint.label]) {
+          newMapping[dataPoint.label] = colors[colorIndex % colors.length];
+          colorIndex++;
+        }
+      }
+    }
+
+    return newMapping;
+  }, [filteredDataSet, colorsMapping, colors]);
+
+  // Notify parent about generated color mapping
+  const prevColorsMappingRef = useRef<{ [key: string]: string }>({});
+  useLayoutEffect(() => {
+    if (onColorMappingGenerated && JSON.stringify(prevColorsMappingRef.current) !== JSON.stringify(generatedColorsMapping)) {
+      prevColorsMappingRef.current = generatedColorsMapping;
+      onColorMappingGenerated(generatedColorsMapping);
+    }
+  }, [generatedColorsMapping, onColorMappingGenerated]);
+  const { highlightItems, disabledItems } = useChartContext();
 
   const renderCompleteRef = useRef(false);
   // Add ref for previous data comparison
@@ -427,7 +483,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                   const y = yScale(d.y);
                   const size = xAxisDataType === "band" ? d.d / 2 : dScale(d.d);
                   const radius = size / 2;
-                  const fill = colorsMapping?.[d.label] || d.color || "transparent";
+                  const fill = getColor(generatedColorsMapping[d.label], d.color);
 
                   // Function to create the right shape based on the shape prop
                   return (

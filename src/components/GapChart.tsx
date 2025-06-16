@@ -1,4 +1,4 @@
-import React, { FC, useRef, useState, useMemo, useEffect } from "react";
+import React, { FC, useRef, useState, useMemo, useEffect, useLayoutEffect } from "react";
 import styled from "styled-components";
 import { ChartMetadata } from "src/types/data";
 import Title from "./shared/Title";
@@ -16,6 +16,19 @@ import { useGapChartRenderer } from "./hooks/gapChart/useGapChartRenderer";
 import { useGapChartLegend } from "./hooks/gapChart/useGapChartLegend";
 import { useGapChartMetadata } from "./hooks/gapChart/useGapChartMetadata";
 import { useGapChartAnimation } from "./hooks/gapChart/useGapChartAnimation";
+
+const DEFAULT_COLORS = [
+  "#1f77b4",
+  "#ff7f0e",
+  "#2ca02c",
+  "#d62728",
+  "#9467bd",
+  "#8c564b",
+  "#e377c2",
+  "#7f7f7f",
+  "#bcbd22",
+  "#17becf",
+];
 
 const DEFAULT_WIDTH = 1000;
 const DEFAULT_HEIGHT = 500;
@@ -131,23 +144,13 @@ interface GapChartProps {
     opacity?: number;
     color?: string;
   }; // custom shadow configuration
+  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
 }
 
 const GapChart: FC<GapChartProps> = ({
   dataSet,
   title,
-  colors = [
-    "#1f77b4",
-    "#ff7f0e",
-    "#2ca02c",
-    "#d62728",
-    "#9467bd",
-    "#8c564b",
-    "#e377c2",
-    "#7f7f7f",
-    "#bcbd22",
-    "#17becf",
-  ],
+  colors = DEFAULT_COLORS,
   colorsMapping,
   colorMode = "label",
   shapeColorsMapping,
@@ -184,6 +187,7 @@ const GapChart: FC<GapChartProps> = ({
     opacity: 0.3,
     color: "#000000",
   },
+  onColorMappingGenerated,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -213,13 +217,22 @@ const GapChart: FC<GapChartProps> = ({
   );
 
   // Get color function
-  const { getColor, getShapeColor } = useGapChartColors(
+  const { getColor, getShapeColor, generatedColorsMapping } = useGapChartColors(
     yAxisDomain,
     colors,
     colorsMapping,
     colorMode,
     shapeColorsMapping
   );
+
+  // Notify parent about generated color mapping
+  const prevColorsMapping = useRef<{ [key: string]: string }>({});
+  useLayoutEffect(() => {
+    if (onColorMappingGenerated && JSON.stringify(prevColorsMapping.current) !== JSON.stringify(generatedColorsMapping)) {
+      prevColorsMapping.current = generatedColorsMapping;
+      onColorMappingGenerated(generatedColorsMapping);
+    }
+  }, [generatedColorsMapping, onColorMappingGenerated]);
 
   // Get tooltip handlers
   const { tooltip, handleMouseOver, handleMouseOut, handleChartElementClick, handleTooltipClick } =

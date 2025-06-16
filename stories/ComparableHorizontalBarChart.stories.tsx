@@ -11,12 +11,6 @@ export default {
   decorators: [
     Story => (
       <MichiVzProvider
-        colorsMapping={{
-          Africa: "red",
-          "Congo": "blue",
-          Egypt: "green",
-          Madagascar: "yellow",
-        }}
         visibleItems={["Africa", "Congo", "Egypt", "Madagascar"]}
       >
         <Story />

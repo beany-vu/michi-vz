@@ -6,6 +6,26 @@ import { useChartContext } from "../components/MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 
+const DEFAULT_COLORS = [
+  "#1f77b4",
+  "#ff7f0e",
+  "#2ca02c",
+  "#d62728",
+  "#9467bd",
+  "#8c564b",
+  "#e377c2",
+  "#7f7f7f",
+  "#bcbd22",
+  "#17becf",
+];
+
+function getColor(mappedColor?: string, dataColor?: string): string {
+  const FALLBACK_COLOR = "rgba(253, 253, 253, 0.5)";
+  if (mappedColor) return mappedColor;
+  if (dataColor) return dataColor;
+  return FALLBACK_COLOR;
+}
+
 const Polygon = styled.polygon`
   stroke-linejoin: round;
   pointer-events: stroke;
@@ -81,6 +101,13 @@ export interface RadarChartProps {
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
   tooltipContainerStyle?: React.CSSProperties;
+  // colors is the color palette for new generated colors
+  colors?: string[];
+  // colorsMapping is the color mapping for existing colors
+  // the purpose is to share the same color mapping between charts
+  colorsMapping?: { [key: string]: string };
+  // Callback to notify parent about generated color mapping
+  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
 }
 
 export const RadarChart: React.FC<RadarChartProps> = ({
@@ -99,8 +126,11 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   onChartDataProcessed,
   onHighlightItem,
   tooltipContainerStyle,
+  colors = DEFAULT_COLORS,
+  colorsMapping = {},
+  onColorMappingGenerated,
 }) => {
-  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
+  const { highlightItems, disabledItems } = useChartContext();
   const svgRef = useRef(null);
   const [tooltipData, setTooltipData] = useState<{
     date: string;
@@ -177,6 +207,32 @@ export const RadarChart: React.FC<RadarChartProps> = ({
 
     return { points, pointString };
   };
+
+  // Generate colors for series that don't have colors in colorsMapping
+  const generatedColorsMapping = useMemo(() => {
+    const newMapping = { ...colorsMapping };
+    let colorIndex = Object.keys(colorsMapping).length;
+
+    if (series && series.length > 0) {
+      for (const dataSet of series) {
+        if (!newMapping[dataSet.label]) {
+          newMapping[dataSet.label] = colors[colorIndex % colors.length];
+          colorIndex++;
+        }
+      }
+    }
+
+    return newMapping;
+  }, [series, colorsMapping, colors]);
+
+  // Notify parent about generated color mapping
+  const prevColorsMappingRef = useRef<{ [key: string]: string }>({});
+  useLayoutEffect(() => {
+    if (onColorMappingGenerated && JSON.stringify(prevColorsMappingRef.current) !== JSON.stringify(generatedColorsMapping)) {
+      prevColorsMappingRef.current = generatedColorsMapping;
+      onColorMappingGenerated(generatedColorsMapping);
+    }
+  }, [generatedColorsMapping, onColorMappingGenerated]);
 
   const processedSeries =
     series && series.length > 0
@@ -387,8 +443,8 @@ export const RadarChart: React.FC<RadarChartProps> = ({
             <Polygon
               points={pointString}
               fill={"transparent"}
-              data-label={colorsMapping[label]}
-              stroke={colorsMapping[label] ?? color}
+              data-label={getColor(generatedColorsMapping[label], color)}
+              stroke={getColor(generatedColorsMapping[label], color)}
               strokeWidth={2}
               onMouseEnter={event => {
                 event.preventDefault();
@@ -420,7 +476,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                         cy={point.y}
                         stroke="#fff"
                         strokeWidth={2}
-                        fill={colorsMapping[label] ?? color}
+                        fill={getColor(generatedColorsMapping[label], color)}
                         onMouseEnter={e => {
                           onHighlightItem([label]);
                           setTooltipData({

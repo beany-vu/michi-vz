@@ -1,211 +1,8 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { Meta, StoryFn } from "@storybook/react";
-import { RadarChart, RadarChartProps } from "src/components/RadarChart";
+import { RadarChart, RadarChartProps } from "../src/components/RadarChart";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
 
-const mockData2 = [
-  {
-    label: "China",
-    color: "#1F77B4",
-    data: [
-      {
-        partner: "156",
-        value: 120,
-        date: "Jan",
-      },
-      {
-        partner: "156",
-        value: "84",
-        date: "Feb",
-      },
-      {
-        partner: "156",
-        value: "86",
-        date: "Mar",
-      },
-      {
-        partner: "156",
-        value: "66",
-        date: "Apr",
-      },
-      {
-        partner: "156",
-        value: "170",
-        date: "May",
-      },
-      {
-        partner: "156",
-        value: "80",
-        date: "Jun",
-      },
-      {
-        partner: "156",
-        value: "132",
-        date: "Jul",
-      },
-      {
-        partner: "156",
-        value: "85",
-        date: "Aug",
-      },
-      {
-        partner: "156",
-        value: "102",
-        date: "Sep",
-      },
-      {
-        partner: "156",
-        value: "113",
-        date: "Oct",
-      },
-      {
-        partner: "156",
-        value: "105",
-        date: "Nov",
-      },
-      {
-        partner: "156",
-        value: "86",
-        date: "Dec",
-      },
-    ],
-    partner: "156",
-  },
-  {
-    label: "UAE",
-    color: "#D62728",
-    data: [
-      {
-        partner: "784",
-        value: "235",
-        date: "Jan",
-      },
-      {
-        partner: "784",
-        value: "245",
-        date: "Feb",
-      },
-      {
-        partner: "784",
-        value: "284",
-        date: "Mar",
-      },
-      {
-        partner: "784",
-        value: "259",
-        date: "Apr",
-      },
-      {
-        partner: "784",
-        value: "484",
-        date: "May",
-      },
-      {
-        partner: "784",
-        value: "221",
-        date: "Jun",
-      },
-      {
-        partner: "784",
-        value: "285",
-        date: "Jul",
-      },
-      {
-        partner: "784",
-        value: "332",
-        date: "Aug",
-      },
-      {
-        partner: "784",
-        value: "217",
-        date: "Sep",
-      },
-      {
-        partner: "784",
-        value: "276",
-        date: "Oct",
-      },
-      {
-        partner: "784",
-        value: "278",
-        date: "Nov",
-      },
-      {
-        partner: "784",
-        value: "250",
-        date: "Dec",
-      },
-    ],
-    partner: "784",
-  },
-  {
-    label: "France",
-    color: "#17BECF",
-    data: [
-      {
-        partner: "251",
-        value: "947",
-        date: "Jan",
-      },
-      {
-        partner: "251",
-        value: "793",
-        date: "Feb",
-      },
-      {
-        partner: "251",
-        value: "738",
-        date: "Mar",
-      },
-      {
-        partner: "251",
-        value: "1066",
-        date: "Apr",
-      },
-      {
-        partner: "251",
-        value: "2317",
-        date: "May",
-      },
-      {
-        partner: "251",
-        value: "1947",
-        date: "Jun",
-      },
-      {
-        partner: "251",
-        value: "2117",
-        date: "Jul",
-      },
-      {
-        partner: "251",
-        value: "1343",
-        date: "Aug",
-      },
-      {
-        partner: "251",
-        value: "808",
-        date: "Sep",
-      },
-      {
-        partner: "251",
-        value: "1093",
-        date: "Oct",
-      },
-      {
-        partner: "251",
-        value: "920",
-        date: "Nov",
-      },
-      {
-        partner: "251",
-        value: "630",
-        date: "Dec",
-      },
-    ],
-    partner: "251",
-  },
-];
 const mockData3 = [
   {
     label: "UAE",
@@ -300,17 +97,92 @@ export default {
   tags: ["autodocs"],
 } as Meta;
 
-const Template: StoryFn<RadarChartProps> = args => (
-  <MichiVzProvider
-    colorsMapping={{
-      UAE: "red",
-      France: "blue",
-    }}
-    highlightItems={["UAE"]}
-  >
-    <RadarChart {...args} />
-  </MichiVzProvider>
-);
+const Template: StoryFn<RadarChartProps> = (args: RadarChartProps) => {
+  const [highlightItems, setHighlightItems] = useState<string[]>([]);
+  const [disabledItems, setDisabledItems] = useState<string[]>([]);
+  const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>({});
+
+  const handleHighlightItem = useCallback((labels: string[]) => {
+    setHighlightItems(labels);
+    console.log('Highlighted items:', labels);
+  }, []);
+
+  const handleColorMappingGenerated = useCallback((mapping: { [key: string]: string }) => {
+    setColorsMapping(prev => {
+      // Only update if mapping actually changed
+      if (JSON.stringify(prev) !== JSON.stringify(mapping)) {
+        console.log('Generated color mapping:', mapping);
+        return mapping;
+      }
+      return prev;
+    });
+  }, []);
+
+  const toggleDisabledItem = useCallback((label: string) => {
+    setDisabledItems(prev => {
+      const newDisabled = prev.includes(label) 
+        ? prev.filter(item => item !== label)
+        : [...prev, label];
+      console.log('Disabled items:', newDisabled);
+      return newDisabled;
+    });
+  }, []);
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <div style={{ marginBottom: '20px' }}>
+        <h3>Interactive Controls</h3>
+        <div style={{ marginBottom: '10px' }}>
+          <strong>Current Highlighted Items:</strong> {highlightItems.length > 0 ? highlightItems.join(', ') : 'None'}
+        </div>
+        <div style={{ marginBottom: '10px' }}>
+          <strong>Current Disabled Items:</strong> {disabledItems.length > 0 ? disabledItems.join(', ') : 'None'}
+        </div>
+        <div style={{ marginBottom: '10px' }}>
+          <strong>Generated Colors:</strong> {Object.keys(colorsMapping).length > 0 ? JSON.stringify(colorsMapping) : 'None yet'}
+        </div>
+        <div style={{ marginBottom: '10px' }}>
+          <strong>Instructions:</strong>
+          <ul>
+            <li>Hover over data points or polygons to highlight series</li>
+            <li>Click on legend items below to disable/enable series</li>
+          </ul>
+        </div>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          {args.series?.map(series => (
+            <button
+              key={series.label}
+              onClick={() => toggleDisabledItem(series.label)}
+              style={{
+                padding: '8px 16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                backgroundColor: disabledItems.includes(series.label) ? '#f0f0f0' : '#fff',
+                color: disabledItems.includes(series.label) ? '#999' : '#000',
+                cursor: 'pointer',
+                textDecoration: disabledItems.includes(series.label) ? 'line-through' : 'none'
+              }}
+            >
+              {series.label} {disabledItems.includes(series.label) ? '(Disabled)' : ''}
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      <MichiVzProvider
+        highlightItems={highlightItems}
+        disabledItems={disabledItems}
+      >
+        <RadarChart 
+          {...args} 
+          colorsMapping={colorsMapping}
+          onColorMappingGenerated={handleColorMappingGenerated}
+          onHighlightItem={handleHighlightItem}
+        />
+      </MichiVzProvider>
+    </div>
+  );
+};
 
 export const Primary = Template.bind({});
 Primary.args = {
@@ -318,8 +190,8 @@ Primary.args = {
   height: 400,
   // series: mockData2,
   series: mockData3,
-  tooltipFormatter: (item) => <>{JSON.stringify(item)}</>,
-  radialLabelFormatter: (item) => `${item}`,
+  tooltipFormatter: (item: any) => <>{JSON.stringify(item)}</>,
+  radialLabelFormatter: (item: any) => `${item}`,
   poles: {
     range: [0, Math.PI * 3],
     domain: [360, 0],
@@ -341,7 +213,4 @@ Primary.args = {
   },
   isLoading: false,
   isNodataComponent: <>ddd</>,
-  onHighlightItem: (labels: string[]) => {
-    // console.log(labels);
-  },
 };

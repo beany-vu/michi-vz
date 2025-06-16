@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { GapChart, MichiVzProvider } from "../src/components";
-import { action } from "@storybook/addon-actions";
+import { fn } from "@storybook/test";
 
 const meta = {
   title: "Charts/GapChart",
@@ -121,8 +121,9 @@ export const Default: Story = {
     width: 1000,
     height: 600,
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
     filter: undefined,
   },
 };
@@ -244,6 +245,7 @@ export const WithColorMapping: Story = {
       "United States": "#8b5cf6",
       "India": "#10b981",
     },
+    onColorMappingGenerated: fn(),
   },
 };
 
@@ -379,8 +381,10 @@ export const WithoutColors: Story = {
     width: 1000,
     height: 500,
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
+    filter: undefined,
   },
 };
 
@@ -401,8 +405,8 @@ export const PositiveGrowthOnly: Story = {
     width: 1000,
     height: 400,
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
     tickHtmlWidth: 150,
     filter: {
       limit: 20,
@@ -430,8 +434,8 @@ export const NegativeGrowthOnly: Story = {
     width: 1000,
     height: 500,
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
     filter: {
       limit: 15,
       date: "2024",
@@ -465,8 +469,9 @@ export const ComplexScenario: Story = {
     width: 1200,
     height: 800,
     margin: { top: 60, right: 180, bottom: 120, left: 180 },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
     filter: {
       limit: 20,
       date: "2024",
@@ -524,8 +529,8 @@ export const ColorModesComparison: Story = {
     xAxisFormat: (d: number) => `${d}mn`,
     width: 1000,
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
     filter: {
       limit: 10,
       date: "2024",
@@ -776,8 +781,12 @@ export const AdvancedInteractive: Story = {
     width: 1000,
     height: 600,
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
+    filter: undefined,
+    shapeValue1: "circle",
+    shapeValue2: "square",
   },
 };
 
@@ -961,8 +970,10 @@ export const AnimatedDataChanges: Story = {
       criteria: "difference",
       sortingDir: "desc",
     },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
+    filter: undefined,
   },
 };
 
@@ -996,8 +1007,9 @@ export const AllPositiveValues: Story = {
     width: 1000,
     height: 500,
     margin: { top: 50, right: 150, bottom: 100, left: 80 },  // Reduced left margin for shorter labels
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
     filter: undefined,
     ticks: 5,
   },
@@ -1028,8 +1040,9 @@ export const ValuesNearZero: Story = {
     width: 1000,
     height: 400,
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
     filter: undefined,
   },
 };
@@ -1061,8 +1074,8 @@ export const LargePositiveValues: Story = {
     width: 1200,
     height: 500,
     margin: { top: 50, right: 180, bottom: 100, left: 180 },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
     filter: {
       limit: 8,
       date: "2024",
@@ -1106,8 +1119,8 @@ export const WithShadowEffects: Story = {
     width: 1000,
     height: 400,
     margin: { top: 50, right: 150, bottom: 100, left: 100 },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
     filter: undefined,
   },
 };
@@ -1144,8 +1157,8 @@ export const WithColoredShadows: Story = {
     width: 1000,
     height: 450,
     margin: { top: 50, right: 150, bottom: 100, left: 120 },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
     filter: {
       limit: 5,
       date: "2024",
@@ -1179,8 +1192,8 @@ export const MixedPositiveNegativeValues: Story = {
     width: 1000,
     height: 400,
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
     filter: undefined,
   },
 };
@@ -1352,7 +1365,7 @@ export const InteractiveControls: Story = {
     width: 1000,
     height: 600,
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
-    onHighlightItem: action("onHighlightItem"),
-    onChartDataProcessed: action("onChartDataProcessed"),
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
   },
 };

@@ -1,7 +1,7 @@
 import { useMemo, useRef } from "react";
 
 export const useGapChartColors = (
-  _labels: string[],
+  labels: string[],
   colors: string[] = [],
   colorsMapping?: Record<string, string>,
   colorMode: "label" | "shape" = "label",
@@ -28,9 +28,24 @@ export const useGapChartColors = (
     "#17becf",
   ];
 
+  // Generate colors for all labels upfront
+  const generatedColorsMapping = useMemo(() => {
+    const colorPalette = colors.length > 0 ? colors : defaultColors;
+    const newMapping = { ...colorsMapping };
+    let colorIndex = Object.keys(colorsMapping || {}).length;
+
+    for (const label of labels) {
+      if (!newMapping[label]) {
+        newMapping[label] = colorPalette[colorIndex % colorPalette.length];
+        colorIndex++;
+      }
+    }
+
+    return newMapping;
+  }, [labels, colors, colorsMapping]);
+
   const getColor = useMemo(() => {
     return (label: string) => {
-      // Use provided colors or default colors
       const colorPalette = colors.length > 0 ? colors : defaultColors;
 
       // In shape mode with explicit shape colors, use the first color as default
@@ -38,26 +53,10 @@ export const useGapChartColors = (
         return shapeColorsMapping.gap || colorPalette[0];
       }
 
-      // First check if there's a predefined color mapping
-      if (colorsMapping && colorsMapping[label]) {
-        return colorsMapping[label];
-      }
-
-      // Check cache
-      if (colorCacheRef.current[label]) {
-        return colorCacheRef.current[label];
-      }
-
-      // Generate new color from the colors array
-      const colorIndex = Object.keys(colorCacheRef.current).length % colorPalette.length;
-      const color = colorPalette[colorIndex];
-
-      // Cache the color
-      colorCacheRef.current[label] = color;
-
-      return color;
+      // Use generated color mapping
+      return generatedColorsMapping[label] || colorPalette[0];
     };
-  }, [colors, colorsMapping, colorMode, shapeColorsMapping]);
+  }, [generatedColorsMapping, colorMode, shapeColorsMapping, colors]);
 
   const getShapeColor = useMemo(() => {
     return (shapeType: "value1" | "value2" | "gap", label?: string) => {
@@ -84,12 +83,12 @@ export const useGapChartColors = (
 
       // In label mode, use the label's color
       if (label) {
-        return getColor(label);
+        return generatedColorsMapping[label] || colorPalette[0];
       }
 
       return colorPalette[0];
     };
-  }, [colorMode, shapeColorsMapping, colors, getColor]);
+  }, [colorMode, shapeColorsMapping, colors, generatedColorsMapping]);
 
-  return { getColor, getShapeColor };
+  return { getColor, getShapeColor, generatedColorsMapping };
 };
