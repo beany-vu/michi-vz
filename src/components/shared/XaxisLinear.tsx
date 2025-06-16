@@ -6,7 +6,10 @@ interface Props {
   xScale: ScaleTime<number, number> | ScaleLinear<number, number>;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
-  xAxisFormat?: (d: number | { valueOf(): number } | string) => string;
+  xAxisFormat?: (
+    d: number | { valueOf(): number } | string,
+    tickValues?: Array<string | number>
+  ) => string;
   xAxisDataType?: "number" | "date_annual" | "date_monthly";
   ticks?: number;
   showGrid?: boolean;
@@ -204,7 +207,10 @@ const XaxisLinear: FC<Props> = ({
       .tickValues(tickValues)
       .tickFormat((domainValue: number | Date | { valueOf(): number }) =>
         xAxisFormat
-          ? xAxisFormat(domainValue instanceof Date ? domainValue : domainValue.valueOf())
+          ? xAxisFormat(
+              domainValue instanceof Date ? domainValue : domainValue.valueOf(),
+              tickValues
+            )
           : defaultFormatter(domainValue)
       )
       .tickSize(6); // Control tick size

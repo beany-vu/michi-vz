@@ -114,10 +114,10 @@ export const Default: Story = {
     shapesLabelsMapping: {
       value1: "2019 Arrivals",
       value2: "2023 Arrivals",
-      gap: "Recovery Gap"
+      gap: "Recovery Gap",
     },
     xAxisDataType: "number",
-    xAxisFormat: (d: number) => `${d}mn`,
+    xAxisFormat: (d: number, values?: Array<string | number>) => `${d}mn`,
     width: 1000,
     height: 600,
     margin: { top: 50, right: 150, bottom: 100, left: 150 },

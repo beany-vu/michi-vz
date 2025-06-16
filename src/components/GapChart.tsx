@@ -106,7 +106,7 @@ interface GapChartProps {
   legendFormatter?: (items: LegendItem[]) => LegendItem[];
   xAxisDataType: "number" | "date_annual" | "date_monthly";
   yAxisFormat?: (d: number) => string;
-  xAxisFormat?: (d: number) => string;
+  xAxisFormat?: (d: number, tickValues?: Array<string | number>) => string;
   ticks?: number;
   width: number;
   height: number;
@@ -227,7 +227,7 @@ const GapChart: FC<GapChartProps> = ({
 
   // Get shape generation function
   const { getShapePath, getSquareDimensions } = useGapChartShapes();
-  
+
   // Helper for shadow filter
   const shadowFilter = enableShadow ? "url(#gapChartShadow)" : undefined;
 
@@ -494,7 +494,7 @@ const GapChart: FC<GapChartProps> = ({
             </filter>
           </defs>
         )}
-        
+
         <Title x={width / 2} y={margin.top / 2}>
           {title}
         </Title>
