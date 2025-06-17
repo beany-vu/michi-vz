@@ -25,7 +25,7 @@ export const useGapChartData = (
   const processedDataSet = useMemo(() => {
     const dataWithDifference = dataSet.map(item => ({
       ...item,
-      difference: item.value1 - item.value2,
+      difference: item.difference != null ? item.difference : item.value1 - item.value2,
     }));
 
     if (!filter) {
@@ -58,10 +58,10 @@ export const useGapChartData = (
     const allValues = processedDataSet.flatMap(d => [d.value1, d.value2]);
     const dataMin = Math.min(...allValues);
     const dataMax = Math.max(...allValues);
-    
+
     // If all values are positive, start at 0. If there are negative values, include them.
-    const min = dataMin < 0 ? dataMin * 1.05 : 0;  // Start at 0 for positive data
-    const max = dataMax * 1.05;  // Add 5% padding to the maximum
+    const min = dataMin < 0 ? dataMin * 1.05 : 0; // Start at 0 for positive data
+    const max = dataMax * 1.05; // Add 5% padding to the maximum
 
     return [min, max];
   }, [processedDataSet]);
