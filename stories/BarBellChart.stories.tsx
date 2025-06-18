@@ -383,3 +383,193 @@ export const InteractiveHover = {
     onColorMappingGenerated: fn(),
   },
 };
+
+// Comprehensive interactive story with disable/enable functionality
+export const DisableEnableColorMapping = {
+  render: (args: any) => {
+    const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
+    const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
+    const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
+    
+    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
+      setColorsMapping(prev => ({ ...prev, ...newMapping }));
+    }, []);
+
+    const toggleDisabled = React.useCallback((key: string) => {
+      setDisabledItems(prev => 
+        prev.includes(key) 
+          ? prev.filter(item => item !== key)
+          : [...prev, key]
+      );
+    }, []);
+
+    const controlsContainerStyle = {
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "15px",
+      marginBottom: "20px",
+      padding: "15px",
+      border: "1px solid #e0e0e0",
+      borderRadius: "8px",
+      backgroundColor: "#f9f9f9",
+    };
+
+    const buttonGroupStyle = {
+      display: "flex",
+      gap: "10px",
+      flexWrap: "wrap" as const,
+      alignItems: "center",
+    };
+
+    const sectionLabelStyle = {
+      fontSize: "14px",
+      fontWeight: "bold" as const,
+      color: "#333",
+      marginBottom: "5px",
+    };
+
+    const buttonStyle = (key: string, type: "highlight" | "disable") => {
+      const baseStyle = {
+        padding: "8px 16px",
+        border: "2px solid",
+        borderRadius: "4px",
+        cursor: "pointer",
+        transition: "all 0.3s ease",
+        fontWeight: 500,
+        fontSize: "12px",
+      };
+
+      if (type === "highlight") {
+        const isHighlighted = currentHighlight.includes(key);
+        const color = colorsMapping[key] || "#666";
+        return {
+          ...baseStyle,
+          borderColor: color,
+          background: isHighlighted ? color : "white",
+          color: isHighlighted ? "white" : color,
+        };
+      } else { // disable
+        const isDisabled = disabledItems.includes(key);
+        return {
+          ...baseStyle,
+          borderColor: isDisabled ? "#dc3545" : "#28a745",
+          background: isDisabled ? "#dc3545" : "#28a745",
+          color: "white",
+        };
+      }
+    };
+
+    const infoPanelStyle = {
+      padding: "10px",
+      backgroundColor: "#e9ecef",
+      borderRadius: "4px",
+      fontSize: "12px",
+      fontFamily: "monospace",
+    };
+
+    return (
+      <div>
+        <div style={controlsContainerStyle}>
+          <div>
+            <div style={sectionLabelStyle}>Highlight Controls:</div>
+            <div style={buttonGroupStyle}>
+              {args.keys.map((key: string) => (
+                <button
+                  key={`highlight-${key}`}
+                  style={buttonStyle(key, "highlight")}
+                  onMouseEnter={() => setCurrentHighlight([key])}
+                  onMouseLeave={() => setCurrentHighlight([])}
+                >
+                  {key}
+                </button>
+              ))}
+              <button
+                style={{
+                  padding: "8px 16px",
+                  border: "2px solid #666",
+                  borderRadius: "4px",
+                  background: currentHighlight.length === args.keys.length ? "#666" : "white",
+                  color: currentHighlight.length === args.keys.length ? "white" : "#666",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  fontWeight: 500,
+                  fontSize: "12px",
+                }}
+                onMouseEnter={() => setCurrentHighlight(args.keys)}
+                onMouseLeave={() => setCurrentHighlight([])}
+              >
+                Show All
+              </button>
+            </div>
+          </div>
+          
+          <div>
+            <div style={sectionLabelStyle}>Disable/Enable Controls:</div>
+            <div style={buttonGroupStyle}>
+              {args.keys.map((key: string) => (
+                <button
+                  key={`disable-${key}`}
+                  style={buttonStyle(key, "disable")}
+                  onClick={() => toggleDisabled(key)}
+                >
+                  {disabledItems.includes(key) ? "Enable" : "Disable"} {key}
+                </button>
+              ))}
+              <button
+                style={{
+                  padding: "8px 16px",
+                  border: "2px solid #6c757d",
+                  borderRadius: "4px",
+                  background: "#6c757d",
+                  color: "white",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  fontWeight: 500,
+                  fontSize: "12px",
+                }}
+                onClick={() => setDisabledItems([])}
+              >
+                Enable All
+              </button>
+            </div>
+          </div>
+          
+          <div style={infoPanelStyle}>
+            <div><strong>Disabled Items:</strong> {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}</div>
+            <div><strong>Colors Mapping:</strong> {JSON.stringify(colorsMapping, null, 2)}</div>
+          </div>
+        </div>
+        
+        <MichiVzProvider>
+          <BarBellChart 
+            {...args} 
+            onColorMappingGenerated={handleColorMappingGenerated}
+            colorsMapping={colorsMapping}
+            highlightItems={currentHighlight}
+            disabledItems={disabledItems}
+          />
+        </MichiVzProvider>
+      </div>
+    );
+  },
+  args: {
+    dataSet: mockData2,
+    keys: ["step1", "step2", "step3"],
+    width: 900,
+    height: 500,
+    margin: {
+      top: 50,
+      right: 50,
+      bottom: 50,
+      left: 200,
+    },
+    title: "Test Disable/Enable with Color Mapping",
+    xAxisFormat: (value: any) => `${value}`,
+    yAxisFormat: (value: any) => value,
+    showGrid: {
+      x: true,
+      y: false,
+    },
+    onColorMappingGenerated: fn(),
+  },
+};

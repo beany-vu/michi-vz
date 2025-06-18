@@ -21,14 +21,6 @@ interface UseGapChartRendererProps {
   shapeValue1: "circle" | "square" | "triangle";
   shapeValue2: "circle" | "square" | "triangle";
   hoveredYItem: string | null;
-  animationState?: {
-    entering: Set<string>;
-    exiting: Set<string>;
-    updating: Set<string>;
-  };
-  getItemOpacity?: (label: string, defaultOpacity: number) => number;
-  getItemTransform?: (label: string) => string;
-  shouldTransition?: (label: string) => boolean;
 }
 
 export const useGapChartRenderer = ({
@@ -42,10 +34,6 @@ export const useGapChartRenderer = ({
   shapeValue1,
   shapeValue2,
   hoveredYItem,
-  animationState,
-  getItemOpacity,
-  getItemTransform,
-  shouldTransition,
 }: UseGapChartRendererProps) => {
   const renderData = useMemo(() => {
     const elements = processedDataSet.map((d, i) => {
@@ -82,13 +70,9 @@ export const useGapChartRenderer = ({
       const baseMarkerOpacity =
         hoveredYItem !== null ? (hoveredYItem === d.label ? 1 : 0.3) : isHighlighted ? 1 : 0.3;
 
-      // Apply animation opacity if available
-      const barOpacity = getItemOpacity ? getItemOpacity(d.label, baseBarOpacity) : baseBarOpacity;
-      const markerOpacity = getItemOpacity
-        ? getItemOpacity(d.label, baseMarkerOpacity)
-        : baseMarkerOpacity;
-      const itemTransform = getItemTransform ? getItemTransform(d.label) : "scale(1)";
-      const hasTransition = shouldTransition ? shouldTransition(d.label) : false;
+      // Use base opacity directly
+      const barOpacity = baseBarOpacity;
+      const markerOpacity = baseMarkerOpacity;
 
       return {
         d,
@@ -103,8 +87,6 @@ export const useGapChartRenderer = ({
         barWidth,
         barOpacity,
         markerOpacity,
-        itemTransform,
-        hasTransition,
       };
     });
 
@@ -140,10 +122,6 @@ export const useGapChartRenderer = ({
     shapeValue1,
     shapeValue2,
     hoveredYItem,
-    animationState,
-    getItemOpacity,
-    getItemTransform,
-    shouldTransition,
   ]);
 
   return renderData;

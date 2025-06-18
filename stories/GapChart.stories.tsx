@@ -790,7 +790,7 @@ export const AdvancedInteractive: Story = {
   },
 };
 
-export const AnimatedDataChanges: Story = {
+export const DataChanges: Story = {
   render: args => {
     const [dataVersion, setDataVersion] = React.useState(0);
 
@@ -931,21 +931,18 @@ export const AnimatedDataChanges: Story = {
           style={{
             marginBottom: "10px",
             padding: "10px",
-            backgroundColor: "#eff6ff",
+            backgroundColor: "#fef3c7",
             borderRadius: "4px",
             fontSize: "14px",
           }}
         >
-          <strong>Animation Note:</strong> Watch how items smoothly enter, exit, and transition when
-          data changes. New items fade in, removed items fade out, and existing items smoothly move
-          to their new positions.
+          <strong>Note:</strong> This chart demonstrates data changes without animations. Animations have been removed for stability.
         </div>
 
         <GapChart
           {...args}
           dataSet={animatedData}
-          title="Animated Gap Chart - Data Changes with Enter/Exit Transitions"
-          enableTransitions={true}
+          title="Gap Chart - Data Changes (No Animations)"
         />
       </div>
     );

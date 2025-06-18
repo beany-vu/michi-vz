@@ -4,10 +4,29 @@ import isEqual from "lodash/isEqual";
 import Title from "./shared/Title";
 import XaxisBand from "./shared/XaxisBand";
 import YaxisLinear from "./shared/YaxisLinear";
-import { useChartContext } from "./MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
+
+const DEFAULT_COLORS = [
+  "#1f77b4",
+  "#ff7f0e",
+  "#2ca02c",
+  "#d62728",
+  "#9467bd",
+  "#8c564b",
+  "#e377c2",
+  "#7f7f7f",
+  "#bcbd22",
+  "#17becf",
+];
+
+function getColor(mappedColor?: string, dataColor?: string): string {
+  const FALLBACK_COLOR = "rgba(253, 253, 253, 0.5)";
+  if (mappedColor) return mappedColor;
+  if (dataColor) return dataColor;
+  return FALLBACK_COLOR;
+}
 
 const VerticalStackBarChartStyled = styled.div`
   position: relative;
@@ -70,6 +89,16 @@ interface Props {
   // New: callback to expose chart metadata to parent component
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
+  // colors is the color palette for new generated colors
+  colors?: string[];
+  // colorsMapping is the color mapping for existing colors
+  // the purpose is to share the same color mapping between charts
+  colorsMapping?: { [key: string]: string };
+  // Callback to notify parent about generated color mapping
+  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
+  // highlightItems and disabledItems as props for better performance
+  highlightItems?: string[];
+  disabledItems?: string[];
 }
 
 export interface RectData {
@@ -116,14 +145,18 @@ const VerticalStackBarChart: React.FC<Props> = ({
   filter,
   onChartDataProcessed,
   onHighlightItem,
+  colors = DEFAULT_COLORS,
+  colorsMapping = {},
+  onColorMappingGenerated,
+  highlightItems = [],
+  disabledItems = [],
 }) => {
-  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
   const chartRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
-  // Remove unused seriesKeys and filteredKeys
+  // First, get all keys from the dataset
   const allKeys = useMemo(() => {
     return Array.from(
       new Set(
@@ -134,6 +167,35 @@ const VerticalStackBarChart: React.FC<Props> = ({
       )
     );
   }, [dataSet]);
+
+  // Generate colors for keys that don't have colors in colorsMapping
+  const generatedColorsMapping = useMemo(() => {
+    const newMapping = { ...colorsMapping };
+    let colorIndex = Object.keys(colorsMapping).length;
+
+    if (allKeys && allKeys.length > 0) {
+      for (const key of allKeys) {
+        if (!newMapping[key]) {
+          newMapping[key] = colors[colorIndex % colors.length];
+          colorIndex++;
+        }
+      }
+    }
+
+    return newMapping;
+  }, [allKeys, colorsMapping, colors]);
+
+  // Notify parent about generated color mapping with infinite loop protection
+  const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
+  useLayoutEffect(() => {
+    if (
+      onColorMappingGenerated &&
+      !isEqual(generatedColorsMapping, lastColorMappingSentRef.current)
+    ) {
+      lastColorMappingSentRef.current = { ...generatedColorsMapping };
+      onColorMappingGenerated(generatedColorsMapping);
+    }
+  }, [generatedColorsMapping, onColorMappingGenerated]);
 
   // Modified: effectiveKeys should filter out hidden items
   const effectiveKeys = useMemo(() => {
@@ -162,17 +224,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
     return sorted.slice(0, filter.limit);
   }, [dataSet, filter]);
 
-  // Keep only the keys we need
-  const keys = useMemo(() => {
-    return Array.from(
-      new Set(
-        dataSet
-          .map(ds => ds.series.map(s => Object.keys(s)))
-          .flat(2)
-          .filter(d => d !== "date" && d !== "code")
-      )
-    );
-  }, [dataSet]);
+  // Use allKeys as the main keys reference
+  const keys = allKeys;
 
   // Replace usage of dataSet with filteredDataSet:
   const flattenedDataSet = useMemo(() => {
@@ -300,7 +353,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                     groupWidth / 2 -
                     groupWidth / 2 +
                     2,
-                  fill: colorsMapping[key],
+                  fill: getColor(generatedColorsMapping[key]),
                   data: yearData,
                   seriesKey: dataItem.seriesKey,
                   seriesKeyAbbreviation: dataItem.seriesKeyAbbreviation,
@@ -316,7 +369,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
       return stackedData;
     },
-    [effectiveKeys, disabledItems, xScale, yScale, colorsMapping]
+    [effectiveKeys, disabledItems, xScale, yScale, generatedColorsMapping]
   );
 
   // Memoize the stacked rect data
@@ -341,7 +394,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
         return `
                 <div style="background: #fff; padding: 5px">
                     <p>${data.date} - ${seriesKey}</p>
-                    ${data[key] ? `<p style="color:${colorsMapping[key]}">${key}: ${data[key]}</p>` : "N/A"}
+                    ${data[key] ? `<p style="color:${getColor(generatedColorsMapping[key])}">${key}: ${data[key]}</p>` : "N/A"}
                 </div>`;
       }
       return `
@@ -352,12 +405,12 @@ const VerticalStackBarChart: React.FC<Props> = ({
                       .sort()
                       .map(
                         key =>
-                          `<p style="color:${colorsMapping[key]}">${key}: ${data[key] ?? "N/A"}</p>`
+                          `<p style="color:${getColor(generatedColorsMapping[key])}">${key}: ${data[key] ?? "N/A"}</p>`
                       )
                       .join("")}
                 </div>`;
     },
-    [tooltipFormatter, showCombined, colorsMapping]
+    [tooltipFormatter, showCombined, generatedColorsMapping]
   );
 
   // Memoize the tooltip position update

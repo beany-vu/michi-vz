@@ -653,12 +653,12 @@ This story shows how to implement interactive highlighting with category toggles
 const [highlightedItems, setHighlightedItems] = useState([]);
 const [disabledItems, setDisabledItems] = useState([]);
 
-<MichiVzProvider highlightItems={highlightedItems} disabledItems={disabledItems}>
-  <AreaChart
-    onHighlightItem={setHighlightedItems}  // Handle hover highlights
-    {...props}
-  />
-</MichiVzProvider>
+<AreaChart
+  onHighlightItem={setHighlightedItems}  // Handle hover highlights
+  highlightItems={highlightedItems}      // Pass as props for better performance
+  disabledItems={disabledItems}
+  {...props}
+/>
 \`\`\`
 
 **Features Demonstrated:**
@@ -720,12 +720,12 @@ const highlightItems = useSelector(state => state.charts.highlightItems);
             </div>
           </div>
         </div>
-        <MichiVzProvider highlightItems={highlightedItems} disabledItems={disabledItems}>
-          <AreaChart
-            {...args}
-            onHighlightItem={setHighlightedItems}
-          />
-        </MichiVzProvider>
+        <AreaChart
+          {...args}
+          onHighlightItem={setHighlightedItems}
+          highlightItems={highlightedItems}
+          disabledItems={disabledItems}
+        />
       </div>
     );
   },
@@ -761,17 +761,16 @@ export const WithPredefinedHighlight = {
       <div>
         <div style={{ marginBottom: "20px" }}>
           <h3>Area Chart with "Processed" Category Pre-highlighted</h3>
-          <p>The "Processed" category is highlighted by default via MichiVzProvider</p>
+          <p>The "Processed" category is highlighted by default via props</p>
         </div>
-        <MichiVzProvider 
-          highlightItems={["Processed"]}
+        <MichiVzProvider
           colorsMapping={{
             Raw: "#ff7f0e",
             "Semi-processed": "#2ca02c",
             Processed: "#1f77b4",
           }}
         >
-          <AreaChart {...args} />
+          <AreaChart {...args} highlightItems={["Processed"]} />
         </MichiVzProvider>
       </div>
     );
@@ -1113,12 +1112,11 @@ export const TestHighlighting = {
           </p>
         </div>
         
-        <MichiVzProvider highlightItems={highlightedItems}>
-          <AreaChart
-            {...args}
-            onHighlightItem={setHighlightedItems}
-          />
-        </MichiVzProvider>
+        <AreaChart
+          {...args}
+          onHighlightItem={setHighlightedItems}
+          highlightItems={highlightedItems}
+        />
       </div>
     );
   },

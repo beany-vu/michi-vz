@@ -48,7 +48,34 @@ export const useGapChartData = (
     return sortedData.slice(0, filter.limit).filter(d => !disabledItems.includes(d.label));
   }, [dataSet, filter, disabledItems]);
 
-  // Get unique labels for y-axis
+  // Get unique labels for y-axis (include all original labels for color generation)
+  const allLabels = useMemo(() => {
+    const dataWithDifference = dataSet.map(item => ({
+      ...item,
+      difference: item.value1 - item.value2,
+    }));
+
+    if (!filter) {
+      return dataWithDifference.map(d => d.label);
+    }
+
+    // Filter by date if specified (but don't exclude disabled items for color generation)
+    const dateFilteredData = filter.date
+      ? dataWithDifference.filter(d => d.date === filter.date)
+      : dataWithDifference;
+
+    // Sort by difference
+    const sortedData = dateFilteredData.slice().sort((a, b) => {
+      const diff =
+        filter.sortingDir === "desc" ? b.difference - a.difference : a.difference - b.difference;
+      return diff;
+    });
+
+    // Apply limit but keep all labels (including disabled ones) for color generation
+    return sortedData.slice(0, filter.limit).map(d => d.label);
+  }, [dataSet, filter]);
+
+  // For rendering, use processed dataset (excluding disabled items)
   const yAxisDomain = useMemo(() => processedDataSet.map(d => d.label), [processedDataSet]);
 
   // Calculate x-axis domain (min and max values)
@@ -58,10 +85,10 @@ export const useGapChartData = (
     const allValues = processedDataSet.flatMap(d => [d.value1, d.value2]);
     const dataMin = Math.min(...allValues);
     const dataMax = Math.max(...allValues);
-    
+
     // If all values are positive, start at 0. If there are negative values, include them.
-    const min = dataMin < 0 ? dataMin * 1.05 : 0;  // Start at 0 for positive data
-    const max = dataMax * 1.05;  // Add 5% padding to the maximum
+    const min = dataMin < 0 ? dataMin * 1.05 : 0; // Start at 0 for positive data
+    const max = dataMax * 1.05; // Add 5% padding to the maximum
 
     return [min, max];
   }, [processedDataSet]);
@@ -70,5 +97,6 @@ export const useGapChartData = (
     processedDataSet,
     yAxisDomain,
     xAxisDomain,
+    allLabels, // Include all labels for color generation
   };
 };

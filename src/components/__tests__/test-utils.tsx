@@ -51,12 +51,7 @@ const mockSVGFunctions = () => {
     baseVal: { value: number } = { value: 0 };
   }
 
-  class SVGLength {
-    value: number = 0;
-  }
-
   // Mock SVG element prototype methods
-  // @ts-ignore
   global.SVGElement.prototype.getBBox =
     global.SVGElement.prototype.getBBox ||
     (() => ({
@@ -66,11 +61,9 @@ const mockSVGFunctions = () => {
       height: 100,
     }));
 
-  // @ts-ignore
   global.SVGElement.prototype.getComputedTextLength =
     global.SVGElement.prototype.getComputedTextLength || (() => 100);
 
-  // @ts-ignore
   global.SVGElement.prototype.getPointAtLength =
     global.SVGElement.prototype.getPointAtLength || (() => ({ x: 0, y: 0 }));
 
@@ -145,13 +138,9 @@ const mockSVGFunctions = () => {
 
 // Clear the mocks
 const clearMocks = () => {
-  // @ts-ignore
   delete global.SVGElement.prototype.getBBox;
-  // @ts-ignore
   delete global.SVGElement.prototype.getComputedTextLength;
-  // @ts-ignore
   delete global.SVGElement.prototype.getPointAtLength;
-  // @ts-ignore
   delete global.ResizeObserver;
 };
 

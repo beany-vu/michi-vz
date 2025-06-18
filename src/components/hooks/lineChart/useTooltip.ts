@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Margin } from "src/types/data";
+import { Margin } from "../../../types/data";
 import { pointer, select } from "d3";
 
 export const useTooltip = (

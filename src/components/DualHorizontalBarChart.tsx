@@ -1,5 +1,6 @@
 import * as d3 from "d3";
-import React, { useEffect, useMemo, useRef, useLayoutEffect } from "react";
+import React, { useEffect, useMemo, useRef, useLayoutEffect, useCallback } from "react";
+import isEqual from "lodash/isEqual";
 import { useChartContext } from "../components/MichiVzProvider";
 import Title from "../components/shared/Title";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
@@ -68,6 +69,9 @@ interface LineChartProps {
   // the purpose is to share the same color mapping between charts
   colorsMapping?: { [key: string]: string };
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
+  // highlightItems and disabledItems as props for better performance
+  highlightItems?: string[];
+  disabledItems?: string[];
 }
 
 interface ChartMetadata {
@@ -100,16 +104,19 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
   colors = DEFAULT_COLORS,
   colorsMapping = {},
   onColorMappingGenerated,
+  highlightItems = [],
+  disabledItems = [],
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
     y: number;
     data: DataPoint;
   } | null>(null);
-  const { highlightItems, disabledItems, visibleItems } = useChartContext();
+  const { visibleItems } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
+  const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
 
   // Generate colors for items that don't have colors in colorsMapping
   const generatedColorsMapping = useMemo(() => {
@@ -127,14 +134,25 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     return newMapping;
   }, [dataSet, colorsMapping, colors]);
 
-  // Notify parent about generated color mapping
-  const prevColorsMapping = useRef<{ [key: string]: string }>({});
+  // Memoized callback for color mapping generation
+  const memoizedOnColorMappingGenerated = useCallback(
+    (colorsMapping: { [key: string]: string }) => {
+      if (onColorMappingGenerated) {
+        onColorMappingGenerated(colorsMapping);
+      }
+    },
+    [onColorMappingGenerated]
+  );
+
+  // Notify parent about generated color mapping with infinite loop protection
   useLayoutEffect(() => {
-    if (onColorMappingGenerated && JSON.stringify(prevColorsMapping.current) !== JSON.stringify(generatedColorsMapping)) {
-      prevColorsMapping.current = generatedColorsMapping;
-      onColorMappingGenerated(generatedColorsMapping);
+    if (memoizedOnColorMappingGenerated) {
+      if (!isEqual(generatedColorsMapping, lastColorMappingSentRef.current)) {
+        lastColorMappingSentRef.current = { ...generatedColorsMapping };
+        memoizedOnColorMappingGenerated(generatedColorsMapping);
+      }
     }
-  }, [generatedColorsMapping, onColorMappingGenerated]);
+  }, [generatedColorsMapping, memoizedOnColorMappingGenerated]);
 
   useLayoutEffect(() => {
     renderCompleteRef.current = true;

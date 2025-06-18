@@ -1,6 +1,6 @@
 import { scaleLinear, min, max } from "d3";
 import { useMemo } from "react";
-import { LineChartDataItem, DataPoint } from "src/types/data";
+import { LineChartDataItem, DataPoint } from "../../../types/data";
 
 const useLineChartYscale = (
   filteredDataSet: LineChartDataItem[],

@@ -45,7 +45,6 @@ const radarChartProps = {
 describe("RadarChart", () => {
   // Skip tests that require deeper SVG mocking
   test.skip("renders with title", async () => {
-    const chartTitle = "Test Radar Chart";
     const { container } = customRender(<RadarChart series={radarData} {...radarChartProps} />);
 
     await waitFor(() => {

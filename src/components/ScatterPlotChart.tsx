@@ -7,13 +7,13 @@ import React, {
   useState,
   useLayoutEffect,
 } from "react";
+import isEqual from "lodash/isEqual";
 import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import XaxisBand from "./shared/XaxisBand";
 import YaxisLinear from "./shared/YaxisLinear";
-import { useChartContext } from "./MichiVzProvider";
 import { drawHalfLeftCircle } from "../components/shared/helpers";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
@@ -151,6 +151,9 @@ interface ScatterPlotChartProps<T extends number | string> {
   colorsMapping?: { [key: string]: string };
   // Callback to notify parent about generated color mapping
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
+  // highlightItems and disabledItems as props for better performance
+  highlightItems?: string[];
+  disabledItems?: string[];
 }
 
 const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
@@ -180,19 +183,22 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   colors = DEFAULT_COLORS,
   colorsMapping = {},
   onColorMappingGenerated,
+  highlightItems = [],
+  disabledItems = [],
 }) => {
   const ref = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const svgContainerRef = useRef<HTMLDivElement>(null);
   const [activePoint, setActivePoint] = useState<DataPoint | null>(null);
+  const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
 
   // Generate colors for data points that don't have colors in colorsMapping
   const generatedColorsMapping = useMemo(() => {
     const newMapping = { ...colorsMapping };
     let colorIndex = Object.keys(colorsMapping).length;
 
-    if (filteredDataSet && filteredDataSet.length > 0) {
-      for (const dataPoint of filteredDataSet) {
+    if (dataSet && dataSet.length > 0) {
+      for (const dataPoint of dataSet) {
         if (!newMapping[dataPoint.label]) {
           newMapping[dataPoint.label] = colors[colorIndex % colors.length];
           colorIndex++;
@@ -201,17 +207,27 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     }
 
     return newMapping;
-  }, [filteredDataSet, colorsMapping, colors]);
+  }, [dataSet, colorsMapping, colors]);
 
-  // Notify parent about generated color mapping
-  const prevColorsMappingRef = useRef<{ [key: string]: string }>({});
+  // Memoized callback for color mapping generation
+  const memoizedOnColorMappingGenerated = useCallback(
+    (colorsMapping: { [key: string]: string }) => {
+      if (onColorMappingGenerated) {
+        onColorMappingGenerated(colorsMapping);
+      }
+    },
+    [onColorMappingGenerated]
+  );
+
+  // Notify parent about generated color mapping with infinite loop protection
   useLayoutEffect(() => {
-    if (onColorMappingGenerated && JSON.stringify(prevColorsMappingRef.current) !== JSON.stringify(generatedColorsMapping)) {
-      prevColorsMappingRef.current = generatedColorsMapping;
-      onColorMappingGenerated(generatedColorsMapping);
+    if (memoizedOnColorMappingGenerated) {
+      if (!isEqual(generatedColorsMapping, lastColorMappingSentRef.current)) {
+        lastColorMappingSentRef.current = { ...generatedColorsMapping };
+        memoizedOnColorMappingGenerated(generatedColorsMapping);
+      }
     }
-  }, [generatedColorsMapping, onColorMappingGenerated]);
-  const { highlightItems, disabledItems } = useChartContext();
+  }, [generatedColorsMapping, memoizedOnColorMappingGenerated]);
 
   const renderCompleteRef = useRef(false);
   // Add ref for previous data comparison

@@ -86,7 +86,7 @@ describe("VerticalStackBarChart", () => {
       return MockLoadingIndicator;
     });
 
-    const { getByTestId } = customRender(
+    customRender(
       <VerticalStackBarChart dataSet={sampleChartData} {...defaultChartProps} isLoading={true} />
     );
 

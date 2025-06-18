@@ -2,10 +2,10 @@ import React, { FC, useRef, useMemo, useLayoutEffect } from "react";
 import { ScaleLinear } from "d3-scale";
 import * as d3 from "d3";
 
-// Simple text width estimation (average character width ~7px for 12px font)
-const estimateTextWidth = (text: string): number => {
-  return text.length * 7;
-};
+// Simple text width estimation (average character width ~7px for 12px font) - currently unused
+// const estimateTextWidth = (text: string): number => {
+//   return text.length * 7;
+// };
 
 interface Props {
   yScale: ScaleLinear<number, number>;
@@ -69,14 +69,14 @@ const YaxisLinear: FC<Props> = ({
     // Update transitions
     g.selectAll(".tick text").transition().duration(750).style("opacity", 1);
 
-    // Calculate dynamic tick line length based on label width
-    const tickData = g.selectAll(".tick").data();
-    const maxLabelWidth = Math.max(
-      ...tickData.map(d => {
-        const formatValue = yAxisFormat ? yAxisFormat(d as number) : String(d);
-        return estimateTextWidth(formatValue);
-      })
-    );
+    // Calculate dynamic tick line length based on label width (currently unused)
+    // const tickData = g.selectAll(".tick").data();
+    // const maxLabelWidthCalc = Math.max(
+    //   ...tickData.map(d => {
+    //     const formatValue = yAxisFormat ? yAxisFormat(d as number) : String(d);
+    //     return estimateTextWidth(formatValue);
+    //   })
+    // );
 
     // Use full grid width for horizontal lines to reach chart edge
     const fullGridWidth = width - margin.right - margin.left;

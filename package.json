@@ -1,15 +1,22 @@
 {
   "name": "michi-vz",
-  "version": "0.4.49",
+  "version": "0.5.3",
   "description": "a visualization library based on d3 and react",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "build": "tsc && tsc-alias",
+    "build": "tsc --pretty && tsc-alias",
+    "build:files": "tsc --pretty --listFiles && tsc-alias",
+    "build:debug": "tsc --pretty --extendedDiagnostics && tsc-alias",
+    "build:trace": "tsc --pretty --traceResolution && tsc-alias",
+    "type-check": "tsc --noEmit --pretty",
     "lint": "eslint './src/**/*.{ts,tsx}'",
     "lint:fix": "eslint './src/**/*.{ts,tsx}' --fix",
     "prepublishOnly": "npm run build",

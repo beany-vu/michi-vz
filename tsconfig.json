@@ -19,7 +19,16 @@
     "baseUrl": ".",
     "paths": {
       "src/*": ["src/*"]
-    }
+    },
+    // Better error reporting
+    "pretty": true,
+    "noErrorTruncation": true,
+    "preserveWatchOutput": true,
+    // Better debugging in consuming projects
+    "sourceMap": true,
+    "inlineSourceMap": false,
+    "inlineSources": true,
+    "declarationMap": true
   },
   "include": ["src/**/*", "src/**/*.ts", "src/**/*.tsx", "**/*.test.ts", "**/*.test.tsx"],
   "exclude": ["node_modules", "build", "dist", "stories"]

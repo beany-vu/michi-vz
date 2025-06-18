@@ -2,10 +2,10 @@ import React, { FC, useLayoutEffect, useRef, useMemo, useCallback } from "react"
 import { ScaleBand } from "d3-scale";
 import * as d3 from "d3";
 
-// Simple text width estimation (average character width ~7px for 12px font)
-const estimateTextWidth = (text: string): number => {
-  return text.length * 7;
-};
+// Simple text width estimation (average character width ~7px for 12px font) - currently unused
+// const estimateTextWidth = (text: string): number => {
+//   return text.length * 7;
+// };
 
 interface Props {
   yScale: ScaleBand<string>;
@@ -17,7 +17,6 @@ interface Props {
   hoveredItem?: string | null;
   tickHtmlWidth?: number;
   enableTransitions?: boolean;
-  isRendering?: boolean;
 }
 
 const YaxisBand: FC<Props> = ({
@@ -30,7 +29,6 @@ const YaxisBand: FC<Props> = ({
   hoveredItem,
   tickHtmlWidth = 100,
   enableTransitions = true,
-  isRendering = false,
 }) => {
   const ref = useRef<SVGGElement>(null);
   const renderedRef = useRef(false);
@@ -43,29 +41,29 @@ const YaxisBand: FC<Props> = ({
       .tickSize(0);
   }, [yScale, yAxisFormat]);
 
-  // Memoize the grid width calculation with dynamic adjustment
-  const gridWidth = useMemo(() => {
-    // Calculate the maximum label width
-    const domain = yScale.domain();
-    const maxLabelWidth = Math.max(
-      ...domain.map(d => {
-        const formatValue = yAxisFormat ? yAxisFormat(d) : String(d);
-        return estimateTextWidth(formatValue);
-      })
-    );
+  // Memoize the grid width calculation with dynamic adjustment (currently unused)
+  // const gridWidthCalc = useMemo(() => {
+  //   // Calculate the maximum label width
+  //   const domain = yScale.domain();
+  //   const maxLabelWidth = Math.max(
+  //     ...domain.map(d => {
+  //       const formatValue = yAxisFormat ? yAxisFormat(d) : String(d);
+  //       return estimateTextWidth(formatValue);
+  //     })
+  //   );
 
-    // Calculate adjusted grid width: full width minus label overlap
-    const labelOverlapBuffer = 10; // 10px buffer
-    const adjustedGridWidth = Math.max(
-      width -
-        margin.left -
-        margin.right -
-        Math.max(0, maxLabelWidth - tickHtmlWidth + labelOverlapBuffer),
-      50 // Minimum grid line length
-    );
+  //   // Calculate adjusted grid width: full width minus label overlap
+  //   const labelOverlapBuffer = 10; // 10px buffer
+  //   const adjustedGridWidth = Math.max(
+  //     width -
+  //       margin.left -
+  //       margin.right -
+  //       Math.max(0, maxLabelWidth - tickHtmlWidth + labelOverlapBuffer),
+  //     50 // Minimum grid line length
+  //   );
 
-    return adjustedGridWidth;
-  }, [width, margin, yScale, yAxisFormat, tickHtmlWidth]);
+  //   return adjustedGridWidth;
+  // }, [width, margin, yScale, yAxisFormat, tickHtmlWidth]);
 
   const updateAxis = useCallback(() => {
     if (!ref.current) return;
@@ -148,16 +146,14 @@ const YaxisBand: FC<Props> = ({
       const element = d3.select(this);
       let opacity = 0;
 
-      if (!isRendering) {
-        opacity = hoveredItem === null ? 1 : d === hoveredItem ? 1 : 0.3;
-      }
+      opacity = hoveredItem === null ? 1 : d === hoveredItem ? 1 : 0.3;
 
       element.style("opacity", opacity);
       if (enableTransitions) {
         element.style("transition", "opacity 0.2s ease-in-out");
       }
     });
-  }, [hoveredItem, isRendering, enableTransitions]);
+  }, [hoveredItem, enableTransitions]);
 
   return <g ref={ref} />;
 };

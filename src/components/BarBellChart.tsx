@@ -1,11 +1,11 @@
 import React, { useRef, useLayoutEffect, useMemo, useState, useCallback } from "react";
+import isEqual from "lodash/isEqual";
 import Title from "./shared/Title";
 import defaultConf from "./hooks/useDefaultConfig";
 import * as d3 from "d3";
 import { scaleBand, scaleLinear } from "d3";
 import YaxisBand from "./shared/YaxisBand";
 import XaxisLinear from "./shared/XaxisLinnearBarBellChart";
-import { useChartContext } from "./MichiVzProvider";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import LoadingIndicator from "./shared/LoadingIndicator";
 
@@ -61,6 +61,9 @@ interface BarBellChartProps {
   // the purpose is to share the same color mapping between charts
   colorsMapping?: { [key: string]: string };
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
+  // highlightItems and disabledItems as props for better performance
+  highlightItems?: string[];
+  disabledItems?: string[];
 }
 
 const BarBellChart: React.FC<BarBellChartProps> = ({
@@ -86,13 +89,27 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   colors = DEFAULT_COLORS,
   colorsMapping = {},
   onColorMappingGenerated,
+  highlightItems = [],
+  disabledItems = [],
 }) => {
-  const { highlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const refTooltip = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
   const [hoveredYItem, setHoveredYItem] = useState<string | null>(null);
+
+  // Ref to track the last color mapping sent to prevent infinite loops
+  const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
+
+  // Memoize callback functions to prevent infinite loops
+  const memoizedOnColorMappingGenerated = useCallback(
+    (colorsMapping: { [key: string]: string }) => {
+      if (onColorMappingGenerated) {
+        onColorMappingGenerated(colorsMapping);
+      }
+    },
+    [onColorMappingGenerated]
+  );
 
   // Generate colors for keys that don't have colors in colorsMapping
   const generatedColorsMapping = useMemo(() => {
@@ -109,12 +126,15 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     return newMapping;
   }, [keys, colorsMapping, colors]);
 
-  // Notify parent about generated color mapping
+  // Notify parent about generated color mapping with infinite loop protection
   useLayoutEffect(() => {
-    if (onColorMappingGenerated) {
-      onColorMappingGenerated(generatedColorsMapping);
+    if (memoizedOnColorMappingGenerated) {
+      if (!isEqual(generatedColorsMapping, lastColorMappingSentRef.current)) {
+        lastColorMappingSentRef.current = { ...generatedColorsMapping };
+        memoizedOnColorMappingGenerated(generatedColorsMapping);
+      }
     }
-  }, [generatedColorsMapping, onColorMappingGenerated]);
+  }, [generatedColorsMapping, memoizedOnColorMappingGenerated]);
 
   const handleYAxisHover = useCallback((item: string | null) => {
     setHoveredYItem(item);

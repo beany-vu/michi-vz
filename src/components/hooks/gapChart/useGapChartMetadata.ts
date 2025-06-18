@@ -54,5 +54,5 @@ export const useGapChartMetadata = ({
         prevChartDataRef.current = currentMetadata;
       }
     }
-  }, [processedDataSet, xAxisDomain, onChartDataProcessed]);
+  }, [processedDataSet, xAxisDomain]);
 };

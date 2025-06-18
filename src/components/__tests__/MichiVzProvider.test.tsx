@@ -19,7 +19,7 @@ describe("MichiVzProvider", () => {
       const context = useChartContext();
       return (
         <div>
-          <span data-testid="disabled-items">{JSON.stringify(context.disabledItems)}</span>
+          <span data-testid="visible-items">{JSON.stringify(context.visibleItems)}</span>
           <span data-testid="colors-mapping">{JSON.stringify(context.colorsMapping)}</span>
         </div>
       );
@@ -31,7 +31,7 @@ describe("MichiVzProvider", () => {
       </MichiVzProvider>
     );
 
-    expect(getByTestId("disabled-items")).toHaveTextContent("[]");
+    expect(getByTestId("visible-items")).toHaveTextContent("[]");
     expect(getByTestId("colors-mapping")).toHaveTextContent("{}");
   });
 
@@ -40,28 +40,28 @@ describe("MichiVzProvider", () => {
       const context = useChartContext();
       return (
         <div>
-          <span data-testid="disabled-items">{JSON.stringify(context.disabledItems)}</span>
+          <span data-testid="visible-items">{JSON.stringify(context.visibleItems)}</span>
           <span data-testid="colors-mapping">{JSON.stringify(context.colorsMapping)}</span>
         </div>
       );
     };
 
     const customValues = {
-      disabledItems: ["item1", "item2"],
+      visibleItems: ["item1", "item2"],
       colorsMapping: { key1: "red", key2: "blue" },
     };
 
     const { getByTestId } = render(
       <MichiVzProvider
-        disabledItems={customValues.disabledItems}
+        visibleItems={customValues.visibleItems}
         colorsMapping={customValues.colorsMapping}
       >
         <TestComponent />
       </MichiVzProvider>
     );
 
-    expect(getByTestId("disabled-items")).toHaveTextContent(
-      JSON.stringify(customValues.disabledItems)
+    expect(getByTestId("visible-items")).toHaveTextContent(
+      JSON.stringify(customValues.visibleItems)
     );
     expect(getByTestId("colors-mapping")).toHaveTextContent(
       JSON.stringify(customValues.colorsMapping)

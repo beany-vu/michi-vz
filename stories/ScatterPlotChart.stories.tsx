@@ -128,17 +128,14 @@ const Template: StoryFn<ScatterPlotChartProps> = (args: ScatterPlotChartProps) =
         </div>
       </div>
       
-      <MichiVzProvider
+      <ScatterPlot 
+        {...args} 
+        colorsMapping={colorsMapping}
+        onColorMappingGenerated={handleColorMappingGenerated}
+        onHighlightItem={handleHighlightItem}
         highlightItems={highlightItems}
         disabledItems={disabledItems}
-      >
-        <ScatterPlot 
-          {...args} 
-          colorsMapping={colorsMapping}
-          onColorMappingGenerated={handleColorMappingGenerated}
-          onHighlightItem={handleHighlightItem}
-        />
-      </MichiVzProvider>
+      />
     </div>
   );
 };

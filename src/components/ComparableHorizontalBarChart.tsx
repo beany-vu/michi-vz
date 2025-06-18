@@ -70,6 +70,9 @@ interface LineChartProps {
   showGrid?: boolean;
   showZeroLineForXAxis?: boolean;
   tickHtmlWidth?: number;
+  // highlightItems and disabledItems as props for better performance
+  highlightItems?: string[];
+  disabledItems?: string[];
 }
 
 interface ChartMetadata {
@@ -102,6 +105,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   showGrid = false,
   showZeroLineForXAxis = false,
   tickHtmlWidth,
+  highlightItems = [],
+  disabledItems = [],
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
@@ -109,8 +114,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     data: DataPoint;
     type?: TValueType;
   } | null>(null);
-  const { colorsMapping, colorsBasedMapping, highlightItems, disabledItems, visibleItems } =
-    useChartContext();
+  const { colorsMapping, colorsBasedMapping, visibleItems } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const renderCompleteRef = useRef(false);
   // Add ref for previous data comparison

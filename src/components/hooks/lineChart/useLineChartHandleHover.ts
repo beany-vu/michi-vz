@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { pointer, select } from "d3";
-import { DEFAULT_HEIGHT, DEFAULT_MARGIN } from "src/components/LineChart";
+import { DEFAULT_HEIGHT, DEFAULT_MARGIN } from "../../LineChart";
 
 const useLineChartTooltipToggle = (
   xScale,

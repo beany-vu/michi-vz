@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 
 export const useGapChartColors = (
   labels: string[],
@@ -11,8 +11,8 @@ export const useGapChartColors = (
     gap?: string;
   }
 ) => {
-  // Cache for generated colors
-  const colorCacheRef = useRef<Record<string, string>>({});
+  // Cache for generated colors (currently unused but kept for future optimization)
+  // const colorCacheRef = useRef<Record<string, string>>({});
 
   // Default color palette if none provided
   const defaultColors = [

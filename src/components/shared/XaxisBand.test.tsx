@@ -40,7 +40,7 @@ describe("XaxisBand component", () => {
       on: jest.fn().mockReturnThis(),
     };
 
-    // @ts-ignore - Mocking d3.select
+    // @ts-expect-error - Mocking d3.select for testing
     d3.select = jest.fn().mockReturnValue(mockSelection);
   });
 

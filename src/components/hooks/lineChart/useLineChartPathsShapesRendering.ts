@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { pointer, select, ScaleLinear, ScaleTime } from "d3";
-import { DataPoint, LineChartDataItem } from "src/types/data";
+import isEqual from "lodash/isEqual";
+import { DataPoint, LineChartDataItem } from "../../../types/data";
 
 const useLineChartPathsShapesRendering = (
   filteredDataSet: LineChartDataItem[],
@@ -27,8 +28,11 @@ const useLineChartPathsShapesRendering = (
   sanitizeForClassName: (str: string) => string,
   highlightItems: string[],
   onHighlightItem?: (labels: string[]) => void,
-  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void
+  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void,
+  originalDataSet?: LineChartDataItem[]
 ) => {
+  // Ref to track the last color mapping sent to prevent infinite loops
+  const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
   const handleMouseEnter = useCallback(
     (
       event: React.MouseEvent,
@@ -60,7 +64,9 @@ const useLineChartPathsShapesRendering = (
 
         highlightItems.forEach(item => {
           console.log("Highlighting item:", item);
-          const highlightedGroups = svg.selectAll(`${groupSelector}[data-label="${CSS.escape(item)}"]`);
+          const highlightedGroups = svg.selectAll(
+            `${groupSelector}[data-label="${CSS.escape(item)}"]`
+          );
           console.log("Found highlighted groups for", item, ":", highlightedGroups.size());
           highlightedGroups.style("opacity", opacityHighlighted);
         });
@@ -110,29 +116,41 @@ const useLineChartPathsShapesRendering = (
         svg.selectAll("g.data-group").style("opacity", 1);
       }
     }
-  }, [highlightItems, onHighlightItem, svgRef, visibleDataSets, handleMouseEnter]);
+  }, [highlightItems, visibleDataSets]);
 
-  useEffect(() => {
-    if (!svgRef.current) return;
-
-    const svg = select(svgRef.current);
-
-    // Generate colors for data sets that don't have colors in colorsMapping
+  // Memoize color generation to prevent infinite loops
+  const generateColors = useCallback(() => {
+    const dataSetForColorGeneration = originalDataSet || filteredDataSet;
     const generatedColorsMapping = { ...colorsMapping };
     let colorIndex = Object.keys(colorsMapping).length;
     let hasNewColors = false;
-    
-    for (const dataSet of filteredDataSet) {
+
+    for (const dataSet of dataSetForColorGeneration) {
       if (!generatedColorsMapping[dataSet.label]) {
         generatedColorsMapping[dataSet.label] = colors[colorIndex % colors.length];
         colorIndex++;
         hasNewColors = true;
       }
     }
-    
-    // Notify parent about generated color mapping only if new colors were generated
+
+    return { generatedColorsMapping, hasNewColors };
+  }, [originalDataSet, filteredDataSet, colors, colorsMapping]);
+
+  useEffect(() => {
+    if (!svgRef.current) return;
+
+    const svg = select(svgRef.current);
+
+    // Generate colors and only notify parent if there are new colors
+    const { generatedColorsMapping, hasNewColors } = generateColors();
+
+    // Only call onColorMappingGenerated if we actually generated new colors
+    // AND the mapping is different from what we last sent (prevent infinite loops)
     if (onColorMappingGenerated && hasNewColors) {
-      onColorMappingGenerated(generatedColorsMapping);
+      if (!isEqual(generatedColorsMapping, lastColorMappingSentRef.current)) {
+        lastColorMappingSentRef.current = { ...generatedColorsMapping };
+        onColorMappingGenerated(generatedColorsMapping);
+      }
     }
 
     // IMPORTANT: Clear everything and redraw from scratch on every render
@@ -337,14 +355,14 @@ const useLineChartPathsShapesRendering = (
           handleMouseOut(svgRef);
         });
     }
-    
+
     // Apply highlighting AFTER rendering is complete
     if (highlightItems.length > 0) {
       console.log("Applying highlighting after render to:", highlightItems);
-      
+
       // Set all groups to low opacity
       svg.selectAll("g.data-group").style("opacity", 0.05);
-      
+
       // Set highlighted groups to full opacity
       highlightItems.forEach(item => {
         svg.selectAll(`g.data-group[data-label="${CSS.escape(item)}"]`).style("opacity", 1);
@@ -360,19 +378,9 @@ const useLineChartPathsShapesRendering = (
     height,
     margin,
     xAxisDataType,
-    getDashArrayMemoized,
-    colors,
-    colorsMapping,
-    line,
+    generateColors,
     xScale,
     yScale,
-    handleItemHighlight,
-    tooltipFormatter,
-    tooltipRef,
-    svgRef,
-    getColor,
-    sanitizeForClassName,
-    onColorMappingGenerated,
   ]);
 };
 

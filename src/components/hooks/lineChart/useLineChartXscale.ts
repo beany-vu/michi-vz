@@ -1,13 +1,14 @@
 import { scaleLinear, scaleTime, min, max } from "d3";
 import { useMemo } from "react";
-import { LineChartDataItem } from "src/types/data";
+import { LineChartDataItem } from "../../../types/data";
 
-interface Props {
-  filteredDataSet: LineChartDataItem[];
-  width: number;
-  margin: { left: number; right: number };
-  xAxisDataType: "number" | "date_annual" | "date_monthly";
-}
+// Interface for potential future use
+// interface UseLineChartXscaleProps {
+//   filteredDataSet: LineChartDataItem[];
+//   width: number;
+//   margin: { left: number; right: number };
+//   xAxisDataType: "number" | "date_annual" | "date_monthly";
+// }
 
 const useLineChartXscale = (
   filteredDataSet: LineChartDataItem[],

@@ -109,35 +109,32 @@ const InteractiveDualHorizontalBarChart = () => {
         </div>
       </div>
 
-      <MichiVzProvider
+      <DualHorizontalBarChart
+        dataSet={dataSet}
+        width={900}
+        height={400}
+        margin={{
+          top: 50,
+          right: 50,
+          bottom: 50,
+          left: 50,
+        }}
+        xAxisFormat={(d) => `${d}`}
+        yAxisFormat={(d) => `${d}`}
+        xAxisDataType="number"
+        title="Interactive Dual Horizontal Bar Chart"
+        tooltipFormatter={(d: any) => {
+          return `<div style="background: white; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <strong>${d?.label}</strong><br/>
+            Value 1: ${d?.value1 || 'N/A'}<br/>
+            Value 2: ${d?.value2 || 'N/A'}
+          </div>`;
+        }}
+        onHighlightItem={handleHighlightItem}
+        onColorMappingGenerated={handleColorMappingGenerated}
         highlightItems={highlightItems}
         disabledItems={disabledItems}
-      >
-        <DualHorizontalBarChart
-          dataSet={dataSet}
-          width={900}
-          height={400}
-          margin={{
-            top: 50,
-            right: 50,
-            bottom: 50,
-            left: 50,
-          }}
-          xAxisFormat={(d) => `${d}`}
-          yAxisFormat={(d) => `${d}`}
-          xAxisDataType="number"
-          title="Interactive Dual Horizontal Bar Chart"
-          tooltipFormatter={(d: any) => {
-            return `<div style="background: white; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-              <strong>${d?.label}</strong><br/>
-              Value 1: ${d?.value1 || 'N/A'}<br/>
-              Value 2: ${d?.value2 || 'N/A'}
-            </div>`;
-          }}
-          onHighlightItem={handleHighlightItem}
-          onColorMappingGenerated={handleColorMappingGenerated}
-        />
-      </MichiVzProvider>
+      />
     </div>
   );
 };
@@ -167,31 +164,28 @@ export const WithCustomColors = {
     }, []);
 
     return (
-      <MichiVzProvider
+      <DualHorizontalBarChart
+        dataSet={[
+          { label: "Africa", value1: 400, value2: 200 },
+          { label: "Asia", value1: 350, value2: 200 },
+          { label: "Australia", value1: 0, value2: 180 },
+          { label: "Europe", value1: 180, value2: 500 },
+          { label: "North America", value1: 250, value2: 300 },
+        ]}
+        width={900}
+        height={400}
+        margin={{ top: 50, right: 50, bottom: 50, left: 50 }}
+        xAxisFormat={(d) => `${d}`}
+        yAxisFormat={(d) => `${d}`}
+        xAxisDataType="number"
+        title="Custom Colors Dual Horizontal Bar Chart"
+        colors={customColors}
+        colorsMapping={customColorsMapping}
+        onHighlightItem={handleHighlightItem}
+        onColorMappingGenerated={handleColorMappingGenerated}
         highlightItems={highlightItems}
         disabledItems={disabledItems}
-      >
-        <DualHorizontalBarChart
-          dataSet={[
-            { label: "Africa", value1: 400, value2: 200 },
-            { label: "Asia", value1: 350, value2: 200 },
-            { label: "Australia", value1: 0, value2: 180 },
-            { label: "Europe", value1: 180, value2: 500 },
-            { label: "North America", value1: 250, value2: 300 },
-          ]}
-          width={900}
-          height={400}
-          margin={{ top: 50, right: 50, bottom: 50, left: 50 }}
-          xAxisFormat={(d) => `${d}`}
-          yAxisFormat={(d) => `${d}`}
-          xAxisDataType="number"
-          title="Custom Colors Dual Horizontal Bar Chart"
-          colors={customColors}
-          colorsMapping={customColorsMapping}
-          onHighlightItem={handleHighlightItem}
-          onColorMappingGenerated={handleColorMappingGenerated}
-        />
-      </MichiVzProvider>
+      />
     );
   },
 };

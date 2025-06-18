@@ -1,11 +1,11 @@
-import React, { FC, useRef, useState, useMemo, useEffect, useLayoutEffect } from "react";
+import React, { FC, useRef, useState, useMemo, useLayoutEffect } from "react";
+import isEqual from "lodash/isEqual";
 import styled from "styled-components";
 import { ChartMetadata } from "src/types/data";
 import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
 import LoadingIndicator from "./shared/LoadingIndicator";
-import { useChartContext } from "./MichiVzProvider";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import { useGapChartData } from "./hooks/gapChart/useGapChartData";
 import { useGapChartScales } from "./hooks/gapChart/useGapChartScales";
@@ -15,7 +15,6 @@ import { useGapChartShapes } from "./hooks/gapChart/useGapChartShapes";
 import { useGapChartRenderer } from "./hooks/gapChart/useGapChartRenderer";
 import { useGapChartLegend } from "./hooks/gapChart/useGapChartLegend";
 import { useGapChartMetadata } from "./hooks/gapChart/useGapChartMetadata";
-import { useGapChartAnimation } from "./hooks/gapChart/useGapChartAnimation";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -192,15 +191,12 @@ const GapChart: FC<GapChartProps> = ({
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [hoveredYItem, setHoveredYItem] = useState<string | null>(null);
-  const [isRendering, setIsRendering] = useState(false);
 
-  const { highlightItems: contextHighlightItems, disabledItems: contextDisabledItems } =
-    useChartContext();
-  const highlightItems = propsHighlightItems || contextHighlightItems || [];
-  const disabledItems = propsDisabledItems || contextDisabledItems || [];
+  const highlightItems = propsHighlightItems || [];
+  const disabledItems = propsDisabledItems || [];
 
   // Process data and get domains
-  const { processedDataSet, yAxisDomain, xAxisDomain } = useGapChartData(
+  const { processedDataSet, yAxisDomain, xAxisDomain, allLabels } = useGapChartData(
     dataSet,
     filter,
     disabledItems
@@ -216,20 +212,23 @@ const GapChart: FC<GapChartProps> = ({
     xAxisDataType
   );
 
-  // Get color function
+  // Get color function (use allLabels for complete color generation including disabled items)
   const { getColor, getShapeColor, generatedColorsMapping } = useGapChartColors(
-    yAxisDomain,
+    allLabels,
     colors,
     colorsMapping,
     colorMode,
     shapeColorsMapping
   );
 
-  // Notify parent about generated color mapping
-  const prevColorsMapping = useRef<{ [key: string]: string }>({});
+  // Notify parent about generated color mapping with infinite loop protection
+  const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
   useLayoutEffect(() => {
-    if (onColorMappingGenerated && JSON.stringify(prevColorsMapping.current) !== JSON.stringify(generatedColorsMapping)) {
-      prevColorsMapping.current = generatedColorsMapping;
+    if (
+      onColorMappingGenerated &&
+      !isEqual(generatedColorsMapping, lastColorMappingSentRef.current)
+    ) {
+      lastColorMappingSentRef.current = { ...generatedColorsMapping };
       onColorMappingGenerated(generatedColorsMapping);
     }
   }, [generatedColorsMapping, onColorMappingGenerated]);
@@ -244,13 +243,9 @@ const GapChart: FC<GapChartProps> = ({
   // Helper for shadow filter
   const shadowFilter = enableShadow ? "url(#gapChartShadow)" : undefined;
 
-  // Get animation state
-  const { animationState, getItemOpacity, getItemTransform, renderDataSet, shouldTransition } =
-    useGapChartAnimation(processedDataSet, enableTransitions);
-
-  // Get render data with animation support
+  // Get render data
   const renderData = useGapChartRenderer({
-    processedDataSet: renderDataSet,
+    processedDataSet,
     xScale,
     yScale,
     getColor,
@@ -260,10 +255,6 @@ const GapChart: FC<GapChartProps> = ({
     shapeValue1,
     shapeValue2,
     hoveredYItem,
-    animationState,
-    getItemOpacity,
-    getItemTransform,
-    shouldTransition,
   });
 
   // Get legend items
@@ -283,17 +274,6 @@ const GapChart: FC<GapChartProps> = ({
     onChartDataProcessed,
   });
 
-  // Track when data is being re-rendered
-  useEffect(() => {
-    setIsRendering(true);
-    // Set a small delay to ensure the axis hides before shapes start rendering
-    const timer = setTimeout(() => {
-      setIsRendering(false);
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [processedDataSet, xScale, yScale, yAxisFormat]);
-
   // Check if no data
   const displayIsNodata = useDisplayIsNodata({
     dataSet,
@@ -310,19 +290,7 @@ const GapChart: FC<GapChartProps> = ({
       <>
         {/* First layer: Render all gap bars and lines */}
         {elements.map(
-          ({
-            d,
-            i,
-            y,
-            barHeight,
-            gapColor,
-            x1,
-            x2,
-            barWidth,
-            barOpacity,
-            markerOpacity,
-            hasTransition,
-          }) => (
+          ({ d, i, y, barHeight, gapColor, x1, x2, barWidth, barOpacity, markerOpacity }) => (
             <g key={`gap-base-${d.label}-${i}`}>
               {/* Gap bar */}
               <rect
@@ -340,10 +308,7 @@ const GapChart: FC<GapChartProps> = ({
                 onClick={e => handleChartElementClick(d, e)}
                 style={{
                   cursor: "pointer",
-                  transition:
-                    enableTransitions && hasTransition
-                      ? "x 0.3s ease-out, y 0.3s ease-out, width 0.3s ease-out, opacity 0.3s ease-out"
-                      : "none",
+                  transition: "none",
                 }}
               />
 
@@ -358,7 +323,7 @@ const GapChart: FC<GapChartProps> = ({
                 strokeDasharray={d.difference < 0 ? "4,2" : "0"}
                 opacity={markerOpacity}
                 style={{
-                  transition: enableTransitions && hasTransition ? "opacity 0.3s ease-out" : "none",
+                  transition: "none",
                 }}
               />
             </g>
@@ -366,116 +331,98 @@ const GapChart: FC<GapChartProps> = ({
         )}
 
         {/* Second layer: Render all square shapes */}
-        {squares.map(
-          ({ d, i, y, barHeight, value1Color, value2Color, markerOpacity, hasTransition }) => (
-            <g key={`gap-squares-${d.label}-${i}`}>
-              {shapeValue1 === "square" &&
-                (() => {
-                  const dims = getSquareDimensions();
-                  return (
-                    <rect
-                      className="gap-marker value1-marker"
-                      x={xScale(d.value1) + dims.x}
-                      y={y + barHeight / 2 + dims.y}
-                      width={dims.width}
-                      height={dims.height}
-                      fill={value1Color}
-                      opacity={markerOpacity}
-                      rx={squareRadius}
-                      ry={squareRadius}
-                      onMouseOver={e => handleMouseOver(d, e)}
-                      onMouseOut={handleMouseOut}
-                      onClick={e => handleChartElementClick(d, e)}
-                      style={{
-                        cursor: "pointer",
-                        transition:
-                          enableTransitions && hasTransition ? "opacity 0.3s ease-out" : "none",
-                        filter: shadowFilter,
-                      }}
-                    />
-                  );
-                })()}
-              {shapeValue2 === "square" &&
-                (() => {
-                  const dims = getSquareDimensions();
-                  return (
-                    <rect
-                      className="gap-marker value2-marker"
-                      x={xScale(d.value2) + dims.x}
-                      y={y + barHeight / 2 + dims.y}
-                      width={dims.width}
-                      height={dims.height}
-                      fill={value2Color}
-                      opacity={markerOpacity}
-                      rx={2}
-                      ry={2}
-                      onMouseOver={e => handleMouseOver(d, e)}
-                      onMouseOut={handleMouseOut}
-                      onClick={e => handleChartElementClick(d, e)}
-                      style={{
-                        cursor: "pointer",
-                        transition:
-                          enableTransitions && hasTransition ? "opacity 0.3s ease-out" : "none",
-                      }}
-                    />
-                  );
-                })()}
-            </g>
-          )
-        )}
+        {squares.map(({ d, i, y, barHeight, value1Color, value2Color, markerOpacity }) => (
+          <g key={`gap-squares-${d.label}-${i}`}>
+            {shapeValue1 === "square" &&
+              (() => {
+                const dims = getSquareDimensions();
+                return (
+                  <rect
+                    className="gap-marker value1-marker"
+                    x={xScale(d.value1) + dims.x}
+                    y={y + barHeight / 2 + dims.y}
+                    width={dims.width}
+                    height={dims.height}
+                    fill={value1Color}
+                    opacity={markerOpacity}
+                    rx={squareRadius}
+                    ry={squareRadius}
+                    onMouseOver={e => handleMouseOver(d, e)}
+                    onMouseOut={handleMouseOut}
+                    onClick={e => handleChartElementClick(d, e)}
+                    style={{
+                      cursor: "pointer",
+                      transition: "none",
+                      filter: shadowFilter,
+                    }}
+                  />
+                );
+              })()}
+            {shapeValue2 === "square" &&
+              (() => {
+                const dims = getSquareDimensions();
+                return (
+                  <rect
+                    className="gap-marker value2-marker"
+                    x={xScale(d.value2) + dims.x}
+                    y={y + barHeight / 2 + dims.y}
+                    width={dims.width}
+                    height={dims.height}
+                    fill={value2Color}
+                    opacity={markerOpacity}
+                    rx={2}
+                    ry={2}
+                    onMouseOver={e => handleMouseOver(d, e)}
+                    onMouseOut={handleMouseOut}
+                    onClick={e => handleChartElementClick(d, e)}
+                    style={{
+                      cursor: "pointer",
+                      transition: "none",
+                    }}
+                  />
+                );
+              })()}
+          </g>
+        ))}
 
         {/* Third layer: Render all circle and triangle shapes */}
-        {nonSquares.map(
-          ({
-            d,
-            i,
-            y,
-            barHeight,
-            value1Color,
-            value2Color,
-            markerOpacity,
-            itemTransform,
-            hasTransition,
-          }) => (
-            <g key={`gap-nonSquares-${d.label}-${i}`}>
-              {shapeValue1 !== "square" && (
-                <path
-                  className="gap-marker value1-marker"
-                  d={getShapePath(shapeValue1) || ""}
-                  transform={`translate(${xScale(d.value1)}, ${y + barHeight / 2}) ${itemTransform}`}
-                  fill={value1Color}
-                  opacity={markerOpacity}
-                  onMouseOver={e => handleMouseOver(d, e)}
-                  onMouseOut={handleMouseOut}
-                  onClick={e => handleChartElementClick(d, e)}
-                  style={{
-                    cursor: "pointer",
-                    transition:
-                      enableTransitions && hasTransition ? "opacity 0.3s ease-out" : "none",
-                    filter: shadowFilter,
-                  }}
-                />
-              )}
-              {shapeValue2 !== "square" && (
-                <path
-                  className="gap-marker value2-marker"
-                  d={getShapePath(shapeValue2) || ""}
-                  transform={`translate(${xScale(d.value2)}, ${y + barHeight / 2}) ${itemTransform}`}
-                  fill={value2Color}
-                  opacity={markerOpacity}
-                  onMouseOver={e => handleMouseOver(d, e)}
-                  onMouseOut={handleMouseOut}
-                  onClick={e => handleChartElementClick(d, e)}
-                  style={{
-                    cursor: "pointer",
-                    transition:
-                      enableTransitions && hasTransition ? "opacity 0.3s ease-out" : "none",
-                  }}
-                />
-              )}
-            </g>
-          )
-        )}
+        {nonSquares.map(({ d, i, y, barHeight, value1Color, value2Color, markerOpacity }) => (
+          <g key={`gap-nonSquares-${d.label}-${i}`}>
+            {shapeValue1 !== "square" && (
+              <path
+                className="gap-marker value1-marker"
+                d={getShapePath(shapeValue1) || ""}
+                transform={`translate(${xScale(d.value1)}, ${y + barHeight / 2})`}
+                fill={value1Color}
+                opacity={markerOpacity}
+                onMouseOver={e => handleMouseOver(d, e)}
+                onMouseOut={handleMouseOut}
+                onClick={e => handleChartElementClick(d, e)}
+                style={{
+                  cursor: "pointer",
+                  transition: "none",
+                  filter: shadowFilter,
+                }}
+              />
+            )}
+            {shapeValue2 !== "square" && (
+              <path
+                className="gap-marker value2-marker"
+                d={getShapePath(shapeValue2) || ""}
+                transform={`translate(${xScale(d.value2)}, ${y + barHeight / 2})`}
+                fill={value2Color}
+                opacity={markerOpacity}
+                onMouseOver={e => handleMouseOver(d, e)}
+                onMouseOut={handleMouseOut}
+                onClick={e => handleChartElementClick(d, e)}
+                style={{
+                  cursor: "pointer",
+                  transition: "none",
+                }}
+              />
+            )}
+          </g>
+        ))}
       </>
     );
   }, [
@@ -533,7 +480,6 @@ const GapChart: FC<GapChartProps> = ({
           hoveredItem={hoveredYItem}
           tickHtmlWidth={tickHtmlWidth}
           enableTransitions={enableTransitions}
-          isRendering={isRendering}
         />
 
         <g className="gap-chart-content">{renderGapBars}</g>

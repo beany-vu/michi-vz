@@ -4,7 +4,6 @@ import { DataPoint } from "../types/data";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
 import XaxisLinear from "./shared/XaxisLinear";
-import { useChartContext } from "./MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
@@ -165,6 +164,9 @@ interface LineChartProps {
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem: (labels: string[]) => void;
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
+  // highlightItems and disabledItems as props for better performance
+  highlightItems?: string[];
+  disabledItems?: string[];
 }
 
 interface ChartMetadata {
@@ -199,9 +201,9 @@ const LineChart: FC<LineChartProps> = ({
   onChartDataProcessed,
   onHighlightItem,
   onColorMappingGenerated,
+  highlightItems = [],
+  disabledItems = [],
 }) => {
-  const { highlightItems, disabledItems } = useChartContext();
-
   // Use the new hook for refs and state
   const { svgRef, tooltipRef, renderCompleteRef, prevChartDataRef, isInitialMount } =
     useLineChartRefsAndState();
@@ -227,6 +229,34 @@ const LineChart: FC<LineChartProps> = ({
     return filteredDataSet.filter(d => d.series.length > 1);
   }, [filteredDataSet]);
 
+  // Memoize callback functions to prevent infinite loops
+  const memoizedOnHighlightItem = useCallback(
+    (labels: string[]) => {
+      if (onHighlightItem) {
+        onHighlightItem(labels);
+      }
+    },
+    [onHighlightItem]
+  );
+
+  const memoizedOnColorMappingGenerated = useCallback(
+    (colorsMapping: { [key: string]: string }) => {
+      if (onColorMappingGenerated) {
+        onColorMappingGenerated(colorsMapping);
+      }
+    },
+    [onColorMappingGenerated]
+  );
+
+  const memoizedOnChartDataProcessed = useCallback(
+    (metadata: ChartMetadata) => {
+      if (onChartDataProcessed) {
+        onChartDataProcessed(metadata);
+      }
+    },
+    [onChartDataProcessed]
+  );
+
   useLineChartPathsShapesRendering(
     filteredDataSet,
     visibleDataSets,
@@ -240,7 +270,7 @@ const LineChart: FC<LineChartProps> = ({
     line,
     xScale,
     yScale,
-    onHighlightItem,
+    memoizedOnHighlightItem,
     tooltipFormatter,
     tooltipRef,
     svgRef,
@@ -248,7 +278,8 @@ const LineChart: FC<LineChartProps> = ({
     sanitizeForClassName,
     highlightItems,
     undefined,
-    onColorMappingGenerated
+    memoizedOnColorMappingGenerated,
+    dataSet
   );
 
   useLineChartColorMapping(colorsMapping, getColor, svgRef, TRANSITION_DURATION);
@@ -299,7 +330,7 @@ const LineChart: FC<LineChartProps> = ({
     disabledItems,
     lineData,
     filter,
-    onChartDataProcessed,
+    memoizedOnChartDataProcessed,
     renderCompleteRef,
     prevChartDataRef
   );

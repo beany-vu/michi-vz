@@ -34,7 +34,7 @@ const useLineChartColorMapping = (colorsMapping, getColor, svgRef, TRANSITION_DU
         .ease(easeQuadOut) // Add consistent easing
         .attr("stroke", getColor(colorsMapping[key], null));
     }
-  }, [colorsMapping, getColor]);
+  }, [colorsMapping]);
 };
 
 export default useLineChartColorMapping;

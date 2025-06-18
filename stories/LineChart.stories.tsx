@@ -2,7 +2,6 @@ import React from "react";
 import LineChartComponent from "../src/components/LineChart";
 import { Meta } from "@storybook/react";
 import { fn } from "@storybook/test";
-import { MichiVzProvider, useChartContext } from "../src/components/MichiVzProvider";
 
 // Define the default metadata for the component
 export default {
@@ -1258,62 +1257,60 @@ export const ButtonHoverInteraction = {
     };
 
     return (
-      <MichiVzProvider highlightItems={currentHighlight} colorsMapping={fixedColorsMapping}>
-        <div>
-          <div style={controlsContainerStyle}>
-            <div>
-              <label style={labelStyle}>Reference Date: </label>
-              <select
-                value={filterDate}
-                onChange={e => setFilterDate(e.target.value)}
-                style={selectStyle}
-              >
-                {availableDates.map(date => (
-                  <option key={date} value={date}>
-                    {date}
-                  </option>
-                ))}
-              </select>
-            </div>
+      <div>
+        <div style={controlsContainerStyle}>
+          <div>
+            <label style={labelStyle}>Reference Date: </label>
+            <select
+              value={filterDate}
+              onChange={e => setFilterDate(e.target.value)}
+              style={selectStyle}
+            >
+              {availableDates.map(date => (
+                <option key={date} value={date}>
+                  {date}
+                </option>
+              ))}
+            </select>
           </div>
-          <div style={buttonContainerStyle}>
-            {filteredDataSet.dataSet.map(item => (
-              <button
-                key={item.label}
-                style={buttonStyle(item.label)}
-                onMouseEnter={() => setCurrentHighlight([item.label])}
-                onMouseLeave={() => setCurrentHighlight([])}
-              >
-                {item.label}
-              </button>
-            ))}
+        </div>
+        <div style={buttonContainerStyle}>
+          {filteredDataSet.dataSet.map(item => (
             <button
-              style={{
-                padding: "8px 16px",
-                border: "2px solid #666",
-                borderRadius: "4px",
-                background: currentHighlight.length === args.filterLimit ? "#666" : "white",
-                color: currentHighlight.length === args.filterLimit ? "white" : "#666",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                fontWeight: 500,
-              }}
-              onMouseEnter={() => setCurrentHighlight(filteredDataSet.dataSet.map(d => d.label))}
+              key={item.label}
+              style={buttonStyle(item.label)}
+              onMouseEnter={() => setCurrentHighlight([item.label])}
               onMouseLeave={() => setCurrentHighlight([])}
             >
-              Show All
+              {item.label}
             </button>
-          </div>
-          <LineChartComponent {...filteredDataSet} />
+          ))}
+          <button
+            style={{
+              padding: "8px 16px",
+              border: "2px solid #666",
+              borderRadius: "4px",
+              background: currentHighlight.length === args.filterLimit ? "#666" : "white",
+              color: currentHighlight.length === args.filterLimit ? "white" : "#666",
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+              fontWeight: 500,
+            }}
+            onMouseEnter={() => setCurrentHighlight(filteredDataSet.dataSet.map(d => d.label))}
+            onMouseLeave={() => setCurrentHighlight([])}
+          >
+            Show All
+          </button>
         </div>
-      </MichiVzProvider>
+        <LineChartComponent {...filteredDataSet} highlightItems={currentHighlight} colorsMapping={fixedColorsMapping} />
+      </div>
     );
   },
   parameters: {
     docs: {
       description: {
         story:
-          "This example demonstrates button-based hover interaction with the line chart using the MichiVzProvider context. Use the slider in the controls panel to adjust how many lines to show, and select which date to use as reference for the filtering. Hover over the buttons to highlight corresponding lines and data points. The 'Show All' button highlights all visible series simultaneously.",
+          "This example demonstrates button-based hover interaction with the line chart using props. Use the slider in the controls panel to adjust how many lines to show, and select which date to use as reference for the filtering. Hover over the buttons to highlight corresponding lines and data points. The 'Show All' button highlights all visible series simultaneously.",
       },
     },
   },
@@ -1398,39 +1395,37 @@ export const SameDataLabelDifferentShapes = {
     const uniqueLabels = Array.from(new Set(args.dataSet.map(d => d.label as string))) as string[];
 
     return (
-      <MichiVzProvider highlightItems={currentHighlight}>
-        <div>
-          <div style={buttonContainerStyle}>
-            {uniqueLabels.map(label => (
-              <button
-                key={label}
-                style={buttonStyle(label)}
-                onMouseEnter={() => setCurrentHighlight([label])}
-                onMouseLeave={() => setCurrentHighlight([])}
-              >
-                {label}
-              </button>
-            ))}
+      <div>
+        <div style={buttonContainerStyle}>
+          {uniqueLabels.map(label => (
             <button
-              style={{
-                padding: "8px 16px",
-                border: "2px solid #666",
-                borderRadius: "4px",
-                background: currentHighlight.length === uniqueLabels.length ? "#666" : "white",
-                color: currentHighlight.length === uniqueLabels.length ? "white" : "#666",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-                fontWeight: 500,
-              }}
-              onMouseEnter={() => setCurrentHighlight(uniqueLabels)}
+              key={label}
+              style={buttonStyle(label)}
+              onMouseEnter={() => setCurrentHighlight([label])}
               onMouseLeave={() => setCurrentHighlight([])}
             >
-              Show All
+              {label}
             </button>
-          </div>
-          <LineChartComponent {...args} />
+          ))}
+          <button
+            style={{
+              padding: "8px 16px",
+              border: "2px solid #666",
+              borderRadius: "4px",
+              background: currentHighlight.length === uniqueLabels.length ? "#666" : "white",
+              color: currentHighlight.length === uniqueLabels.length ? "white" : "#666",
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+              fontWeight: 500,
+            }}
+            onMouseEnter={() => setCurrentHighlight(uniqueLabels)}
+            onMouseLeave={() => setCurrentHighlight([])}
+          >
+            Show All
+          </button>
         </div>
-      </MichiVzProvider>
+        <LineChartComponent {...args} highlightItems={currentHighlight} />
+      </div>
     );
   },
 };
@@ -1483,5 +1478,437 @@ export const ManyMonths = {
     xAxisDataType: "date_monthly",
     title: "Monthly Data (Many Months)",
     tooltipFormatter: (dataSet: any, d: any) => JSON.stringify(d),
+  },
+};
+
+// Dataset for disable/enable testing
+const testDataSetForDisabling = [
+  {
+    label: "Series A",
+    shape: "circle",
+    curve: "curveLinear",
+    color: "#FF6B35", // Orange
+    series: [
+      { date: "2019", value: 45, certainty: true },
+      { date: "2020", value: 55, certainty: true },
+      { date: "2021", value: 65, certainty: true },
+      { date: "2022", value: 75, certainty: false },
+    ],
+  },
+  {
+    label: "Series B",
+    shape: "square",
+    curve: "curveLinear",
+    color: "#4ECDC4", // Teal
+    series: [
+      { date: "2019", value: 30, certainty: true },
+      { date: "2020", value: 40, certainty: true },
+      { date: "2021", value: 50, certainty: true },
+      { date: "2022", value: 60, certainty: false },
+    ],
+  },
+  {
+    label: "Series C",
+    shape: "triangle",
+    curve: "curveBumpX",
+    color: "#45B7D1", // Blue
+    series: [
+      { date: "2019", value: 60, certainty: true },
+      { date: "2020", value: 70, certainty: true },
+      { date: "2021", value: 80, certainty: true },
+      { date: "2022", value: 90, certainty: false },
+    ],
+  },
+  {
+    label: "Series D",
+    shape: "circle",
+    curve: "curveLinear",
+    color: "#96CEB4", // Light Green
+    series: [
+      { date: "2019", value: 25, certainty: true },
+      { date: "2020", value: 35, certainty: true },
+      { date: "2021", value: 45, certainty: true },
+      { date: "2022", value: 55, certainty: false },
+    ],
+  },
+  {
+    label: "Series E",
+    shape: "square",
+    curve: "curveLinear",
+    color: "#FFEAA7", // Yellow
+    series: [
+      { date: "2019", value: 50, certainty: true },
+      { date: "2020", value: 45, certainty: true },
+      { date: "2021", value: 40, certainty: true },
+      { date: "2022", value: 35, certainty: false },
+    ],
+  },
+];
+
+// Story for testing disabled items with color mapping persistence
+export const DisableEnableColorMapping = {
+  args: {
+    ...commonProps,
+    dataSet: testDataSetForDisabling,
+    title: "Test Disable/Enable with Color Mapping",
+    filter: null,
+  },
+  render: args => {
+    const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
+    const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
+    const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
+    
+    console.log("Current disabled items:", disabledItems);
+    console.log("Current colors mapping:", colorsMapping);
+
+    // Handle color mapping generation
+    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
+      console.log("New color mapping generated:", newMapping);
+      setColorsMapping(prev => ({ ...prev, ...newMapping }));
+    }, []);
+
+    // Toggle disabled state for an item
+    const toggleDisabled = React.useCallback((label: string) => {
+      setDisabledItems(prev => 
+        prev.includes(label) 
+          ? prev.filter(item => item !== label)
+          : [...prev, label]
+      );
+    }, []);
+
+    // Style for the controls container
+    const controlsContainerStyle = {
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "15px",
+      marginBottom: "20px",
+      padding: "15px",
+      border: "1px solid #e0e0e0",
+      borderRadius: "8px",
+      backgroundColor: "#f9f9f9",
+    };
+
+    // Style for button groups
+    const buttonGroupStyle = {
+      display: "flex",
+      gap: "10px",
+      flexWrap: "wrap" as const,
+      alignItems: "center",
+    };
+
+    // Style for section labels
+    const sectionLabelStyle = {
+      fontSize: "14px",
+      fontWeight: "bold" as const,
+      color: "#333",
+      marginBottom: "5px",
+    };
+
+    // Style for individual buttons
+    const buttonStyle = (label: string, type: "highlight" | "disable") => {
+      const baseStyle = {
+        padding: "8px 16px",
+        border: "2px solid",
+        borderRadius: "4px",
+        cursor: "pointer",
+        transition: "all 0.3s ease",
+        fontWeight: 500,
+        fontSize: "12px",
+      };
+
+      if (type === "highlight") {
+        const isHighlighted = currentHighlight.includes(label);
+        const color = colorsMapping[label] || "#666";
+        return {
+          ...baseStyle,
+          borderColor: color,
+          background: isHighlighted ? color : "white",
+          color: isHighlighted ? "white" : color,
+        };
+      } else { // disable
+        const isDisabled = disabledItems.includes(label);
+        return {
+          ...baseStyle,
+          borderColor: isDisabled ? "#dc3545" : "#28a745",
+          background: isDisabled ? "#dc3545" : "#28a745",
+          color: "white",
+        };
+      }
+    };
+
+    // Info panel style
+    const infoPanelStyle = {
+      padding: "10px",
+      backgroundColor: "#e9ecef",
+      borderRadius: "4px",
+      fontSize: "12px",
+      fontFamily: "monospace",
+    };
+
+    return (
+      <div>
+        <div style={controlsContainerStyle}>
+          <div>
+            <div style={sectionLabelStyle}>Highlight Controls:</div>
+            <div style={buttonGroupStyle}>
+              {testDataSetForDisabling.map(item => (
+                <button
+                  key={`highlight-${item.label}`}
+                  style={buttonStyle(item.label, "highlight")}
+                  onMouseEnter={() => setCurrentHighlight([item.label])}
+                  onMouseLeave={() => setCurrentHighlight([])}
+                >
+                  {item.label}
+                </button>
+              ))}
+              <button
+                style={{
+                  padding: "8px 16px",
+                  border: "2px solid #666",
+                  borderRadius: "4px",
+                  background: currentHighlight.length === testDataSetForDisabling.length ? "#666" : "white",
+                  color: currentHighlight.length === testDataSetForDisabling.length ? "white" : "#666",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  fontWeight: 500,
+                  fontSize: "12px",
+                }}
+                onMouseEnter={() => setCurrentHighlight(testDataSetForDisabling.map(d => d.label))}
+                onMouseLeave={() => setCurrentHighlight([])}
+              >
+                Show All
+              </button>
+            </div>
+          </div>
+          
+          <div>
+            <div style={sectionLabelStyle}>Disable/Enable Controls:</div>
+            <div style={buttonGroupStyle}>
+              {testDataSetForDisabling.map(item => (
+                <button
+                  key={`disable-${item.label}`}
+                  style={buttonStyle(item.label, "disable")}
+                  onClick={() => toggleDisabled(item.label)}
+                >
+                  {disabledItems.includes(item.label) ? "Enable" : "Disable"} {item.label}
+                </button>
+              ))}
+              <button
+                style={{
+                  padding: "8px 16px",
+                  border: "2px solid #6c757d",
+                  borderRadius: "4px",
+                  background: "#6c757d",
+                  color: "white",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  fontWeight: 500,
+                  fontSize: "12px",
+                }}
+                onClick={() => setDisabledItems([])}
+              >
+                Enable All
+              </button>
+            </div>
+          </div>
+          
+          <div style={infoPanelStyle}>
+            <div><strong>Disabled Items:</strong> {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}</div>
+            <div><strong>Colors Mapping:</strong> {JSON.stringify(colorsMapping, null, 2)}</div>
+          </div>
+        </div>
+        
+        <LineChartComponent 
+          {...args} 
+          onColorMappingGenerated={handleColorMappingGenerated}
+          colorsMapping={colorsMapping}
+          highlightItems={currentHighlight}
+          disabledItems={disabledItems}
+        />
+      </div>
+    );
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This story tests the disable/enable functionality with color mapping persistence. The key issue being tested is that disabled items should retain their colors in the color mapping even when they're not visible in the chart. Use the 'Disable' buttons to hide series and observe that their colors remain consistent when re-enabled.",
+      },
+    },
+  },
+};
+
+// Story for testing dynamic color assignment
+export const DynamicColorAssignment = {
+  args: {
+    ...commonProps,
+    dataSet: testDataSetForDisabling,
+    title: "Test Dynamic Color Assignment",
+    filter: null,
+  },
+  render: args => {
+    const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
+    const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
+    const [colorAssignmentLog, setColorAssignmentLog] = React.useState<string[]>([]);
+    
+    // Handle color mapping generation with logging
+    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = `${timestamp}: ${JSON.stringify(newMapping)}`;
+      setColorAssignmentLog(prev => [logEntry, ...prev.slice(0, 9)]); // Keep last 10 entries
+      setColorsMapping(prev => ({ ...prev, ...newMapping }));
+    }, []);
+
+    // Toggle disabled state for an item
+    const toggleDisabled = React.useCallback((label: string) => {
+      setDisabledItems(prev => 
+        prev.includes(label) 
+          ? prev.filter(item => item !== label)
+          : [...prev, label]
+      );
+    }, []);
+
+    // Style for the controls container
+    const controlsContainerStyle = {
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "15px",
+      marginBottom: "20px",
+      padding: "15px",
+      border: "1px solid #e0e0e0",
+      borderRadius: "8px",
+      backgroundColor: "#f9f9f9",
+    };
+
+    // Style for button groups
+    const buttonGroupStyle = {
+      display: "flex",
+      gap: "10px",
+      flexWrap: "wrap" as const,
+      alignItems: "center",
+    };
+
+    // Style for section labels
+    const sectionLabelStyle = {
+      fontSize: "14px",
+      fontWeight: "bold" as const,
+      color: "#333",
+      marginBottom: "5px",
+    };
+
+    // Style for disable buttons
+    const disableButtonStyle = (label: string) => {
+      const isDisabled = disabledItems.includes(label);
+      return {
+        padding: "8px 16px",
+        border: "2px solid",
+        borderRadius: "4px",
+        cursor: "pointer",
+        transition: "all 0.3s ease",
+        fontWeight: 500,
+        fontSize: "12px",
+        borderColor: isDisabled ? "#dc3545" : "#28a745",
+        background: isDisabled ? "#dc3545" : "#28a745",
+        color: "white",
+      };
+    };
+
+    // Log panel style
+    const logPanelStyle = {
+      padding: "10px",
+      backgroundColor: "#f8f9fa",
+      borderRadius: "4px",
+      fontSize: "11px",
+      fontFamily: "monospace",
+      maxHeight: "200px",
+      overflowY: "auto" as const,
+      border: "1px solid #dee2e6",
+    };
+
+    return (
+      <div>
+        <div style={controlsContainerStyle}>
+          <div>
+            <div style={sectionLabelStyle}>Disable/Enable Controls (Watch Color Assignment):</div>
+            <div style={buttonGroupStyle}>
+              {testDataSetForDisabling.map(item => (
+                <button
+                  key={`disable-${item.label}`}
+                  style={disableButtonStyle(item.label)}
+                  onClick={() => toggleDisabled(item.label)}
+                >
+                  {disabledItems.includes(item.label) ? "Enable" : "Disable"} {item.label}
+                </button>
+              ))}
+              <button
+                style={{
+                  padding: "8px 16px",
+                  border: "2px solid #6c757d",
+                  borderRadius: "4px",
+                  background: "#6c757d",
+                  color: "white",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  fontWeight: 500,
+                  fontSize: "12px",
+                }}
+                onClick={() => setDisabledItems([])}
+              >
+                Enable All
+              </button>
+              <button
+                style={{
+                  padding: "8px 16px",
+                  border: "2px solid #ffc107",
+                  borderRadius: "4px",
+                  background: "#ffc107",
+                  color: "black",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  fontWeight: 500,
+                  fontSize: "12px",
+                }}
+                onClick={() => {
+                  setColorsMapping({});
+                  setColorAssignmentLog([]);
+                }}
+              >
+                Reset Colors
+              </button>
+            </div>
+          </div>
+          
+          <div>
+            <div style={sectionLabelStyle}>Color Assignment Log:</div>
+            <div style={logPanelStyle}>
+              {colorAssignmentLog.length === 0 ? (
+                <div style={{ color: "#6c757d" }}>No color assignments yet...</div>
+              ) : (
+                colorAssignmentLog.map((entry, index) => (
+                  <div key={index} style={{ marginBottom: "2px" }}>
+                    {entry}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <LineChartComponent 
+          {...args} 
+          onColorMappingGenerated={handleColorMappingGenerated}
+          colorsMapping={colorsMapping}
+          disabledItems={disabledItems}
+        />
+      </div>
+    );
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This story demonstrates how colors are dynamically assigned to series and shows the fix for the color mapping issue. The log shows when color mappings are generated. Before the fix, disabled items would lose their colors. After the fix, all items (including disabled ones) retain their assigned colors.",
+      },
+    },
   },
 };

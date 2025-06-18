@@ -53,6 +53,9 @@ interface RangeChartProps {
       ) => boolean);
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
+  // highlightItems and disabledItems as props for better performance
+  highlightItems?: string[];
+  disabledItems?: string[];
 }
 
 interface ChartMetadata {
@@ -83,8 +86,10 @@ const RangeChart: React.FC<RangeChartProps> = ({
   isNodata,
   onChartDataProcessed,
   onHighlightItem,
+  highlightItems = [],
+  disabledItems = [],
 }) => {
-  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
+  const { colorsMapping } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const renderCompleteRef = useRef(false);

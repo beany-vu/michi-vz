@@ -1,8 +1,8 @@
-import React, { Fragment, useMemo, useRef, useState, useLayoutEffect } from "react";
+import React, { Fragment, useMemo, useRef, useState, useLayoutEffect, useCallback } from "react";
 import * as d3 from "d3";
+import isEqual from "lodash/isEqual";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
-import { useChartContext } from "./MichiVzProvider";
 import XaxisLinear from "./shared/XaxisLinear";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
@@ -77,6 +77,9 @@ interface Props {
   // the purpose is to share the same color mapping between charts
   colorsMapping?: { [key: string]: string };
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
+  // highlightItems and disabledItems as props for better performance
+  highlightItems?: string[];
+  disabledItems?: string[];
 }
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
@@ -107,12 +110,26 @@ const AreaChart: React.FC<Props> = ({
   colors = DEFAULT_COLORS,
   colorsMapping = {},
   onColorMappingGenerated,
+  highlightItems = [],
+  disabledItems = [],
 }) => {
-  const { highlightItems, disabledItems } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const [hoveredDate] = useState<number | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
+
+  // Ref to track the last color mapping sent to prevent infinite loops
+  const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
+
+  // Memoize callback functions to prevent infinite loops
+  const memoizedOnColorMappingGenerated = useCallback(
+    (colorsMapping: { [key: string]: string }) => {
+      if (onColorMappingGenerated) {
+        onColorMappingGenerated(colorsMapping);
+      }
+    },
+    [onColorMappingGenerated]
+  );
 
   // Generate colors for keys that don't have colors in colorsMapping
   const generatedColorsMapping = useMemo(() => {
@@ -129,12 +146,15 @@ const AreaChart: React.FC<Props> = ({
     return newMapping;
   }, [keys, colorsMapping, colors]);
 
-  // Notify parent about generated color mapping
+  // Notify parent about generated color mapping with infinite loop protection
   useLayoutEffect(() => {
-    if (onColorMappingGenerated) {
-      onColorMappingGenerated(generatedColorsMapping);
+    if (memoizedOnColorMappingGenerated) {
+      if (!isEqual(generatedColorsMapping, lastColorMappingSentRef.current)) {
+        lastColorMappingSentRef.current = { ...generatedColorsMapping };
+        memoizedOnColorMappingGenerated(generatedColorsMapping);
+      }
     }
-  }, [generatedColorsMapping, onColorMappingGenerated]);
+  }, [generatedColorsMapping, memoizedOnColorMappingGenerated]);
 
   const xScale = useMemo(() => {
     if (xAxisDataType === "number") {

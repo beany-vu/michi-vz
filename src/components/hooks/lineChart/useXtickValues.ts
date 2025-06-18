@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { XaxisDataType, Margin, LineChartDataItem } from "src/types/data";
-import { CONST_DATE_ANNUAL, CONST_DATE_MONTHLY, CONST_NUMBER } from "src/types/constants";
+import { XaxisDataType, Margin, LineChartDataItem } from "../../../types/data";
+import { CONST_DATE_ANNUAL, CONST_DATE_MONTHLY, CONST_NUMBER } from "../../../types/constants";
 
 const useLineChartXtickValues = (
   filteredDataSet: LineChartDataItem[],

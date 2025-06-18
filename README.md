@@ -1,5 +1,15 @@
 # Overview
 
+A React-based data visualization library built with D3.js and TypeScript.
+
+## Recent Updates (v0.5.2)
+- ✅ **Fixed infinite loop issues** in LineChart and GapChart components 
+- ✅ **Improved stability** - resolved "Maximum update depth exceeded" errors
+- ✅ **Better debugging** - added source maps for clearer stack traces in consuming projects
+- ✅ **Code cleanup** - removed unused Redux/worker files for smaller bundle size
+- ✅ **Better performance** - optimized useEffect dependencies across components
+
+## Tech Stack
 - `react`/`typescript`
 - `storybook` for component development
 - `eslint` and `prettier` to harmonize the code base
@@ -153,6 +163,21 @@ See Storybook examples for detailed implementation patterns.
 
 # Console commands
 
-    - `npm run storybook`: start dev server
-    - `npm run test`: run tests
-    - `npm publish`: publish the package to npm, we need to update the package.json version before publishing
+## Development
+- `npm run storybook`: start dev server  
+- `npm run test`: run tests
+- `npm run test:watch`: run tests in watch mode
+
+## Building  
+- `npm run build`: standard build with prettier output
+- `npm run build:files`: build with file listing (shows all processed files)
+- `npm run build:debug`: build with performance metrics and timing breakdown
+- `npm run build:trace`: build with module resolution tracing
+- `npm run type-check`: type checking only (no file output)
+
+## Linting
+- `npm run lint`: check for linting errors
+- `npm run lint:fix`: automatically fix linting issues
+
+## Publishing
+- `npm publish`: publish the package to npm (update package.json version first)

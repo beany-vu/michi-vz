@@ -169,17 +169,14 @@ const Template: StoryFn<RadarChartProps> = (args: RadarChartProps) => {
         </div>
       </div>
       
-      <MichiVzProvider
+      <RadarChart 
+        {...args} 
+        colorsMapping={colorsMapping}
+        onColorMappingGenerated={handleColorMappingGenerated}
+        onHighlightItem={handleHighlightItem}
         highlightItems={highlightItems}
         disabledItems={disabledItems}
-      >
-        <RadarChart 
-          {...args} 
-          colorsMapping={colorsMapping}
-          onColorMappingGenerated={handleColorMappingGenerated}
-          onHighlightItem={handleHighlightItem}
-        />
-      </MichiVzProvider>
+      />
     </div>
   );
 };

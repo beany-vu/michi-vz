@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState, useLayoutEffect } from "re
 import * as d3 from "d3";
 import styled from "styled-components";
 import range from "lodash/range";
-import { useChartContext } from "../components/MichiVzProvider";
+import isEqual from "lodash/isEqual";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 
@@ -108,6 +108,9 @@ export interface RadarChartProps {
   colorsMapping?: { [key: string]: string };
   // Callback to notify parent about generated color mapping
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
+  // highlightItems and disabledItems as props for better performance
+  highlightItems?: string[];
+  disabledItems?: string[];
 }
 
 export const RadarChart: React.FC<RadarChartProps> = ({
@@ -129,8 +132,9 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   colors = DEFAULT_COLORS,
   colorsMapping = {},
   onColorMappingGenerated,
+  highlightItems = [],
+  disabledItems = [],
 }) => {
-  const { highlightItems, disabledItems } = useChartContext();
   const svgRef = useRef(null);
   const [tooltipData, setTooltipData] = useState<{
     date: string;
@@ -225,11 +229,14 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     return newMapping;
   }, [series, colorsMapping, colors]);
 
-  // Notify parent about generated color mapping
-  const prevColorsMappingRef = useRef<{ [key: string]: string }>({});
+  // Notify parent about generated color mapping with infinite loop protection
+  const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
   useLayoutEffect(() => {
-    if (onColorMappingGenerated && JSON.stringify(prevColorsMappingRef.current) !== JSON.stringify(generatedColorsMapping)) {
-      prevColorsMappingRef.current = generatedColorsMapping;
+    if (
+      onColorMappingGenerated &&
+      !isEqual(generatedColorsMapping, lastColorMappingSentRef.current)
+    ) {
+      lastColorMappingSentRef.current = { ...generatedColorsMapping };
       onColorMappingGenerated(generatedColorsMapping);
     }
   }, [generatedColorsMapping, onColorMappingGenerated]);

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { DataPoint, ChartMetadata } from "src/types/data";
+import isEqual from "lodash/isEqual";
+import { DataPoint, ChartMetadata } from "../../../types/data";
 
 // We'll use the project's built-in event system
 const useLineChartMetadataExpose = (
@@ -16,6 +17,8 @@ const useLineChartMetadataExpose = (
   // Keep track of the chart ID
   // Track if we've dispatched our first event
   const firstEventDispatchedRef = useRef(false);
+  // Track the last metadata sent to prevent infinite loops
+  const lastMetadataSentRef = useRef<ChartMetadata | null>(null);
 
   useEffect(() => {
     // Log whether render is complete for debugging
@@ -90,21 +93,16 @@ const useLineChartMetadataExpose = (
         firstEventDispatchedRef.current = true;
 
         // Call the callback if it exists (for backward compatibility)
+        // But only if the metadata is actually different from what we last sent
         if (onChartDataProcessed) {
-          onChartDataProcessed(currentMetadata);
+          if (!isEqual(currentMetadata, lastMetadataSentRef.current)) {
+            lastMetadataSentRef.current = { ...currentMetadata };
+            onChartDataProcessed(currentMetadata);
+          }
         }
       }
     }
-  }, [
-    dataSet,
-    xAxisDataType,
-    yScale,
-    disabledItems,
-    lineData,
-    filter,
-    onChartDataProcessed,
-    prevChartDataRef,
-  ]);
+  }, [dataSet, xAxisDataType, yScale, disabledItems, lineData, filter]);
 };
 
 export default useLineChartMetadataExpose;

@@ -38,6 +38,9 @@ interface Props {
   tooltipContent?: (data: DataPoint) => string;
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
+  // highlightItems and disabledItems as props for better performance
+  highlightItems?: string[];
+  disabledItems?: string[];
 }
 
 interface RectData {
@@ -71,8 +74,10 @@ const RibbonChart: React.FC<Props> = ({
   tooltipContent,
   onChartDataProcessed,
   onHighlightItem,
+  highlightItems = [],
+  disabledItems = [],
 }) => {
-  const { colorsMapping, highlightItems, disabledItems } = useChartContext();
+  const { colorsMapping } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
