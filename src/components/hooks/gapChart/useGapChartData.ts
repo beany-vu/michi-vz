@@ -25,7 +25,7 @@ export const useGapChartData = (
   const processedDataSet = useMemo(() => {
     const dataWithDifference = dataSet.map(item => ({
       ...item,
-      difference: item.value1 - item.value2,
+      difference: item.difference != null ? item.difference : item.value1 - item.value2,
     }));
 
     if (!filter) {
