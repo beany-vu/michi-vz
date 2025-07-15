@@ -1,24 +1,30 @@
 import { useEffect, useRef } from "react";
 import isEqual from "lodash/isEqual";
-import { DataPoint, ChartMetadata } from "../../../types/data";
+import { DataPoint, ChartMetadata, LegendItem } from "../../../types/data";
+import { sanitizeForClassName } from "./lineChartUtils";
 
-// We'll use the project's built-in event system
+// Hook for exposing chart metadata including legend data
 const useLineChartMetadataExpose = (
-  dataSet,
-  xAxisDataType,
-  yScale,
-  disabledItems,
-  lineData,
-  filter,
-  onChartDataProcessed,
-  renderCompleteRef,
-  prevChartDataRef
+  dataSet: any,
+  xAxisDataType: any,
+  yScale: any,
+  disabledItems: string[],
+  lineData: any,
+  filter: any,
+  onChartDataProcessed: ((metadata: ChartMetadata) => void) | undefined,
+  renderCompleteRef: any,
+  prevChartDataRef: any,
+  colorsMapping: { [key: string]: string },
+  defaultColors: string[],
+  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void,
+  onLegendDataChange?: (legendData: LegendItem[]) => void
 ) => {
   // Keep track of the chart ID
   // Track if we've dispatched our first event
   const firstEventDispatchedRef = useRef(false);
   // Track the last metadata sent to prevent infinite loops
   const lastMetadataSentRef = useRef<ChartMetadata | null>(null);
+  const lastLegendDataSentRef = useRef<LegendItem[] | null>(null);
 
   useEffect(() => {
     // Log whether render is complete for debugging
@@ -34,14 +40,19 @@ const useLineChartMetadataExpose = (
 
       // Sort and filter series based on values at the filter date if filter exists
       let visibleSeries = dataSet.map(d => d.label);
+      const sortValues: { [key: string]: number } = {};
+
       if (filter?.date) {
+        // Calculate sort values for all series
+        visibleSeries.forEach(label => {
+          const data = dataSet.find(d => d.label === label);
+          const value = data?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
+          sortValues[label] = value;
+        });
+
         visibleSeries = visibleSeries.sort((a, b) => {
-          const aData = dataSet.find(d => d.label === a);
-          const bData = dataSet.find(d => d.label === b);
-          const aValue =
-            aData?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
-          const bValue =
-            bData?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
+          const aValue = sortValues[a];
+          const bValue = sortValues[b];
           return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
         });
 
@@ -49,6 +60,48 @@ const useLineChartMetadataExpose = (
         if (filter.limit) {
           visibleSeries = visibleSeries.slice(0, filter.limit);
         }
+      }
+
+      // Generate legend data in the same order as visibleSeries (which is sorted by filter)
+      // Include ALL items (both enabled and disabled) for complete legend
+      const legendData = visibleSeries
+        .filter(label => dataSet.find(d => d.label === label)?.series.length > 0)
+        .map((label, index) => {
+          // Assign colors based on legend order using DEFAULT_COLORS
+          const colorIndex = index % defaultColors.length;
+          const baseColor = defaultColors[colorIndex];
+
+          // Calculate opacity for repeat items beyond color palette
+          const repeatCycle = Math.floor(index / defaultColors.length);
+          const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
+
+          // Create color with opacity if needed
+          const finalColor =
+            repeatCycle > 0
+              ? `${baseColor}${Math.round(opacity * 255)
+                  .toString(16)
+                  .padStart(2, "0")}`
+              : baseColor;
+
+          return {
+            label,
+            color: finalColor,
+            order: index,
+            disabled: disabledItems.includes(label),
+            dataLabelSafe: sanitizeForClassName(label),
+            sortValue: sortValues[label],
+          };
+        });
+
+      // Generate new color mapping based on legend order
+      const newColorMapping: { [key: string]: string } = {};
+      legendData.forEach(item => {
+        newColorMapping[item.label] = item.color;
+      });
+
+      // Update color mapping if it has changed
+      if (!isEqual(newColorMapping, colorsMapping) && onColorMappingGenerated) {
+        onColorMappingGenerated(newColorMapping);
       }
 
       const currentMetadata: ChartMetadata = {
@@ -70,6 +123,7 @@ const useLineChartMetadataExpose = (
           {} as { [key: string]: DataPoint[] }
         ),
         chartType: "line-chart",
+        legendData: legendData,
       };
 
       // Check if data has actually changed
@@ -100,9 +154,28 @@ const useLineChartMetadataExpose = (
             onChartDataProcessed(currentMetadata);
           }
         }
+
+        // Call legend data callback if it exists and data has changed
+        if (onLegendDataChange) {
+          if (!isEqual(legendData, lastLegendDataSentRef.current)) {
+            lastLegendDataSentRef.current = [...legendData];
+            onLegendDataChange(legendData);
+          }
+        }
       }
     }
-  }, [dataSet, xAxisDataType, yScale, disabledItems, lineData, filter]);
+  }, [
+    dataSet,
+    xAxisDataType,
+    yScale,
+    disabledItems,
+    lineData,
+    filter,
+    colorsMapping,
+    defaultColors,
+    onColorMappingGenerated,
+    onLegendDataChange,
+  ]);
 };
 
 export default useLineChartMetadataExpose;

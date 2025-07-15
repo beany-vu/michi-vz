@@ -54,6 +54,8 @@ export default {
   title: "Charts/Scatter Plot",
   component: ScatterPlot,
   tags: ["autodocs"],
+  argTypes: {
+  },
 } as Meta;
 
 const Template: StoryFn<ScatterPlotChartProps> = (args: ScatterPlotChartProps) => {
@@ -264,4 +266,210 @@ Primary.args = {
       color: "#0CF823",
     },
   ],
+};
+
+// Generate comprehensive dataset for legend testing
+const generateLargeScatterDataset = () => {
+  const industries = [
+    "Technology", "Healthcare", "Finance", "Manufacturing", "Retail", "Energy", 
+    "Education", "Transportation", "Real Estate", "Agriculture", "Aerospace", "Automotive",
+    "Telecommunications", "Construction", "Entertainment", "Food & Beverage", "Chemicals", 
+    "Pharmaceuticals", "Banking", "Insurance", "Consulting", "Media", "Tourism", "Mining",
+    "Textile", "Electronics", "Software", "Biotechnology", "Renewable Energy", "Logistics",
+    "Gaming", "Sports", "Fashion", "Furniture", "Jewelry", "Cosmetics", "Publishing", 
+    "Photography", "Architecture", "Legal Services", "Accounting", "Marketing", "HR Services",
+    "Security", "Cleaning", "Catering", "Event Management", "Translation", "Fitness", "Beauty"
+  ];
+  
+  const dates = ["2020", "2021", "2022", "2023"];
+  
+  return industries.map((industry, index) => ({
+    x: Math.random() * 100, // Market Share %
+    y: Math.random() * 50, // Growth Rate %
+    d: Math.random() * 10000 + 1000, // Market Size
+    label: industry,
+    date: dates[index % dates.length],
+    shape: ["circle", "square", "triangle"][index % 3] as "circle" | "square" | "triangle",
+  }));
+};
+
+export const LegendWithFilterControls = {
+  render: (args: any) => {
+    const [filter, setFilter] = useState({ 
+      limit: 15, 
+      criteria: "d" as "x" | "y" | "d", 
+      sortingDir: "desc" as "asc" | "desc",
+      date: "2023"
+    });
+    const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>({});
+    const [legendData, setLegendData] = useState<any[]>([]);
+    const [disabledItems, setDisabledItems] = useState<string[]>([]);
+
+    const handleChartDataProcessed = useCallback((metadata: any) => {
+      if (metadata.legendData) {
+        setLegendData(metadata.legendData);
+      }
+    }, []);
+
+    const handleColorMappingGenerated = useCallback((colors: { [key: string]: string }) => {
+      setColorsMapping(colors);
+    }, []);
+
+    const toggleItemDisabled = useCallback((label: string) => {
+      setDisabledItems(prev => 
+        prev.includes(label) 
+          ? prev.filter(item => item !== label)
+          : [...prev, label]
+      );
+    }, []);
+
+    return (
+      <div>
+        <div style={{ marginBottom: "20px", padding: "10px", border: "1px solid #ddd", borderRadius: "4px" }}>
+          <h3>🎨 Legend-Based Color Assignment Test</h3>
+          <p>This story tests the new legend-based color assignment approach for ScatterPlotChart.</p>
+          
+          <div style={{ display: "flex", gap: "20px", marginBottom: "15px", alignItems: "center", flexWrap: "wrap" }}>
+            <div>
+              <label style={{ marginRight: "5px" }}>Sort By:</label>
+              <select 
+                value={filter.criteria} 
+                onChange={(e) => setFilter(prev => ({ ...prev, criteria: e.target.value as "x" | "y" | "d" }))}
+                style={{ padding: "4px" }}
+              >
+                <option value="x">Market Share (X)</option>
+                <option value="y">Growth Rate (Y)</option>
+                <option value="d">Market Size (D)</option>
+              </select>
+            </div>
+            
+            <div>
+              <label style={{ marginRight: "5px" }}>Direction:</label>
+              <select 
+                value={filter.sortingDir} 
+                onChange={(e) => setFilter(prev => ({ ...prev, sortingDir: e.target.value as "asc" | "desc" }))}
+                style={{ padding: "4px" }}
+              >
+                <option value="desc">Highest First</option>
+                <option value="asc">Lowest First</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ marginRight: "5px" }}>Date Filter:</label>
+              <select 
+                value={filter.date} 
+                onChange={(e) => setFilter(prev => ({ ...prev, date: e.target.value }))}
+                style={{ padding: "4px" }}
+              >
+                <option value="2020">2020</option>
+                <option value="2021">2021</option>
+                <option value="2022">2022</option>
+                <option value="2023">2023</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ marginRight: "5px" }}>Limit:</label>
+              <select 
+                value={filter.limit} 
+                onChange={(e) => setFilter(prev => ({ ...prev, limit: parseInt(e.target.value) }))}
+                style={{ padding: "4px" }}
+              >
+                <option value={10}>Top 10</option>
+                <option value={15}>Top 15</option>
+                <option value={25}>Top 25</option>
+                <option value={50}>All 50</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", marginBottom: "10px", flexWrap: "wrap" }}>
+            <button onClick={() => setFilter({ limit: 10, criteria: "d", sortingDir: "desc", date: "2023" })}>
+              💰 Market Size: High→Low (10)
+            </button>
+            <button onClick={() => setFilter({ limit: 15, criteria: "y", sortingDir: "desc", date: "2022" })}>
+              📈 Growth: High→Low (15)
+            </button>
+            <button onClick={() => setFilter({ limit: 25, criteria: "x", sortingDir: "asc", date: "2021" })}>
+              📊 Market Share: Low→High (25)
+            </button>
+            <button onClick={() => setFilter({ limit: 50, criteria: "d", sortingDir: "desc", date: "2020" })}>
+              🔄 All 2020: Size High→Low
+            </button>
+          </div>
+
+          <div style={{ marginTop: "15px" }}>
+            <strong>Legend Data (First 10 items):</strong>
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", 
+              gap: "5px", 
+              marginTop: "5px",
+              maxHeight: "120px",
+              overflowY: "auto"
+            }}>
+              {legendData.slice(0, 10).map((item, index) => (
+                <div 
+                  key={item.label}
+                  style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    padding: "2px 5px",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    backgroundColor: item.disabled ? "#f5f5f5" : "transparent",
+                    textDecoration: item.disabled ? "line-through" : "none"
+                  }}
+                  onClick={() => toggleItemDisabled(item.label)}
+                >
+                  <div 
+                    style={{ 
+                      width: "12px", 
+                      height: "12px", 
+                      backgroundColor: item.color, 
+                      marginRight: "5px",
+                      border: "1px solid #ccc"
+                    }}
+                  />
+                  <span>#{index + 1} {item.label}</span>
+                </div>
+              ))}
+            </div>
+            {legendData.length > 10 && (
+              <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
+                ... and {legendData.length - 10} more items
+              </p>
+            )}
+          </div>
+        </div>
+
+        <ScatterPlot
+          {...args}
+          filter={filter}
+          colorsMapping={colorsMapping}
+          disabledItems={disabledItems}
+          onChartDataProcessed={handleChartDataProcessed}
+          onColorMappingGenerated={handleColorMappingGenerated}
+        />
+      </div>
+    );
+  },
+  args: {
+    dataSet: generateLargeScatterDataset(),
+    width: 900,
+    height: 600,
+    margin: { top: 50, right: 50, bottom: 80, left: 80 },
+    title: "ScatterPlotChart - Legend-Based Color Assignment Test",
+    xAxisFormat: (d: any) => `${d.toFixed(1)}%`,
+    yAxisFormat: (d: any) => `${d.toFixed(1)}%`,
+    xAxisDataType: "number",
+    yAxisDomain: [0, 50],
+    tooltipFormatter: (d: any) => `${d.label}: Market Share ${d.x}%, Growth ${d.y}%, Size $${d.d}M`,
+    showGrid: { x: true, y: true },
+    dScaleLegend: {
+      title: "Market Size ($M)",
+      valueFormatter: (d: number) => `$${(d/1000).toFixed(1)}B`
+    },
+  },
 };

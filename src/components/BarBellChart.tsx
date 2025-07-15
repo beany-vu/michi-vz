@@ -8,6 +8,7 @@ import YaxisBand from "./shared/YaxisBand";
 import XaxisLinear from "./shared/XaxisLinnearBarBellChart";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import LoadingIndicator from "./shared/LoadingIndicator";
+import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -32,6 +33,7 @@ interface ChartMetadata {
   visibleItems: string[];
   renderedData: string[];
   chartType: "bar-bell-chart";
+  legendData?: { label: string; color: string; order: number; disabled?: boolean }[];
 }
 
 interface BarBellChartProps {
@@ -85,6 +87,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   showGrid = defaultConf.SHOW_GRID,
   onChartDataProcessed,
   onHighlightItem,
+  filter,
   tickHtmlWidth,
   colors = DEFAULT_COLORS,
   colorsMapping = {},
@@ -116,6 +119,8 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     const newMapping = { ...colorsMapping };
     let colorIndex = Object.keys(colorsMapping).length;
 
+    // Normal case: assign colors to new items only
+    // Color order is now handled by legend data generation in metadata
     for (const key of keys) {
       if (!newMapping[key]) {
         newMapping[key] = colors[colorIndex % colors.length];
@@ -252,12 +257,70 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
 
   useLayoutEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
+      // Sort keys based on filter criteria if filter exists
+      let sortedKeys = keys;
+      const sortValues: { [key: string]: number } = {};
+
+      if (filter?.criteria && filter?.sortingDir) {
+        // Calculate sort values for all keys
+        keys.forEach(key => {
+          const total = dataSet.reduce((sum, d) => sum + (d[key] || 0), 0);
+          sortValues[key] = total;
+        });
+
+        sortedKeys = [...keys].sort((a, b) => {
+          const aTotal = sortValues[a];
+          const bTotal = sortValues[b];
+          return filter.sortingDir === "desc" ? bTotal - aTotal : aTotal - bTotal;
+        });
+      }
+
+      // Generate legend data with colors based on legend order
+      const legendData = sortedKeys.map((key, index) => {
+        // Assign colors based on legend order using DEFAULT_COLORS
+        const colorIndex = index % colors.length;
+        const baseColor = colors[colorIndex];
+
+        // Calculate opacity for repeat items beyond color palette
+        const repeatCycle = Math.floor(index / colors.length);
+        const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
+
+        // Create color with opacity if needed
+        const finalColor =
+          repeatCycle > 0
+            ? `${baseColor}${Math.round(opacity * 255)
+                .toString(16)
+                .padStart(2, "0")}`
+            : baseColor;
+
+        return {
+          label: key,
+          color: finalColor,
+          order: index,
+          disabled: disabledItems.includes(key),
+          dataLabelSafe: sanitizeForClassName(key),
+          sortValue: sortValues[key],
+        };
+      });
+
+      // Generate new color mapping based on legend order
+      const newColorMapping: { [key: string]: string } = {};
+      legendData.forEach(item => {
+        newColorMapping[item.label] = item.color;
+      });
+
+      // Update color mapping if it has changed
+      if (!isEqual(newColorMapping, generatedColorsMapping) && memoizedOnColorMappingGenerated) {
+        memoizedOnColorMappingGenerated(newColorMapping);
+      }
+
       const currentMetadata: ChartMetadata = {
         xAxisDomain: xValues.map(String),
         yAxisDomain: [0, maxValueX],
-        visibleItems: keys.filter(key => !disabledItems.includes(key)),
+        visibleItems: sortedKeys.filter(key => !disabledItems.includes(key)),
         renderedData: keys,
         chartType: "bar-bell-chart",
+        legendData: legendData,
       };
 
       // Check if data has actually changed
@@ -360,6 +423,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                         <rect
                           className="bar-data"
                           data-label={key}
+                          data-label-safe={sanitizeForClassName(key)}
                           key={`${key}-${i}`}
                           x={x}
                           y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 2 || 0}
@@ -400,6 +464,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                         >
                           <div
                             data-label={key}
+                            data-label-safe={sanitizeForClassName(key)}
                             data-value={value}
                             data-index={j}
                             data-order={keys.indexOf(key) + 1}

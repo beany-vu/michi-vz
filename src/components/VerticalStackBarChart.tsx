@@ -7,6 +7,7 @@ import YaxisLinear from "./shared/YaxisLinear";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
+import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -60,6 +61,7 @@ interface ChartMetadata {
   visibleItems: string[];
   renderedData: { [key: string]: RectData[] };
   chartType: "vertical-stack-bar-chart";
+  legendData?: { label: string; color: string; order: number; disabled?: boolean }[];
 }
 
 interface Props {
@@ -171,9 +173,10 @@ const VerticalStackBarChart: React.FC<Props> = ({
   // Generate colors for keys that don't have colors in colorsMapping
   const generatedColorsMapping = useMemo(() => {
     const newMapping = { ...colorsMapping };
-    let colorIndex = Object.keys(colorsMapping).length;
 
     if (allKeys && allKeys.length > 0) {
+      // Assign colors to new items only
+      let colorIndex = Object.keys(colorsMapping).length;
       for (const key of allKeys) {
         if (!newMapping[key]) {
           newMapping[key] = colors[colorIndex % colors.length];
@@ -187,15 +190,18 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
   // Notify parent about generated color mapping with infinite loop protection
   const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
+  const onColorMappingGeneratedRef = useRef(onColorMappingGenerated);
+  onColorMappingGeneratedRef.current = onColorMappingGenerated;
+
   useLayoutEffect(() => {
     if (
-      onColorMappingGenerated &&
+      onColorMappingGeneratedRef.current &&
       !isEqual(generatedColorsMapping, lastColorMappingSentRef.current)
     ) {
       lastColorMappingSentRef.current = { ...generatedColorsMapping };
-      onColorMappingGenerated(generatedColorsMapping);
+      onColorMappingGeneratedRef.current(generatedColorsMapping);
     }
-  }, [generatedColorsMapping, onColorMappingGenerated]);
+  }, [generatedColorsMapping]);
 
   // Modified: effectiveKeys should filter out hidden items
   const effectiveKeys = useMemo(() => {
@@ -496,12 +502,83 @@ const VerticalStackBarChart: React.FC<Props> = ({
           .slice(0, filter.limit);
       }
 
+      // Sort keys based on filter criteria for consistent legend ordering
+      let visibleKeys = allKeys;
+      const sortValues: { [key: string]: number } = {};
+
+      if (filter) {
+        // Calculate sort values for all keys
+        allKeys.forEach(key => {
+          if (filter.date) {
+            const data = stackedRectData[key]?.find(d => String(d.date) === String(filter.date));
+            const value = data?.value ?? 0;
+            sortValues[key] = value;
+          } else {
+            sortValues[key] = 0;
+          }
+        });
+
+        visibleKeys = allKeys.sort((a, b) => {
+          if (filter.date) {
+            const aValue = sortValues[a];
+            const bValue = sortValues[b];
+            return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
+          }
+          return 0;
+        });
+
+        if (filter.limit) {
+          visibleKeys = visibleKeys.slice(0, filter.limit);
+        }
+      }
+
+      // Generate legend data based on visible keys order (include disabled items)
+      const legendData = visibleKeys
+        .map((key, index) => {
+          // Assign colors based on legend order using DEFAULT_COLORS
+          const colorIndex = index % DEFAULT_COLORS.length;
+          const baseColor = DEFAULT_COLORS[colorIndex];
+
+          // Calculate opacity for repeat items beyond color palette
+          const repeatCycle = Math.floor(index / DEFAULT_COLORS.length);
+          const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
+
+          // Create color with opacity if needed
+          const finalColor =
+            repeatCycle > 0
+              ? `${baseColor}${Math.round(opacity * 255)
+                  .toString(16)
+                  .padStart(2, "0")}`
+              : baseColor;
+
+          return {
+            label: key,
+            color: finalColor,
+            order: index,
+            disabled: disabledItems.includes(key),
+            dataLabelSafe: sanitizeForClassName(key),
+            sortValue: sortValues[key],
+          };
+        });
+
+      // Generate new color mapping based on legend order
+      const newColorMapping: { [key: string]: string } = {};
+      legendData.forEach(item => {
+        newColorMapping[item.label] = item.color;
+      });
+
+      // Update color mapping if it has changed
+      if (!isEqual(newColorMapping, generatedColorsMapping) && onColorMappingGeneratedRef.current) {
+        onColorMappingGeneratedRef.current(newColorMapping);
+      }
+
       // Create the current metadata with filtered data and UNIQUE xAxisDomain
       const currentMetadata: ChartMetadata = {
         xAxisDomain: [...new Set(xAxisDomain ?? dates)],
         visibleItems: renderedKeys,
         renderedData: allRenderedData,
         chartType: "vertical-stack-bar-chart",
+        legendData: legendData,
       }; // Check if the data has actually changed
       const hasChanged =
         !prevChartDataRef.current ||
@@ -520,7 +597,17 @@ const VerticalStackBarChart: React.FC<Props> = ({
         onChartDataProcessed(currentMetadata);
       }
     }
-  }, [xAxisDomain, dates, stackedRectData, filter, onChartDataProcessed, onHighlightItem]);
+  }, [
+    xAxisDomain,
+    dates,
+    stackedRectData,
+    filter,
+    onChartDataProcessed,
+    onHighlightItem,
+    allKeys,
+    disabledItems,
+    generatedColorsMapping,
+  ]);
 
   return (
     <VerticalStackBarChartStyled>
@@ -582,6 +669,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
                         stroke={"#fff"}
                         className={`bar`}
                         data-value-zero={d.value === 0}
+                        data-label={key}
+                        data-label-safe={sanitizeForClassName(key)}
                         opacity={
                           highlightItems.length === 0 || highlightItems.includes(key) ? 1 : 0.2
                         }

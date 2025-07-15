@@ -7,6 +7,8 @@ import { useChartContext } from "./MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import useDeepCompareEffect from "use-deep-compare-effect";
+import { LegendItem } from "../types/data";
+import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 
 interface DataPoint {
   date: number;
@@ -19,6 +21,7 @@ interface ChartMetadata {
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
   chartType: "ribbon-chart";
+  legendData?: LegendItem[];
 }
 
 interface Props {
@@ -38,6 +41,7 @@ interface Props {
   tooltipContent?: (data: DataPoint) => string;
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
+  onLegendDataChange?: (legendData: LegendItem[]) => void;
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
@@ -74,6 +78,7 @@ const RibbonChart: React.FC<Props> = ({
   tooltipContent,
   onChartDataProcessed,
   onHighlightItem,
+  onLegendDataChange,
   highlightItems = [],
   disabledItems = [],
 }) => {
@@ -210,6 +215,15 @@ const RibbonChart: React.FC<Props> = ({
           ? (yScaleDomain as [number, number])
           : [0, yScaleDomain[1] || 0];
 
+      // Generate legend data (include disabled items)
+      const legendData: LegendItem[] = keys.map((key, index) => ({
+        label: key,
+        color: colorsMapping[key] || "#000000",
+        order: index,
+        disabled: disabledItems.includes(key),
+        dataLabelSafe: sanitizeForClassName(key),
+      }));
+
       const currentMetadata: ChartMetadata = {
         xAxisDomain: uniqueDates,
         yAxisDomain: safeYDomain,
@@ -218,6 +232,7 @@ const RibbonChart: React.FC<Props> = ({
           [keys[0]]: filteredDataSet,
         },
         chartType: "ribbon-chart",
+        legendData,
       };
 
       // Check if data has actually changed
@@ -239,6 +254,11 @@ const RibbonChart: React.FC<Props> = ({
       if (hasChanged) {
         onChartDataProcessed(currentMetadata);
       }
+
+      // Call legend data change callback
+      if (onLegendDataChange) {
+        onLegendDataChange(legendData);
+      }
     }
   }, [
     filteredDataSet,
@@ -250,6 +270,8 @@ const RibbonChart: React.FC<Props> = ({
     keys,
     yScaleDomain,
     onChartDataProcessed,
+    colorsMapping,
+    onLegendDataChange,
   ]);
 
   return (

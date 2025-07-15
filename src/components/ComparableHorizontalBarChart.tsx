@@ -9,6 +9,8 @@ import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import styled from "styled-components";
+import { LegendItem } from "../types/data";
+import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 
 const ComparableHorizontalBarChartStyled = styled.div`
   position: relative;
@@ -67,6 +69,7 @@ interface LineChartProps {
   };
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
+  onLegendDataChange?: (legendData: LegendItem[]) => void;
   showGrid?: boolean;
   showZeroLineForXAxis?: boolean;
   tickHtmlWidth?: number;
@@ -81,6 +84,7 @@ interface ChartMetadata {
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
   chartType: "comparable-horizontal-bar-chart" | "";
+  legendData?: LegendItem[];
 }
 
 const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
@@ -102,6 +106,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   isNodata,
   onChartDataProcessed,
   onHighlightItem,
+  onLegendDataChange,
   showGrid = false,
   showZeroLineForXAxis = false,
   tickHtmlWidth,
@@ -297,6 +302,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           <g
             className={"bar"}
             data-label={d?.label}
+            data-label-safe={d?.label ? sanitizeForClassName(d.label) : ""}
             key={i}
             style={{
               opacity: highlightItems.includes(d?.label) || highlightItems.length === 0 ? 1 : 0.3,
@@ -405,12 +411,22 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         const yMin = Number(domain[0]);
         const yMax = Number(domain[1]);
 
+        // Generate legend data (include disabled items)
+        const legendData: LegendItem[] = filteredDataSet.map((item, index) => ({
+          label: item.label,
+          color: item.color || "#000000",
+          order: index,
+          disabled: disabledItems.includes(item.label),
+          dataLabelSafe: sanitizeForClassName(item.label),
+        }));
+
         const currentMetadata: ChartMetadata = {
           xAxisDomain: uniqueLabels,
           yAxisDomain: [yMin, yMax],
           visibleItems: visibleItemsList,
           renderedData,
           chartType: "comparable-horizontal-bar-chart",
+          legendData,
         };
 
         // Check individual changes
@@ -444,9 +460,14 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           onChartDataProcessed(currentMetadata);
           prevChartDataRef.current = { ...currentMetadata };
         }
+
+        // Call legend data change callback
+        if (onLegendDataChange) {
+          onLegendDataChange(legendData);
+        }
       }
     }
-  }, [yAxisDomain, xAxisDomain, visibleItemsList, renderedData, onChartDataProcessed, yAxisScale]);
+  }, [yAxisDomain, xAxisDomain, visibleItemsList, renderedData, onChartDataProcessed, yAxisScale, disabledItems, filteredDataSet, onLegendDataChange]);
 
   return (
     <ComparableHorizontalBarChartStyled>

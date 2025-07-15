@@ -8,6 +8,8 @@ import LoadingIndicator from "./shared/LoadingIndicator";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
 import useDeepCompareEffect from "use-deep-compare-effect";
+import { LegendItem } from "../types/data";
+import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -62,6 +64,7 @@ interface LineChartProps {
   };
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
+  onLegendDataChange?: (legendData: LegendItem[]) => void;
   tickHtmlWidth?: number;
   // colors is the color palette for the chart for new generated colors
   colors?: string[];
@@ -80,6 +83,7 @@ interface ChartMetadata {
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
   chartType: "dual-horizontal-bar-chart";
+  legendData?: LegendItem[];
 }
 
 const DualHorizontalBarChart: React.FC<LineChartProps> = ({
@@ -100,6 +104,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
   isNodata,
   onChartDataProcessed,
   onHighlightItem,
+  onLegendDataChange,
   tickHtmlWidth,
   colors = DEFAULT_COLORS,
   colorsMapping = {},
@@ -259,6 +264,15 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
       // Ensure unique labels
       const uniqueLabels = [...new Set(yAxisDomain)];
 
+      // Generate legend data (include disabled items)
+      const legendData: LegendItem[] = dataSet.map((item, index) => ({
+        label: item.label,
+        color: generatedColorsMapping[item.label] || item.color || "#000000",
+        order: index,
+        disabled: disabledItems.includes(item.label),
+        dataLabelSafe: sanitizeForClassName(item.label),
+      }));
+
       const currentMetadata: ChartMetadata = {
         xAxisDomain: uniqueLabels,
         yAxisDomain: [Number(yAxisScale.domain()[0]), Number(yAxisScale.domain()[1])],
@@ -267,6 +281,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
           [uniqueLabels[0]]: filteredDataSet,
         },
         chartType: "dual-horizontal-bar-chart",
+        legendData,
       };
 
       // Check if data has actually changed
@@ -291,10 +306,20 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
           onChartDataProcessed(currentMetadata);
         }, 0);
 
+        // Call legend data change callback
+        if (onLegendDataChange) {
+          onLegendDataChange(legendData);
+        }
+
         return () => clearTimeout(timeoutId);
       }
+
+      // Call legend data change callback even if metadata hasn't changed
+      if (onLegendDataChange) {
+        onLegendDataChange(legendData);
+      }
     }
-  }, [yAxisDomain, xAxisDomain, visibleItems, filteredDataSet, onChartDataProcessed]);
+  }, [yAxisDomain, xAxisDomain, visibleItems, filteredDataSet, onChartDataProcessed, dataSet, generatedColorsMapping, disabledItems, onLegendDataChange]);
 
   return (
     <div style={{ position: "relative" }}>

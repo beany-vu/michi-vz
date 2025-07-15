@@ -2,6 +2,7 @@ import React from "react";
 import LineChartComponent from "../src/components/LineChart";
 import { Meta } from "@storybook/react";
 import { fn } from "@storybook/test";
+import { LegendItem } from "../src/types/data";
 
 // Define the default metadata for the component
 export default {
@@ -1908,6 +1909,1124 @@ export const DynamicColorAssignment = {
       description: {
         story:
           "This story demonstrates how colors are dynamically assigned to series and shows the fix for the color mapping issue. The log shows when color mappings are generated. Before the fix, disabled items would lose their colors. After the fix, all items (including disabled ones) retain their assigned colors.",
+      },
+    },
+  },
+};
+
+// Large dataset for comprehensive filter testing
+const comprehensiveFilterDataset = [
+  {
+    label: "United States",
+    shape: "circle",
+    curve: "curveLinear",
+    series: [
+      { date: "2019", value: 95, certainty: true },
+      { date: "2020", value: 88, certainty: true },
+      { date: "2021", value: 92, certainty: true },
+      { date: "2022", value: 89, certainty: false },
+      { date: "2023", value: 94, certainty: false },
+    ],
+  },
+  {
+    label: "China",
+    shape: "square",
+    curve: "curveLinear",
+    series: [
+      { date: "2019", value: 87, certainty: true },
+      { date: "2020", value: 91, certainty: true },
+      { date: "2021", value: 89, certainty: true },
+      { date: "2022", value: 93, certainty: false },
+      { date: "2023", value: 96, certainty: false },
+    ],
+  },
+  {
+    label: "Japan",
+    shape: "triangle",
+    curve: "curveBumpX",
+    series: [
+      { date: "2019", value: 78, certainty: true },
+      { date: "2020", value: 82, certainty: true },
+      { date: "2021", value: 85, certainty: true },
+      { date: "2022", value: 87, certainty: false },
+      { date: "2023", value: 90, certainty: false },
+    ],
+  },
+  {
+    label: "Germany",
+    shape: "circle",
+    curve: "curveLinear",
+    series: [
+      { date: "2019", value: 82, certainty: true },
+      { date: "2020", value: 79, certainty: true },
+      { date: "2021", value: 84, certainty: true },
+      { date: "2022", value: 86, certainty: false },
+      { date: "2023", value: 88, certainty: false },
+    ],
+  },
+  {
+    label: "India",
+    shape: "square",
+    curve: "curveLinear",
+    series: [
+      { date: "2019", value: 65, certainty: true },
+      { date: "2020", value: 68, certainty: true },
+      { date: "2021", value: 72, certainty: true },
+      { date: "2022", value: 75, certainty: false },
+      { date: "2023", value: 78, certainty: false },
+    ],
+  },
+  {
+    label: "United Kingdom",
+    shape: "triangle",
+    curve: "curveBumpX",
+    series: [
+      { date: "2019", value: 80, certainty: true },
+      { date: "2020", value: 76, certainty: true },
+      { date: "2021", value: 81, certainty: true },
+      { date: "2022", value: 83, certainty: false },
+      { date: "2023", value: 85, certainty: false },
+    ],
+  },
+  {
+    label: "France",
+    shape: "circle",
+    curve: "curveLinear",
+    series: [
+      { date: "2019", value: 75, certainty: true },
+      { date: "2020", value: 72, certainty: true },
+      { date: "2021", value: 77, certainty: true },
+      { date: "2022", value: 79, certainty: false },
+      { date: "2023", value: 82, certainty: false },
+    ],
+  },
+  {
+    label: "Italy",
+    shape: "square",
+    curve: "curveLinear",
+    series: [
+      { date: "2019", value: 70, certainty: true },
+      { date: "2020", value: 68, certainty: true },
+      { date: "2021", value: 73, certainty: true },
+      { date: "2022", value: 76, certainty: false },
+      { date: "2023", value: 79, certainty: false },
+    ],
+  },
+  {
+    label: "Brazil",
+    shape: "triangle",
+    curve: "curveBumpX",
+    series: [
+      { date: "2019", value: 58, certainty: true },
+      { date: "2020", value: 55, certainty: true },
+      { date: "2021", value: 60, certainty: true },
+      { date: "2022", value: 63, certainty: false },
+      { date: "2023", value: 66, certainty: false },
+    ],
+  },
+  {
+    label: "Canada",
+    shape: "circle",
+    curve: "curveLinear",
+    series: [
+      { date: "2019", value: 85, certainty: true },
+      { date: "2020", value: 82, certainty: true },
+      { date: "2021", value: 87, certainty: true },
+      { date: "2022", value: 89, certainty: false },
+      { date: "2023", value: 91, certainty: false },
+    ],
+  },
+  {
+    label: "Russia",
+    shape: "square",
+    curve: "curveLinear",
+    series: [
+      { date: "2019", value: 62, certainty: true },
+      { date: "2020", value: 59, certainty: true },
+      { date: "2021", value: 64, certainty: true },
+      { date: "2022", value: 67, certainty: false },
+      { date: "2023", value: 70, certainty: false },
+    ],
+  },
+  {
+    label: "South Korea",
+    shape: "triangle",
+    curve: "curveBumpX",
+    series: [
+      { date: "2019", value: 88, certainty: true },
+      { date: "2020", value: 85, certainty: true },
+      { date: "2021", value: 90, certainty: true },
+      { date: "2022", value: 92, certainty: false },
+      { date: "2023", value: 94, certainty: false },
+    ],
+  },
+  {
+    label: "Spain",
+    shape: "circle",
+    curve: "curveLinear",
+    series: [
+      { date: "2019", value: 72, certainty: true },
+      { date: "2020", value: 69, certainty: true },
+      { date: "2021", value: 74, certainty: true },
+      { date: "2022", value: 77, certainty: false },
+      { date: "2023", value: 80, certainty: false },
+    ],
+  },
+  {
+    label: "Australia",
+    shape: "square",
+    curve: "curveLinear",
+    series: [
+      { date: "2019", value: 83, certainty: true },
+      { date: "2020", value: 80, certainty: true },
+      { date: "2021", value: 85, certainty: true },
+      { date: "2022", value: 87, certainty: false },
+      { date: "2023", value: 89, certainty: false },
+    ],
+  },
+  {
+    label: "Mexico",
+    shape: "triangle",
+    curve: "curveBumpX",
+    series: [
+      { date: "2019", value: 55, certainty: true },
+      { date: "2020", value: 52, certainty: true },
+      { date: "2021", value: 57, certainty: true },
+      { date: "2022", value: 60, certainty: false },
+      { date: "2023", value: 63, certainty: false },
+    ],
+  },
+];
+
+// Story for testing preselected items with color consistency
+export const PreselectedItemsColorTest = {
+  args: {
+    ...commonProps,
+    dataSet: comprehensiveFilterDataset,
+    title: "Preselected Items - Color Consistency Test",
+    filter: null,
+    onLegendDataChange: fn(),
+    onHighlightItem: fn(),
+  },
+  render: args => {
+    const [filterType, setFilterType] = React.useState<"preselected" | "top10" | "bottom10" | "none">("none");
+    const [selectedYear, setSelectedYear] = React.useState("2021");
+    const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
+    const [colorLog, setColorLog] = React.useState<string[]>([]);
+
+    // Preselected items (hand-picked for testing)
+    const preselectedItems = ["United States", "China", "Japan", "Germany", "India"];
+
+    // Handle color mapping generation
+    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = `${timestamp}: Color mapping updated - ${Object.keys(newMapping).length} items`;
+      setColorLog(prev => [logEntry, ...prev.slice(0, 9)]);
+      setColorsMapping(prev => ({ ...prev, ...newMapping }));
+    }, []);
+
+    // Create filter based on current state
+    const currentFilter = React.useMemo(() => {
+      if (filterType === "none") return null;
+      
+      return {
+        limit: filterType === "preselected" ? preselectedItems.length : 10,
+        date: selectedYear,
+        criteria: "value",
+        sortingDir: filterType === "bottom10" ? "asc" : "desc" as "asc" | "desc",
+      };
+    }, [filterType, selectedYear]);
+
+    // Style for controls
+    const controlsStyle = {
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "16px",
+      marginBottom: "24px",
+      padding: "16px",
+      backgroundColor: "#f8f9fa",
+      borderRadius: "8px",
+      border: "1px solid #e9ecef",
+    };
+
+    const buttonGroupStyle = {
+      display: "flex",
+      gap: "8px",
+      flexWrap: "wrap" as const,
+      alignItems: "center",
+    };
+
+    const buttonStyle = (isActive: boolean) => ({
+      padding: "8px 16px",
+      borderRadius: "4px",
+      border: "1px solid #dee2e6",
+      backgroundColor: isActive ? "#007bff" : "#fff",
+      color: isActive ? "#fff" : "#495057",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "500",
+    });
+
+    const selectStyle = {
+      padding: "8px 12px",
+      borderRadius: "4px",
+      border: "1px solid #dee2e6",
+      fontSize: "14px",
+    };
+
+    const logStyle = {
+      padding: "12px",
+      backgroundColor: "#f8f9fa",
+      borderRadius: "4px",
+      fontSize: "12px",
+      fontFamily: "monospace",
+      maxHeight: "150px",
+      overflowY: "auto" as const,
+      border: "1px solid #dee2e6",
+    };
+
+    return (
+      <div>
+        <div style={controlsStyle}>
+          <div>
+            <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+              Filter Type:
+            </div>
+            <div style={buttonGroupStyle}>
+              <button
+                style={buttonStyle(filterType === "none")}
+                onClick={() => setFilterType("none")}
+              >
+                Show All
+              </button>
+              <button
+                style={buttonStyle(filterType === "preselected")}
+                onClick={() => setFilterType("preselected")}
+              >
+                Preselected Items ({preselectedItems.length})
+              </button>
+              <button
+                style={buttonStyle(filterType === "top10")}
+                onClick={() => setFilterType("top10")}
+              >
+                Top 10
+              </button>
+              <button
+                style={buttonStyle(filterType === "bottom10")}
+                onClick={() => setFilterType("bottom10")}
+              >
+                Bottom 10
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+              Reference Year:
+            </div>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              style={selectStyle}
+            >
+              <option value="2019">2019</option>
+              <option value="2020">2020</option>
+              <option value="2021">2021</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+            </select>
+          </div>
+
+          <div>
+            <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+              Color Assignment Log:
+            </div>
+            <div style={logStyle}>
+              {colorLog.length === 0 ? (
+                <div style={{ color: "#6c757d", fontStyle: "italic" }}>
+                  No color assignments yet
+                </div>
+              ) : (
+                colorLog.map((entry, index) => (
+                  <div key={index} style={{ marginBottom: "4px" }}>
+                    {entry}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div style={{ fontSize: "12px", color: "#6c757d" }}>
+            <strong>Current Filter:</strong> {filterType === "none" ? "None" : JSON.stringify(currentFilter)}
+          </div>
+        </div>
+
+        <LineChartComponent
+          {...args}
+          filter={currentFilter}
+          onColorMappingGenerated={handleColorMappingGenerated}
+          colorsMapping={colorsMapping}
+        />
+      </div>
+    );
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This story tests color consistency when switching between different filter types: preselected items, top 10, bottom 10, and no filter. The key test is ensuring that colors remain consistent for the same countries across different filter states. Use the year selector to test different reference points.",
+      },
+    },
+  },
+};
+
+// Story for testing year-based filtering with color persistence
+export const YearBasedFilteringColorTest = {
+  args: {
+    ...commonProps,
+    dataSet: comprehensiveFilterDataset,
+    title: "Year-Based Filtering - Color Persistence Test",
+    filter: null,
+    onLegendDataChange: fn(),
+    onHighlightItem: fn(),
+  },
+  render: args => {
+    const [filterLimit, setFilterLimit] = React.useState(5);
+    const [selectedYear, setSelectedYear] = React.useState("2021");
+    const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("desc");
+    const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
+    const [colorConsistencyLog, setColorConsistencyLog] = React.useState<string[]>([]);
+
+    // Handle color mapping generation with consistency checking
+    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
+      const timestamp = new Date().toLocaleTimeString();
+      
+      setColorsMapping(prev => {
+        // Check for color consistency using the previous state
+        const existingColors = Object.keys(prev);
+        const newColors = Object.keys(newMapping);
+        const changedColors = existingColors.filter(color => 
+          prev[color] !== newMapping[color]
+        );
+        
+        let logEntry = `${timestamp}: ${newColors.length} items mapped`;
+        if (changedColors.length > 0) {
+          logEntry += ` (${changedColors.length} colors changed)`;
+        } else if (existingColors.length > 0) {
+          logEntry += " (colors consistent)";
+        }
+        
+        setColorConsistencyLog(prevLog => [logEntry, ...prevLog.slice(0, 9)]);
+        return { ...prev, ...newMapping };
+      });
+    }, []);
+
+    // Create current filter
+    const currentFilter = React.useMemo(() => ({
+      limit: filterLimit,
+      date: selectedYear,
+      criteria: "value",
+      sortingDir: sortDirection,
+    }), [filterLimit, selectedYear, sortDirection]);
+
+    // Style for controls
+    const controlsStyle = {
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "16px",
+      marginBottom: "24px",
+      padding: "16px",
+      backgroundColor: "#f8f9fa",
+      borderRadius: "8px",
+      border: "1px solid #e9ecef",
+    };
+
+    const controlGroupStyle = {
+      display: "flex",
+      gap: "16px",
+      alignItems: "center",
+      flexWrap: "wrap" as const,
+    };
+
+    const labelStyle = {
+      fontSize: "14px",
+      fontWeight: "600",
+      minWidth: "120px",
+    };
+
+    const inputStyle = {
+      padding: "8px 12px",
+      borderRadius: "4px",
+      border: "1px solid #dee2e6",
+      fontSize: "14px",
+    };
+
+    const buttonStyle = (isActive: boolean) => ({
+      padding: "8px 16px",
+      borderRadius: "4px",
+      border: "1px solid #dee2e6",
+      backgroundColor: isActive ? "#007bff" : "#fff",
+      color: isActive ? "#fff" : "#495057",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "500",
+    });
+
+    const logStyle = {
+      padding: "12px",
+      backgroundColor: "#f8f9fa",
+      borderRadius: "4px",
+      fontSize: "12px",
+      fontFamily: "monospace",
+      maxHeight: "150px",
+      overflowY: "auto" as const,
+      border: "1px solid #dee2e6",
+    };
+
+    return (
+      <div>
+        <div style={controlsStyle}>
+          <div style={controlGroupStyle}>
+            <div>
+              <label style={labelStyle}>Filter Limit:</label>
+              <input
+                type="range"
+                min="3"
+                max="15"
+                value={filterLimit}
+                onChange={(e) => setFilterLimit(parseInt(e.target.value))}
+                style={inputStyle}
+              />
+              <span style={{ marginLeft: "8px" }}>{filterLimit}</span>
+            </div>
+
+            <div>
+              <label style={labelStyle}>Reference Year:</label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="2019">2019</option>
+                <option value="2020">2020</option>
+                <option value="2021">2021</option>
+                <option value="2022">2022</option>
+                <option value="2023">2023</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={labelStyle}>Sort Direction:</label>
+              <div style={{ display: "flex", gap: "4px" }}>
+                <button
+                  style={buttonStyle(sortDirection === "desc")}
+                  onClick={() => setSortDirection("desc")}
+                >
+                  Descending
+                </button>
+                <button
+                  style={buttonStyle(sortDirection === "asc")}
+                  onClick={() => setSortDirection("asc")}
+                >
+                  Ascending
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+              Color Consistency Log:
+            </div>
+            <div style={logStyle}>
+              {colorConsistencyLog.length === 0 ? (
+                <div style={{ color: "#6c757d", fontStyle: "italic" }}>
+                  No color assignments yet
+                </div>
+              ) : (
+                colorConsistencyLog.map((entry, index) => (
+                  <div key={index} style={{ marginBottom: "4px" }}>
+                    {entry}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div style={{ fontSize: "12px", color: "#6c757d" }}>
+            <strong>Current Filter:</strong> {JSON.stringify(currentFilter)}
+          </div>
+        </div>
+
+        <LineChartComponent
+          {...args}
+          filter={currentFilter}
+          onColorMappingGenerated={handleColorMappingGenerated}
+          colorsMapping={colorsMapping}
+        />
+      </div>
+    );
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This story specifically tests color persistence when changing the reference year for filtering. The log shows whether colors remain consistent or change when switching between different years. This helps verify that the color mapping system properly handles year-based filtering scenarios.",
+      },
+    },
+  },
+};
+
+// Story for testing criteria-based filtering (value vs other potential criteria)
+export const CriteriaBasedFilteringColorTest = {
+  args: {
+    ...commonProps,
+    dataSet: comprehensiveFilterDataset,
+    title: "Criteria-Based Filtering - Color Consistency Test",
+    filter: null,
+    onLegendDataChange: fn(),
+    onHighlightItem: fn(),
+  },
+  render: args => {
+    const [filterLimit, setFilterLimit] = React.useState(8);
+    const [selectedYear, setSelectedYear] = React.useState("2021");
+    const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("desc");
+    const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
+    const [colorHistory, setColorHistory] = React.useState<{ [key: string]: string[] }>({});
+
+    // Handle color mapping generation with history tracking
+    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
+      const timestamp = new Date().toLocaleTimeString();
+      
+      // Track color history for each item using previous state
+      setColorHistory(prevHistory => {
+        const newHistory = { ...prevHistory };
+        Object.keys(newMapping).forEach(item => {
+          if (!newHistory[item]) {
+            newHistory[item] = [];
+          }
+          if (!newHistory[item].includes(newMapping[item])) {
+            newHistory[item] = [...newHistory[item], newMapping[item]];
+          }
+        });
+        return newHistory;
+      });
+      
+      setColorsMapping(prev => ({ ...prev, ...newMapping }));
+    }, []);
+
+    // Create current filter
+    const currentFilter = React.useMemo(() => ({
+      limit: filterLimit,
+      date: selectedYear,
+      criteria: "value", // Currently only "value" is supported
+      sortingDir: sortDirection,
+    }), [filterLimit, selectedYear, sortDirection]);
+
+    // Style for controls
+    const controlsStyle = {
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "16px",
+      marginBottom: "24px",
+      padding: "16px",
+      backgroundColor: "#f8f9fa",
+      borderRadius: "8px",
+      border: "1px solid #e9ecef",
+    };
+
+    const controlGroupStyle = {
+      display: "flex",
+      gap: "16px",
+      alignItems: "center",
+      flexWrap: "wrap" as const,
+    };
+
+    const labelStyle = {
+      fontSize: "14px",
+      fontWeight: "600",
+      minWidth: "120px",
+    };
+
+    const inputStyle = {
+      padding: "8px 12px",
+      borderRadius: "4px",
+      border: "1px solid #dee2e6",
+      fontSize: "14px",
+    };
+
+    const buttonStyle = (isActive: boolean) => ({
+      padding: "8px 16px",
+      borderRadius: "4px",
+      border: "1px solid #dee2e6",
+      backgroundColor: isActive ? "#007bff" : "#fff",
+      color: isActive ? "#fff" : "#495057",
+      cursor: "pointer",
+      fontSize: "14px",
+      fontWeight: "500",
+    });
+
+    const historyStyle = {
+      padding: "12px",
+      backgroundColor: "#f8f9fa",
+      borderRadius: "4px",
+      fontSize: "11px",
+      fontFamily: "monospace",
+      maxHeight: "200px",
+      overflowY: "auto" as const,
+      border: "1px solid #dee2e6",
+    };
+
+    return (
+      <div>
+        <div style={controlsStyle}>
+          <div style={controlGroupStyle}>
+            <div>
+              <label style={labelStyle}>Filter Limit:</label>
+              <input
+                type="range"
+                min="3"
+                max="15"
+                value={filterLimit}
+                onChange={(e) => setFilterLimit(parseInt(e.target.value))}
+                style={inputStyle}
+              />
+              <span style={{ marginLeft: "8px" }}>{filterLimit}</span>
+            </div>
+
+            <div>
+              <label style={labelStyle}>Reference Year:</label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="2019">2019</option>
+                <option value="2020">2020</option>
+                <option value="2021">2021</option>
+                <option value="2022">2022</option>
+                <option value="2023">2023</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={labelStyle}>Sort Direction:</label>
+              <div style={{ display: "flex", gap: "4px" }}>
+                <button
+                  style={buttonStyle(sortDirection === "desc")}
+                  onClick={() => setSortDirection("desc")}
+                >
+                  Descending
+                </button>
+                <button
+                  style={buttonStyle(sortDirection === "asc")}
+                  onClick={() => setSortDirection("asc")}
+                >
+                  Ascending
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+              Color History by Item:
+            </div>
+            <div style={historyStyle}>
+              {Object.keys(colorHistory).length === 0 ? (
+                <div style={{ color: "#6c757d", fontStyle: "italic" }}>
+                  No color history yet
+                </div>
+              ) : (
+                Object.entries(colorHistory).map(([item, colors]) => (
+                  <div key={item} style={{ marginBottom: "8px" }}>
+                    <div style={{ fontWeight: "bold", color: "#495057" }}>
+                      {item}:
+                    </div>
+                    <div style={{ marginLeft: "12px" }}>
+                      {colors.map((color, index) => (
+                        <span
+                          key={index}
+                          style={{
+                            display: "inline-block",
+                            width: "12px",
+                            height: "12px",
+                            backgroundColor: color,
+                            border: "1px solid #fff",
+                            borderRadius: "2px",
+                            marginRight: "4px",
+                            boxShadow: "0 0 0 1px rgba(0,0,0,0.1)",
+                          }}
+                          title={`${color} (change ${index + 1})`}
+                        />
+                      ))}
+                      <span style={{ fontSize: "10px", color: "#6c757d", marginLeft: "8px" }}>
+                        {colors.length} color{colors.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div style={{ fontSize: "12px", color: "#6c757d" }}>
+            <strong>Current Filter:</strong> {JSON.stringify(currentFilter)}
+            <br />
+            <strong>Items with Color History:</strong> {Object.keys(colorHistory).length}
+          </div>
+        </div>
+
+        <LineChartComponent
+          {...args}
+          filter={currentFilter}
+          onColorMappingGenerated={handleColorMappingGenerated}
+          colorsMapping={colorsMapping}
+        />
+      </div>
+    );
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This story tracks the color history of each item across different filter configurations. It shows how many times each item's color has changed, helping to identify if the color mapping system is working correctly. Items should ideally maintain consistent colors across filter changes.",
+      },
+    },
+  },
+};
+
+// Story for testing color initialization issue
+export const ColorInitializationTest = {
+  args: {
+    ...commonProps,
+    dataSet: comprehensiveFilterDataset.slice(0, 5), // Use first 5 items for simplicity
+    title: "Color Initialization Test - Should Show Colors Immediately",
+    filter: null,
+    onLegendDataChange: fn(),
+    onHighlightItem: fn(),
+  },
+  render: args => {
+    const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
+    const [initializationLog, setInitializationLog] = React.useState<string[]>([]);
+    const [renderCount, setRenderCount] = React.useState(0);
+
+    // Track render count
+    React.useEffect(() => {
+      setRenderCount(prev => prev + 1);
+    });
+
+    // Handle color mapping generation with initialization tracking
+    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = `${timestamp}: ${Object.keys(newMapping).length} colors generated`;
+      setInitializationLog(prev => [logEntry, ...prev.slice(0, 9)]);
+      setColorsMapping(newMapping);
+    }, []);
+
+    // Style for the test panel
+    const testPanelStyle = {
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "16px",
+      marginBottom: "24px",
+      padding: "16px",
+      backgroundColor: "#f8f9fa",
+      borderRadius: "8px",
+      border: "1px solid #e9ecef",
+    };
+
+    const logStyle = {
+      padding: "12px",
+      backgroundColor: "#fff",
+      borderRadius: "4px",
+      fontSize: "12px",
+      fontFamily: "monospace",
+      maxHeight: "150px",
+      overflowY: "auto" as const,
+      border: "1px solid #dee2e6",
+    };
+
+    const statusStyle = {
+      padding: "8px 12px",
+      borderRadius: "4px",
+      fontSize: "14px",
+      fontWeight: "600",
+    };
+
+    const hasColors = Object.keys(colorsMapping).length > 0;
+    const statusColor = hasColors ? "#28a745" : "#dc3545";
+    const statusText = hasColors ? "✅ Colors Generated" : "❌ No Colors Yet";
+
+    return (
+      <div>
+        <div style={testPanelStyle}>
+          <div style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "8px" }}>
+            Color Initialization Test
+          </div>
+          
+          <div style={statusStyle} style={{ backgroundColor: statusColor, color: "white" }}>
+            {statusText} (Render #{renderCount})
+          </div>
+
+          <div>
+            <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+              Current Colors ({Object.keys(colorsMapping).length}):
+            </div>
+            <div style={logStyle}>
+              {Object.keys(colorsMapping).length === 0 ? (
+                <div style={{ color: "#6c757d", fontStyle: "italic" }}>
+                  No colors generated yet...
+                </div>
+              ) : (
+                Object.entries(colorsMapping).map(([label, color]) => (
+                  <div key={label} style={{ marginBottom: "4px" }}>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: "12px",
+                        height: "12px",
+                        backgroundColor: color,
+                        border: "1px solid #fff",
+                        borderRadius: "2px",
+                        marginRight: "8px",
+                        boxShadow: "0 0 0 1px rgba(0,0,0,0.1)",
+                      }}
+                    />
+                    {label}: {color}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+              Initialization Log:
+            </div>
+            <div style={logStyle}>
+              {initializationLog.length === 0 ? (
+                <div style={{ color: "#6c757d", fontStyle: "italic" }}>
+                  No initialization events yet...
+                </div>
+              ) : (
+                initializationLog.map((entry, index) => (
+                  <div key={index} style={{ marginBottom: "2px" }}>
+                    {entry}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div style={{ fontSize: "12px", color: "#6c757d" }}>
+            <strong>Expected Behavior:</strong> Colors should be generated immediately on first render, not after a state change.
+          </div>
+        </div>
+
+        <LineChartComponent
+          {...args}
+          onColorMappingGenerated={handleColorMappingGenerated}
+          colorsMapping={colorsMapping}
+        />
+      </div>
+    );
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This story specifically tests the color initialization issue. Before the fix, colors would only appear after making changes (like adding disabled items). After the fix, colors should appear immediately on the first render. The status indicator shows whether colors have been generated, and the log tracks when color generation events occur.",
+      },
+    },
+  },
+};
+
+export const LegendDataExposure = {
+  args: {
+    ...commonProps,
+    dataSet: diverseDataSet,
+    filter: {
+      limit: 5,
+      date: "2020",
+      criteria: "value",
+      sortingDir: "desc",
+    },
+    onLegendDataChange: fn(),
+    onHighlightItem: fn(),
+  },
+  render: args => {
+    const [legendData, setLegendData] = React.useState<LegendItem[]>([]);
+    const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("desc");
+
+    const handleLegendDataChange = (data: LegendItem[]) => {
+      setLegendData(data);
+    };
+
+    const handleHighlightItem = (labels: string[]) => {
+      // Handle highlight logic here if needed
+      console.log("Highlighted items:", labels);
+    };
+
+    const toggleSortDirection = () => {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    };
+
+    const currentFilter = React.useMemo(() => ({
+      ...args.filter,
+      sortingDir: sortDirection,
+    }), [args.filter, sortDirection]);
+
+    return (
+      <div style={{ padding: "20px" }}>
+        <h3>Legend Data Exposure Demo</h3>
+        
+        <div style={{ marginBottom: "20px" }}>
+          <h4>Legend Data (sorted by value at filter date: {args.filter?.date}):</h4>
+          <button onClick={toggleSortDirection} style={{ marginBottom: "10px" }}>
+            Current Sort: {sortDirection.toUpperCase()} - Click to toggle
+          </button>
+          
+          <div style={{ 
+            background: "#f5f5f5", 
+            padding: "15px", 
+            borderRadius: "4px",
+            maxHeight: "400px",
+            overflowY: "auto"
+          }}>
+            {legendData.length > 0 ? (
+              <div style={{ fontSize: "14px" }}>
+                <div style={{ marginBottom: "10px", fontWeight: "bold" }}>
+                  Total Items: {legendData.length}
+                </div>
+                
+                {legendData.map((item, index) => (
+                  <div key={item.label} style={{ 
+                    marginBottom: "15px",
+                    padding: "10px",
+                    backgroundColor: item.disabled ? "#f8f9fa" : "#ffffff",
+                    border: `1px solid ${item.disabled ? "#dee2e6" : "#e9ecef"}`,
+                    borderRadius: "4px",
+                    opacity: item.disabled ? 0.7 : 1
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", marginBottom: "8px" }}>
+                      <span style={{ 
+                        display: "inline-block", 
+                        width: "20px", 
+                        height: "20px", 
+                        backgroundColor: item.color,
+                        marginRight: "10px",
+                        borderRadius: "3px",
+                        border: "1px solid #ccc"
+                      }}></span>
+                      <strong style={{ fontSize: "16px" }}>{item.label}</strong>
+                      {item.disabled && (
+                        <span style={{ 
+                          marginLeft: "10px", 
+                          background: "#dc3545", 
+                          color: "white", 
+                          padding: "2px 6px", 
+                          borderRadius: "3px", 
+                          fontSize: "12px" 
+                        }}>
+                          DISABLED
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "13px" }}>
+                      <div>
+                        <span style={{ fontWeight: "600", color: "#495057" }}>Order:</span>{" "}
+                        <span style={{ fontFamily: "monospace", background: "#e9ecef", padding: "2px 4px", borderRadius: "2px" }}>
+                          {item.order}
+                        </span>
+                      </div>
+                      
+                      <div>
+                        <span style={{ fontWeight: "600", color: "#495057" }}>Disabled:</span>{" "}
+                        <span style={{ 
+                          fontFamily: "monospace", 
+                          background: item.disabled ? "#f8d7da" : "#d1edcc", 
+                          color: item.disabled ? "#721c24" : "#155724",
+                          padding: "2px 4px", 
+                          borderRadius: "2px" 
+                        }}>
+                          {item.disabled ? "true" : "false"}
+                        </span>
+                      </div>
+                      
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <span style={{ fontWeight: "600", color: "#495057" }}>Color:</span>{" "}
+                        <span style={{ fontFamily: "monospace", background: "#e9ecef", padding: "2px 4px", borderRadius: "2px" }}>
+                          {item.color}
+                        </span>
+                      </div>
+                      
+                      {item.dataLabelSafe && (
+                        <div style={{ gridColumn: "1 / -1" }}>
+                          <span style={{ fontWeight: "600", color: "#495057" }}>CSS Safe Label:</span>{" "}
+                          <span style={{ fontFamily: "monospace", background: "#e9ecef", padding: "2px 4px", borderRadius: "2px" }}>
+                            {item.dataLabelSafe}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {item.sortValue !== undefined && (
+                        <div style={{ gridColumn: "1 / -1" }}>
+                          <span style={{ fontWeight: "600", color: "#495057" }}>Sort Value:</span>{" "}
+                          <span style={{ 
+                            fontFamily: "monospace", 
+                            background: "#fff3cd", 
+                            color: "#856404",
+                            padding: "2px 4px", 
+                            borderRadius: "2px",
+                            fontWeight: "600"
+                          }}>
+                            {item.sortValue}
+                          </span>
+                          <span style={{ fontSize: "11px", color: "#6c757d", marginLeft: "8px" }}>
+                            (value at filter date: {args.filter?.date})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div style={{ marginTop: "8px", fontSize: "12px", color: "#6c757d" }}>
+                      <strong>Raw JSON:</strong>
+                      <pre style={{ 
+                        background: "#f8f9fa", 
+                        padding: "6px", 
+                        borderRadius: "2px", 
+                        margin: "4px 0 0 0",
+                        fontSize: "11px",
+                        overflow: "auto"
+                      }}>
+                        {JSON.stringify(item, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>No legend data available yet...</p>
+            )}
+          </div>
+        </div>
+
+        <LineChartComponent
+          {...args}
+          filter={currentFilter}
+          onLegendDataChange={handleLegendDataChange}
+          onHighlightItem={handleHighlightItem}
+        />
+      </div>
+    );
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This story demonstrates the new `onLegendDataChange` callback that exposes the legend data used for sorting and filtering. The legend data is sorted based on the filter criteria and includes the color, order, and disabled state for each item. You can toggle the sort direction to see how the legend data changes accordingly.",
       },
     },
   },

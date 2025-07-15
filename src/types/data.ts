@@ -41,6 +41,15 @@ export type Filter = {
 
 export type XaxisDataType = "date_annual" | "date_monthly" | "number";
 
+export type LegendItem = {
+  label: string;
+  color: string;
+  order: number;
+  disabled?: boolean;
+  dataLabelSafe?: string;
+  sortValue?: number;
+};
+
 export type ChartMetadata = {
   xAxisDomain: string[];
   yAxisDomain: [number, number];
@@ -52,5 +61,8 @@ export type ChartMetadata = {
     | "bar-chart"
     | "pie-chart"
     | "scatter-chart"
-    | "radar-chart";
+    | "scatter-plot-chart"
+    | "radar-chart"
+    | "vertical-stack-bar-chart";
+  legendData?: LegendItem[];
 };

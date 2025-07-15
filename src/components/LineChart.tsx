@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, FC, useEffect } from "react";
 import { select } from "d3";
-import { DataPoint } from "../types/data";
+import { DataPoint, ChartMetadata, LegendItem } from "../types/data";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
 import XaxisLinear from "./shared/XaxisLinear";
@@ -15,6 +15,7 @@ import useLineChartPathsShapesRendering from "./hooks/lineChart/useLineChartPath
 import useLineChartMouseInteractionCombinedMode from "./hooks/lineChart/useLineChartMouseInteractionCombinedMode";
 import useLineChartMetadataExpose from "./hooks/lineChart/useLineChartMetadataExpose";
 import useLineChartColorMapping from "./hooks/lineChart/useColorMapping";
+import useGenerateColorMapping from "./hooks/lineChart/useGenerateColorMapping";
 import { useLineChartRefsAndState } from "./hooks/lineChart/useLineChartRefsAndState";
 import { sanitizeForClassName, getColor } from "./hooks/lineChart/lineChartUtils";
 import { useLineChartGeometry } from "./hooks/lineChart/useLineChartGeometry";
@@ -37,6 +38,16 @@ const DEFAULT_COLORS = [
   "#7f7f7f",
   "#bcbd22",
   "#17becf",
+  "#aec7e8",
+  "#ffbb78",
+  "#98df8a",
+  "#ff9896",
+  "#c5b0d5",
+  "#c49c94",
+  "#f7b6d2",
+  "#c7c7c7",
+  "#dbdb8d",
+  "#9edae5",
 ];
 
 interface LineChartContainerProps {
@@ -162,19 +173,12 @@ interface LineChartProps {
   // the purpose is to share the same color mapping between charts
   colorsMapping?: { [key: string]: string };
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
-  onHighlightItem: (labels: string[]) => void;
+  onHighlightItem?: (labels: string[]) => void;
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
+  onLegendDataChange?: (legendData: LegendItem[]) => void;
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
-}
-
-interface ChartMetadata {
-  xAxisDomain: string[];
-  yAxisDomain: [number, number];
-  visibleItems: string[];
-  renderedData: { [key: string]: DataPoint[] };
-  chartType: "line-chart";
 }
 
 const LineChart: FC<LineChartProps> = ({
@@ -201,6 +205,7 @@ const LineChart: FC<LineChartProps> = ({
   onChartDataProcessed,
   onHighlightItem,
   onColorMappingGenerated,
+  onLegendDataChange,
   highlightItems = [],
   disabledItems = [],
 }) => {
@@ -257,6 +262,23 @@ const LineChart: FC<LineChartProps> = ({
     [onChartDataProcessed]
   );
 
+  const memoizedOnLegendDataChange = useCallback(
+    (legendData: LegendItem[]) => {
+      if (onLegendDataChange) {
+        onLegendDataChange(legendData);
+      }
+    },
+    [onLegendDataChange]
+  );
+
+  // Generate consistent color mapping first
+  const generatedColorMapping = useGenerateColorMapping(
+    dataSet,
+    colors,
+    colorsMapping,
+    onColorMappingGenerated
+  );
+
   useLineChartPathsShapesRendering(
     filteredDataSet,
     visibleDataSets,
@@ -266,7 +288,7 @@ const LineChart: FC<LineChartProps> = ({
     xAxisDataType,
     getDashArrayMemoized,
     colors,
-    colorsMapping,
+    generatedColorMapping, // Use the generated mapping here
     line,
     xScale,
     yScale,
@@ -282,7 +304,7 @@ const LineChart: FC<LineChartProps> = ({
     dataSet
   );
 
-  useLineChartColorMapping(colorsMapping, getColor, svgRef, TRANSITION_DURATION);
+  useLineChartColorMapping(generatedColorMapping, getColor, svgRef, TRANSITION_DURATION);
 
   const handleTooltipToggle = useLineChartTooltipToggle(
     xScale,
@@ -332,7 +354,11 @@ const LineChart: FC<LineChartProps> = ({
     filter,
     memoizedOnChartDataProcessed,
     renderCompleteRef,
-    prevChartDataRef
+    prevChartDataRef,
+    colorsMapping,
+    colors,
+    memoizedOnColorMappingGenerated,
+    memoizedOnLegendDataChange
   );
 
   useEffect(() => {

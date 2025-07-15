@@ -125,6 +125,8 @@ const useLineChartPathsShapesRendering = (
     let colorIndex = Object.keys(colorsMapping).length;
     let hasNewColors = false;
 
+    // Normal case: assign colors to new items only
+    // Color order is now handled by useLineChartMetadataExpose based on legend order
     for (const dataSet of dataSetForColorGeneration) {
       if (!generatedColorsMapping[dataSet.label]) {
         generatedColorsMapping[dataSet.label] = colors[colorIndex % colors.length];

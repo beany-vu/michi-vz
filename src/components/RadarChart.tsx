@@ -5,6 +5,7 @@ import range from "lodash/range";
 import isEqual from "lodash/isEqual";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
+import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -78,6 +79,7 @@ interface ChartMetadata {
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
   chartType: "radar-chart";
+  legendData?: { label: string; color: string; order: number; disabled?: boolean }[];
 }
 
 export interface RadarChartProps {
@@ -218,6 +220,8 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     let colorIndex = Object.keys(colorsMapping).length;
 
     if (series && series.length > 0) {
+      // Normal case: assign colors to new items only
+      // Color order is now handled by legend data generation in metadata
       for (const dataSet of series) {
         if (!newMapping[dataSet.label]) {
           newMapping[dataSet.label] = colors[colorIndex % colors.length];
@@ -368,6 +372,46 @@ export const RadarChart: React.FC<RadarChartProps> = ({
       // Ensure unique labels in poles.labels
       const uniqueLabels = poles?.labels ? [...new Set(poles.labels)] : [];
 
+      // Generate legend data with colors based on series order
+      const legendData =
+        series?.map((item, index) => {
+          // Assign colors based on legend order using DEFAULT_COLORS
+          const colorIndex = index % colors.length;
+          const baseColor = colors[colorIndex];
+
+          // Calculate opacity for repeat items beyond color palette
+          const repeatCycle = Math.floor(index / colors.length);
+          const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
+
+          // Create color with opacity if needed
+          const finalColor =
+            repeatCycle > 0
+              ? `${baseColor}${Math.round(opacity * 255)
+                  .toString(16)
+                  .padStart(2, "0")}`
+              : baseColor;
+
+          return {
+            label: item.label,
+            color: finalColor,
+            order: index,
+            disabled: disabledItems.includes(item.label),
+            dataLabelSafe: sanitizeForClassName(item.label),
+            sortValue: undefined, // RadarChart doesn't have sorting
+          };
+        }) || [];
+
+      // Generate new color mapping based on legend order
+      const newColorMapping: { [key: string]: string } = {};
+      legendData.forEach(item => {
+        newColorMapping[item.label] = item.color;
+      });
+
+      // Update color mapping if it has changed
+      if (!isEqual(newColorMapping, generatedColorsMapping) && onColorMappingGenerated) {
+        onColorMappingGenerated(newColorMapping);
+      }
+
       const currentMetadata: ChartMetadata = {
         xAxisDomain: poles?.labels ? poles.labels.map(String) : [],
         yAxisDomain: yScale.domain() as [number, number],
@@ -379,6 +423,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           [uniqueLabels[0] || "default"]: series || [],
         },
         chartType: "radar-chart",
+        legendData: legendData,
       };
 
       // Check if data has actually changed
@@ -446,11 +491,17 @@ export const RadarChart: React.FC<RadarChartProps> = ({
       >
         {children}
         {processedSeries.map(({ label, pointString, points, color }, i: number) => (
-          <g key={`series-${i}`} data-label={label} className={`series`}>
+          <g
+            key={`series-${i}`}
+            data-label={label}
+            data-label-safe={sanitizeForClassName(label)}
+            className={`series`}
+          >
             <Polygon
               points={pointString}
               fill={"transparent"}
-              data-label={getColor(generatedColorsMapping[label], color)}
+              data-label={label}
+              data-label-safe={sanitizeForClassName(label)}
               stroke={getColor(generatedColorsMapping[label], color)}
               strokeWidth={2}
               onMouseEnter={event => {
@@ -478,6 +529,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                       <DataPointStyled
                         className={`data-point data-point-${i}`}
                         data-label={label}
+                        data-label-safe={sanitizeForClassName(label)}
                         r={5}
                         cx={point.x}
                         cy={point.y}

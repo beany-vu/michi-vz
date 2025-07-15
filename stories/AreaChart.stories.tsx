@@ -1172,3 +1172,167 @@ export const TestHighlighting = {
     ticks: 5,
   },
 };
+
+// Generate comprehensive dataset for legend testing (similar to LineChart)
+const generateLargeDataset = () => {
+  const countries = [
+    "United States", "China", "Japan", "Germany", "India", "United Kingdom", "France", "Brazil", "Italy", "Canada",
+    "Russia", "South Korea", "Australia", "Spain", "Mexico", "Indonesia", "Netherlands", "Saudi Arabia", "Turkey", "Taiwan",
+    "Switzerland", "Ireland", "Belgium", "Israel", "Argentina", "Egypt", "South Africa", "Thailand", "Bangladesh", "Nigeria",
+    "Chile", "Finland", "Philippines", "Malaysia", "New Zealand", "Vietnam", "Peru", "Czech Republic", "Romania", "Portugal",
+    "Iraq", "Kenya", "Morocco", "Ukraine", "Sri Lanka", "Ethiopia", "Guatemala", "Uruguay", "Costa Rica", "Panama"
+  ];
+  
+  const years = [2020, 2021, 2022, 2023];
+  
+  return years.map(year => {
+    const entry: any = { date: year };
+    countries.forEach(country => {
+      entry[country] = Math.random() * 100;
+    });
+    return entry;
+  });
+};
+
+export const LegendWithFilterControls = {
+  render: (args: any) => {
+    const [filter, setFilter] = useState({ date: 2023, sortingDir: "desc" as "asc" | "desc" });
+    const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>({});
+    const [legendData, setLegendData] = useState<any[]>([]);
+    const [disabledItems, setDisabledItems] = useState<string[]>([]);
+
+    const handleChartDataProcessed = useCallback((metadata: any) => {
+      if (metadata.legendData) {
+        setLegendData(metadata.legendData);
+      }
+    }, []);
+
+    const handleColorMappingGenerated = useCallback((colors: { [key: string]: string }) => {
+      setColorsMapping(colors);
+    }, []);
+
+    const toggleItemDisabled = useCallback((label: string) => {
+      setDisabledItems(prev => 
+        prev.includes(label) 
+          ? prev.filter(item => item !== label)
+          : [...prev, label]
+      );
+    }, []);
+
+    return (
+      <div>
+        <div style={{ marginBottom: "20px", padding: "10px", border: "1px solid #ddd", borderRadius: "4px" }}>
+          <h3>🎨 Legend-Based Color Assignment Test</h3>
+          <p>This story tests the new legend-based color assignment approach for AreaChart.</p>
+          
+          <div style={{ display: "flex", gap: "20px", marginBottom: "15px", alignItems: "center" }}>
+            <div>
+              <label style={{ marginRight: "5px" }}>Filter Year:</label>
+              <select 
+                value={filter.date} 
+                onChange={(e) => setFilter(prev => ({ ...prev, date: parseInt(e.target.value) }))}
+                style={{ padding: "4px" }}
+              >
+                <option value={2020}>2020</option>
+                <option value={2021}>2021</option>
+                <option value={2022}>2022</option>
+                <option value={2023}>2023</option>
+              </select>
+            </div>
+            
+            <div>
+              <label style={{ marginRight: "5px" }}>Sort Direction:</label>
+              <select 
+                value={filter.sortingDir} 
+                onChange={(e) => setFilter(prev => ({ ...prev, sortingDir: e.target.value as "asc" | "desc" }))}
+                style={{ padding: "4px" }}
+              >
+                <option value="desc">Highest First</option>
+                <option value="asc">Lowest First</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+            <button onClick={() => setFilter({ date: 2020, sortingDir: "desc" })}>📊 2020 High→Low</button>
+            <button onClick={() => setFilter({ date: 2021, sortingDir: "asc" })}>📈 2021 Low→High</button>
+            <button onClick={() => setFilter({ date: 2022, sortingDir: "desc" })}>📉 2022 High→Low</button>
+            <button onClick={() => setFilter({ date: 2023, sortingDir: "asc" })}>🔄 2023 Low→High</button>
+          </div>
+
+          <div style={{ marginTop: "15px" }}>
+            <strong>Legend Data (First 10 items):</strong>
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+              gap: "5px", 
+              marginTop: "5px",
+              maxHeight: "120px",
+              overflowY: "auto"
+            }}>
+              {legendData.slice(0, 10).map((item, index) => (
+                <div 
+                  key={item.label}
+                  style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    padding: "2px 5px",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    backgroundColor: item.disabled ? "#f5f5f5" : "transparent",
+                    textDecoration: item.disabled ? "line-through" : "none"
+                  }}
+                  onClick={() => toggleItemDisabled(item.label)}
+                >
+                  <div 
+                    style={{ 
+                      width: "12px", 
+                      height: "12px", 
+                      backgroundColor: item.color, 
+                      marginRight: "5px",
+                      border: "1px solid #ccc"
+                    }}
+                  />
+                  <span>#{index + 1} {item.label}</span>
+                </div>
+              ))}
+            </div>
+            {legendData.length > 10 && (
+              <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
+                ... and {legendData.length - 10} more items
+              </p>
+            )}
+          </div>
+        </div>
+
+        <AreaChart
+          {...args}
+          filter={filter}
+          colorsMapping={colorsMapping}
+          disabledItems={disabledItems}
+          onChartDataProcessed={handleChartDataProcessed}
+          onColorMappingGenerated={handleColorMappingGenerated}
+        />
+      </div>
+    );
+  },
+  args: {
+    keys: [
+      "United States", "China", "Japan", "Germany", "India", "United Kingdom", "France", "Brazil", "Italy", "Canada",
+      "Russia", "South Korea", "Australia", "Spain", "Mexico", "Indonesia", "Netherlands", "Saudi Arabia", "Turkey", "Taiwan",
+      "Switzerland", "Ireland", "Belgium", "Israel", "Argentina", "Egypt", "South Africa", "Thailand", "Bangladesh", "Nigeria",
+      "Chile", "Finland", "Philippines", "Malaysia", "New Zealand", "Vietnam", "Peru", "Czech Republic", "Romania", "Portugal",
+      "Iraq", "Kenya", "Morocco", "Ukraine", "Sri Lanka", "Ethiopia", "Guatemala", "Uruguay", "Costa Rica", "Panama"
+    ],
+    series: generateLargeDataset(),
+    width: 900,
+    height: 500,
+    margin: { top: 50, right: 70, bottom: 70, left: 70 },
+    title: "Area Chart - Legend-Based Color Assignment Test",
+    yAxisFormat: (d: any) => `${d.toFixed(1)}%`,
+    yAxisDomain: [0, 100],
+    xAxisDataType: "number",
+    xAxisFormat: (d: any) => `${d}`,
+    ticks: 4,
+  },
+};

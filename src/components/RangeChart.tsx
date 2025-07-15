@@ -1,7 +1,7 @@
 // RangeChart.tsx
 import React, { useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import * as d3 from "d3";
-import { DataPointRangeChart } from "../types/data";
+import { DataPointRangeChart, LegendItem } from "../types/data";
 import { useChartContext } from "./MichiVzProvider";
 import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
@@ -9,6 +9,7 @@ import YaxisLinear from "./shared/YaxisLinear";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import useDeepCompareEffect from "use-deep-compare-effect";
+import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
@@ -53,6 +54,7 @@ interface RangeChartProps {
       ) => boolean);
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
+  onLegendDataChange?: (legendData: LegendItem[]) => void;
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
@@ -64,6 +66,7 @@ interface ChartMetadata {
   visibleItems: string[];
   renderedData: { [key: string]: DataPointRangeChart[] };
   chartType: "range-chart";
+  legendData?: LegendItem[];
 }
 
 const RangeChart: React.FC<RangeChartProps> = ({
@@ -86,6 +89,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
   isNodata,
   onChartDataProcessed,
   onHighlightItem,
+  onLegendDataChange,
   highlightItems = [],
   disabledItems = [],
 }) => {
@@ -245,6 +249,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
       .attr("fill", d => (showLine(d.series[0]) ? "none" : colorsMapping[d.label] || d.color))
       .attr("stroke", d => (showLine(d.series[0]) ? colorsMapping[d.label] || d.color : "none"))
       .attr("data-label", d => d.label)
+      .attr("data-label-safe", d => sanitizeForClassName(d.label))
       .attr("transition", "all 0.1s ease-out")
       .on("mouseenter", function (event) {
         const label = d3.select(this).attr("label");
@@ -279,6 +284,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
         .attr("class", `rect-hover rect-hover-${i}`)
         .attr("stroke", "#ccc")
         .attr("data-label", data.label)
+        .attr("data-label-safe", sanitizeForClassName(data.label))
         .attr("x", d => xScale(new Date(d.date)) - 4 / 2)
         .attr("y", d => yScale(d.valueMax))
         .attr("width", 4)
@@ -348,6 +354,15 @@ const RangeChart: React.FC<RangeChartProps> = ({
       // Create unique dates array
       const uniqueDates = [...new Set(allDates)].map(date => String(date));
 
+      // Generate legend data (include disabled items)
+      const legendData: LegendItem[] = dataSet.map((item, index) => ({
+        label: item.label,
+        color: colorsMapping[item.label] || item.color,
+        order: index,
+        disabled: disabledItems.includes(item.label),
+        dataLabelSafe: sanitizeForClassName(item.label),
+      }));
+
       const currentMetadata: ChartMetadata = {
         xAxisDomain: uniqueDates,
         yAxisDomain: yScale.domain() as [number, number],
@@ -362,6 +377,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
           {} as { [key: string]: DataPointRangeChart[] }
         ),
         chartType: "range-chart",
+        legendData,
       };
 
       // Check if data has actually changed
@@ -383,8 +399,13 @@ const RangeChart: React.FC<RangeChartProps> = ({
       if (hasChanged) {
         onChartDataProcessed(currentMetadata);
       }
+
+      // Call legend data change callback
+      if (onLegendDataChange) {
+        onLegendDataChange(legendData);
+      }
     }
-  }, [filteredDataSet, xAxisDataType, yScale, disabledItems, onChartDataProcessed]);
+  }, [filteredDataSet, xAxisDataType, yScale, disabledItems, onChartDataProcessed, dataSet, colorsMapping, onLegendDataChange]);
 
   return (
     <div className="chart-container" style={{ position: "relative" }}>

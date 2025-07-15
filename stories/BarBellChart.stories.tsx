@@ -156,6 +156,8 @@ const mockData2 = [
 export default {
   title: "Charts/BarBellChart",
   component: BarBellChart,
+  argTypes: {
+  },
   decorators: [
     Story => (
       <MichiVzProvider>
@@ -571,5 +573,183 @@ export const DisableEnableColorMapping = {
       y: false,
     },
     onColorMappingGenerated: fn(),
+  },
+};
+
+// Generate comprehensive dataset for legend testing
+const generateLargeBarBellDataset = () => {
+  const sectors = [
+    "Technology", "Healthcare", "Finance", "Manufacturing", "Retail", "Energy", 
+    "Education", "Transportation", "Real Estate", "Agriculture", "Aerospace", "Automotive",
+    "Telecommunications", "Construction", "Entertainment", "Food & Beverage", "Chemicals", 
+    "Pharmaceuticals", "Banking", "Insurance", "Consulting", "Media", "Tourism", "Mining",
+    "Textile", "Electronics", "Software", "Biotechnology", "Renewable Energy", "Logistics"
+  ];
+  
+  return sectors.map((sector, index) => ({
+    date: `Q${Math.floor(index / 8) + 1} | ${sector}`,
+    revenue: Math.random() * 10000 + 1000,
+    profit: Math.random() * 5000 + 500,
+    expenses: Math.random() * 3000 + 200,
+  }));
+};
+
+export const LegendWithFilterControls = {
+  render: (args: any) => {
+    const [filter, setFilter] = useState({ 
+      criteria: "revenue", 
+      sortingDir: "desc", 
+      limit: 15 
+    });
+    const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>({});
+    const [legendData, setLegendData] = useState<any[]>([]);
+    const [disabledItems, setDisabledItems] = useState<string[]>([]);
+
+    const handleChartDataProcessed = React.useCallback((metadata: any) => {
+      if (metadata.legendData) {
+        setLegendData(metadata.legendData);
+      }
+    }, []);
+
+    const handleColorMappingGenerated = React.useCallback((colors: { [key: string]: string }) => {
+      setColorsMapping(colors);
+    }, []);
+
+    const toggleItemDisabled = React.useCallback((label: string) => {
+      setDisabledItems(prev => 
+        prev.includes(label) 
+          ? prev.filter(item => item !== label)
+          : [...prev, label]
+      );
+    }, []);
+
+    return (
+      <div>
+        <div style={{ marginBottom: "20px", padding: "10px", border: "1px solid #ddd", borderRadius: "4px" }}>
+          <h3>🎨 Legend-Based Color Assignment Test</h3>
+          <p>This story tests the new legend-based color assignment approach for BarBellChart.</p>
+          
+          <div style={{ display: "flex", gap: "20px", marginBottom: "15px", alignItems: "center", flexWrap: "wrap" }}>
+            <div>
+              <label style={{ marginRight: "5px" }}>Sort By:</label>
+              <select 
+                value={filter.criteria} 
+                onChange={(e) => setFilter(prev => ({ ...prev, criteria: e.target.value }))}
+                style={{ padding: "4px" }}
+              >
+                <option value="revenue">Revenue</option>
+                <option value="profit">Profit</option>
+                <option value="expenses">Expenses</option>
+              </select>
+            </div>
+            
+            <div>
+              <label style={{ marginRight: "5px" }}>Direction:</label>
+              <select 
+                value={filter.sortingDir} 
+                onChange={(e) => setFilter(prev => ({ ...prev, sortingDir: e.target.value }))}
+                style={{ padding: "4px" }}
+              >
+                <option value="desc">Highest First</option>
+                <option value="asc">Lowest First</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ marginRight: "5px" }}>Limit:</label>
+              <select 
+                value={filter.limit} 
+                onChange={(e) => setFilter(prev => ({ ...prev, limit: parseInt(e.target.value) }))}
+                style={{ padding: "4px" }}
+              >
+                <option value={10}>Top 10</option>
+                <option value={15}>Top 15</option>
+                <option value={20}>Top 20</option>
+                <option value={30}>All 30</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", marginBottom: "10px", flexWrap: "wrap" }}>
+            <button onClick={() => setFilter({ criteria: "revenue", sortingDir: "desc", limit: 10 })}>
+              💰 Revenue: High→Low (10)
+            </button>
+            <button onClick={() => setFilter({ criteria: "profit", sortingDir: "asc", limit: 15 })}>
+              📊 Profit: Low→High (15)
+            </button>
+            <button onClick={() => setFilter({ criteria: "expenses", sortingDir: "desc", limit: 20 })}>
+              💸 Expenses: High→Low (20)
+            </button>
+            <button onClick={() => setFilter({ criteria: "revenue", sortingDir: "asc", limit: 30 })}>
+              🔄 All Revenue: Low→High
+            </button>
+          </div>
+
+          <div style={{ marginTop: "15px" }}>
+            <strong>Legend Data (First 10 items):</strong>
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", 
+              gap: "5px", 
+              marginTop: "5px",
+              maxHeight: "120px",
+              overflowY: "auto"
+            }}>
+              {legendData.slice(0, 10).map((item, index) => (
+                <div 
+                  key={item.label}
+                  style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    padding: "2px 5px",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    backgroundColor: item.disabled ? "#f5f5f5" : "transparent",
+                    textDecoration: item.disabled ? "line-through" : "none"
+                  }}
+                  onClick={() => toggleItemDisabled(item.label)}
+                >
+                  <div 
+                    style={{ 
+                      width: "12px", 
+                      height: "12px", 
+                      backgroundColor: item.color, 
+                      marginRight: "5px",
+                      border: "1px solid #ccc"
+                    }}
+                  />
+                  <span>#{index + 1} {item.label}</span>
+                </div>
+              ))}
+            </div>
+            {legendData.length > 10 && (
+              <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
+                ... and {legendData.length - 10} more items
+              </p>
+            )}
+          </div>
+        </div>
+
+        <BarBellChart
+          {...args}
+          filter={filter}
+          colorsMapping={colorsMapping}
+          disabledItems={disabledItems}
+          onChartDataProcessed={handleChartDataProcessed}
+          onColorMappingGenerated={handleColorMappingGenerated}
+        />
+      </div>
+    );
+  },
+  args: {
+    dataSet: generateLargeBarBellDataset(),
+    keys: ["revenue", "profit", "expenses"],
+    width: 900,
+    height: 800,
+    margin: { top: 50, right: 50, bottom: 50, left: 200 },
+    title: "BarBell Chart - Legend-Based Color Assignment Test",
+    xAxisFormat: (d: any) => `$${(d / 1000).toFixed(1)}K`,
+    yAxisFormat: (d: any) => d,
+    showGrid: { x: true, y: false },
   },
 };

@@ -54,6 +54,8 @@ export default {
   title: "Charts/Vertical Stack Bar Chart",
   component: VerticalStackBarChart,
   tags: ["autodocs"],
+  argTypes: {
+  },
 } as Meta;
 
 const Template: StoryFn<VerticalStackBarChartProps> = (args: VerticalStackBarChartProps) => {
@@ -309,4 +311,202 @@ WithManyDataKeys.args = {
     },
   ],
   onChartDataProcessed: fn(),
+};
+
+// Generate comprehensive dataset for legend testing
+const generateLargeVerticalStackDataset = () => {
+  const regions = [
+    "North America", "Europe", "Asia Pacific", "Latin America", "Middle East", 
+    "Africa", "Oceania", "Central Asia", "Southeast Asia", "Eastern Europe",
+    "Western Europe", "Northern Europe", "Southern Europe", "East Asia", "South Asia",
+    "Central America", "Caribbean", "South America", "North Africa", "Sub-Saharan Africa",
+    "Gulf States", "Levant", "Maghreb", "Horn of Africa", "Central Africa"
+  ];
+  
+  const products = [
+    "Smartphones", "Laptops", "Tablets", "Smart Watches", "Gaming Consoles", 
+    "TVs", "Speakers", "Headphones", "Cameras", "Drones", "Smart Home", "Software"
+  ];
+  
+  const years = ["2020", "2021", "2022", "2023"];
+  
+  return regions.map((region, index) => {
+    const series = years.map(year => {
+      const entry: any = { date: year };
+      products.forEach(product => {
+        entry[product] = (Math.random() * 1000 + 100).toFixed(0);
+      });
+      return entry;
+    });
+    
+    return {
+      seriesKey: region,
+      seriesKeyAbbreviation: region.split(' ').map(word => word[0]).join(''),
+      series: series,
+    };
+  });
+};
+
+export const LegendWithFilterControls = {
+  render: (args: any) => {
+    const [filter, setFilter] = useState({ 
+      limit: 10, 
+      sortingDir: "desc" as "asc" | "desc",
+      date: "2023"
+    });
+    const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>({});
+    const [legendData, setLegendData] = useState<any[]>([]);
+    const [disabledItems, setDisabledItems] = useState<string[]>([]);
+
+    const handleChartDataProcessed = useCallback((metadata: any) => {
+      if (metadata.legendData) {
+        setLegendData(metadata.legendData);
+      }
+    }, []);
+
+    const handleColorMappingGenerated = useCallback((colors: { [key: string]: string }) => {
+      setColorsMapping(prev => {
+        if (JSON.stringify(prev) !== JSON.stringify(colors)) {
+          return colors;
+        }
+        return prev;
+      });
+    }, []);
+
+    const toggleItemDisabled = useCallback((label: string) => {
+      setDisabledItems(prev => 
+        prev.includes(label) 
+          ? prev.filter(item => item !== label)
+          : [...prev, label]
+      );
+    }, []);
+
+    return (
+      <div>
+        <div style={{ marginBottom: "20px", padding: "10px", border: "1px solid #ddd", borderRadius: "4px" }}>
+          <h3>🎨 Legend-Based Color Assignment Test</h3>
+          <p>This story tests the new legend-based color assignment approach for VerticalStackBarChart.</p>
+          
+          <div style={{ display: "flex", gap: "20px", marginBottom: "15px", alignItems: "center", flexWrap: "wrap" }}>
+            <div>
+              <label style={{ marginRight: "5px" }}>Date Filter:</label>
+              <select 
+                value={filter.date} 
+                onChange={(e) => setFilter(prev => ({ ...prev, date: e.target.value }))}
+                style={{ padding: "4px" }}
+              >
+                <option value="2020">2020</option>
+                <option value="2021">2021</option>
+                <option value="2022">2022</option>
+                <option value="2023">2023</option>
+              </select>
+            </div>
+            
+            <div>
+              <label style={{ marginRight: "5px" }}>Sort Direction:</label>
+              <select 
+                value={filter.sortingDir} 
+                onChange={(e) => setFilter(prev => ({ ...prev, sortingDir: e.target.value as "asc" | "desc" }))}
+                style={{ padding: "4px" }}
+              >
+                <option value="desc">Highest First</option>
+                <option value="asc">Lowest First</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ marginRight: "5px" }}>Limit:</label>
+              <select 
+                value={filter.limit} 
+                onChange={(e) => setFilter(prev => ({ ...prev, limit: parseInt(e.target.value) }))}
+                style={{ padding: "4px" }}
+              >
+                <option value={8}>Top 8</option>
+                <option value={12}>Top 12</option>
+                <option value={18}>Top 18</option>
+                <option value={25}>All 25</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", marginBottom: "10px", flexWrap: "wrap" }}>
+            <button onClick={() => setFilter({ limit: 8, sortingDir: "desc", date: "2023" })}>
+              📊 2023: High→Low (8)
+            </button>
+            <button onClick={() => setFilter({ limit: 12, sortingDir: "asc", date: "2022" })}>
+              📈 2022: Low→High (12)
+            </button>
+            <button onClick={() => setFilter({ limit: 18, sortingDir: "desc", date: "2021" })}>
+              💰 2021: High→Low (18)
+            </button>
+            <button onClick={() => setFilter({ limit: 25, sortingDir: "desc", date: "2020" })}>
+              🔄 All 2020: High→Low
+            </button>
+          </div>
+
+          <div style={{ marginTop: "15px" }}>
+            <strong>Legend Data (First 10 items):</strong>
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", 
+              gap: "5px", 
+              marginTop: "5px",
+              maxHeight: "120px",
+              overflowY: "auto"
+            }}>
+              {legendData.slice(0, 10).map((item, index) => (
+                <div 
+                  key={item.label}
+                  style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    padding: "2px 5px",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    backgroundColor: item.disabled ? "#f5f5f5" : "transparent",
+                    textDecoration: item.disabled ? "line-through" : "none"
+                  }}
+                  onClick={() => toggleItemDisabled(item.label)}
+                >
+                  <div 
+                    style={{ 
+                      width: "12px", 
+                      height: "12px", 
+                      backgroundColor: item.color, 
+                      marginRight: "5px",
+                      border: "1px solid #ccc"
+                    }}
+                  />
+                  <span>#{index + 1} {item.label}</span>
+                </div>
+              ))}
+            </div>
+            {legendData.length > 10 && (
+              <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
+                ... and {legendData.length - 10} more items
+              </p>
+            )}
+          </div>
+        </div>
+
+        <VerticalStackBarChart
+          {...args}
+          filter={filter}
+          colorsMapping={colorsMapping}
+          disabledItems={disabledItems}
+          onChartDataProcessed={handleChartDataProcessed}
+          onColorMappingGenerated={handleColorMappingGenerated}
+        />
+      </div>
+    );
+  },
+  args: {
+    dataSet: generateLargeVerticalStackDataset(),
+    width: 900,
+    height: 700,
+    margin: { top: 50, right: 50, bottom: 100, left: 80 },
+    title: "VerticalStackBarChart - Legend-Based Color Assignment Test",
+    yAxisFormat: (d: any) => `${(d/1000).toFixed(1)}K`,
+    xAxisFormat: (d: any) => d,
+  },
 };

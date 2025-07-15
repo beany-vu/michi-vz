@@ -19,6 +19,7 @@ import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import LoadingIndicator from "./shared/LoadingIndicator";
+import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -109,6 +110,7 @@ interface ChartMetadata {
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
   chartType: "scatter-plot-chart";
+  legendData?: { label: string; color: string; order: number; disabled?: boolean }[];
 }
 
 interface ScatterPlotChartProps<T extends number | string> {
@@ -195,9 +197,10 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   // Generate colors for data points that don't have colors in colorsMapping
   const generatedColorsMapping = useMemo(() => {
     const newMapping = { ...colorsMapping };
-    let colorIndex = Object.keys(colorsMapping).length;
 
     if (dataSet && dataSet.length > 0) {
+      // Assign colors to new items only
+      let colorIndex = Object.keys(colorsMapping).length;
       for (const dataPoint of dataSet) {
         if (!newMapping[dataPoint.label]) {
           newMapping[dataPoint.label] = colors[colorIndex % colors.length];
@@ -449,6 +452,73 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   // Move useDeepCompareEffect here, before any conditional returns
   useDeepCompareEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
+      // Get all unique labels from the dataset
+      const allLabels = [...new Set(dataSet.map(d => d.label))];
+
+      // Sort labels based on filter if present
+      let visibleLabels = allLabels;
+      const sortValues: { [key: string]: number } = {};
+
+      if (filter) {
+        // Calculate sort values for all labels
+        allLabels.forEach(label => {
+          const data = dataSet.find(d => d.label === label);
+          const value = data ? data[filter.criteria] : 0;
+          sortValues[label] = value;
+        });
+
+        visibleLabels = allLabels.sort((a, b) => {
+          const aValue = sortValues[a];
+          const bValue = sortValues[b];
+          return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
+        });
+
+        if (filter.limit) {
+          visibleLabels = visibleLabels.slice(0, filter.limit);
+        }
+      }
+
+      // Generate legend data based on visible labels order
+      const legendData = visibleLabels
+        .filter(label => dataSet.find(d => d.label === label))
+        .map((label, index) => {
+          // Assign colors based on legend order using DEFAULT_COLORS
+          const colorIndex = index % DEFAULT_COLORS.length;
+          const baseColor = DEFAULT_COLORS[colorIndex];
+
+          // Calculate opacity for repeat items beyond color palette
+          const repeatCycle = Math.floor(index / DEFAULT_COLORS.length);
+          const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
+
+          // Create color with opacity if needed
+          const finalColor =
+            repeatCycle > 0
+              ? `${baseColor}${Math.round(opacity * 255)
+                  .toString(16)
+                  .padStart(2, "0")}`
+              : baseColor;
+
+          return {
+            label,
+            color: finalColor,
+            order: index,
+            disabled: disabledItems.includes(label),
+            dataLabelSafe: sanitizeForClassName(label),
+            sortValue: sortValues[label],
+          };
+        });
+
+      // Generate new color mapping based on legend order
+      const newColorMapping: { [key: string]: string } = {};
+      legendData.forEach(item => {
+        newColorMapping[item.label] = item.color;
+      });
+
+      // Update color mapping if it has changed
+      if (!isEqual(newColorMapping, generatedColorsMapping) && onColorMappingGenerated) {
+        onColorMappingGenerated(newColorMapping);
+      }
+
       const currentMetadata: ChartMetadata = {
         xAxisDomain: xValues.map(String),
         yAxisDomain: yScale.domain() as [number, number],
@@ -457,6 +527,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
           points: renderOrderedDataSet,
         },
         chartType: "scatter-plot-chart",
+        legendData: legendData,
       };
 
       const hasChanged =
@@ -476,7 +547,18 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
 
       prevChartDataRef.current = currentMetadata;
     }
-  }, [renderOrderedDataSet, xValues, yScale, filteredDataSet, onChartDataProcessed]);
+  }, [
+    renderOrderedDataSet,
+    xValues,
+    yScale,
+    filteredDataSet,
+    onChartDataProcessed,
+    dataSet,
+    filter,
+    disabledItems,
+    generatedColorsMapping,
+    onColorMappingGenerated,
+  ]);
 
   return (
     <Styled style={{ position: "relative" }}>
@@ -508,6 +590,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                       transform={`translate(${x}, ${y})`}
                       opacity={0.9}
                       data-label={d.label}
+                      data-label-safe={sanitizeForClassName(d.label)}
                       onMouseEnter={event => handleMouseEnter(event, d)}
                       onMouseLeave={handleMouseLeave}
                     >
