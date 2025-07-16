@@ -319,7 +319,17 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
         onLegendDataChange(legendData);
       }
     }
-  }, [yAxisDomain, xAxisDomain, visibleItems, filteredDataSet, onChartDataProcessed, dataSet, generatedColorsMapping, disabledItems, onLegendDataChange]);
+  }, [
+    yAxisDomain,
+    xAxisDomain,
+    visibleItems,
+    filteredDataSet,
+    onChartDataProcessed,
+    dataSet,
+    generatedColorsMapping,
+    disabledItems,
+    onLegendDataChange,
+  ]);
 
   return (
     <div style={{ position: "relative" }}>

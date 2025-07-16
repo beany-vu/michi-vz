@@ -9,14 +9,15 @@ const useFilteredDataSet = (
   return useMemo(() => {
     // If no filter is provided, return the entire dataset excluding disabled items
     if (!filter) {
-      return dataSet.filter(d => !disabledItems.includes(d.label));
+      const result = dataSet.filter(d => !disabledItems.includes(d.label));
+      return {
+        filteredData: result,
+        topNItems: result, // For legend purposes, same as filtered data when no filter
+      };
     }
 
-    // Start with the base dataset, excluding disabled items
-    let result = dataSet.filter(d => !disabledItems.includes(d.label));
-
-    // Apply filter logic if filter exists
-    result = result
+    // Apply filter logic to get top N items (including disabled items)
+    const topNItems = dataSet
       .filter(item => {
         const targetPoint = item.series.find(d => d.date.toString() === filter.date.toString());
         return targetPoint !== undefined;
@@ -30,11 +31,19 @@ const useFilteredDataSet = (
       })
       .slice(0, filter.limit);
 
+    // Then filter out disabled items for rendering (but keep them in legend)
+    const filteredData = topNItems.filter(d => !disabledItems.includes(d.label));
+
     // Pre-process each dataset to ensure valid points for line rendering
-    return result.map(item => ({
+    const processedFilteredData = filteredData.map(item => ({
       ...item,
       series: item.series.filter(point => point.value !== null && point.value !== undefined),
     }));
+
+    return {
+      filteredData: processedFilteredData,
+      topNItems: topNItems, // Original top N items for legend generation
+    };
   }, [
     dataSet,
     filter,

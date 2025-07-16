@@ -48,6 +48,7 @@ interface VerticalStackBarChartProps {
   colors?: string[];
   colorsMapping?: { [key: string]: string };
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
+  onLegendDataChange?: (legendData: any[]) => void;
 }
 
 export default {
@@ -194,6 +195,7 @@ Primary.args = {
   yAxisFormat: d => `${d}`,
   title: "Vertical Stack Bar Chart with Self-Generated Colors",
   onChartDataProcessed: fn(),
+  onLegendDataChange: fn(),
 };
 
 // Example with data callback
@@ -284,6 +286,7 @@ WithFilteredItems.args = {
     date: "2002",
   },
   onChartDataProcessed: fn(),
+  onLegendDataChange: fn(),
 };
 
 export const WithManyDataKeys = Template.bind({});
@@ -311,6 +314,7 @@ WithManyDataKeys.args = {
     },
   ],
   onChartDataProcessed: fn(),
+  onLegendDataChange: fn(),
 };
 
 // Generate comprehensive dataset for legend testing
@@ -356,13 +360,19 @@ export const LegendWithFilterControls = {
     });
     const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>({});
     const [legendData, setLegendData] = useState<any[]>([]);
+    const [originalLegendOrder, setOriginalLegendOrder] = useState<any[]>([]);
     const [disabledItems, setDisabledItems] = useState<string[]>([]);
 
     const handleChartDataProcessed = useCallback((metadata: any) => {
       if (metadata.legendData) {
         setLegendData(metadata.legendData);
+        
+        // Store original legend order when first loaded or when no items are disabled
+        if (disabledItems.length === 0) {
+          setOriginalLegendOrder(metadata.legendData);
+        }
       }
-    }, []);
+    }, [disabledItems.length]);
 
     const handleColorMappingGenerated = useCallback((colors: { [key: string]: string }) => {
       setColorsMapping(prev => {
@@ -454,32 +464,40 @@ export const LegendWithFilterControls = {
               maxHeight: "120px",
               overflowY: "auto"
             }}>
-              {legendData.slice(0, 10).map((item, index) => (
+              {(originalLegendOrder.length > 0 ? originalLegendOrder : legendData)
+                .slice(0, 10)
+                .map((originalItem, index) => {
+                  // Find current status from legendData
+                  const currentItem = legendData.find(item => item.label === originalItem.label);
+                  const displayItem = currentItem || originalItem;
+                  
+                  return (
                 <div 
-                  key={item.label}
+                  key={displayItem.label}
                   style={{ 
                     display: "flex", 
                     alignItems: "center", 
                     padding: "2px 5px",
                     fontSize: "12px",
                     cursor: "pointer",
-                    backgroundColor: item.disabled ? "#f5f5f5" : "transparent",
-                    textDecoration: item.disabled ? "line-through" : "none"
+                    backgroundColor: disabledItems.includes(displayItem.label) ? "#f5f5f5" : "transparent",
+                    textDecoration: disabledItems.includes(displayItem.label) ? "line-through" : "none"
                   }}
-                  onClick={() => toggleItemDisabled(item.label)}
+                  onClick={() => toggleItemDisabled(displayItem.label)}
                 >
                   <div 
                     style={{ 
                       width: "12px", 
                       height: "12px", 
-                      backgroundColor: item.color, 
+                      backgroundColor: originalItem.color, 
                       marginRight: "5px",
                       border: "1px solid #ccc"
                     }}
                   />
-                  <span>#{index + 1} {item.label}</span>
+                  <span>#{originalItem.order + 1} {displayItem.label}</span>
                 </div>
-              ))}
+                  );
+                })}
             </div>
             {legendData.length > 10 && (
               <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
@@ -508,5 +526,6 @@ export const LegendWithFilterControls = {
     title: "VerticalStackBarChart - Legend-Based Color Assignment Test",
     yAxisFormat: (d: any) => `${(d/1000).toFixed(1)}K`,
     xAxisFormat: (d: any) => d,
+    onLegendDataChange: fn(),
   },
 };

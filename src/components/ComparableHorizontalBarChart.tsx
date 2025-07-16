@@ -467,7 +467,17 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         }
       }
     }
-  }, [yAxisDomain, xAxisDomain, visibleItemsList, renderedData, onChartDataProcessed, yAxisScale, disabledItems, filteredDataSet, onLegendDataChange]);
+  }, [
+    yAxisDomain,
+    xAxisDomain,
+    visibleItemsList,
+    renderedData,
+    onChartDataProcessed,
+    yAxisScale,
+    disabledItems,
+    filteredDataSet,
+    onLegendDataChange,
+  ]);
 
   return (
     <ComparableHorizontalBarChartStyled>

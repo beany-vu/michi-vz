@@ -8,6 +8,7 @@ import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
+import { LegendItem } from "../types/data";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -98,6 +99,8 @@ interface Props {
   colorsMapping?: { [key: string]: string };
   // Callback to notify parent about generated color mapping
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
+  // Callback to notify parent about legend data changes
+  onLegendDataChange?: (legendData: LegendItem[]) => void;
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
@@ -150,6 +153,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   colors = DEFAULT_COLORS,
   colorsMapping = {},
   onColorMappingGenerated,
+  onLegendDataChange,
   highlightItems = [],
   disabledItems = [],
 }) => {
@@ -157,6 +161,11 @@ const VerticalStackBarChart: React.FC<Props> = ({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
+  const lastLegendDataRef = useRef<LegendItem[] | null>(null);
+  const onHighlightItemRef = useRef(onHighlightItem);
+
+  // Update refs when props change
+  onHighlightItemRef.current = onHighlightItem;
 
   // First, get all keys from the dataset
   const allKeys = useMemo(() => {
@@ -503,22 +512,33 @@ const VerticalStackBarChart: React.FC<Props> = ({
       }
 
       // Sort keys based on filter criteria for consistent legend ordering
-      let visibleKeys = allKeys;
+      // Keep track of original top N keys for legend (including disabled items)
+      let topNKeys = allKeys;
       const sortValues: { [key: string]: number } = {};
 
       if (filter) {
-        // Calculate sort values for all keys
+        // Calculate sort values for all keys using original data (including disabled items)
+        // Calculate raw sum values directly from the dataset for accurate sorting
         allKeys.forEach(key => {
           if (filter.date) {
-            const data = stackedRectData[key]?.find(d => String(d.date) === String(filter.date));
-            const value = data?.value ?? 0;
-            sortValues[key] = value;
+            // Calculate sum across all series for this key and date
+            let totalValue = 0;
+            filteredDataSet.forEach(dataItem => {
+              const yearData = dataItem.series.find(s => String(s.date) === String(filter.date));
+              if (yearData && yearData[key] !== undefined && yearData[key] !== null) {
+                const numericValue = typeof yearData[key] === "string" ? parseFloat(yearData[key] as string) : yearData[key];
+                if (!isNaN(numericValue as number)) {
+                  totalValue += numericValue as number;
+                }
+              }
+            });
+            sortValues[key] = totalValue;
           } else {
             sortValues[key] = 0;
           }
         });
 
-        visibleKeys = allKeys.sort((a, b) => {
+        topNKeys = allKeys.sort((a, b) => {
           if (filter.date) {
             const aValue = sortValues[a];
             const bValue = sortValues[b];
@@ -527,14 +547,18 @@ const VerticalStackBarChart: React.FC<Props> = ({
           return 0;
         });
 
+        // Apply limit to get top N keys for legend generation
         if (filter.limit) {
-          visibleKeys = visibleKeys.slice(0, filter.limit);
+          topNKeys = topNKeys.slice(0, filter.limit);
         }
       }
 
-      // Generate legend data based on visible keys order (include disabled items)
-      const legendData = visibleKeys
-        .map((key, index) => {
+      // Generate legend data based on top N keys (include disabled items)
+      const legendData = topNKeys.map((key, index) => {
+        // Use existing color from colorsMapping if available, otherwise assign new color
+        let finalColor = colorsMapping[key];
+        
+        if (!finalColor) {
           // Assign colors based on legend order using DEFAULT_COLORS
           const colorIndex = index % DEFAULT_COLORS.length;
           const baseColor = DEFAULT_COLORS[colorIndex];
@@ -544,22 +568,23 @@ const VerticalStackBarChart: React.FC<Props> = ({
           const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
 
           // Create color with opacity if needed
-          const finalColor =
+          finalColor =
             repeatCycle > 0
               ? `${baseColor}${Math.round(opacity * 255)
                   .toString(16)
                   .padStart(2, "0")}`
               : baseColor;
+        }
 
-          return {
-            label: key,
-            color: finalColor,
-            order: index,
-            disabled: disabledItems.includes(key),
-            dataLabelSafe: sanitizeForClassName(key),
-            sortValue: sortValues[key],
-          };
-        });
+        return {
+          label: key,
+          color: finalColor,
+          order: index,
+          disabled: disabledItems.includes(key),
+          dataLabelSafe: sanitizeForClassName(key),
+          sortValue: sortValues[key],
+        };
+      });
 
       // Generate new color mapping based on legend order
       const newColorMapping: { [key: string]: string } = {};
@@ -570,6 +595,12 @@ const VerticalStackBarChart: React.FC<Props> = ({
       // Update color mapping if it has changed
       if (!isEqual(newColorMapping, generatedColorsMapping) && onColorMappingGeneratedRef.current) {
         onColorMappingGeneratedRef.current(newColorMapping);
+      }
+
+      // Call legend data callback if it exists and data has changed
+      if (onLegendDataChange && !isEqual(legendData, lastLegendDataRef.current)) {
+        lastLegendDataRef.current = [...legendData];
+        onLegendDataChange(legendData);
       }
 
       // Create the current metadata with filtered data and UNIQUE xAxisDomain
@@ -603,10 +634,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
     stackedRectData,
     filter,
     onChartDataProcessed,
-    onHighlightItem,
     allKeys,
     disabledItems,
-    generatedColorsMapping,
   ]);
 
   return (

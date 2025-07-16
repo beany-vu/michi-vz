@@ -38,16 +38,6 @@ const DEFAULT_COLORS = [
   "#7f7f7f",
   "#bcbd22",
   "#17becf",
-  "#aec7e8",
-  "#ffbb78",
-  "#98df8a",
-  "#ff9896",
-  "#c5b0d5",
-  "#c49c94",
-  "#f7b6d2",
-  "#c7c7c7",
-  "#dbdb8d",
-  "#9edae5",
 ];
 
 interface LineChartContainerProps {
@@ -173,7 +163,7 @@ interface LineChartProps {
   // the purpose is to share the same color mapping between charts
   colorsMapping?: { [key: string]: string };
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
-  onHighlightItem?: (labels: string[]) => void;
+  onHighlightItem: (labels: string[]) => void;
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
   onLegendDataChange?: (legendData: LegendItem[]) => void;
   // highlightItems and disabledItems as props for better performance
@@ -213,7 +203,11 @@ const LineChart: FC<LineChartProps> = ({
   const { svgRef, tooltipRef, renderCompleteRef, prevChartDataRef, isInitialMount } =
     useLineChartRefsAndState();
 
-  const filteredDataSet = useFilteredDataSet(dataSet, filter, disabledItems);
+  const { filteredData: filteredDataSet, topNItems } = useFilteredDataSet(
+    dataSet,
+    filter,
+    disabledItems
+  );
 
   const yScale = useLineChartYscale(filteredDataSet, yAxisDomain, height, margin);
 
@@ -260,15 +254,6 @@ const LineChart: FC<LineChartProps> = ({
       }
     },
     [onChartDataProcessed]
-  );
-
-  const memoizedOnLegendDataChange = useCallback(
-    (legendData: LegendItem[]) => {
-      if (onLegendDataChange) {
-        onLegendDataChange(legendData);
-      }
-    },
-    [onLegendDataChange]
   );
 
   // Generate consistent color mapping first
@@ -358,7 +343,8 @@ const LineChart: FC<LineChartProps> = ({
     colorsMapping,
     colors,
     memoizedOnColorMappingGenerated,
-    memoizedOnLegendDataChange
+    onLegendDataChange,
+    topNItems
   );
 
   useEffect(() => {

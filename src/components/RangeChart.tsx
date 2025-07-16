@@ -405,7 +405,16 @@ const RangeChart: React.FC<RangeChartProps> = ({
         onLegendDataChange(legendData);
       }
     }
-  }, [filteredDataSet, xAxisDataType, yScale, disabledItems, onChartDataProcessed, dataSet, colorsMapping, onLegendDataChange]);
+  }, [
+    filteredDataSet,
+    xAxisDataType,
+    yScale,
+    disabledItems,
+    onChartDataProcessed,
+    dataSet,
+    colorsMapping,
+    onLegendDataChange,
+  ]);
 
   return (
     <div className="chart-container" style={{ position: "relative" }}>

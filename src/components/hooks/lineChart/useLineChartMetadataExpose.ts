@@ -17,7 +17,8 @@ const useLineChartMetadataExpose = (
   colorsMapping: { [key: string]: string },
   defaultColors: string[],
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void,
-  onLegendDataChange?: (legendData: LegendItem[]) => void
+  onLegendDataChange?: (legendData: LegendItem[]) => void,
+  topNItems?: any
 ) => {
   // Keep track of the chart ID
   // Track if we've dispatched our first event
@@ -38,27 +39,46 @@ const useLineChartMetadataExpose = (
       // Create unique dates array
       const uniqueDates = [...new Set(allDates)];
 
-      // Sort and filter series based on values at the filter date if filter exists
-      let visibleSeries = dataSet.map(d => d.label);
+      // Use topNItems if available, otherwise use the original logic
+      let visibleSeries: string[];
       const sortValues: { [key: string]: number } = {};
 
-      if (filter?.date) {
-        // Calculate sort values for all series
-        visibleSeries.forEach(label => {
-          const data = dataSet.find(d => d.label === label);
-          const value = data?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
-          sortValues[label] = value;
-        });
+      if (topNItems && topNItems.length > 0) {
+        // Use the pre-filtered topNItems from useFilteredDataSet
+        visibleSeries = topNItems.map(d => d.label);
 
-        visibleSeries = visibleSeries.sort((a, b) => {
-          const aValue = sortValues[a];
-          const bValue = sortValues[b];
-          return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
-        });
+        // Calculate sort values for the topNItems
+        if (filter?.date) {
+          visibleSeries.forEach(label => {
+            const data = topNItems.find(d => d.label === label);
+            const value =
+              data?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
+            sortValues[label] = value;
+          });
+        }
+      } else {
+        // Fallback to original logic
+        visibleSeries = dataSet.map(d => d.label);
 
-        // Apply limit if specified
-        if (filter.limit) {
-          visibleSeries = visibleSeries.slice(0, filter.limit);
+        if (filter?.date) {
+          // Calculate sort values for all series
+          visibleSeries.forEach(label => {
+            const data = dataSet.find(d => d.label === label);
+            const value =
+              data?.series.find(d => String(d.date) === String(filter.date))?.value || 0;
+            sortValues[label] = value;
+          });
+
+          visibleSeries = visibleSeries.sort((a, b) => {
+            const aValue = sortValues[a];
+            const bValue = sortValues[b];
+            return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
+          });
+
+          // Apply limit if specified
+          if (filter.limit) {
+            visibleSeries = visibleSeries.slice(0, filter.limit);
+          }
         }
       }
 
@@ -175,6 +195,7 @@ const useLineChartMetadataExpose = (
     defaultColors,
     onColorMappingGenerated,
     onLegendDataChange,
+    topNItems,
   ]);
 };
 
