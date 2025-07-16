@@ -1,5 +1,5 @@
 import * as d3 from "d3";
-import React, { useLayoutEffect, useMemo, useRef, useCallback } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useCallback, useEffect } from "react";
 import isEqual from "lodash/isEqual";
 import Title from "../components/shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
@@ -41,6 +41,19 @@ const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
 const HEIGHT = 480 - MARGIN.top - MARGIN.bottom;
 
+const DEFAULT_COLORS = [
+  "#1f77b4",
+  "#ff7f0e",
+  "#2ca02c",
+  "#d62728",
+  "#9467bd",
+  "#8c564b",
+  "#e377c2",
+  "#7f7f7f",
+  "#bcbd22",
+  "#17becf",
+];
+
 interface LineChartProps {
   dataSet: DataPoint[];
   width: number;
@@ -70,6 +83,12 @@ interface LineChartProps {
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
   onLegendDataChange?: (legendData: LegendItem[]) => void;
+  // colors is the color palette for the chart for new generated colors
+  colors?: string[];
+  // colorsMapping is the color mapping for the chart for existing colors
+  // the purpose is to share the same color mapping between charts
+  colorsMapping?: { [key: string]: string };
+  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
   showGrid?: boolean;
   showZeroLineForXAxis?: boolean;
   tickHtmlWidth?: number;
@@ -107,6 +126,9 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   onChartDataProcessed,
   onHighlightItem,
   onLegendDataChange,
+  colors = DEFAULT_COLORS,
+  colorsMapping: propColorsMapping = {},
+  onColorMappingGenerated,
   showGrid = false,
   showZeroLineForXAxis = false,
   tickHtmlWidth,
@@ -119,7 +141,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     data: DataPoint;
     type?: TValueType;
   } | null>(null);
-  const { colorsMapping, colorsBasedMapping, visibleItems } = useChartContext();
+  const { colorsMapping: contextColorsMapping, colorsBasedMapping, visibleItems } = useChartContext();
+
   const svgRef = useRef<SVGSVGElement | null>(null);
   const renderCompleteRef = useRef(false);
   // Add ref for previous data comparison
@@ -137,6 +160,43 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
       })
       .slice(0, filter.limit);
   }, [dataSet, filter]);
+
+  // Memoize the color mapping callback
+  const memoizedOnColorMappingGenerated = useCallback(
+    (colorsMapping: { [key: string]: string }) => {
+      if (onColorMappingGenerated) {
+        onColorMappingGenerated(colorsMapping);
+      }
+    },
+    [onColorMappingGenerated]
+  );
+
+  // Generate colors for data items
+  const generatedColorsMapping = useMemo(() => {
+    const mapping = { ...propColorsMapping };
+    let colorIndex = 0;
+    
+    filteredDataSet.forEach(item => {
+      if (!mapping[item.label] && !item.color) {
+        mapping[item.label] = colors[colorIndex % colors.length];
+        colorIndex++;
+      }
+    });
+
+    return mapping;
+  }, [filteredDataSet, propColorsMapping, colors]);
+
+  // Use context colors as fallback, then prop colors, then generated colors
+  const finalColorsMapping = useMemo(() => {
+    return { ...contextColorsMapping, ...generatedColorsMapping };
+  }, [contextColorsMapping, generatedColorsMapping]);
+
+  // Call the color mapping callback when colors are generated
+  useEffect(() => {
+    if (Object.keys(generatedColorsMapping).length > 0) {
+      memoizedOnColorMappingGenerated(generatedColorsMapping);
+    }
+  }, [generatedColorsMapping]);
 
   // Memoize yAxisDomain
   const yAxisDomain = useMemo(
@@ -318,7 +378,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   y={y + (standardHeight - 30) / 2}
                   width={Math.max(width2, 3)}
                   height={30}
-                  fill={colorsMapping[d?.label] ?? d.color ?? "transparent"}
+                  fill={finalColorsMapping[d?.label] ?? d.color ?? "transparent"}
                   opacity={0.9}
                   rx={5}
                   ry={5}
@@ -366,7 +426,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   y={y + (standardHeight - 30) / 2}
                   width={Math.max(width2, 3)}
                   height={30}
-                  fill={colorsMapping[d?.label] ?? d.color ?? "transparent"}
+                  fill={finalColorsMapping[d?.label] ?? d.color ?? "transparent"}
                   opacity={0.9}
                   rx={5}
                   ry={5}
@@ -388,7 +448,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     xAxisScale,
     yAxisScale,
     highlightItems,
-    colorsMapping,
+    finalColorsMapping,
     colorsBasedMapping,
     handleMouseOver,
     handleMouseOut,
@@ -414,7 +474,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         // Generate legend data (include disabled items)
         const legendData: LegendItem[] = filteredDataSet.map((item, index) => ({
           label: item.label,
-          color: item.color || "#000000",
+          color: finalColorsMapping[item.label] || item.color || "#000000",
           order: index,
           disabled: disabledItems.includes(item.label),
           dataLabelSafe: sanitizeForClassName(item.label),
@@ -472,11 +532,10 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     xAxisDomain,
     visibleItemsList,
     renderedData,
-    onChartDataProcessed,
     yAxisScale,
     disabledItems,
     filteredDataSet,
-    onLegendDataChange,
+    finalColorsMapping,
   ]);
 
   return (

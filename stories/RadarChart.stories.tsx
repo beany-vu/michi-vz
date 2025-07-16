@@ -210,6 +210,7 @@ Primary.args = {
       "12",
     ],
   },
+  showFilled: false,
   isLoading: false,
   isNodataComponent: <>ddd</>,
 };
@@ -366,7 +367,7 @@ export const LegendWithFilterControls = {
                       border: "1px solid #ccc"
                     }}
                   />
-                  <span>#{index + 1} {item.label}</span>
+                  <span>#{item.order + 1} {item.label}</span>
                 </div>
               ))}
             </div>
@@ -404,6 +405,333 @@ export const LegendWithFilterControls = {
       ],
     },
     title: "RadarChart - Legend-Based Color Assignment Test",
+    isLoading: false,
+    isNodataComponent: <>No data available</>,
+  },
+};
+
+export const WithLegendInteraction = {
+  render: (args: any) => {
+    const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>({});
+    const [legendData, setLegendData] = useState<any[]>([]);
+    const [disabledItems, setDisabledItems] = useState<string[]>([]);
+    const [highlightItems, setHighlightItems] = useState<string[]>([]);
+
+    const handleChartDataProcessed = useCallback((metadata: any) => {
+      if (metadata.legendData) {
+        setLegendData(metadata.legendData);
+      }
+    }, []);
+
+    const handleColorMappingGenerated = useCallback((colors: { [key: string]: string }) => {
+      setColorsMapping(colors);
+    }, []);
+
+    const handleLegendItemClick = useCallback((label: string) => {
+      setDisabledItems(prev => 
+        prev.includes(label) 
+          ? prev.filter(item => item !== label)
+          : [...prev, label]
+      );
+    }, []);
+
+    const handleLegendItemHover = useCallback((label: string) => {
+      setHighlightItems([label]);
+    }, []);
+
+    const handleLegendItemLeave = useCallback(() => {
+      setHighlightItems([]);
+    }, []);
+
+    const Legend = ({ items }: { items: any[] }) => (
+      <div style={{ 
+        display: "flex", 
+        flexDirection: "column", 
+        gap: "8px", 
+        marginTop: "20px",
+        padding: "15px",
+        border: "1px solid #e0e0e0",
+        borderRadius: "8px",
+        backgroundColor: "#f9f9f9"
+      }}>
+        <h4 style={{ margin: "0 0 10px 0", fontSize: "14px", fontWeight: "600" }}>Legend</h4>
+        <div style={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", 
+          gap: "8px" 
+        }}>
+          {items.map((item, index) => (
+            <div
+              key={item.label}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                padding: "6px 10px",
+                borderRadius: "4px",
+                cursor: "pointer",
+                backgroundColor: item.disabled ? "#f0f0f0" : "#fff",
+                border: `1px solid ${item.disabled ? "#ccc" : "#e0e0e0"}`,
+                opacity: item.disabled ? 0.6 : 1,
+                textDecoration: item.disabled ? "line-through" : "none",
+                transition: "all 0.2s ease",
+                fontSize: "12px"
+              }}
+              onClick={() => handleLegendItemClick(item.label)}
+              onMouseEnter={() => handleLegendItemHover(item.label)}
+              onMouseLeave={handleLegendItemLeave}
+            >
+              <div
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "2px",
+                  backgroundColor: item.color,
+                  marginRight: "8px",
+                  border: "1px solid #ccc",
+                  flexShrink: 0
+                }}
+              />
+              <span style={{ 
+                overflow: "hidden", 
+                textOverflow: "ellipsis", 
+                whiteSpace: "nowrap",
+                flex: 1
+              }}>
+                {item.label}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div style={{ 
+          fontSize: "11px", 
+          color: "#666", 
+          marginTop: "8px",
+          fontStyle: "italic"
+        }}>
+          💡 Click legend items to toggle visibility • Hover to highlight in chart
+        </div>
+      </div>
+    );
+
+    return (
+      <div style={{ padding: "20px" }}>
+        <div style={{ marginBottom: "20px" }}>
+          <h3>📊 Radar Chart with Interactive Legend</h3>
+          <p style={{ color: "#666", fontSize: "14px", marginBottom: "15px" }}>
+            This story demonstrates legend interaction with the RadarChart component.
+          </p>
+          
+          <div style={{ 
+            display: "grid", 
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+            gap: "15px",
+            marginBottom: "15px",
+            padding: "10px",
+            backgroundColor: "#f8f9fa",
+            borderRadius: "6px"
+          }}>
+            <div>
+              <strong>Active Series:</strong>
+              <div style={{ fontSize: "12px", color: "#666" }}>
+                {legendData.filter(item => !item.disabled).length} of {legendData.length} visible
+              </div>
+            </div>
+            <div>
+              <strong>Highlighted:</strong>
+              <div style={{ fontSize: "12px", color: "#666" }}>
+                {highlightItems.length > 0 ? highlightItems.join(", ") : "None"}
+              </div>
+            </div>
+            <div>
+              <strong>Disabled:</strong>
+              <div style={{ fontSize: "12px", color: "#666" }}>
+                {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}
+              </div>
+            </div>
+            <div>
+              <strong>Colors Generated:</strong>
+              <div style={{ fontSize: "12px", color: "#666" }}>
+                {Object.keys(colorsMapping).length} series
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}>
+          <div style={{ flex: "0 0 auto" }}>
+            <RadarChart
+              {...args}
+              colorsMapping={colorsMapping}
+              disabledItems={disabledItems}
+              highlightItems={highlightItems}
+              onChartDataProcessed={handleChartDataProcessed}
+              onColorMappingGenerated={handleColorMappingGenerated}
+            />
+          </div>
+          
+          <div style={{ flex: "1", minWidth: "300px" }}>
+            <Legend items={legendData} />
+            
+            {/* Raw Legend Data Display */}
+            <div style={{ 
+              marginTop: "20px", 
+              padding: "15px", 
+              border: "1px solid #e0e0e0", 
+              borderRadius: "8px",
+              backgroundColor: "#f9f9f9"
+            }}>
+              <h4 style={{ margin: "0 0 10px 0", fontSize: "14px", fontWeight: "600" }}>Raw Legend Data</h4>
+              <pre style={{ 
+                fontSize: "11px", 
+                backgroundColor: "#fff", 
+                padding: "10px", 
+                borderRadius: "4px", 
+                overflow: "auto",
+                maxHeight: "200px",
+                border: "1px solid #ddd"
+              }}>
+                {JSON.stringify(legendData, null, 2)}
+              </pre>
+            </div>
+            
+            {/* Color Mapping Display */}
+            <div style={{ 
+              marginTop: "15px", 
+              padding: "15px", 
+              border: "1px solid #e0e0e0", 
+              borderRadius: "8px",
+              backgroundColor: "#f9f9f9"
+            }}>
+              <h4 style={{ margin: "0 0 10px 0", fontSize: "14px", fontWeight: "600" }}>Color Mapping</h4>
+              <pre style={{ 
+                fontSize: "11px", 
+                backgroundColor: "#fff", 
+                padding: "10px", 
+                borderRadius: "4px", 
+                overflow: "auto",
+                maxHeight: "150px",
+                border: "1px solid #ddd"
+              }}>
+                {JSON.stringify(colorsMapping, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  },
+  args: {
+    width: 450,
+    height: 450,
+    series: [
+      {
+        label: "UAE",
+        color: undefined, // Let component auto-generate
+        data: [
+          { date: "01", value: "4.2" },
+          { date: "02", value: "3.8" },
+          { date: "03", value: "3.1" },
+          { date: "04", value: "2.9" },
+          { date: "05", value: "2.2" },
+          { date: "06", value: "1.8" },
+          { date: "07", value: "1.5" },
+          { date: "08", value: "1.3" },
+          { date: "09", value: "1.1" },
+          { date: "10", value: "0.9" },
+          { date: "11", value: "0.7" },
+          { date: "12", value: "1.2" },
+        ],
+      },
+      {
+        label: "France",
+        color: undefined,
+        data: [
+          { date: "01", value: "3.5" },
+          { date: "02", value: "3.2" },
+          { date: "03", value: "2.8" },
+          { date: "04", value: "2.4" },
+          { date: "05", value: "2.0" },
+          { date: "06", value: "1.6" },
+          { date: "07", value: "1.3" },
+          { date: "08", value: "1.1" },
+          { date: "09", value: "0.9" },
+          { date: "10", value: "0.8" },
+          { date: "11", value: "0.6" },
+          { date: "12", value: "1.0" },
+        ],
+      },
+      {
+        label: "Germany",
+        color: undefined,
+        data: [
+          { date: "01", value: "3.8" },
+          { date: "02", value: "3.4" },
+          { date: "03", value: "3.0" },
+          { date: "04", value: "2.6" },
+          { date: "05", value: "2.3" },
+          { date: "06", value: "1.9" },
+          { date: "07", value: "1.6" },
+          { date: "08", value: "1.4" },
+          { date: "09", value: "1.2" },
+          { date: "10", value: "1.0" },
+          { date: "11", value: "0.8" },
+          { date: "12", value: "1.1" },
+        ],
+      },
+      {
+        label: "Japan",
+        color: undefined,
+        data: [
+          { date: "01", value: "2.9" },
+          { date: "02", value: "2.6" },
+          { date: "03", value: "2.3" },
+          { date: "04", value: "2.0" },
+          { date: "05", value: "1.8" },
+          { date: "06", value: "1.5" },
+          { date: "07", value: "1.3" },
+          { date: "08", value: "1.1" },
+          { date: "09", value: "1.0" },
+          { date: "10", value: "0.9" },
+          { date: "11", value: "0.7" },
+          { date: "12", value: "0.8" },
+        ],
+      },
+      {
+        label: "South Korea",
+        color: undefined,
+        data: [
+          { date: "01", value: "3.1" },
+          { date: "02", value: "2.8" },
+          { date: "03", value: "2.5" },
+          { date: "04", value: "2.2" },
+          { date: "05", value: "1.9" },
+          { date: "06", value: "1.7" },
+          { date: "07", value: "1.4" },
+          { date: "08", value: "1.2" },
+          { date: "09", value: "1.1" },
+          { date: "10", value: "0.9" },
+          { date: "11", value: "0.8" },
+          { date: "12", value: "0.9" },
+        ],
+      },
+    ],
+    tooltipFormatter: (item: any) => (
+      <div>
+        <strong>Period:</strong> {item.date}<br />
+        <strong>Value:</strong> {item.value}
+      </div>
+    ),
+    radialLabelFormatter: (item: any) => `${item}`,
+    poles: {
+      range: [0, Math.PI * 2],
+      domain: [5, 0],
+      labels: [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      ],
+    },
+    showFilled: false,
+    title: "RadarChart - Interactive Legend Demo",
     isLoading: false,
     isNodataComponent: <>No data available</>,
   },

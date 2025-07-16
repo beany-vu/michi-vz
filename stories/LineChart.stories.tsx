@@ -3031,3 +3031,401 @@ export const LegendDataExposure = {
     },
   },
 };
+
+export const SynchronizedLegendInteraction = {
+  args: {
+    dataSet: [
+      {
+        label: "Country A",
+        color: "#1f77b4",
+        series: [
+          { date: "2020", value: 85 },
+          { date: "2021", value: 90 },
+          { date: "2022", value: 95 },
+          { date: "2023", value: 100 },
+        ],
+      },
+      {
+        label: "Country B", 
+        color: "#ff7f0e",
+        series: [
+          { date: "2020", value: 75 },
+          { date: "2021", value: 80 },
+          { date: "2022", value: 85 },
+          { date: "2023", value: 90 },
+        ],
+      },
+      {
+        label: "Country C",
+        color: "#2ca02c", 
+        series: [
+          { date: "2020", value: 65 },
+          { date: "2021", value: 70 },
+          { date: "2022", value: 75 },
+          { date: "2023", value: 80 },
+        ],
+      },
+      {
+        label: "Country D",
+        color: "#d62728",
+        series: [
+          { date: "2020", value: 55 },
+          { date: "2021", value: 60 },
+          { date: "2022", value: 65 },
+          { date: "2023", value: 70 },
+        ],
+      },
+      {
+        label: "Country E",
+        color: "#9467bd",
+        series: [
+          { date: "2020", value: 45 },
+          { date: "2021", value: 50 },
+          { date: "2022", value: 55 },
+          { date: "2023", value: 60 },
+        ],
+      },
+      {
+        label: "Country F",
+        color: "#8c564b",
+        series: [
+          { date: "2020", value: 35 },
+          { date: "2021", value: 40 },
+          { date: "2022", value: 45 },
+          { date: "2023", value: 50 },
+        ],
+      },
+      {
+        label: "Country G",
+        color: "#e377c2",
+        series: [
+          { date: "2020", value: 25 },
+          { date: "2021", value: 30 },
+          { date: "2022", value: 35 },
+          { date: "2023", value: 40 },
+        ],
+      },
+      {
+        label: "Country H",
+        color: "#7f7f7f",
+        series: [
+          { date: "2020", value: 15 },
+          { date: "2021", value: 20 },
+          { date: "2022", value: 25 },
+          { date: "2023", value: 30 },
+        ],
+      },
+      {
+        label: "Country I",
+        color: "#bcbd22",
+        series: [
+          { date: "2020", value: 10 },
+          { date: "2021", value: 15 },
+          { date: "2022", value: 20 },
+          { date: "2023", value: 25 },
+        ],
+      },
+      {
+        label: "Country J",
+        color: "#17becf",
+        series: [
+          { date: "2020", value: 5 },
+          { date: "2021", value: 10 },
+          { date: "2022", value: 15 },
+          { date: "2023", value: 20 },
+        ],
+      },
+    ],
+    width: 400,
+    height: 300,
+    margin: { top: 40, right: 40, bottom: 40, left: 40 },
+    title: "Chart 1",
+    xAxisDataType: "date_annual" as const,
+    onHighlightItem: fn(),
+    onLegendDataChange: fn(),
+  },
+  render: (args: any) => {
+    const [highlightedItems, setHighlightedItems] = React.useState<string[]>([]);
+    const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
+    const [sharedColorMapping, setSharedColorMapping] = React.useState<{[key: string]: string}>({});
+    const [filterLimit, setFilterLimit] = React.useState<number>(3);
+    const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("desc");
+    const [legendData, setLegendData] = React.useState<any[]>([]);
+    const [masterChart, setMasterChart] = React.useState<"A" | "B">("A");
+    
+    const chart2Data = [
+      {
+        label: "Country A",
+        color: "#1f77b4",
+        series: [
+          { date: "2020", value: 120 },
+          { date: "2021", value: 125 },
+          { date: "2022", value: 130 },
+          { date: "2023", value: 135 },
+        ],
+      },
+      {
+        label: "Country B",
+        color: "#ff7f0e", 
+        series: [
+          { date: "2020", value: 110 },
+          { date: "2021", value: 115 },
+          { date: "2022", value: 120 },
+          { date: "2023", value: 125 },
+        ],
+      },
+      {
+        label: "Country C",
+        color: "#2ca02c",
+        series: [
+          { date: "2020", value: 100 },
+          { date: "2021", value: 105 },
+          { date: "2022", value: 110 },
+          { date: "2023", value: 115 },
+        ],
+      },
+      {
+        label: "Country D",
+        color: "#d62728",
+        series: [
+          { date: "2020", value: 90 },
+          { date: "2021", value: 95 },
+          { date: "2022", value: 100 },
+          { date: "2023", value: 105 },
+        ],
+      },
+      {
+        label: "Country E",
+        color: "#9467bd",
+        series: [
+          { date: "2020", value: 80 },
+          { date: "2021", value: 85 },
+          { date: "2022", value: 90 },
+          { date: "2023", value: 95 },
+        ],
+      },
+      {
+        label: "Country F",
+        color: "#8c564b",
+        series: [
+          { date: "2020", value: 70 },
+          { date: "2021", value: 75 },
+          { date: "2022", value: 80 },
+          { date: "2023", value: 85 },
+        ],
+      },
+      {
+        label: "Country G",
+        color: "#e377c2",
+        series: [
+          { date: "2020", value: 60 },
+          { date: "2021", value: 65 },
+          { date: "2022", value: 70 },
+          { date: "2023", value: 75 },
+        ],
+      },
+      {
+        label: "Country H",
+        color: "#7f7f7f",
+        series: [
+          { date: "2020", value: 50 },
+          { date: "2021", value: 55 },
+          { date: "2022", value: 60 },
+          { date: "2023", value: 65 },
+        ],
+      },
+      {
+        label: "Country I",
+        color: "#bcbd22",
+        series: [
+          { date: "2020", value: 40 },
+          { date: "2021", value: 45 },
+          { date: "2022", value: 50 },
+          { date: "2023", value: 55 },
+        ],
+      },
+      {
+        label: "Country J",
+        color: "#17becf",
+        series: [
+          { date: "2020", value: 30 },
+          { date: "2021", value: 35 },
+          { date: "2022", value: 40 },
+          { date: "2023", value: 45 },
+        ],
+      },
+    ];
+
+    const handleHighlightItem = (labels: string[]) => {
+      setHighlightedItems(labels);
+    };
+
+    const handleColorMappingGenerated = (colorMapping: {[key: string]: string}) => {
+      setSharedColorMapping(colorMapping);
+    };
+
+    const handleLegendDataChange = (newLegendData: any[]) => {
+      setLegendData(newLegendData);
+    };
+
+    const handleLegendClick = (seriesLabel: string) => {
+      setDisabledItems(prev => 
+        prev.includes(seriesLabel) 
+          ? prev.filter(item => item !== seriesLabel)
+          : [...prev, seriesLabel]
+      );
+    };
+
+    // Create filter configuration for the master chart
+    const masterFilter = {
+      limit: filterLimit,
+      date: "2023",
+      criteria: "value",
+      sortingDir: sortDirection,
+    };
+
+    // Get the filtered items from the master chart's legend data to apply to the slave chart
+    const getFilteredDataForSlave = () => {
+      if (legendData.length === 0) {
+        // If no legend data yet, return empty array to avoid showing all items
+        return [];
+      }
+      
+      // Get the labels that are visible in the master chart (not disabled and within limit)
+      const visibleLabels = legendData
+        .filter(item => !item.disabled && item.order <= filterLimit)
+        .map(item => item.label);
+      
+      // Filter slave chart data to only show the SAME items that are visible in the master chart
+      const slaveDataSet = masterChart === "A" ? chart2Data : args.dataSet;
+      return slaveDataSet.filter(item => visibleLabels.includes(item.label));
+    };
+
+    return (
+      <div>
+        <div style={{ marginBottom: "20px" }}>
+          <h3>Master-Slave Chart Filtering</h3>
+          <p>Select which chart acts as the master - its filtering determines which items appear in both charts. Both charts show the SAME items, just with different data values.</p>
+          
+          <div style={{ display: "flex", gap: "20px", marginBottom: "20px", alignItems: "center", flexWrap: "wrap" }}>
+            <div>
+              <label>Master Chart: </label>
+              <select 
+                value={masterChart} 
+                onChange={(e) => {
+                  setMasterChart(e.target.value as "A" | "B");
+                  setLegendData([]); // Reset legend data when switching master
+                }}
+                style={{ padding: "5px", marginLeft: "5px" }}
+              >
+                <option value="A">Chart A</option>
+                <option value="B">Chart B</option>
+              </select>
+            </div>
+            
+            <div>
+              <label>Show Top: </label>
+              <select 
+                value={filterLimit} 
+                onChange={(e) => setFilterLimit(parseInt(e.target.value))}
+                style={{ padding: "5px", marginLeft: "5px" }}
+              >
+                <option value={3}>3 items</option>
+                <option value={5}>5 items</option>
+                <option value={7}>7 items</option>
+                <option value={10}>All items</option>
+              </select>
+            </div>
+            
+            <div>
+              <label>Sort by 2023 value: </label>
+              <select 
+                value={sortDirection} 
+                onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}
+                style={{ padding: "5px", marginLeft: "5px" }}
+              >
+                <option value="desc">Highest first</option>
+                <option value="asc">Lowest first</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <h4>Legend Controls (click to toggle):</h4>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              {legendData.map((item: any) => (
+                <button
+                  key={item.label}
+                  onClick={() => handleLegendClick(item.label)}
+                  style={{
+                    padding: "5px 10px",
+                    backgroundColor: item.disabled ? "#f0f0f0" : item.color,
+                    color: item.disabled ? "#666" : "white",
+                    border: "1px solid #ccc",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    textDecoration: item.disabled ? "line-through" : "none",
+                    opacity: item.order <= filterLimit ? 1 : 0.5,
+                  }}
+                  title={`Order: ${item.order}, ${item.disabled ? "Disabled" : "Enabled"}`}
+                >
+                  {item.label} ({item.order})
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+          <div>
+            <h4>Chart A {masterChart === "A" ? "(Master)" : "(Slave)"} {masterChart === "A" ? "- Controls which items appear" : "- Shows same items as Chart B"}</h4>
+            <LineChartComponent
+              {...args}
+              title={`Chart A ${masterChart === "A" ? "(Master)" : "(Slave)"}`}
+              dataSet={masterChart === "A" ? args.dataSet : getFilteredDataForSlave()}
+              filter={masterChart === "A" ? masterFilter : undefined}
+              highlightItems={highlightedItems}
+              disabledItems={disabledItems}
+              colorsMapping={sharedColorMapping}
+              onHighlightItem={handleHighlightItem}
+              onColorMappingGenerated={handleColorMappingGenerated}
+              onLegendDataChange={masterChart === "A" ? handleLegendDataChange : undefined}
+            />
+          </div>
+          
+          <div>
+            <h4>Chart B {masterChart === "B" ? "(Master)" : "(Slave)"} {masterChart === "B" ? "- Controls which items appear" : "- Shows same items as Chart A"}</h4>
+            <LineChartComponent
+              {...args}
+              dataSet={masterChart === "B" ? chart2Data : getFilteredDataForSlave()}
+              title={`Chart B ${masterChart === "B" ? "(Master)" : "(Slave)"}`}
+              filter={masterChart === "B" ? masterFilter : undefined}
+              highlightItems={highlightedItems}
+              disabledItems={disabledItems}
+              colorsMapping={sharedColorMapping}
+              onHighlightItem={handleHighlightItem}
+              onColorMappingGenerated={masterChart === "A" ? handleColorMappingGenerated : undefined}
+              onLegendDataChange={masterChart === "B" ? handleLegendDataChange : undefined}
+            />
+          </div>
+        </div>
+
+        <div style={{ marginTop: "20px" }}>
+          <h4>Current State:</h4>
+          <p><strong>Master Chart:</strong> Chart {masterChart}</p>
+          <p><strong>Highlighted Items:</strong> {highlightedItems.join(", ") || "None"}</p>
+          <p><strong>Disabled Items:</strong> {disabledItems.join(", ") || "None"}</p>
+          <p><strong>Items shown in both charts:</strong> {getFilteredDataForSlave().map(item => item.label).join(", ")}</p>
+        </div>
+      </div>
+    );
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "This story demonstrates switchable master-slave chart filtering with synchronized legend interaction. You can choose which chart (A or B) acts as the master chart with filtering controls (limit and sort direction) that determine which items appear in both charts. The slave chart displays the same filtered items as the master chart but with different data values. Both charts share hover highlighting and legend toggle functionality. This pattern is useful for comparing filtered datasets across different metrics while maintaining consistent legend ordering and visibility, with the flexibility to switch which dataset drives the filtering.",
+      },
+    },
+  },
+};

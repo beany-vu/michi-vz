@@ -2,7 +2,6 @@ import React, { useState, useCallback } from "react";
 import ScatterPlot from "../src/components/ScatterPlotChart";
 import { Meta, StoryFn } from "@storybook/react";
 import { fn } from "@storybook/test";
-import { MichiVzProvider } from "../src/components/MichiVzProvider";
 
 interface ScatterPlotChartProps {
   dataSet: Array<{
@@ -54,8 +53,7 @@ export default {
   title: "Charts/Scatter Plot",
   component: ScatterPlot,
   tags: ["autodocs"],
-  argTypes: {
-  },
+  argTypes: {},
 } as Meta;
 
 const Template: StoryFn<ScatterPlotChartProps> = (args: ScatterPlotChartProps) => {
@@ -65,14 +63,14 @@ const Template: StoryFn<ScatterPlotChartProps> = (args: ScatterPlotChartProps) =
 
   const handleHighlightItem = useCallback((labels: string[]) => {
     setHighlightItems(labels);
-    console.log('Highlighted items:', labels);
+    console.log("Highlighted items:", labels);
   }, []);
 
   const handleColorMappingGenerated = useCallback((mapping: { [key: string]: string }) => {
     setColorsMapping(prev => {
       // Only update if mapping actually changed
       if (JSON.stringify(prev) !== JSON.stringify(mapping)) {
-        console.log('Generated color mapping:', mapping);
+        console.log("Generated color mapping:", mapping);
         return mapping;
       }
       return prev;
@@ -81,57 +79,62 @@ const Template: StoryFn<ScatterPlotChartProps> = (args: ScatterPlotChartProps) =
 
   const toggleDisabledItem = useCallback((label: string) => {
     setDisabledItems(prev => {
-      const newDisabled = prev.includes(label) 
+      const newDisabled = prev.includes(label)
         ? prev.filter(item => item !== label)
         : [...prev, label];
-      console.log('Disabled items:', newDisabled);
+      console.log("Disabled items:", newDisabled);
       return newDisabled;
     });
   }, []);
 
   return (
-    <div style={{ padding: '20px' }}>
-      <div style={{ marginBottom: '20px' }}>
+    <div style={{ padding: "20px" }}>
+      <div style={{ marginBottom: "20px" }}>
         <h3>Interactive Controls</h3>
-        <div style={{ marginBottom: '10px' }}>
-          <strong>Current Highlighted Items:</strong> {highlightItems.length > 0 ? highlightItems.join(', ') : 'None'}
+        <div style={{ marginBottom: "10px" }}>
+          <strong>Current Highlighted Items:</strong>{" "}
+          {highlightItems.length > 0 ? highlightItems.join(", ") : "None"}
         </div>
-        <div style={{ marginBottom: '10px' }}>
-          <strong>Current Disabled Items:</strong> {disabledItems.length > 0 ? disabledItems.join(', ') : 'None'}
+        <div style={{ marginBottom: "10px" }}>
+          <strong>Current Disabled Items:</strong>{" "}
+          {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}
         </div>
-        <div style={{ marginBottom: '10px' }}>
-          <strong>Generated Colors:</strong> {Object.keys(colorsMapping).length > 0 ? JSON.stringify(colorsMapping) : 'None yet'}
+        <div style={{ marginBottom: "10px" }}>
+          <strong>Generated Colors:</strong>{" "}
+          {Object.keys(colorsMapping).length > 0 ? JSON.stringify(colorsMapping) : "None yet"}
         </div>
-        <div style={{ marginBottom: '10px' }}>
+        <div style={{ marginBottom: "10px" }}>
           <strong>Instructions:</strong>
           <ul>
             <li>Hover over scatter plot points to highlight items</li>
             <li>Click on legend items below to disable/enable data points</li>
           </ul>
         </div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           {args.dataSet?.map(dataPoint => (
             <button
               key={dataPoint.label}
               onClick={() => toggleDisabledItem(dataPoint.label)}
               style={{
-                padding: '8px 16px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                backgroundColor: disabledItems.includes(dataPoint.label) ? '#f0f0f0' : colorsMapping[dataPoint.label] || '#fff',
-                color: disabledItems.includes(dataPoint.label) ? '#999' : '#000',
-                cursor: 'pointer',
-                textDecoration: disabledItems.includes(dataPoint.label) ? 'line-through' : 'none'
+                padding: "8px 16px",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+                backgroundColor: disabledItems.includes(dataPoint.label)
+                  ? "#f0f0f0"
+                  : colorsMapping[dataPoint.label] || "#fff",
+                color: disabledItems.includes(dataPoint.label) ? "#999" : "#000",
+                cursor: "pointer",
+                textDecoration: disabledItems.includes(dataPoint.label) ? "line-through" : "none",
               }}
             >
-              {dataPoint.label} {disabledItems.includes(dataPoint.label) ? '(Disabled)' : ''}
+              {dataPoint.label} {disabledItems.includes(dataPoint.label) ? "(Disabled)" : ""}
             </button>
           ))}
         </div>
       </div>
-      
-      <ScatterPlot 
-        {...args} 
+
+      <ScatterPlot
+        {...args}
         colorsMapping={colorsMapping}
         onColorMappingGenerated={handleColorMappingGenerated}
         onHighlightItem={handleHighlightItem}
@@ -271,18 +274,60 @@ Primary.args = {
 // Generate comprehensive dataset for legend testing
 const generateLargeScatterDataset = () => {
   const industries = [
-    "Technology", "Healthcare", "Finance", "Manufacturing", "Retail", "Energy", 
-    "Education", "Transportation", "Real Estate", "Agriculture", "Aerospace", "Automotive",
-    "Telecommunications", "Construction", "Entertainment", "Food & Beverage", "Chemicals", 
-    "Pharmaceuticals", "Banking", "Insurance", "Consulting", "Media", "Tourism", "Mining",
-    "Textile", "Electronics", "Software", "Biotechnology", "Renewable Energy", "Logistics",
-    "Gaming", "Sports", "Fashion", "Furniture", "Jewelry", "Cosmetics", "Publishing", 
-    "Photography", "Architecture", "Legal Services", "Accounting", "Marketing", "HR Services",
-    "Security", "Cleaning", "Catering", "Event Management", "Translation", "Fitness", "Beauty"
+    "Technology",
+    "Healthcare",
+    "Finance",
+    "Manufacturing",
+    "Retail",
+    "Energy",
+    "Education",
+    "Transportation",
+    "Real Estate",
+    "Agriculture",
+    "Aerospace",
+    "Automotive",
+    "Telecommunications",
+    "Construction",
+    "Entertainment",
+    "Food & Beverage",
+    "Chemicals",
+    "Pharmaceuticals",
+    "Banking",
+    "Insurance",
+    "Consulting",
+    "Media",
+    "Tourism",
+    "Mining",
+    "Textile",
+    "Electronics",
+    "Software",
+    "Biotechnology",
+    "Renewable Energy",
+    "Logistics",
+    "Gaming",
+    "Sports",
+    "Fashion",
+    "Furniture",
+    "Jewelry",
+    "Cosmetics",
+    "Publishing",
+    "Photography",
+    "Architecture",
+    "Legal Services",
+    "Accounting",
+    "Marketing",
+    "HR Services",
+    "Security",
+    "Cleaning",
+    "Catering",
+    "Event Management",
+    "Translation",
+    "Fitness",
+    "Beauty",
   ];
-  
+
   const dates = ["2020", "2021", "2022", "2023"];
-  
+
   return industries.map((industry, index) => ({
     x: Math.random() * 100, // Market Share %
     y: Math.random() * 50, // Growth Rate %
@@ -295,46 +340,72 @@ const generateLargeScatterDataset = () => {
 
 export const LegendWithFilterControls = {
   render: (args: any) => {
-    const [filter, setFilter] = useState({ 
-      limit: 15, 
-      criteria: "d" as "x" | "y" | "d", 
+    const [filter, setFilter] = useState({
+      limit: 15,
+      criteria: "d" as "x" | "y" | "d",
       sortingDir: "desc" as "asc" | "desc",
-      date: "2023"
+      date: "2023",
     });
     const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>({});
     const [legendData, setLegendData] = useState<any[]>([]);
+    const [originalLegendOrder, setOriginalLegendOrder] = useState<any[]>([]);
     const [disabledItems, setDisabledItems] = useState<string[]>([]);
 
-    const handleChartDataProcessed = useCallback((metadata: any) => {
-      if (metadata.legendData) {
-        setLegendData(metadata.legendData);
-      }
-    }, []);
+    const handleChartDataProcessed = useCallback(
+      (metadata: any) => {
+        if (metadata.legendData) {
+          setLegendData(metadata.legendData);
+
+          // Store original legend order when first loaded or when no items are disabled
+          if (disabledItems.length === 0) {
+            setOriginalLegendOrder(metadata.legendData);
+          }
+        }
+      },
+      [disabledItems.length]
+    );
 
     const handleColorMappingGenerated = useCallback((colors: { [key: string]: string }) => {
       setColorsMapping(colors);
     }, []);
 
     const toggleItemDisabled = useCallback((label: string) => {
-      setDisabledItems(prev => 
-        prev.includes(label) 
-          ? prev.filter(item => item !== label)
-          : [...prev, label]
+      setDisabledItems(prev =>
+        prev.includes(label) ? prev.filter(item => item !== label) : [...prev, label]
       );
     }, []);
 
     return (
       <div>
-        <div style={{ marginBottom: "20px", padding: "10px", border: "1px solid #ddd", borderRadius: "4px" }}>
+        <div
+          style={{
+            marginBottom: "20px",
+            padding: "10px",
+            border: "1px solid #ddd",
+            borderRadius: "4px",
+          }}
+        >
           <h3>🎨 Legend-Based Color Assignment Test</h3>
-          <p>This story tests the new legend-based color assignment approach for ScatterPlotChart.</p>
-          
-          <div style={{ display: "flex", gap: "20px", marginBottom: "15px", alignItems: "center", flexWrap: "wrap" }}>
+          <p>
+            This story tests the new legend-based color assignment approach for ScatterPlotChart.
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "20px",
+              marginBottom: "15px",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <div>
               <label style={{ marginRight: "5px" }}>Sort By:</label>
-              <select 
-                value={filter.criteria} 
-                onChange={(e) => setFilter(prev => ({ ...prev, criteria: e.target.value as "x" | "y" | "d" }))}
+              <select
+                value={filter.criteria}
+                onChange={e =>
+                  setFilter(prev => ({ ...prev, criteria: e.target.value as "x" | "y" | "d" }))
+                }
                 style={{ padding: "4px" }}
               >
                 <option value="x">Market Share (X)</option>
@@ -342,12 +413,14 @@ export const LegendWithFilterControls = {
                 <option value="d">Market Size (D)</option>
               </select>
             </div>
-            
+
             <div>
               <label style={{ marginRight: "5px" }}>Direction:</label>
-              <select 
-                value={filter.sortingDir} 
-                onChange={(e) => setFilter(prev => ({ ...prev, sortingDir: e.target.value as "asc" | "desc" }))}
+              <select
+                value={filter.sortingDir}
+                onChange={e =>
+                  setFilter(prev => ({ ...prev, sortingDir: e.target.value as "asc" | "desc" }))
+                }
                 style={{ padding: "4px" }}
               >
                 <option value="desc">Highest First</option>
@@ -357,9 +430,9 @@ export const LegendWithFilterControls = {
 
             <div>
               <label style={{ marginRight: "5px" }}>Date Filter:</label>
-              <select 
-                value={filter.date} 
-                onChange={(e) => setFilter(prev => ({ ...prev, date: e.target.value }))}
+              <select
+                value={filter.date}
+                onChange={e => setFilter(prev => ({ ...prev, date: e.target.value }))}
                 style={{ padding: "4px" }}
               >
                 <option value="2020">2020</option>
@@ -371,9 +444,9 @@ export const LegendWithFilterControls = {
 
             <div>
               <label style={{ marginRight: "5px" }}>Limit:</label>
-              <select 
-                value={filter.limit} 
-                onChange={(e) => setFilter(prev => ({ ...prev, limit: parseInt(e.target.value) }))}
+              <select
+                value={filter.limit}
+                onChange={e => setFilter(prev => ({ ...prev, limit: parseInt(e.target.value) }))}
                 style={{ padding: "4px" }}
               >
                 <option value={10}>Top 10</option>
@@ -385,56 +458,88 @@ export const LegendWithFilterControls = {
           </div>
 
           <div style={{ display: "flex", gap: "10px", marginBottom: "10px", flexWrap: "wrap" }}>
-            <button onClick={() => setFilter({ limit: 10, criteria: "d", sortingDir: "desc", date: "2023" })}>
+            <button
+              onClick={() =>
+                setFilter({ limit: 10, criteria: "d", sortingDir: "desc", date: "2023" })
+              }
+            >
               💰 Market Size: High→Low (10)
             </button>
-            <button onClick={() => setFilter({ limit: 15, criteria: "y", sortingDir: "desc", date: "2022" })}>
+            <button
+              onClick={() =>
+                setFilter({ limit: 15, criteria: "y", sortingDir: "desc", date: "2022" })
+              }
+            >
               📈 Growth: High→Low (15)
             </button>
-            <button onClick={() => setFilter({ limit: 25, criteria: "x", sortingDir: "asc", date: "2021" })}>
+            <button
+              onClick={() =>
+                setFilter({ limit: 25, criteria: "x", sortingDir: "asc", date: "2021" })
+              }
+            >
               📊 Market Share: Low→High (25)
             </button>
-            <button onClick={() => setFilter({ limit: 50, criteria: "d", sortingDir: "desc", date: "2020" })}>
+            <button
+              onClick={() =>
+                setFilter({ limit: 50, criteria: "d", sortingDir: "desc", date: "2020" })
+              }
+            >
               🔄 All 2020: Size High→Low
             </button>
           </div>
 
           <div style={{ marginTop: "15px" }}>
             <strong>Legend Data (First 10 items):</strong>
-            <div style={{ 
-              display: "grid", 
-              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", 
-              gap: "5px", 
-              marginTop: "5px",
-              maxHeight: "120px",
-              overflowY: "auto"
-            }}>
-              {legendData.slice(0, 10).map((item, index) => (
-                <div 
-                  key={item.label}
-                  style={{ 
-                    display: "flex", 
-                    alignItems: "center", 
-                    padding: "2px 5px",
-                    fontSize: "12px",
-                    cursor: "pointer",
-                    backgroundColor: item.disabled ? "#f5f5f5" : "transparent",
-                    textDecoration: item.disabled ? "line-through" : "none"
-                  }}
-                  onClick={() => toggleItemDisabled(item.label)}
-                >
-                  <div 
-                    style={{ 
-                      width: "12px", 
-                      height: "12px", 
-                      backgroundColor: item.color, 
-                      marginRight: "5px",
-                      border: "1px solid #ccc"
-                    }}
-                  />
-                  <span>#{index + 1} {item.label}</span>
-                </div>
-              ))}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                gap: "5px",
+                marginTop: "5px",
+                maxHeight: "120px",
+                overflowY: "auto",
+              }}
+            >
+              {(originalLegendOrder.length > 0 ? originalLegendOrder : legendData)
+                .slice(0, 10)
+                .map((originalItem, index) => {
+                  // Find current status from legendData
+                  const currentItem = legendData.find(item => item.label === originalItem.label);
+                  const displayItem = currentItem || originalItem;
+
+                  return (
+                    <div
+                      key={displayItem.label}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "2px 5px",
+                        fontSize: "12px",
+                        cursor: "pointer",
+                        backgroundColor: disabledItems.includes(displayItem.label)
+                          ? "#f5f5f5"
+                          : "transparent",
+                        textDecoration: disabledItems.includes(displayItem.label)
+                          ? "line-through"
+                          : "none",
+                      }}
+                      onClick={() => toggleItemDisabled(displayItem.label)}
+                    >
+                      <div
+                        style={{
+                          width: "12px",
+                          height: "12px",
+                          backgroundColor: originalItem.color,
+                          marginRight: "5px",
+                          border: "1px solid #ccc",
+                        }}
+                      />
+                      <span>
+                        #{originalItem.order + 1} {displayItem.label}
+                      </span>
+                    </div>
+                  );
+                })}
             </div>
             {legendData.length > 10 && (
               <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
@@ -469,7 +574,7 @@ export const LegendWithFilterControls = {
     showGrid: { x: true, y: true },
     dScaleLegend: {
       title: "Market Size ($M)",
-      valueFormatter: (d: number) => `$${(d/1000).toFixed(1)}B`
+      valueFormatter: (d: number) => `$${(d / 1000).toFixed(1)}B`,
     },
   },
 };

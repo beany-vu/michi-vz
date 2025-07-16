@@ -113,6 +113,16 @@ export interface RadarChartProps {
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
+  // filter for sorting and limiting series data
+  filter?: {
+    seriesLimit?: number;
+    sortingDir?: "asc" | "desc";
+    metric?: string;
+  };
+  // Whether to show filled areas (default: true)
+  showFilled?: boolean;
+  // Fill opacity for the polygon areas (default: 0.2)
+  fillOpacity?: number;
 }
 
 export const RadarChart: React.FC<RadarChartProps> = ({
@@ -136,6 +146,9 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   onColorMappingGenerated,
   highlightItems = [],
   disabledItems = [],
+  filter,
+  showFilled = false,
+  fillOpacity = 0.4,
 }) => {
   const svgRef = useRef(null);
   const [tooltipData, setTooltipData] = useState<{
@@ -147,12 +160,47 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
 
+  // Process series data based on filter
+  const filteredSeries = useMemo(() => {
+    if (!series || series.length === 0) return series;
+    
+    let processed = [...series];
+    
+    // Apply filtering and sorting based on filter props
+    if (filter?.metric && filter.metric !== "Performance") {
+      // Find the metric in the poles labels to get the correct index
+      const metricIndex = poles?.labels?.findIndex(label => label === filter.metric);
+      if (metricIndex !== undefined && metricIndex >= 0) {
+        // Sort by the specified metric
+        processed = processed.sort((a, b) => {
+          const aValue = parseFloat(String(a.data[metricIndex]?.value || "0"));
+          const bValue = parseFloat(String(b.data[metricIndex]?.value || "0"));
+          return filter.sortingDir === "asc" ? aValue - bValue : bValue - aValue;
+        });
+      }
+    } else {
+      // Default sorting by Performance (first metric)
+      processed = processed.sort((a, b) => {
+        const aValue = parseFloat(String(a.data[0]?.value || "0"));
+        const bValue = parseFloat(String(b.data[0]?.value || "0"));
+        return filter?.sortingDir === "asc" ? aValue - bValue : bValue - aValue;
+      });
+    }
+    
+    // Apply series limit
+    if (filter?.seriesLimit && filter.seriesLimit > 0) {
+      processed = processed.slice(0, filter.seriesLimit);
+    }
+    
+    return processed;
+  }, [series, filter, poles?.labels]);
+
   const yScaleDomain = useMemo(() => {
-    if (!series) return [0, 30];
+    if (!filteredSeries) return [0, 30];
     return [
       0,
       Math.max(
-        ...series
+        ...filteredSeries
           .filter((d: DataPoint) => !disabledItems.includes(d.label))
           .map((d: DataPoint) => d.data)
           .flat()
@@ -162,7 +210,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           })
       ),
     ];
-  }, [series, disabledItems]);
+  }, [filteredSeries, disabledItems]);
 
   const yScale = useMemo(() => {
     return d3
@@ -196,17 +244,22 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     const pointString: string = data.reduce((res, cur, i) => {
       if (i > data.length) return res;
 
-      if (!cur?.value) {
+      // Use 0 as value for missing data points (center of radar)
+      const value = cur?.value ? parseFloat(String(cur.value)) : 0;
+      if (isNaN(value)) {
         return res;
       }
 
       // Adjusting starting angle by subtracting Math.PI / 2
       const angle = anglesDateMapping[cur.date];
+      if (angle === undefined) {
+        return res; // Skip if angle is not defined
+      }
       // Now include the center of the radar chart in your calculations.
-      const xVal = Math.round(width / 2 + scale(cur.value) * Math.sin(angle));
-      const yVal = Math.round(height / 2 + scale(cur.value) * Math.cos(angle) * -1);
+      const xVal = Math.round(width / 2 + scale(value) * Math.sin(angle));
+      const yVal = Math.round(height / 2 + scale(value) * Math.cos(angle) * -1);
 
-      points[i] = { x: xVal, y: yVal, date: cur.date, value: cur.value };
+      points[i] = { x: xVal, y: yVal, date: cur.date, value: value };
       res += `${xVal},${yVal} `;
       return res;
     }, "");
@@ -219,19 +272,24 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     const newMapping = { ...colorsMapping };
     let colorIndex = Object.keys(colorsMapping).length;
 
-    if (series && series.length > 0) {
-      // Normal case: assign colors to new items only
-      // Color order is now handled by legend data generation in metadata
-      for (const dataSet of series) {
-        if (!newMapping[dataSet.label]) {
-          newMapping[dataSet.label] = colors[colorIndex % colors.length];
+    if (filteredSeries && filteredSeries.length > 0) {
+      // Extract unique labels without year suffixes for color mapping
+      const uniqueLabels = [...new Set(filteredSeries.map(dataSet => {
+        // Remove year suffix (e.g., "China-2021" -> "China")
+        return dataSet.label.replace(/-\d{4}$/, '');
+      }))];
+
+      // Assign colors to unique labels only
+      for (const uniqueLabel of uniqueLabels) {
+        if (!newMapping[uniqueLabel]) {
+          newMapping[uniqueLabel] = colors[colorIndex % colors.length];
           colorIndex++;
         }
       }
     }
 
     return newMapping;
-  }, [series, colorsMapping, colors]);
+  }, [filteredSeries, colorsMapping, colors]);
 
   // Notify parent about generated color mapping with infinite loop protection
   const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
@@ -246,8 +304,8 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   }, [generatedColorsMapping, onColorMappingGenerated]);
 
   const processedSeries =
-    series && series.length > 0
-      ? series
+    filteredSeries && filteredSeries.length > 0
+      ? filteredSeries
           // sort disabled items first
           .filter((d: DataPoint) => !disabledItems.includes(d.label))
           .map((item: DataPoint) => ({
@@ -342,22 +400,28 @@ export const RadarChart: React.FC<RadarChartProps> = ({
         })
         .text(poleLabelFormatter ? poleLabelFormatter(label) : label);
     });
-  }, [width, height, series, poles]);
+  }, [width, height, filteredSeries, poles]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
     svg.selectAll(".series").attr("opacity", highlightItems.length === 0 ? 1 : 0.5);
     svg.selectAll(".data-point").attr("opacity", 0);
+    if (showFilled) {
+      svg.selectAll(".series polygon").attr("fill-opacity", fillOpacity);
+    }
 
     highlightItems.forEach((item: string) => {
       svg.selectAll(`.series[data-label="${item}"]`).attr("opacity", 1).raise();
-      svg.selectAll(`.data-point[data-label="${item}"]`).attr("opacity", 1).raise();
+      if (showFilled) {
+        svg.selectAll(`.series[data-label="${item}"] polygon`).attr("fill-opacity", Math.min(fillOpacity * 2, 0.6));
+      }
+      svg.selectAll(`.data-point[data-label="${item}"]`).attr("opacity", 0.3).raise();
       svg.selectAll(".radial-label").raise();
     });
-  }, [highlightItems]);
+  }, [highlightItems, showFilled, fillOpacity]);
 
   const displayIsNodata = useDisplayIsNodata({
-    dataSet: series,
+    dataSet: filteredSeries,
     isLoading: isLoading,
     isNodataComponent: isNodataComponent,
     isNodata: isNodata,
@@ -370,11 +434,19 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   useEffect(() => {
     if (renderCompleteRef.current && onChartDataProcessed) {
       // Ensure unique labels in poles.labels
-      const uniqueLabels = poles?.labels ? [...new Set(poles.labels)] : [];
+      const uniquePoleLabels = poles?.labels ? [...new Set(poles.labels)] : [];
 
-      // Generate legend data with colors based on series order
-      const legendData =
-        series?.map((item, index) => {
+      // Generate legend data with colors based on unique labels (deduplicated)
+      const uniqueSeriesLabels = [...new Set(filteredSeries?.map(item => {
+        // Remove year suffix (e.g., "China-2021" -> "China")
+        return item.label.replace(/-\d{4}$/, '');
+      }) || [])];
+
+      const legendData = uniqueSeriesLabels.map((uniqueLabel, index) => {
+        // Use existing color from generatedColorsMapping if available, otherwise assign new color
+        let finalColor = generatedColorsMapping[uniqueLabel];
+        
+        if (!finalColor) {
           // Assign colors based on legend order using DEFAULT_COLORS
           const colorIndex = index % colors.length;
           const baseColor = colors[colorIndex];
@@ -384,43 +456,30 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
 
           // Create color with opacity if needed
-          const finalColor =
+          finalColor =
             repeatCycle > 0
               ? `${baseColor}${Math.round(opacity * 255)
                   .toString(16)
                   .padStart(2, "0")}`
               : baseColor;
+        }
 
-          return {
-            label: item.label,
-            color: finalColor,
-            order: index,
-            disabled: disabledItems.includes(item.label),
-            dataLabelSafe: sanitizeForClassName(item.label),
-            sortValue: undefined, // RadarChart doesn't have sorting
-          };
-        }) || [];
-
-      // Generate new color mapping based on legend order
-      const newColorMapping: { [key: string]: string } = {};
-      legendData.forEach(item => {
-        newColorMapping[item.label] = item.color;
+        return {
+          label: uniqueLabel,
+          color: finalColor,
+          order: index,
+          disabled: disabledItems.includes(uniqueLabel),
+          dataLabelSafe: sanitizeForClassName(uniqueLabel),
+          sortValue: undefined, // RadarChart doesn't have sorting
+        };
       });
-
-      // Update color mapping if it has changed
-      if (!isEqual(newColorMapping, generatedColorsMapping) && onColorMappingGenerated) {
-        onColorMappingGenerated(newColorMapping);
-      }
 
       const currentMetadata: ChartMetadata = {
         xAxisDomain: poles?.labels ? poles.labels.map(String) : [],
         yAxisDomain: yScale.domain() as [number, number],
-        visibleItems:
-          series && series.length > 0
-            ? series.filter(s => !disabledItems.includes(s.label)).map(s => s.label)
-            : [],
+        visibleItems: uniqueSeriesLabels.filter(label => !disabledItems.includes(label)),
         renderedData: {
-          [uniqueLabels[0] || "default"]: series || [],
+          [uniquePoleLabels[0] || "default"]: filteredSeries || [],
         },
         chartType: "radar-chart",
         legendData: legendData,
@@ -446,7 +505,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
         onChartDataProcessed(currentMetadata);
       }
     }
-  }, [series, poles, processedSeries, disabledItems, onChartDataProcessed]);
+  }, [filteredSeries, poles, processedSeries, disabledItems, onChartDataProcessed]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -499,10 +558,11 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           >
             <Polygon
               points={pointString}
-              fill={"transparent"}
+              fill={showFilled ? getColor(generatedColorsMapping[label.replace(/-\d{4}$/, '')], color) : "transparent"}
+              fillOpacity={showFilled ? fillOpacity : 0}
               data-label={label}
               data-label-safe={sanitizeForClassName(label)}
-              stroke={getColor(generatedColorsMapping[label], color)}
+              stroke={getColor(generatedColorsMapping[label.replace(/-\d{4}$/, '')], color)}
               strokeWidth={2}
               onMouseEnter={event => {
                 event.preventDefault();
@@ -535,7 +595,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                         cy={point.y}
                         stroke="#fff"
                         strokeWidth={2}
-                        fill={getColor(generatedColorsMapping[label], color)}
+                        fill={getColor(generatedColorsMapping[label.replace(/-\d{4}$/, '')], color)}
                         onMouseEnter={e => {
                           onHighlightItem([label]);
                           setTooltipData({

@@ -26,8 +26,8 @@ const DEFAULT_COLORS = [
 const AreaChartContainer = styled.div`
   position: relative;
   path {
-    transition: fill 0.1s ease-out;
-    will-change: fill;
+    transition: fill 0.1s ease-out, opacity 0.1s ease-out;
+    will-change: fill, opacity;
     transition-behavior: allow-discrete;
   }
 `;
@@ -262,18 +262,27 @@ const AreaChart: React.FC<Props> = ({
           ? (yScaleDomain as [number, number])
           : [0, yScaleDomain[1] || 0];
 
+      // Generate all keys from series data (including disabled items)
+      const allKeys = Array.from(
+        new Set(
+          series
+            .flatMap(d => Object.keys(d))
+            .filter(key => key !== "date" && key !== "code")
+        )
+      );
+
       // Sort keys based on values at the filter date if filter exists
-      let sortedKeys = keys;
+      let sortedKeys = allKeys;
       const sortValues: { [key: string]: number } = {};
 
       if (filter?.date) {
-        // Calculate sort values for all keys
-        keys.forEach(key => {
+        // Calculate sort values for all keys (including disabled items)
+        allKeys.forEach(key => {
           const value = series.find(d => String(d.date) === String(filter.date))?.[key] || 0;
           sortValues[key] = value;
         });
 
-        sortedKeys = [...keys].sort((a, b) => {
+        sortedKeys = [...allKeys].sort((a, b) => {
           const aValue = sortValues[a];
           const bValue = sortValues[b];
           return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
@@ -282,21 +291,26 @@ const AreaChart: React.FC<Props> = ({
 
       // Generate legend data with colors based on legend order
       const legendData = sortedKeys.map((key, index) => {
-        // Assign colors based on legend order using DEFAULT_COLORS
-        const colorIndex = index % colors.length;
-        const baseColor = colors[colorIndex];
+        // Use existing color from colorsMapping if available, otherwise assign new color
+        let finalColor = colorsMapping[key];
+        
+        if (!finalColor) {
+          // Assign colors based on legend order using DEFAULT_COLORS
+          const colorIndex = index % colors.length;
+          const baseColor = colors[colorIndex];
 
-        // Calculate opacity for repeat items beyond color palette
-        const repeatCycle = Math.floor(index / colors.length);
-        const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
+          // Calculate opacity for repeat items beyond color palette
+          const repeatCycle = Math.floor(index / colors.length);
+          const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
 
-        // Create color with opacity if needed
-        const finalColor =
-          repeatCycle > 0
-            ? `${baseColor}${Math.round(opacity * 255)
-                .toString(16)
-                .padStart(2, "0")}`
-            : baseColor;
+          // Create color with opacity if needed
+          finalColor =
+            repeatCycle > 0
+              ? `${baseColor}${Math.round(opacity * 255)
+                  .toString(16)
+                  .padStart(2, "0")}`
+              : baseColor;
+        }
 
         return {
           label: key,
@@ -415,7 +429,7 @@ const AreaChart: React.FC<Props> = ({
                 stroke={"#fff"}
                 strokeWidth={1}
                 opacity={
-                  highlightItems.length === 0 || highlightItems.includes(areaData.key) ? 1 : 0.2
+                  highlightItems.length === 0 || highlightItems.includes(areaData.key) ? 1 : 0.05
                 }
                 data-label={areaData.key}
                 data-label-safe={sanitizeForClassName(areaData.key)}

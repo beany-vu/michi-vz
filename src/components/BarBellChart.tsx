@@ -203,7 +203,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
       dataSet.map(d => {
         let sum = 0;
         for (const key in d) {
-          if (key !== "date" && disabledItems.includes(key) === false) {
+          if (key !== "date" && key !== "code" && disabledItems.includes(key) === false) {
             sum += d[key] || 0;
           }
         }
@@ -277,21 +277,26 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
 
       // Generate legend data with colors based on legend order
       const legendData = sortedKeys.map((key, index) => {
-        // Assign colors based on legend order using DEFAULT_COLORS
-        const colorIndex = index % colors.length;
-        const baseColor = colors[colorIndex];
+        // Use existing color from colorsMapping if available, otherwise assign new color
+        let finalColor = colorsMapping[key];
+        
+        if (!finalColor) {
+          // Assign colors based on legend order using DEFAULT_COLORS
+          const colorIndex = index % colors.length;
+          const baseColor = colors[colorIndex];
 
-        // Calculate opacity for repeat items beyond color palette
-        const repeatCycle = Math.floor(index / colors.length);
-        const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
+          // Calculate opacity for repeat items beyond color palette
+          const repeatCycle = Math.floor(index / colors.length);
+          const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
 
-        // Create color with opacity if needed
-        const finalColor =
-          repeatCycle > 0
-            ? `${baseColor}${Math.round(opacity * 255)
-                .toString(16)
-                .padStart(2, "0")}`
-            : baseColor;
+          // Create color with opacity if needed
+          finalColor =
+            repeatCycle > 0
+              ? `${baseColor}${Math.round(opacity * 255)
+                  .toString(16)
+                  .padStart(2, "0")}`
+              : baseColor;
+        }
 
         return {
           label: key,

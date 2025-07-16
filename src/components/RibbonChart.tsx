@@ -95,7 +95,7 @@ const RibbonChart: React.FC<Props> = ({
 
       // Remove properties that are in disabledItems
       Object.keys(filtered).forEach(key => {
-        if (disabledItems.includes(key) && key !== "date") {
+        if (disabledItems.includes(key) && key !== "date" && key !== "code") {
           delete filtered[key];
         }
       });
@@ -124,7 +124,7 @@ const RibbonChart: React.FC<Props> = ({
       d =>
         d3.sum(
           Object.keys(d)
-            .filter(key => key !== "date")
+            .filter(key => key !== "date" && key !== "code")
             .map(key => d[key] || 0)
         ) || 0
     );
@@ -187,7 +187,7 @@ const RibbonChart: React.FC<Props> = ({
     <div style="background: #fff; padding: 5px">
       <p>${xAxisFormat?.(String(data.date)) ?? data.date}</p>
       ${Object.keys(data)
-        .filter(key => key !== "date")
+        .filter(key => key !== "date" && key !== "code")
         .map(key => `<p style="color:${colorsMapping[key]}">${key}: ${data[key] ?? "N/A"}</p>`)
         .join("")}
     </div>`;

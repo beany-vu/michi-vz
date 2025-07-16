@@ -23,9 +23,10 @@ export default {
 // Create a default story using the template
 export const Primary = {
   args: {
-    onChartDataProcessed: (metadata: any) => {
-      // console.log({ metadata });
-    },
+    onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
+    onHighlightItem: fn(),
+    onColorMappingGenerated: fn(),
     isNoDataComponent: <div>No data</div>,
     dataSet: [
       {
@@ -168,6 +169,9 @@ export const InteractiveControls = {
   },
   args: {
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
+    onHighlightItem: fn(),
+    onColorMappingGenerated: fn(),
     isNoDataComponent: <div>No data</div>,
     dataSet: [
       {
@@ -229,7 +233,14 @@ export const DisableEnableColorMapping = {
     const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
     
     const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
-      setColorsMapping(prev => ({ ...prev, ...newMapping }));
+      setColorsMapping(prev => {
+        const updated = { ...prev, ...newMapping };
+        // Only update if the mapping has actually changed
+        if (JSON.stringify(prev) !== JSON.stringify(updated)) {
+          return updated;
+        }
+        return prev;
+      });
     }, []);
 
     const toggleDisabled = React.useCallback((label: string) => {
@@ -396,6 +407,9 @@ export const DisableEnableColorMapping = {
   },
   args: {
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
+    onHighlightItem: fn(),
+    onColorMappingGenerated: fn(),
     isNoDataComponent: <div>No data</div>,
     dataSet: [
       {
@@ -442,6 +456,259 @@ export const DisableEnableColorMapping = {
     xAisFormat: (d: any) => `${d}%`,
     yAxisFormat: (d: any) => `${d}`,
     title: "Test Disable/Enable with Color Mapping",
+    tooltipFormatter: (d: unknown) => {
+      return JSON.stringify(d);
+    },
+    filter: { limit: 10, criteria: "valueBased", sortingDir: "desc" },
+  },
+};
+
+// Story to test legend metadata exposure
+export const LegendMetadataExposure = {
+  render: (args: any) => {
+    const [legendData, setLegendData] = React.useState<any[]>([]);
+    const [chartMetadata, setChartMetadata] = React.useState<any>(null);
+    const [colorMapping, setColorMapping] = React.useState<{ [key: string]: string }>({});
+
+    const handleLegendDataChange = React.useCallback((newLegendData: any[]) => {
+      setLegendData(prev => {
+        if (JSON.stringify(prev) !== JSON.stringify(newLegendData)) {
+          console.log('Legend data changed:', newLegendData);
+          return newLegendData;
+        }
+        return prev;
+      });
+    }, []);
+
+    const handleChartDataProcessed = React.useCallback((metadata: any) => {
+      setChartMetadata(prev => {
+        if (JSON.stringify(prev) !== JSON.stringify(metadata)) {
+          console.log('Chart metadata processed:', metadata);
+          return metadata;
+        }
+        return prev;
+      });
+    }, []);
+
+    const handleColorMappingGenerated = React.useCallback((mapping: { [key: string]: string }) => {
+      setColorMapping(prev => {
+        if (JSON.stringify(prev) !== JSON.stringify(mapping)) {
+          console.log('Color mapping generated:', mapping);
+          return mapping;
+        }
+        return prev;
+      });
+    }, []);
+
+    return (
+      <div style={{ padding: '20px' }}>
+        <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+          <h3>Legend & Metadata Exposure Test</h3>
+          
+          <div style={{ marginBottom: '15px' }}>
+            <h4>Legend Data:</h4>
+            <pre style={{ fontSize: '12px', backgroundColor: '#fff', padding: '10px', borderRadius: '4px', overflow: 'auto' }}>
+              {JSON.stringify(legendData, null, 2)}
+            </pre>
+          </div>
+          
+          <div style={{ marginBottom: '15px' }}>
+            <h4>Chart Metadata:</h4>
+            <pre style={{ fontSize: '12px', backgroundColor: '#fff', padding: '10px', borderRadius: '4px', overflow: 'auto' }}>
+              {JSON.stringify(chartMetadata, null, 2)}
+            </pre>
+          </div>
+          
+          <div style={{ marginBottom: '15px' }}>
+            <h4>Color Mapping:</h4>
+            <pre style={{ fontSize: '12px', backgroundColor: '#fff', padding: '10px', borderRadius: '4px', overflow: 'auto' }}>
+              {JSON.stringify(colorMapping, null, 2)}
+            </pre>
+          </div>
+          
+          <div style={{ fontSize: '14px', color: '#666' }}>
+            <strong>Instructions:</strong> Check the browser console for real-time logging of legend data changes.
+          </div>
+        </div>
+        
+        <MichiVzProvider>
+          <ComparableHorizontalBarChart 
+            {...args}
+            onLegendDataChange={handleLegendDataChange}
+            onChartDataProcessed={handleChartDataProcessed}
+            onColorMappingGenerated={handleColorMappingGenerated}
+          />
+        </MichiVzProvider>
+      </div>
+    );
+  },
+  args: {
+    onHighlightItem: fn(),
+    isNoDataComponent: <div>No data</div>,
+    dataSet: [
+      {
+        label: "Research & Development",
+        valueBased: 85,
+        valueCompared: 78,
+      },
+      {
+        label: "Marketing",
+        valueBased: 72,
+        valueCompared: 85,
+      },
+      {
+        label: "Operations",
+        valueBased: 91,
+        valueCompared: 88,
+      },
+      {
+        label: "Sales",
+        valueBased: 67,
+        valueCompared: 74,
+      },
+      {
+        label: "Customer Support",
+        valueBased: 89,
+        valueCompared: 82,
+      },
+    ],
+    width: 900,
+    height: 400,
+    margin: {
+      top: 50,
+      right: 50,
+      bottom: 50,
+      left: 150,
+    },
+    xAxisPredefinedDomain: [0, 100],
+    showCombined: false,
+    xAisFormat: (d: any) => `${d}%`,
+    yAxisFormat: (d: any) => `${d}`,
+    title: "Legend Metadata Exposure Test",
+    tooltipFormatter: (d: unknown) => {
+      return JSON.stringify(d);
+    },
+    filter: { limit: 10, criteria: "valueBased", sortingDir: "desc" },
+  },
+};
+
+// Story to test legend metadata with dynamic data changes
+export const DynamicLegendMetadata = {
+  render: (args: any) => {
+    const [currentDataSet, setCurrentDataSet] = React.useState(args.dataSet);
+    const [legendData, setLegendData] = React.useState<any[]>([]);
+    const [updateCount, setUpdateCount] = React.useState(0);
+
+    const handleLegendDataChange = React.useCallback((newLegendData: any[]) => {
+      setLegendData(prev => {
+        if (JSON.stringify(prev) !== JSON.stringify(newLegendData)) {
+          setUpdateCount(prevCount => {
+            console.log(`Legend update #${prevCount + 1}:`, newLegendData);
+            return prevCount + 1;
+          });
+          return newLegendData;
+        }
+        return prev;
+      });
+    }, []);
+
+    const addRandomDataPoint = React.useCallback(() => {
+      const newItem = {
+        label: `Item ${currentDataSet.length + 1}`,
+        valueBased: Math.floor(Math.random() * 100),
+        valueCompared: Math.floor(Math.random() * 100),
+      };
+      setCurrentDataSet(prev => [...prev, newItem]);
+    }, [currentDataSet]);
+
+    const removeLastDataPoint = React.useCallback(() => {
+      if (currentDataSet.length > 1) {
+        setCurrentDataSet(prev => prev.slice(0, -1));
+      }
+    }, [currentDataSet]);
+
+    const shuffleData = React.useCallback(() => {
+      setCurrentDataSet(prev => [...prev].sort(() => Math.random() - 0.5));
+    }, []);
+
+    return (
+      <div style={{ padding: '20px' }}>
+        <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+          <h3>Dynamic Legend Metadata Test</h3>
+          
+          <div style={{ marginBottom: '15px' }}>
+            <button onClick={addRandomDataPoint} style={{ marginRight: '10px', padding: '8px 16px' }}>
+              Add Random Item
+            </button>
+            <button onClick={removeLastDataPoint} style={{ marginRight: '10px', padding: '8px 16px' }}>
+              Remove Last Item
+            </button>
+            <button onClick={shuffleData} style={{ padding: '8px 16px' }}>
+              Shuffle Data
+            </button>
+          </div>
+          
+          <div style={{ marginBottom: '15px' }}>
+            <strong>Legend Updates: {updateCount}</strong>
+          </div>
+          
+          <div style={{ marginBottom: '15px' }}>
+            <h4>Current Legend Data:</h4>
+            <pre style={{ fontSize: '12px', backgroundColor: '#fff', padding: '10px', borderRadius: '4px', overflow: 'auto', maxHeight: '200px' }}>
+              {JSON.stringify(legendData, null, 2)}
+            </pre>
+          </div>
+          
+          <div style={{ fontSize: '14px', color: '#666' }}>
+            <strong>Instructions:</strong> Use the buttons above to modify the data and watch how the legend metadata changes.
+          </div>
+        </div>
+        
+        <MichiVzProvider>
+          <ComparableHorizontalBarChart 
+            {...args}
+            dataSet={currentDataSet}
+            onLegendDataChange={handleLegendDataChange}
+            onChartDataProcessed={fn()}
+            onColorMappingGenerated={fn()}
+            onHighlightItem={fn()}
+          />
+        </MichiVzProvider>
+      </div>
+    );
+  },
+  args: {
+    isNoDataComponent: <div>No data</div>,
+    dataSet: [
+      {
+        label: "Alpha",
+        valueBased: 75,
+        valueCompared: 68,
+      },
+      {
+        label: "Beta",
+        valueBased: 82,
+        valueCompared: 91,
+      },
+      {
+        label: "Gamma",
+        valueBased: 59,
+        valueCompared: 73,
+      },
+    ],
+    width: 900,
+    height: 400,
+    margin: {
+      top: 50,
+      right: 50,
+      bottom: 50,
+      left: 150,
+    },
+    xAxisPredefinedDomain: [0, 100],
+    showCombined: false,
+    xAisFormat: (d: any) => `${d}%`,
+    yAxisFormat: (d: any) => `${d}`,
+    title: "Dynamic Legend Metadata Test",
     tooltipFormatter: (d: unknown) => {
       return JSON.stringify(d);
     },

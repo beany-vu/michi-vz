@@ -482,21 +482,26 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
       const legendData = visibleLabels
         .filter(label => dataSet.find(d => d.label === label))
         .map((label, index) => {
-          // Assign colors based on legend order using DEFAULT_COLORS
-          const colorIndex = index % DEFAULT_COLORS.length;
-          const baseColor = DEFAULT_COLORS[colorIndex];
+          // Use existing color from colorsMapping if available, otherwise assign new color
+          let finalColor = colorsMapping[label];
+          
+          if (!finalColor) {
+            // Assign colors based on legend order using DEFAULT_COLORS
+            const colorIndex = index % DEFAULT_COLORS.length;
+            const baseColor = DEFAULT_COLORS[colorIndex];
 
-          // Calculate opacity for repeat items beyond color palette
-          const repeatCycle = Math.floor(index / DEFAULT_COLORS.length);
-          const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
+            // Calculate opacity for repeat items beyond color palette
+            const repeatCycle = Math.floor(index / DEFAULT_COLORS.length);
+            const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
 
-          // Create color with opacity if needed
-          const finalColor =
-            repeatCycle > 0
-              ? `${baseColor}${Math.round(opacity * 255)
-                  .toString(16)
-                  .padStart(2, "0")}`
-              : baseColor;
+            // Create color with opacity if needed
+            finalColor =
+              repeatCycle > 0
+                ? `${baseColor}${Math.round(opacity * 255)
+                    .toString(16)
+                    .padStart(2, "0")}`
+                : baseColor;
+          }
 
           return {
             label,

@@ -27,9 +27,11 @@ const useGenerateColorMapping = (
     });
 
     // Then assign colors to items that don't have them yet
-    dataSet.forEach(item => {
-      if (!newMapping[item.label]) {
-        newMapping[item.label] = colors[colorIndex % colors.length];
+    // Get unique labels to avoid duplicate color assignments
+    const uniqueLabels = [...new Set(dataSet.map(item => item.label))];
+    uniqueLabels.forEach(label => {
+      if (!newMapping[label]) {
+        newMapping[label] = colors[colorIndex % colors.length];
         colorIndex++;
       }
     });
@@ -60,9 +62,11 @@ const useGenerateColorMapping = (
     });
 
     // Then assign colors to items that don't have them yet
-    dataSet.forEach(item => {
-      if (!newMapping[item.label]) {
-        newMapping[item.label] = colors[colorIndex % colors.length];
+    // Get unique labels to avoid duplicate color assignments
+    const uniqueLabels = [...new Set(dataSet.map(item => item.label))];
+    uniqueLabels.forEach(label => {
+      if (!newMapping[label]) {
+        newMapping[label] = colors[colorIndex % colors.length];
         colorIndex++;
       }
     });

@@ -82,36 +82,39 @@ const useLineChartMetadataExpose = (
         }
       }
 
-      // Generate legend data in the same order as visibleSeries (which is sorted by filter)
-      // Include ALL items (both enabled and disabled) for complete legend
-      const legendData = visibleSeries
-        .filter(label => dataSet.find(d => d.label === label)?.series.length > 0)
-        .map((label, index) => {
-          // Assign colors based on legend order using DEFAULT_COLORS
-          const colorIndex = index % defaultColors.length;
-          const baseColor = defaultColors[colorIndex];
+      // Generate legend data with deduplicated labels
+      // First, get unique labels while preserving order
+      const uniqueLabels = [...new Set(visibleSeries)].filter(
+        label => dataSet.find(d => d.label === label)?.series.length > 0
+      );
+      
+      // Create legend data for unique labels only
+      const legendData = uniqueLabels.map((label, index) => {
+        // Assign colors based on legend order using DEFAULT_COLORS
+        const colorIndex = index % defaultColors.length;
+        const baseColor = defaultColors[colorIndex];
 
-          // Calculate opacity for repeat items beyond color palette
-          const repeatCycle = Math.floor(index / defaultColors.length);
-          const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
+        // Calculate opacity for repeat items beyond color palette
+        const repeatCycle = Math.floor(index / defaultColors.length);
+        const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
 
-          // Create color with opacity if needed
-          const finalColor =
-            repeatCycle > 0
-              ? `${baseColor}${Math.round(opacity * 255)
-                  .toString(16)
-                  .padStart(2, "0")}`
-              : baseColor;
+        // Create color with opacity if needed
+        const finalColor =
+          repeatCycle > 0
+            ? `${baseColor}${Math.round(opacity * 255)
+                .toString(16)
+                .padStart(2, "0")}`
+            : baseColor;
 
-          return {
-            label,
-            color: finalColor,
-            order: index,
-            disabled: disabledItems.includes(label),
-            dataLabelSafe: sanitizeForClassName(label),
-            sortValue: sortValues[label],
-          };
-        });
+        return {
+          label,
+          color: finalColor,
+          order: index,
+          disabled: disabledItems.includes(label),
+          dataLabelSafe: sanitizeForClassName(label),
+          sortValue: sortValues[label],
+        };
+      });
 
       // Generate new color mapping based on legend order
       const newColorMapping: { [key: string]: string } = {};
@@ -127,7 +130,7 @@ const useLineChartMetadataExpose = (
       const currentMetadata: ChartMetadata = {
         xAxisDomain: uniqueDates.map(String),
         yAxisDomain: yScale.domain() as [number, number],
-        visibleItems: visibleSeries.filter(
+        visibleItems: uniqueLabels.filter(
           label =>
             !disabledItems.includes(label) &&
             dataSet.find(d => d.label === label)?.series.length > 0
@@ -135,7 +138,7 @@ const useLineChartMetadataExpose = (
         renderedData: lineData.reduce(
           (acc, item) => {
             // Only include data for visible series
-            if (item.points.length > 0 && visibleSeries.includes(item.label)) {
+            if (item.points.length > 0 && uniqueLabels.includes(item.label)) {
               acc[item.label] = item.points;
             }
             return acc;
