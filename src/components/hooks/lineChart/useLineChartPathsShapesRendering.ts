@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect } from "react";
 import { pointer, select, ScaleLinear, ScaleTime } from "d3";
-import isEqual from "lodash/isEqual";
 import { DataPoint, LineChartDataItem } from "../../../types/data";
 
 const useLineChartPathsShapesRendering = (
@@ -27,15 +26,11 @@ const useLineChartPathsShapesRendering = (
   getColor: (color: string | undefined, fallback: string | null) => string,
   sanitizeForClassName: (str: string) => string,
   highlightItems: string[],
-  onHighlightItem?: (labels: string[]) => void,
-  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void,
-  originalDataSet?: LineChartDataItem[]
+  onHighlightItem?: (labels: string[]) => void
 ) => {
-  // Ref to track the last color mapping sent to prevent infinite loops
-  const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
   const handleMouseEnter = useCallback(
     (
-      event: React.MouseEvent,
+      event: React.MouseEvent | null,
       svgRef: React.RefObject<SVGSVGElement>,
       groupSelector: string,
       opacityUnhighlighted: number,
@@ -118,47 +113,15 @@ const useLineChartPathsShapesRendering = (
     }
   }, [highlightItems, visibleDataSets]);
 
-  // Memoize color generation to prevent infinite loops
-  const generateColors = useCallback(() => {
-    const dataSetForColorGeneration = originalDataSet || filteredDataSet;
-    const generatedColorsMapping = { ...colorsMapping };
-    let colorIndex = Object.keys(colorsMapping).length;
-    let hasNewColors = false;
-
-    // Normal case: assign colors to new items only
-    // Color order is now handled by useLineChartMetadataExpose based on legend order
-    for (const dataSet of dataSetForColorGeneration) {
-      if (!generatedColorsMapping[dataSet.label]) {
-        generatedColorsMapping[dataSet.label] = colors[colorIndex % colors.length];
-        colorIndex++;
-        hasNewColors = true;
-      }
-    }
-
-    return { generatedColorsMapping, hasNewColors };
-  }, [originalDataSet, filteredDataSet, colors, colorsMapping]);
-
   useEffect(() => {
     if (!svgRef.current) return;
 
     const svg = select(svgRef.current);
 
-    // Generate colors and only notify parent if there are new colors
-    const { generatedColorsMapping, hasNewColors } = generateColors();
-
-    // Only call onColorMappingGenerated if we actually generated new colors
-    // AND the mapping is different from what we last sent (prevent infinite loops)
-    if (onColorMappingGenerated && hasNewColors) {
-      if (!isEqual(generatedColorsMapping, lastColorMappingSentRef.current)) {
-        lastColorMappingSentRef.current = { ...generatedColorsMapping };
-        onColorMappingGenerated(generatedColorsMapping);
-      }
-    }
-
     // IMPORTANT: Clear everything and redraw from scratch on every render
     // This ensures we don't have any stale elements lingering around
     // when the filter changes
-    svg.selectAll(".data-point, .line, .line-overlay, .series-group").remove();
+    svg.selectAll(".data-point, .line, .line-overlay, .series-group, .data-group").remove();
 
     // Now draw all elements for each series inside a <g>
     for (let i = 0; i < visibleDataSets.length; i++) {
@@ -167,7 +130,7 @@ const useLineChartPathsShapesRendering = (
       const circleSize = 5;
       const squareSize = 6;
       const triangleSize = 16;
-      const color = getColor(generatedColorsMapping[data.label], data.color);
+      const color = getColor(colorsMapping[data.label], data.color);
       const safeLabelClass = sanitizeForClassName(data.label);
       const uniqueKey = `${data.label}__${i}`;
 
@@ -175,24 +138,16 @@ const useLineChartPathsShapesRendering = (
       const pointKeyFn = (d: DataPoint) => `${uniqueKey}-${d.date}`;
 
       // --- GROUP ---
-      // Select or create a <g> for this series
-      // Escape the uniqueKey for use in CSS selector
-      const escapedKey = CSS.escape(uniqueKey);
-      let group = svg.select(`g.series-group[data-key='${escapedKey}']`);
-      if (group.empty()) {
-        group = svg
-          .append("g")
-          .attr("class", `data-group series-group series-group-${i} series-group-${safeLabelClass}`)
-          .attr("data-label", data.label)
-          .attr("data-label-safe", safeLabelClass)
-          .attr("data-key", uniqueKey);
-        console.log("Created group with data-label:", data.label);
-      }
+      // Always create a new group since we cleared all groups above
+      const group = svg
+        .append("g")
+        .attr("class", `data-group series-group series-group-${i} series-group-${safeLabelClass}`)
+        .attr("data-label", data.label)
+        .attr("data-label-safe", safeLabelClass)
+        .attr("data-key", uniqueKey);
 
       // --- LINE ---
-      // Clear old paths first if they exist to ensure proper redrawing
-      group.selectAll(".line").remove();
-      group.selectAll(".line-overlay").remove();
+      // No need to clear since we're creating a fresh group
 
       // Create new line path with updated data
       const linePath = group
@@ -380,9 +335,14 @@ const useLineChartPathsShapesRendering = (
     height,
     margin,
     xAxisDataType,
-    generateColors,
     xScale,
     yScale,
+    colorsMapping,
+    getColor,
+    sanitizeForClassName,
+    highlightItems,
+    handleItemHighlight,
+    tooltipFormatter,
   ]);
 };
 

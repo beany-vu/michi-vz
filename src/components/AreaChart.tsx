@@ -26,7 +26,9 @@ const DEFAULT_COLORS = [
 const AreaChartContainer = styled.div`
   position: relative;
   path {
-    transition: fill 0.1s ease-out, opacity 0.1s ease-out;
+    transition:
+      fill 0.1s ease-out,
+      opacity 0.1s ease-out;
     will-change: fill, opacity;
     transition-behavior: allow-discrete;
   }
@@ -264,11 +266,7 @@ const AreaChart: React.FC<Props> = ({
 
       // Generate all keys from series data (including disabled items)
       const allKeys = Array.from(
-        new Set(
-          series
-            .flatMap(d => Object.keys(d))
-            .filter(key => key !== "date" && key !== "code")
-        )
+        new Set(series.flatMap(d => Object.keys(d)).filter(key => key !== "date" && key !== "code"))
       );
 
       // Sort keys based on values at the filter date if filter exists
@@ -293,7 +291,7 @@ const AreaChart: React.FC<Props> = ({
       const legendData = sortedKeys.map((key, index) => {
         // Use existing color from colorsMapping if available, otherwise assign new color
         let finalColor = colorsMapping[key];
-        
+
         if (!finalColor) {
           // Assign colors based on legend order using DEFAULT_COLORS
           const colorIndex = index % colors.length;

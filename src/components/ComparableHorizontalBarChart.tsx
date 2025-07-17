@@ -141,7 +141,11 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     data: DataPoint;
     type?: TValueType;
   } | null>(null);
-  const { colorsMapping: contextColorsMapping, colorsBasedMapping, visibleItems } = useChartContext();
+  const {
+    colorsMapping: contextColorsMapping,
+    colorsBasedMapping,
+    visibleItems,
+  } = useChartContext();
 
   const svgRef = useRef<SVGSVGElement | null>(null);
   const renderCompleteRef = useRef(false);
@@ -175,7 +179,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   const generatedColorsMapping = useMemo(() => {
     const mapping = { ...propColorsMapping };
     let colorIndex = 0;
-    
+
     filteredDataSet.forEach(item => {
       if (!mapping[item.label] && !item.color) {
         mapping[item.label] = colors[colorIndex % colors.length];

@@ -279,7 +279,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
       const legendData = sortedKeys.map((key, index) => {
         // Use existing color from colorsMapping if available, otherwise assign new color
         let finalColor = colorsMapping[key];
-        
+
         if (!finalColor) {
           // Assign colors based on legend order using DEFAULT_COLORS
           const colorIndex = index % colors.length;

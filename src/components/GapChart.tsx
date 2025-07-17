@@ -1,7 +1,7 @@
 import React, { FC, useRef, useState, useMemo, useLayoutEffect } from "react";
 import isEqual from "lodash/isEqual";
 import styled from "styled-components";
-import { ChartMetadata } from "src/types/data";
+import { ChartMetadata, LegendItem } from "src/types/data";
 import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
@@ -86,7 +86,7 @@ interface Filter {
   sortingDir: "asc" | "desc";
 }
 
-interface LegendItem {
+interface GapChartLegendItem {
   type: "value1" | "value2" | "gap";
   label: string;
   color?: string;
@@ -115,7 +115,7 @@ interface GapChartProps {
     value2?: string;
     gap?: string;
   };
-  legendFormatter?: (items: LegendItem[]) => LegendItem[];
+  legendFormatter?: (items: GapChartLegendItem[]) => GapChartLegendItem[];
   xAxisDataType: "number" | "date_annual" | "date_monthly";
   yAxisFormat?: (d: number) => string;
   xAxisFormat?: (d: number, tickValues?: Array<string | number>) => string;
@@ -144,6 +144,7 @@ interface GapChartProps {
     color?: string;
   }; // custom shadow configuration
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
+  onLegendDataChange?: (legendData: LegendItem[]) => void;
 }
 
 const GapChart: FC<GapChartProps> = ({
@@ -187,6 +188,7 @@ const GapChart: FC<GapChartProps> = ({
     color: "#000000",
   },
   onColorMappingGenerated,
+  onLegendDataChange,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -258,13 +260,14 @@ const GapChart: FC<GapChartProps> = ({
   });
 
   // Get legend items
-  const { legendItems } = useGapChartLegend({
+  const { legendItems, globalLegendItems } = useGapChartLegend({
     shapesLabelsMapping,
     shapeValue1,
     shapeValue2,
     colorMode,
     shapeColorsMapping,
     legendFormatter,
+    onLegendDataChange,
   });
 
   // Handle metadata
@@ -272,6 +275,7 @@ const GapChart: FC<GapChartProps> = ({
     processedDataSet,
     xAxisDomain,
     onChartDataProcessed,
+    globalLegendItems,
   });
 
   // Check if no data
@@ -514,7 +518,7 @@ const GapChart: FC<GapChartProps> = ({
                     : -totalWidth / 2;
 
               // Render legend items based on the processed array
-              legendItems.forEach(legendItem => {
+              (legendItems as GapChartLegendItem[]).forEach(legendItem => {
                 if (legendItem.type === "gap") {
                   items.push(
                     <g key={legendItem.type} transform={`translate(${currentX}, 0)`}>

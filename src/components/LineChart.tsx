@@ -284,9 +284,7 @@ const LineChart: FC<LineChartProps> = ({
     getColor,
     sanitizeForClassName,
     highlightItems,
-    undefined,
-    memoizedOnColorMappingGenerated,
-    dataSet
+    undefined // Remove the callback since color generation is handled by useGenerateColorMapping
   );
 
   useLineChartColorMapping(generatedColorMapping, getColor, svgRef, TRANSITION_DURATION);

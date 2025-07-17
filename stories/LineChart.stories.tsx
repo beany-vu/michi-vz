@@ -2709,12 +2709,11 @@ export const ColorInitializationTest = {
   render: args => {
     const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
     const [initializationLog, setInitializationLog] = React.useState<string[]>([]);
-    const [renderCount, setRenderCount] = React.useState(0);
-
-    // Track render count
-    React.useEffect(() => {
-      setRenderCount(prev => prev + 1);
-    });
+    const renderCountRef = React.useRef(0);
+    
+    // Track render count using ref to avoid infinite loop
+    renderCountRef.current += 1;
+    const renderCount = renderCountRef.current;
 
     // Handle color mapping generation with initialization tracking
     const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {

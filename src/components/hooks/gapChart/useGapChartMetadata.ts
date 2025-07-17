@@ -1,6 +1,6 @@
 import { useRef, useLayoutEffect } from "react";
 import useDeepCompareEffect from "use-deep-compare-effect";
-import { ChartMetadata, DataPoint } from "src/types/data";
+import { ChartMetadata, DataPoint, LegendItem } from "src/types/data";
 
 interface DataItem {
   label: string;
@@ -15,12 +15,14 @@ interface UseGapChartMetadataProps {
   processedDataSet: DataItem[];
   xAxisDomain: [number, number];
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
+  globalLegendItems?: LegendItem[];
 }
 
 export const useGapChartMetadata = ({
   processedDataSet,
   xAxisDomain,
   onChartDataProcessed,
+  globalLegendItems = [],
 }: UseGapChartMetadataProps) => {
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
   const renderCompleteRef = useRef(false);
@@ -42,7 +44,8 @@ export const useGapChartMetadata = ({
           },
           {} as { [key: string]: DataPoint[] }
         ),
-        chartType: "line-chart" as ChartMetadata["chartType"],
+        chartType: "gap-chart" as ChartMetadata["chartType"],
+        legendData: globalLegendItems,
       };
 
       const hasChanged =
@@ -54,5 +57,5 @@ export const useGapChartMetadata = ({
         prevChartDataRef.current = currentMetadata;
       }
     }
-  }, [processedDataSet, xAxisDomain]);
+  }, [processedDataSet, xAxisDomain, globalLegendItems]);
 };

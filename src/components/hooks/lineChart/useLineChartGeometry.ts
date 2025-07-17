@@ -4,10 +4,10 @@ import { DataPoint } from "../../../types/data";
 import { getPathLengthAtX } from "./lineChartUtils";
 
 interface UseLineChartGeometryArgs {
-  dataSet: any[];
+  dataSet: { label: string; color: string; series: DataPoint[] }[];
   xAxisDataType: "number" | "date_annual" | "date_monthly";
-  xScale: any;
-  yScale: any;
+  xScale: d3.ScaleLinear<number, number> | d3.ScaleTime<number, number>;
+  yScale: d3.ScaleLinear<number, number>;
 }
 
 export function useLineChartGeometry({
@@ -48,7 +48,11 @@ export function useLineChartGeometry({
 
   // Memoized dash array generator
   const getDashArrayMemoized = useMemo(() => {
-    return (series: DataPoint[], pathNode: SVGPathElement, xScale: any) => {
+    return (
+      series: DataPoint[],
+      pathNode: SVGPathElement,
+      xScale: d3.ScaleLinear<number, number> | d3.ScaleTime<number, number>
+    ) => {
       const totalLength = pathNode.getTotalLength();
       const lengths = series.map(d => getPathLengthAtX(pathNode, xScale(new Date(d.date))));
 

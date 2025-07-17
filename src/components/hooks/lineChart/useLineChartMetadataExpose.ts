@@ -2,23 +2,31 @@ import { useEffect, useRef } from "react";
 import isEqual from "lodash/isEqual";
 import { DataPoint, ChartMetadata, LegendItem } from "../../../types/data";
 import { sanitizeForClassName } from "./lineChartUtils";
+import * as d3 from "d3";
 
 // Hook for exposing chart metadata including legend data
 const useLineChartMetadataExpose = (
-  dataSet: any,
-  xAxisDataType: any,
-  yScale: any,
+  dataSet: { label: string; color: string; series: DataPoint[] }[],
+  xAxisDataType: "number" | "date_annual" | "date_monthly",
+  yScale: d3.ScaleLinear<number, number>,
   disabledItems: string[],
-  lineData: any,
-  filter: any,
+  lineData: { label: string; color: string; points: DataPoint[] }[],
+  filter:
+    | {
+        limit: number;
+        date: number | string;
+        criteria: string;
+        sortingDir: "asc" | "desc";
+      }
+    | undefined,
   onChartDataProcessed: ((metadata: ChartMetadata) => void) | undefined,
-  renderCompleteRef: any,
-  prevChartDataRef: any,
+  renderCompleteRef: React.MutableRefObject<boolean>,
+  prevChartDataRef: React.MutableRefObject<ChartMetadata | null>,
   colorsMapping: { [key: string]: string },
   defaultColors: string[],
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void,
   onLegendDataChange?: (legendData: LegendItem[]) => void,
-  topNItems?: any
+  topNItems?: { label: string; series: DataPoint[] }[]
 ) => {
   // Keep track of the chart ID
   // Track if we've dispatched our first event
@@ -87,7 +95,7 @@ const useLineChartMetadataExpose = (
       const uniqueLabels = [...new Set(visibleSeries)].filter(
         label => dataSet.find(d => d.label === label)?.series.length > 0
       );
-      
+
       // Create legend data for unique labels only
       const legendData = uniqueLabels.map((label, index) => {
         // Assign colors based on legend order using DEFAULT_COLORS

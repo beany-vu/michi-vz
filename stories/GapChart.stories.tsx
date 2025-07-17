@@ -123,6 +123,7 @@ export const Default: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
     onColorMappingGenerated: fn(),
     filter: undefined,
   },
@@ -383,6 +384,7 @@ export const WithoutColors: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
     onColorMappingGenerated: fn(),
     filter: undefined,
   },
@@ -407,6 +409,8 @@ export const PositiveGrowthOnly: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
+    onColorMappingGenerated: fn(),
     tickHtmlWidth: 150,
     filter: {
       limit: 20,
@@ -436,6 +440,8 @@ export const NegativeGrowthOnly: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
+    onColorMappingGenerated: fn(),
     filter: {
       limit: 15,
       date: "2024",
@@ -471,7 +477,9 @@ export const ComplexScenario: Story = {
     margin: { top: 60, right: 180, bottom: 120, left: 180 },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
     onColorMappingGenerated: fn(),
+    onLegendDataChange: fn(),
     filter: {
       limit: 20,
       date: "2024",
@@ -531,6 +539,8 @@ export const ColorModesComparison: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
+    onColorMappingGenerated: fn(),
     filter: {
       limit: 10,
       date: "2024",
@@ -783,6 +793,7 @@ export const AdvancedInteractive: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
     onColorMappingGenerated: fn(),
     filter: undefined,
     shapeValue1: "circle",
@@ -969,6 +980,7 @@ export const DataChanges: Story = {
     },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
     onColorMappingGenerated: fn(),
     filter: undefined,
   },
@@ -1006,6 +1018,7 @@ export const AllPositiveValues: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 80 },  // Reduced left margin for shorter labels
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
     onColorMappingGenerated: fn(),
     filter: undefined,
     ticks: 5,
@@ -1039,6 +1052,7 @@ export const ValuesNearZero: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
     onColorMappingGenerated: fn(),
     filter: undefined,
   },
@@ -1073,6 +1087,7 @@ export const LargePositiveValues: Story = {
     margin: { top: 50, right: 180, bottom: 100, left: 180 },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
     filter: {
       limit: 8,
       date: "2024",
@@ -1118,6 +1133,7 @@ export const WithShadowEffects: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 100 },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
     filter: undefined,
   },
 };
@@ -1156,6 +1172,7 @@ export const WithColoredShadows: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 120 },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
     filter: {
       limit: 5,
       date: "2024",
@@ -1191,6 +1208,7 @@ export const MixedPositiveNegativeValues: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
     filter: undefined,
   },
 };
@@ -1200,149 +1218,397 @@ export const InteractiveControls: Story = {
     const [limit, setLimit] = useState(10);
     const [criteria, setCriteria] = useState<"value1" | "value2" | "difference">("difference");
     const [sortingDir, setSortingDir] = useState<"asc" | "desc">("desc");
+    const [highlightItems, setHighlightItems] = useState<string[]>([]);
+    const [disabledItems, setDisabledItems] = useState<string[]>([]);
+    const [legendData, setLegendData] = useState<any[]>([]);
+    const [metadataInfo, setMetadataInfo] = useState<any>(null);
+    const [availableItems, setAvailableItems] = useState<string[]>([]);
+
+    const handleLegendDataChange = (newLegendData: any[]) => {
+      setLegendData(newLegendData);
+    };
+
+    const handleMetadataChange = (metadata: any) => {
+      setMetadataInfo(metadata);
+      if (metadata.visibleItems) {
+        setAvailableItems(metadata.visibleItems);
+      }
+    };
+
+    const toggleHighlight = (item: string) => {
+      setHighlightItems(prev => 
+        prev.includes(item) 
+          ? prev.filter(i => i !== item)
+          : [...prev, item]
+      );
+    };
+
+    const toggleDisable = (item: string) => {
+      setDisabledItems(prev => 
+        prev.includes(item) 
+          ? prev.filter(i => i !== item)
+          : [...prev, item]
+      );
+    };
 
     return (
-      <div style={{ width: "100%" }}>
-        {/* Control Panel */}
+      <div style={{ width: "100%", display: "flex", gap: "20px" }}>
+        {/* Main Chart Area */}
+        <div style={{ flex: 1 }}>
+          {/* Control Panel */}
+          <div style={{ 
+            marginBottom: "20px", 
+            padding: "20px", 
+            backgroundColor: "#f3f4f6", 
+            borderRadius: "8px",
+            display: "flex",
+            gap: "20px",
+            alignItems: "center",
+            flexWrap: "wrap"
+          }}>
+            {/* Limit Slider */}
+            <div style={{ flex: "1", minWidth: "200px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+                Number of Items: {limit}
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="25"
+                value={limit}
+                onChange={(e) => setLimit(Number(e.target.value))}
+                style={{ width: "100%" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#666" }}>
+                <span>1</span>
+                <span>25</span>
+              </div>
+            </div>
+
+            {/* Sort By Buttons */}
+            <div style={{ flex: "1", minWidth: "300px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+                Sort By:
+              </label>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => setCriteria("value1")}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "4px",
+                    border: "1px solid #d1d5db",
+                    backgroundColor: criteria === "value1" ? "#3b82f6" : "white",
+                    color: criteria === "value1" ? "white" : "black",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  2019 Arrivals
+                </button>
+                <button
+                  onClick={() => setCriteria("value2")}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "4px",
+                    border: "1px solid #d1d5db",
+                    backgroundColor: criteria === "value2" ? "#3b82f6" : "white",
+                    color: criteria === "value2" ? "white" : "black",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  2023 Arrivals
+                </button>
+                <button
+                  onClick={() => setCriteria("difference")}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "4px",
+                    border: "1px solid #d1d5db",
+                    backgroundColor: criteria === "difference" ? "#3b82f6" : "white",
+                    color: criteria === "difference" ? "white" : "black",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  Gap/Difference
+                </button>
+              </div>
+            </div>
+
+            {/* Sort Direction */}
+            <div style={{ minWidth: "150px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+                Direction:
+              </label>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  onClick={() => setSortingDir("desc")}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "4px",
+                    border: "1px solid #d1d5db",
+                    backgroundColor: sortingDir === "desc" ? "#10b981" : "white",
+                    color: sortingDir === "desc" ? "white" : "black",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  ↓ High to Low
+                </button>
+                <button
+                  onClick={() => setSortingDir("asc")}
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: "4px",
+                    border: "1px solid #d1d5db",
+                    backgroundColor: sortingDir === "asc" ? "#10b981" : "white",
+                    color: sortingDir === "asc" ? "white" : "black",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  ↑ Low to High
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Current Filter Info */}
+          <div style={{ 
+            marginBottom: "10px", 
+            padding: "10px", 
+            backgroundColor: "#e5e7eb", 
+            borderRadius: "4px",
+            fontSize: "14px"
+          }}>
+            <strong>Current Filter:</strong> Showing {limit} items sorted by {criteria} in {sortingDir}ending order
+            <br />
+            <strong>Highlighted:</strong> {highlightItems.length} items | <strong>Disabled:</strong> {disabledItems.length} items
+          </div>
+
+          {/* Chart */}
+          <GapChart
+            {...args}
+            filter={{
+              limit,
+              date: "2024",
+              criteria,
+              sortingDir,
+            }}
+            highlightItems={highlightItems}
+            disabledItems={disabledItems}
+            onLegendDataChange={handleLegendDataChange}
+            onChartDataProcessed={handleMetadataChange}
+          />
+        </div>
+
+        {/* Right Panel - Data Reading & Controls */}
         <div style={{ 
-          marginBottom: "20px", 
+          width: "350px", 
           padding: "20px", 
-          backgroundColor: "#f3f4f6", 
+          backgroundColor: "#f8fafc", 
           borderRadius: "8px",
-          display: "flex",
-          gap: "20px",
-          alignItems: "center",
-          flexWrap: "wrap"
+          border: "1px solid #e2e8f0",
+          maxHeight: "800px",
+          overflow: "auto"
         }}>
-          {/* Limit Slider */}
-          <div style={{ flex: "1", minWidth: "200px" }}>
-            <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-              Number of Items: {limit}
-            </label>
-            <input
-              type="range"
-              min="1"
-              max="25"
-              value={limit}
-              onChange={(e) => setLimit(Number(e.target.value))}
-              style={{ width: "100%" }}
-            />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#666" }}>
-              <span>1</span>
-              <span>25</span>
+          <h3 style={{ marginTop: 0, color: "#1e293b", marginBottom: "20px" }}>📊 Data Reading & Controls</h3>
+          
+          {/* Item Controls */}
+          <div style={{ marginBottom: "20px" }}>
+            <h4 style={{ color: "#475569", marginBottom: "10px" }}>🎯 Item Controls</h4>
+            <div style={{ 
+              maxHeight: "150px",
+              overflow: "auto",
+              backgroundColor: "#ffffff", 
+              padding: "10px", 
+              borderRadius: "4px",
+              border: "1px solid #e2e8f0"
+            }}>
+              {availableItems.map((item, index) => (
+                <div key={index} style={{ 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  alignItems: "center",
+                  marginBottom: "8px",
+                  padding: "4px",
+                  backgroundColor: disabledItems.includes(item) ? "#fee2e2" : highlightItems.includes(item) ? "#fef3c7" : "#f8fafc",
+                  borderRadius: "3px"
+                }}>
+                  <span style={{ 
+                    fontSize: "11px", 
+                    fontWeight: "500",
+                    color: disabledItems.includes(item) ? "#dc2626" : highlightItems.includes(item) ? "#d97706" : "#374151",
+                    flex: 1,
+                    marginRight: "8px"
+                  }}>
+                    {item}
+                  </span>
+                  <div style={{ display: "flex", gap: "4px" }}>
+                    <button
+                      onClick={() => toggleHighlight(item)}
+                      style={{
+                        padding: "2px 6px",
+                        borderRadius: "2px",
+                        border: "1px solid #d1d5db",
+                        backgroundColor: highlightItems.includes(item) ? "#f59e0b" : "#f3f4f6",
+                        color: highlightItems.includes(item) ? "white" : "#374151",
+                        cursor: "pointer",
+                        fontSize: "10px"
+                      }}
+                    >
+                      ✨
+                    </button>
+                    <button
+                      onClick={() => toggleDisable(item)}
+                      style={{
+                        padding: "2px 6px",
+                        borderRadius: "2px",
+                        border: "1px solid #d1d5db",
+                        backgroundColor: disabledItems.includes(item) ? "#ef4444" : "#f3f4f6",
+                        color: disabledItems.includes(item) ? "white" : "#374151",
+                        cursor: "pointer",
+                        fontSize: "10px"
+                      }}
+                    >
+                      ❌
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {availableItems.length === 0 && (
+                <div style={{ color: "#64748b", fontStyle: "italic", fontSize: "12px" }}>
+                  No items available yet
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Sort By Buttons */}
-          <div style={{ flex: "1", minWidth: "300px" }}>
-            <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-              Sort By:
-            </label>
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              <button
-                onClick={() => setCriteria("value1")}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "4px",
-                  border: "1px solid #d1d5db",
-                  backgroundColor: criteria === "value1" ? "#3b82f6" : "white",
-                  color: criteria === "value1" ? "white" : "black",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                2019 Arrivals
-              </button>
-              <button
-                onClick={() => setCriteria("value2")}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "4px",
-                  border: "1px solid #d1d5db",
-                  backgroundColor: criteria === "value2" ? "#3b82f6" : "white",
-                  color: criteria === "value2" ? "white" : "black",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                2023 Arrivals
-              </button>
-              <button
-                onClick={() => setCriteria("difference")}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "4px",
-                  border: "1px solid #d1d5db",
-                  backgroundColor: criteria === "difference" ? "#3b82f6" : "white",
-                  color: criteria === "difference" ? "white" : "black",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                Gap/Difference
-              </button>
+          {/* Legend Data */}
+          <div style={{ marginBottom: "20px" }}>
+            <h4 style={{ color: "#475569", marginBottom: "10px" }}>🏷️ Legend Data</h4>
+            <div style={{ 
+              backgroundColor: "#ffffff", 
+              padding: "10px", 
+              borderRadius: "4px",
+              border: "1px solid #e2e8f0",
+              fontSize: "11px",
+              fontFamily: "monospace"
+            }}>
+              {legendData.length > 0 ? (
+                <div>
+                  {legendData.map((item, index) => (
+                    <div key={index} style={{ 
+                      marginBottom: "8px",
+                      padding: "6px",
+                      backgroundColor: "#f8fafc",
+                      borderRadius: "3px",
+                      border: `1px solid ${item.color}`
+                    }}>
+                      <div style={{ fontWeight: "bold", color: item.color }}>
+                        {item.label}
+                      </div>
+                      <div style={{ marginTop: "2px", color: "#64748b" }}>
+                        Order: {item.order} | Color: {item.color}
+                        <br />
+                        Disabled: {item.disabled ? 'Yes' : 'No'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span style={{ color: "#64748b", fontStyle: "italic" }}>No legend data</span>
+              )}
+            </div>
+          </div>
+          
+          {/* Metadata */}
+          <div style={{ marginBottom: "20px" }}>
+            <h4 style={{ color: "#475569", marginBottom: "10px" }}>📈 Metadata</h4>
+            <div style={{ 
+              backgroundColor: "#ffffff", 
+              padding: "10px", 
+              borderRadius: "4px",
+              border: "1px solid #e2e8f0",
+              fontSize: "11px",
+              fontFamily: "monospace"
+            }}>
+              {metadataInfo ? (
+                <div>
+                  <div style={{ marginBottom: "4px" }}>
+                    <strong>Chart Type:</strong> {metadataInfo.chartType}
+                  </div>
+                  <div style={{ marginBottom: "4px" }}>
+                    <strong>Visible Items:</strong> {metadataInfo.visibleItems?.length || 0}
+                  </div>
+                  <div style={{ marginBottom: "4px" }}>
+                    <strong>X-Axis Domain:</strong> [{metadataInfo.xAxisDomain?.join(', ')}]
+                  </div>
+                  <div style={{ marginBottom: "4px" }}>
+                    <strong>Y-Axis Domain:</strong> [{metadataInfo.yAxisDomain?.join(', ')}]
+                  </div>
+                  <div style={{ marginBottom: "4px" }}>
+                    <strong>Legend Items:</strong> {metadataInfo.legendData?.length || 0}
+                  </div>
+                  <div style={{ marginBottom: "4px" }}>
+                    <strong>Data Points:</strong> {Object.keys(metadataInfo.renderedData || {}).length}
+                  </div>
+                  
+                  {metadataInfo.visibleItems && (
+                    <div style={{ marginTop: "8px" }}>
+                      <strong>Visible Items List:</strong>
+                      <div style={{ 
+                        maxHeight: "100px", 
+                        overflow: "auto", 
+                        marginTop: "4px",
+                        padding: "4px",
+                        backgroundColor: "#f8fafc",
+                        borderRadius: "2px"
+                      }}>
+                        {metadataInfo.visibleItems.map((item: string, index: number) => (
+                          <div key={index} style={{ 
+                            fontSize: "10px", 
+                            color: "#374151",
+                            marginBottom: "2px"
+                          }}>
+                            {index + 1}. {item}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span style={{ color: "#64748b", fontStyle: "italic" }}>No metadata</span>
+              )}
             </div>
           </div>
 
-          {/* Sort Direction */}
-          <div style={{ minWidth: "150px" }}>
-            <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
-              Direction:
-            </label>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button
-                onClick={() => setSortingDir("desc")}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "4px",
-                  border: "1px solid #d1d5db",
-                  backgroundColor: sortingDir === "desc" ? "#10b981" : "white",
-                  color: sortingDir === "desc" ? "white" : "black",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                ↓ High to Low
-              </button>
-              <button
-                onClick={() => setSortingDir("asc")}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: "4px",
-                  border: "1px solid #d1d5db",
-                  backgroundColor: sortingDir === "asc" ? "#10b981" : "white",
-                  color: sortingDir === "asc" ? "white" : "black",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                ↑ Low to High
-              </button>
+          {/* JSON Output */}
+          <div>
+            <h4 style={{ color: "#475569", marginBottom: "10px" }}>🔧 JSON Output</h4>
+            <div style={{ 
+              backgroundColor: "#ffffff", 
+              padding: "10px", 
+              borderRadius: "4px",
+              border: "1px solid #e2e8f0",
+              fontSize: "10px",
+              fontFamily: "monospace",
+              maxHeight: "200px",
+              overflow: "auto"
+            }}>
+              <strong>Legend Data:</strong>
+              <pre style={{ margin: "4px 0", color: "#059669" }}>
+                {JSON.stringify(legendData, null, 2)}
+              </pre>
+              <strong>Metadata:</strong>
+              <pre style={{ margin: "4px 0", color: "#dc2626" }}>
+                {JSON.stringify(metadataInfo, null, 2)}
+              </pre>
             </div>
           </div>
         </div>
-
-        {/* Current Filter Info */}
-        <div style={{ 
-          marginBottom: "10px", 
-          padding: "10px", 
-          backgroundColor: "#e5e7eb", 
-          borderRadius: "4px",
-          fontSize: "14px"
-        }}>
-          <strong>Current Filter:</strong> Showing {limit} items sorted by {criteria} in {sortingDir}ending order
-        </div>
-
-        {/* Chart */}
-        <GapChart
-          {...args}
-          filter={{
-            limit,
-            date: "2024",
-            criteria,
-            sortingDir,
-          }}
-        />
       </div>
     );
   },
@@ -1364,5 +1630,591 @@ export const InteractiveControls: Story = {
     margin: { top: 50, right: 150, bottom: 100, left: 150 },
     onHighlightItem: fn(),
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
+    onColorMappingGenerated: fn(),
+  },
+};
+
+// Story to demonstrate legend data exposure
+export const LegendDataExposure: Story = {
+  render: (args) => {
+    const [legendData, setLegendData] = useState<any[]>([]);
+    const [metadataInfo, setMetadataInfo] = useState<any>(null);
+    
+    const handleLegendDataChange = (newLegendData: any[]) => {
+      console.log("Legend data changed:", newLegendData);
+      setLegendData(newLegendData);
+    };
+    
+    const handleMetadataChange = (metadata: any) => {
+      console.log("Chart metadata:", metadata);
+      setMetadataInfo(metadata);
+    };
+
+    return (
+      <div style={{ width: "100%", display: "flex", gap: "30px" }}>
+        <div style={{ flex: 1 }}>
+          <GapChart
+            {...args}
+            onLegendDataChange={handleLegendDataChange}
+            onChartDataProcessed={handleMetadataChange}
+          />
+        </div>
+        
+        <div style={{ 
+          width: "300px", 
+          padding: "20px", 
+          backgroundColor: "#f8fafc", 
+          borderRadius: "8px",
+          border: "1px solid #e2e8f0"
+        }}>
+          <h3 style={{ marginTop: 0, color: "#1e293b" }}>Exposed Data</h3>
+          
+          <div style={{ marginBottom: "20px" }}>
+            <h4 style={{ color: "#475569", marginBottom: "10px" }}>Legend Data:</h4>
+            <div style={{ 
+              backgroundColor: "#ffffff", 
+              padding: "10px", 
+              borderRadius: "4px",
+              border: "1px solid #e2e8f0",
+              fontSize: "12px",
+              fontFamily: "monospace"
+            }}>
+              {legendData.length > 0 ? (
+                <div>
+                  {legendData.map((item, index) => (
+                    <div key={index} style={{ marginBottom: "8px" }}>
+                      <div style={{ fontWeight: "bold", color: item.color }}>
+                        {item.label}
+                      </div>
+                      <div style={{ marginLeft: "10px", color: "#64748b" }}>
+                        Order: {item.order}<br/>
+                        Color: {item.color}<br/>
+                        Disabled: {item.disabled ? 'Yes' : 'No'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span style={{ color: "#64748b", fontStyle: "italic" }}>No legend data</span>
+              )}
+            </div>
+          </div>
+          
+          <div>
+            <h4 style={{ color: "#475569", marginBottom: "10px" }}>Metadata Info:</h4>
+            <div style={{ 
+              backgroundColor: "#ffffff", 
+              padding: "10px", 
+              borderRadius: "4px",
+              border: "1px solid #e2e8f0",
+              fontSize: "12px",
+              fontFamily: "monospace",
+              maxHeight: "200px",
+              overflow: "auto"
+            }}>
+              {metadataInfo ? (
+                <div>
+                  <div><strong>Chart Type:</strong> {metadataInfo.chartType}</div>
+                  <div><strong>Visible Items:</strong> {metadataInfo.visibleItems?.length || 0}</div>
+                  <div><strong>X-Axis Domain:</strong> [{metadataInfo.xAxisDomain?.join(', ')}]</div>
+                  <div><strong>Y-Axis Domain:</strong> [{metadataInfo.yAxisDomain?.join(', ')}]</div>
+                  <div><strong>Legend Data:</strong> {metadataInfo.legendData?.length || 0} items</div>
+                  <div><strong>Rendered Data Keys:</strong> {Object.keys(metadataInfo.renderedData || {}).length}</div>
+                </div>
+              ) : (
+                <span style={{ color: "#64748b", fontStyle: "italic" }}>No metadata</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  },
+  args: {
+    dataSet: generateSampleData().slice(0, 12),
+    title: "Legend Data Exposure Demo",
+    colors: ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4"],
+    shapeValue1: "circle",
+    shapeValue2: "square",
+    shapesLabelsMapping: {
+      value1: "2019 Tourist Arrivals",
+      value2: "2023 Tourist Arrivals", 
+      gap: "Recovery Gap"
+    },
+    xAxisDataType: "number",
+    xAxisFormat: (d: number) => `${d}mn`,
+    width: 800,
+    height: 500,
+    margin: { top: 50, right: 150, bottom: 100, left: 150 },
+    shapeValue1: "circle",
+    shapeValue2: "square",
+    filter: {
+      limit: 12,
+      date: "2024",
+      criteria: "difference",
+      sortingDir: "desc",
+    },
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
+    onColorMappingGenerated: fn(),
+  },
+};
+
+// Story to demonstrate real-time legend updates
+export const InteractiveLegendUpdates: Story = {
+  render: (args) => {
+    const [legendData, setLegendData] = useState<any[]>([]);
+    const [shapeValue1, setShapeValue1] = useState<"circle" | "square" | "triangle">("circle");
+    const [shapeValue2, setShapeValue2] = useState<"circle" | "square" | "triangle">("square");
+    const [colorMode, setColorMode] = useState<"label" | "shape">("label");
+    const [shapesLabelsMapping, setShapesLabelsMapping] = useState({
+      value1: "Pre-Pandemic (2019)",
+      value2: "Current (2023)",
+      gap: "Recovery Gap"
+    });
+    
+    const handleLegendDataChange = (newLegendData: any[]) => {
+      setLegendData(newLegendData);
+    };
+
+    return (
+      <div style={{ width: "100%" }}>
+        <div style={{
+          marginBottom: "20px",
+          padding: "20px",
+          backgroundColor: "#f1f5f9",
+          borderRadius: "8px",
+          border: "1px solid #cbd5e1"
+        }}>
+          <h3 style={{ marginTop: 0, color: "#334155" }}>Interactive Legend Controls</h3>
+          
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+            <div>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                Shape for Value 1:
+              </label>
+              <select
+                value={shapeValue1}
+                onChange={(e) => setShapeValue1(e.target.value as any)}
+                style={{
+                  padding: "8px",
+                  borderRadius: "4px",
+                  border: "1px solid #d1d5db",
+                  width: "100%"
+                }}
+              >
+                <option value="circle">● Circle</option>
+                <option value="square">■ Square</option>
+                <option value="triangle">▲ Triangle</option>
+              </select>
+            </div>
+            
+            <div>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+                Shape for Value 2:
+              </label>
+              <select
+                value={shapeValue2}
+                onChange={(e) => setShapeValue2(e.target.value as any)}
+                style={{
+                  padding: "8px",
+                  borderRadius: "4px",
+                  border: "1px solid #d1d5db",
+                  width: "100%"
+                }}
+              >
+                <option value="circle">● Circle</option>
+                <option value="square">■ Square</option>
+                <option value="triangle">▲ Triangle</option>
+              </select>
+            </div>
+          </div>
+          
+          <div style={{ marginBottom: "20px" }}>
+            <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+              Color Mode:
+            </label>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                onClick={() => setColorMode("label")}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "4px",
+                  border: "1px solid #d1d5db",
+                  backgroundColor: colorMode === "label" ? "#3b82f6" : "white",
+                  color: colorMode === "label" ? "white" : "black",
+                  cursor: "pointer"
+                }}
+              >
+                Color by Label
+              </button>
+              <button
+                onClick={() => setColorMode("shape")}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "4px",
+                  border: "1px solid #d1d5db",
+                  backgroundColor: colorMode === "shape" ? "#3b82f6" : "white",
+                  color: colorMode === "shape" ? "white" : "black",
+                  cursor: "pointer"
+                }}
+              >
+                Color by Shape
+              </button>
+            </div>
+          </div>
+          
+          <div>
+            <label style={{ display: "block", marginBottom: "8px", fontWeight: "600" }}>
+              Legend Labels:
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+              <input
+                type="text"
+                placeholder="Value 1 label"
+                value={shapesLabelsMapping.value1}
+                onChange={(e) => setShapesLabelsMapping({...shapesLabelsMapping, value1: e.target.value})}
+                style={{
+                  padding: "6px",
+                  borderRadius: "4px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "12px"
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Value 2 label"
+                value={shapesLabelsMapping.value2}
+                onChange={(e) => setShapesLabelsMapping({...shapesLabelsMapping, value2: e.target.value})}
+                style={{
+                  padding: "6px",
+                  borderRadius: "4px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "12px"
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Gap label"
+                value={shapesLabelsMapping.gap}
+                onChange={(e) => setShapesLabelsMapping({...shapesLabelsMapping, gap: e.target.value})}
+                style={{
+                  padding: "6px",
+                  borderRadius: "4px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "12px"
+                }}
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div style={{ display: "flex", gap: "20px" }}>
+          <div style={{ flex: 1 }}>
+            <GapChart
+              {...args}
+              shapeValue1={shapeValue1}
+              shapeValue2={shapeValue2}
+              colorMode={colorMode}
+              shapesLabelsMapping={shapesLabelsMapping}
+              shapeColorsMapping={colorMode === "shape" ? {
+                value1: "#dc2626",
+                value2: "#059669",
+                gap: "#7c3aed"
+              } : undefined}
+              onLegendDataChange={handleLegendDataChange}
+            />
+          </div>
+          
+          <div style={{ 
+            width: "250px", 
+            padding: "15px", 
+            backgroundColor: "#fefefe", 
+            borderRadius: "6px",
+            border: "1px solid #e2e8f0"
+          }}>
+            <h4 style={{ marginTop: 0, color: "#374151" }}>Live Legend Data:</h4>
+            <div style={{ 
+              backgroundColor: "#f8fafc", 
+              padding: "12px", 
+              borderRadius: "4px",
+              fontSize: "11px",
+              fontFamily: "monospace"
+            }}>
+              {legendData.length > 0 ? (
+                legendData.map((item, index) => (
+                  <div key={index} style={{ 
+                    marginBottom: "10px", 
+                    padding: "8px", 
+                    backgroundColor: "white", 
+                    borderRadius: "3px",
+                    border: `1px solid ${item.color}`
+                  }}>
+                    <div style={{ fontWeight: "bold", color: item.color }}>
+                      {item.label}
+                    </div>
+                    <div style={{ marginTop: "4px", color: "#64748b" }}>
+                      Order: {item.order}<br/>
+                      Color: {item.color}<br/>
+                      Disabled: {item.disabled ? 'Yes' : 'No'}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ color: "#64748b", fontStyle: "italic" }}>
+                  No legend data available
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  },
+  args: {
+    dataSet: generateSampleData().slice(0, 10),
+    title: "Interactive Legend Updates Demo",
+    colors: ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4"],
+    xAxisDataType: "number",
+    xAxisFormat: (d: number) => `${d}mn`,
+    width: 700,
+    height: 500,
+    margin: { top: 50, right: 150, bottom: 100, left: 150 },
+    shapeValue1: "circle",
+    shapeValue2: "square",
+    filter: {
+      limit: 10,
+      date: "2024",
+      criteria: "difference",
+      sortingDir: "desc",
+    },
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
+    onColorMappingGenerated: fn(),
+  },
+};
+
+// Story to demonstrate metadata callback with detailed information
+export const MetadataExposureDemo: Story = {
+  render: (args) => {
+    const [metadataHistory, setMetadataHistory] = useState<any[]>([]);
+    const [currentMetadata, setCurrentMetadata] = useState<any>(null);
+    const [dataFilter, setDataFilter] = useState({
+      limit: 15,
+      criteria: "difference" as "value1" | "value2" | "difference",
+      sortingDir: "desc" as "asc" | "desc"
+    });
+    
+    const handleMetadataChange = (metadata: any) => {
+      setCurrentMetadata(metadata);
+      setMetadataHistory(prev => [...prev.slice(-4), {
+        timestamp: new Date().toLocaleTimeString(),
+        metadata: metadata
+      }]);
+    };
+
+    return (
+      <div style={{ width: "100%" }}>
+        <div style={{
+          marginBottom: "20px",
+          padding: "20px",
+          backgroundColor: "#f0f9ff",
+          borderRadius: "8px",
+          border: "1px solid #0ea5e9"
+        }}>
+          <h3 style={{ marginTop: 0, color: "#0c4a6e" }}>Metadata Exposure Controls</h3>
+          
+          <div style={{ display: "flex", gap: "20px", alignItems: "center", marginBottom: "15px" }}>
+            <div>
+              <label style={{ marginRight: "10px", fontWeight: "600" }}>Limit:</label>
+              <input
+                type="range"
+                min="5"
+                max="25"
+                value={dataFilter.limit}
+                onChange={(e) => setDataFilter({...dataFilter, limit: Number(e.target.value)})}
+                style={{ marginRight: "10px" }}
+              />
+              <span style={{ fontWeight: "bold", color: "#0ea5e9" }}>{dataFilter.limit}</span>
+            </div>
+            
+            <div>
+              <label style={{ marginRight: "10px", fontWeight: "600" }}>Sort by:</label>
+              <select
+                value={dataFilter.criteria}
+                onChange={(e) => setDataFilter({...dataFilter, criteria: e.target.value as any})}
+                style={{ padding: "4px", borderRadius: "4px", border: "1px solid #0ea5e9" }}
+              >
+                <option value="difference">Gap/Difference</option>
+                <option value="value1">Value 1</option>
+                <option value="value2">Value 2</option>
+              </select>
+            </div>
+            
+            <div>
+              <label style={{ marginRight: "10px", fontWeight: "600" }}>Direction:</label>
+              <select
+                value={dataFilter.sortingDir}
+                onChange={(e) => setDataFilter({...dataFilter, sortingDir: e.target.value as any})}
+                style={{ padding: "4px", borderRadius: "4px", border: "1px solid #0ea5e9" }}
+              >
+                <option value="desc">Descending</option>
+                <option value="asc">Ascending</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div style={{ display: "flex", gap: "20px" }}>
+          <div style={{ flex: 1 }}>
+            <GapChart
+              {...args}
+              filter={{
+                limit: dataFilter.limit,
+                date: "2024",
+                criteria: dataFilter.criteria,
+                sortingDir: dataFilter.sortingDir,
+              }}
+              onChartDataProcessed={handleMetadataChange}
+            />
+          </div>
+          
+          <div style={{ 
+            width: "350px", 
+            padding: "15px", 
+            backgroundColor: "#fefefe", 
+            borderRadius: "6px",
+            border: "1px solid #e2e8f0"
+          }}>
+            <h4 style={{ marginTop: 0, color: "#374151" }}>Current Metadata:</h4>
+            <div style={{ 
+              backgroundColor: "#f8fafc", 
+              padding: "12px", 
+              borderRadius: "4px",
+              fontSize: "11px",
+              fontFamily: "monospace",
+              marginBottom: "15px"
+            }}>
+              {currentMetadata ? (
+                <div>
+                  <div style={{ marginBottom: "8px" }}>
+                    <strong>Chart Type:</strong> {currentMetadata.chartType}
+                  </div>
+                  <div style={{ marginBottom: "8px" }}>
+                    <strong>Visible Items:</strong> {currentMetadata.visibleItems?.length || 0}
+                  </div>
+                  <div style={{ marginBottom: "8px" }}>
+                    <strong>X-Axis Domain:</strong><br />
+                    <span style={{ color: "#059669" }}>
+                      [{currentMetadata.xAxisDomain?.join(', ')}]
+                    </span>
+                  </div>
+                  <div style={{ marginBottom: "8px" }}>
+                    <strong>Y-Axis Domain:</strong><br />
+                    <span style={{ color: "#dc2626" }}>
+                      [{currentMetadata.yAxisDomain?.join(', ')}]
+                    </span>
+                  </div>
+                  <div style={{ marginBottom: "8px" }}>
+                    <strong>Legend Items:</strong> {currentMetadata.legendData?.length || 0}
+                  </div>
+                  <div style={{ marginBottom: "8px" }}>
+                    <strong>Data Points:</strong> {Object.keys(currentMetadata.renderedData || {}).length}
+                  </div>
+                  
+                  {currentMetadata.legendData && (
+                    <div style={{ marginTop: "12px" }}>
+                      <strong>Legend Details:</strong>
+                      <div style={{ marginTop: "6px" }}>
+                        {currentMetadata.legendData.map((item: any, index: number) => (
+                          <div key={index} style={{ 
+                            marginBottom: "4px", 
+                            padding: "4px", 
+                            backgroundColor: "white", 
+                            borderRadius: "2px",
+                            border: `1px solid ${item.color}`
+                          }}>
+                            <span style={{ color: item.color, fontWeight: "bold" }}>
+                              {item.label}
+                            </span>
+                            <span style={{ color: "#64748b", marginLeft: "8px" }}>
+                              (Order: {item.order})
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ color: "#64748b", fontStyle: "italic" }}>
+                  No metadata available
+                </div>
+              )}
+            </div>
+            
+            <h4 style={{ color: "#374151", marginBottom: "10px" }}>Metadata History:</h4>
+            <div style={{ 
+              backgroundColor: "#f8fafc", 
+              padding: "12px", 
+              borderRadius: "4px",
+              fontSize: "10px",
+              fontFamily: "monospace",
+              maxHeight: "200px",
+              overflowY: "auto"
+            }}>
+              {metadataHistory.length > 0 ? (
+                metadataHistory.map((entry, index) => (
+                  <div key={index} style={{ 
+                    marginBottom: "8px", 
+                    padding: "6px", 
+                    backgroundColor: "white", 
+                    borderRadius: "3px",
+                    border: "1px solid #e2e8f0"
+                  }}>
+                    <div style={{ fontWeight: "bold", color: "#0ea5e9" }}>
+                      {entry.timestamp}
+                    </div>
+                    <div style={{ color: "#64748b" }}>
+                      Items: {entry.metadata.visibleItems?.length || 0} | 
+                      Legend: {entry.metadata.legendData?.length || 0}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ color: "#64748b", fontStyle: "italic" }}>
+                  No history available
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  },
+  args: {
+    dataSet: generateSampleData(),
+    title: "Metadata Exposure Demo",
+    colors: ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4"],
+    shapeValue1: "triangle",
+    shapeValue2: "circle",
+    shapesLabelsMapping: {
+      value1: "2019 International Arrivals",
+      value2: "2023 Current Arrivals",
+      gap: "Recovery Status"
+    },
+    xAxisDataType: "number",
+    xAxisFormat: (d: number) => `${d}mn`,
+    width: 700,
+    height: 600,
+    margin: { top: 50, right: 150, bottom: 100, left: 150 },
+    filter: undefined,
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
+    onColorMappingGenerated: fn(),
   },
 };

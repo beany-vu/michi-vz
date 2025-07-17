@@ -163,9 +163,9 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   // Process series data based on filter
   const filteredSeries = useMemo(() => {
     if (!series || series.length === 0) return series;
-    
+
     let processed = [...series];
-    
+
     // Apply filtering and sorting based on filter props
     if (filter?.metric && filter.metric !== "Performance") {
       // Find the metric in the poles labels to get the correct index
@@ -186,12 +186,12 @@ export const RadarChart: React.FC<RadarChartProps> = ({
         return filter?.sortingDir === "asc" ? aValue - bValue : bValue - aValue;
       });
     }
-    
+
     // Apply series limit
     if (filter?.seriesLimit && filter.seriesLimit > 0) {
       processed = processed.slice(0, filter.seriesLimit);
     }
-    
+
     return processed;
   }, [series, filter, poles?.labels]);
 
@@ -274,10 +274,14 @@ export const RadarChart: React.FC<RadarChartProps> = ({
 
     if (filteredSeries && filteredSeries.length > 0) {
       // Extract unique labels without year suffixes for color mapping
-      const uniqueLabels = [...new Set(filteredSeries.map(dataSet => {
-        // Remove year suffix (e.g., "China-2021" -> "China")
-        return dataSet.label.replace(/-\d{4}$/, '');
-      }))];
+      const uniqueLabels = [
+        ...new Set(
+          filteredSeries.map(dataSet => {
+            // Remove year suffix (e.g., "China-2021" -> "China")
+            return dataSet.label.replace(/-\d{4}$/, "");
+          })
+        ),
+      ];
 
       // Assign colors to unique labels only
       for (const uniqueLabel of uniqueLabels) {
@@ -413,7 +417,9 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     highlightItems.forEach((item: string) => {
       svg.selectAll(`.series[data-label="${item}"]`).attr("opacity", 1).raise();
       if (showFilled) {
-        svg.selectAll(`.series[data-label="${item}"] polygon`).attr("fill-opacity", Math.min(fillOpacity * 2, 0.6));
+        svg
+          .selectAll(`.series[data-label="${item}"] polygon`)
+          .attr("fill-opacity", Math.min(fillOpacity * 2, 0.6));
       }
       svg.selectAll(`.data-point[data-label="${item}"]`).attr("opacity", 0.3).raise();
       svg.selectAll(".radial-label").raise();
@@ -437,15 +443,19 @@ export const RadarChart: React.FC<RadarChartProps> = ({
       const uniquePoleLabels = poles?.labels ? [...new Set(poles.labels)] : [];
 
       // Generate legend data with colors based on unique labels (deduplicated)
-      const uniqueSeriesLabels = [...new Set(filteredSeries?.map(item => {
-        // Remove year suffix (e.g., "China-2021" -> "China")
-        return item.label.replace(/-\d{4}$/, '');
-      }) || [])];
+      const uniqueSeriesLabels = [
+        ...new Set(
+          filteredSeries?.map(item => {
+            // Remove year suffix (e.g., "China-2021" -> "China")
+            return item.label.replace(/-\d{4}$/, "");
+          }) || []
+        ),
+      ];
 
       const legendData = uniqueSeriesLabels.map((uniqueLabel, index) => {
         // Use existing color from generatedColorsMapping if available, otherwise assign new color
         let finalColor = generatedColorsMapping[uniqueLabel];
-        
+
         if (!finalColor) {
           // Assign colors based on legend order using DEFAULT_COLORS
           const colorIndex = index % colors.length;
@@ -558,11 +568,15 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           >
             <Polygon
               points={pointString}
-              fill={showFilled ? getColor(generatedColorsMapping[label.replace(/-\d{4}$/, '')], color) : "transparent"}
+              fill={
+                showFilled
+                  ? getColor(generatedColorsMapping[label.replace(/-\d{4}$/, "")], color)
+                  : "transparent"
+              }
               fillOpacity={showFilled ? fillOpacity : 0}
               data-label={label}
               data-label-safe={sanitizeForClassName(label)}
-              stroke={getColor(generatedColorsMapping[label.replace(/-\d{4}$/, '')], color)}
+              stroke={getColor(generatedColorsMapping[label.replace(/-\d{4}$/, "")], color)}
               strokeWidth={2}
               onMouseEnter={event => {
                 event.preventDefault();
@@ -595,7 +609,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                         cy={point.y}
                         stroke="#fff"
                         strokeWidth={2}
-                        fill={getColor(generatedColorsMapping[label.replace(/-\d{4}$/, '')], color)}
+                        fill={getColor(generatedColorsMapping[label.replace(/-\d{4}$/, "")], color)}
                         onMouseEnter={e => {
                           onHighlightItem([label]);
                           setTooltipData({

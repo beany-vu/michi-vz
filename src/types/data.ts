@@ -63,6 +63,7 @@ export type ChartMetadata = {
     | "scatter-chart"
     | "scatter-plot-chart"
     | "radar-chart"
-    | "vertical-stack-bar-chart";
+    | "vertical-stack-bar-chart"
+    | "gap-chart";
   legendData?: LegendItem[];
 };

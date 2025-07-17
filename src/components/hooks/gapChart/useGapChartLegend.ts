@@ -1,6 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
+import isEqual from "lodash/isEqual";
+import { LegendItem } from "src/types/data";
 
-export interface LegendItem {
+export interface GapChartLegendItem {
   type: "value1" | "value2" | "gap";
   label: string;
   color?: string;
@@ -22,7 +24,8 @@ interface UseGapChartLegendProps {
     value2?: string;
     gap?: string;
   };
-  legendFormatter?: (items: LegendItem[]) => LegendItem[];
+  legendFormatter?: (items: GapChartLegendItem[]) => GapChartLegendItem[];
+  onLegendDataChange?: (legendData: LegendItem[]) => void;
 }
 
 export const useGapChartLegend = ({
@@ -32,12 +35,14 @@ export const useGapChartLegend = ({
   colorMode,
   shapeColorsMapping,
   legendFormatter,
+  onLegendDataChange,
 }: UseGapChartLegendProps) => {
+  const lastLegendDataSentRef = useRef<LegendItem[] | null>(null);
   const legendItems = useMemo(() => {
     if (!shapesLabelsMapping) return [];
 
     // Prepare default legend items
-    const defaultLegendItems: LegendItem[] = [];
+    const defaultLegendItems: GapChartLegendItem[] = [];
 
     if (shapesLabelsMapping.value1) {
       defaultLegendItems.push({
@@ -85,5 +90,23 @@ export const useGapChartLegend = ({
     legendFormatter,
   ]);
 
-  return { legendItems };
+  // Convert internal legend items to global LegendItem format for callback
+  const globalLegendItems = useMemo(() => {
+    return legendItems.map((item, index) => ({
+      label: item.label,
+      color: item.color || "#666",
+      order: index,
+      disabled: item.visible === false,
+    }));
+  }, [legendItems]);
+
+  // Expose legend data to parent component
+  useEffect(() => {
+    if (onLegendDataChange && !isEqual(globalLegendItems, lastLegendDataSentRef.current)) {
+      lastLegendDataSentRef.current = [...globalLegendItems];
+      onLegendDataChange(globalLegendItems);
+    }
+  }, [globalLegendItems, onLegendDataChange]);
+
+  return { legendItems, globalLegendItems };
 };

@@ -484,7 +484,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
         .map((label, index) => {
           // Use existing color from colorsMapping if available, otherwise assign new color
           let finalColor = colorsMapping[label];
-          
+
           if (!finalColor) {
             // Assign colors based on legend order using DEFAULT_COLORS
             const colorIndex = index % DEFAULT_COLORS.length;

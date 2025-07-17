@@ -526,7 +526,10 @@ const VerticalStackBarChart: React.FC<Props> = ({
             filteredDataSet.forEach(dataItem => {
               const yearData = dataItem.series.find(s => String(s.date) === String(filter.date));
               if (yearData && yearData[key] !== undefined && yearData[key] !== null) {
-                const numericValue = typeof yearData[key] === "string" ? parseFloat(yearData[key] as string) : yearData[key];
+                const numericValue =
+                  typeof yearData[key] === "string"
+                    ? parseFloat(yearData[key] as string)
+                    : yearData[key];
                 if (!isNaN(numericValue as number)) {
                   totalValue += numericValue as number;
                 }
@@ -557,7 +560,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
       const legendData = topNKeys.map((key, index) => {
         // Use existing color from colorsMapping if available, otherwise assign new color
         let finalColor = colorsMapping[key];
-        
+
         if (!finalColor) {
           // Assign colors based on legend order using DEFAULT_COLORS
           const colorIndex = index % DEFAULT_COLORS.length;
@@ -628,15 +631,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
         onChartDataProcessed(currentMetadata);
       }
     }
-  }, [
-    xAxisDomain,
-    dates,
-    stackedRectData,
-    filter,
-    onChartDataProcessed,
-    allKeys,
-    disabledItems,
-  ]);
+  }, [xAxisDomain, dates, stackedRectData, filter, onChartDataProcessed, allKeys, disabledItems]);
 
   return (
     <VerticalStackBarChartStyled>
