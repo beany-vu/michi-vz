@@ -2697,6 +2697,126 @@ export const CriteriaBasedFilteringColorTest = {
 };
 
 // Story for testing color initialization issue
+export const FilterNullWithDisabledItemsTest = {
+  args: {
+    ...commonProps,
+    dataSet: comprehensiveFilterDataset.slice(0, 5),
+    title: "Filter Null with Disabled Items Test - Legend Bug Demo",
+    filter: null,
+    onLegendDataChange: fn(),
+    onHighlightItem: fn(),
+  },
+  render: args => {
+    const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
+    const [legendData, setLegendData] = React.useState<any[]>([]);
+    const [filterType, setFilterType] = React.useState<'null' | 'object'>('null');
+    
+    const testFilter = React.useMemo(() => {
+      if (filterType === 'null') return null;
+      return {
+        limit: 5,
+        date: 2020,
+        criteria: "value",
+        sortingDir: "desc" as const,
+      };
+    }, [filterType]);
+
+    const handleLegendDataChange = React.useCallback((newLegendData: any[]) => {
+      setLegendData(newLegendData);
+    }, []);
+
+    const toggleDisabled = React.useCallback((label: string) => {
+      setDisabledItems(prev => 
+        prev.includes(label) 
+          ? prev.filter(item => item !== label)
+          : [...prev, label]
+      );
+    }, []);
+
+    return (
+      <div>
+        <div style={{
+          padding: "16px",
+          marginBottom: "16px",
+          backgroundColor: "#f8f9fa",
+          borderRadius: "8px",
+          border: "1px solid #e9ecef",
+        }}>
+          <h4>Filter Null vs Object Test</h4>
+          <p style={{ fontSize: "14px", color: "#666", marginBottom: "12px" }}>
+            This demonstrates the bug where disabled items disappear from legend when filter is null.
+          </p>
+          
+          <div style={{ marginBottom: "12px" }}>
+            <button
+              onClick={() => setFilterType('null')}
+              style={{
+                padding: "4px 8px",
+                marginRight: "8px",
+                backgroundColor: filterType === 'null' ? "#007bff" : "#f8f9fa",
+                color: filterType === 'null' ? "white" : "#333",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+              }}
+            >
+              Filter: null
+            </button>
+            <button
+              onClick={() => setFilterType('object')}
+              style={{
+                padding: "4px 8px",
+                backgroundColor: filterType === 'object' ? "#007bff" : "#f8f9fa",
+                color: filterType === 'object' ? "white" : "#333",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+              }}
+            >
+              Filter: object
+            </button>
+          </div>
+
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
+            {args.dataSet.map((item: any) => (
+              <button
+                key={item.label}
+                onClick={() => toggleDisabled(item.label)}
+                style={{
+                  padding: "4px 8px",
+                  fontSize: "12px",
+                  backgroundColor: disabledItems.includes(item.label) ? "#dc3545" : "#28a745",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                {disabledItems.includes(item.label) ? "Enable" : "Disable"} {item.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ fontSize: "12px", color: "#666" }}>
+            <div><strong>Current filter:</strong> {filterType}</div>
+            <div><strong>Disabled items:</strong> {disabledItems.join(", ") || "None"}</div>
+            <div><strong>Legend items count:</strong> {legendData.length}</div>
+            <div><strong>Expected behavior:</strong> All items should appear in legend regardless of filter type</div>
+            <div style={{ color: "#dc3545" }}>
+              <strong>Bug:</strong> When filter is null, disabled items disappear from legend completely
+            </div>
+          </div>
+        </div>
+
+        <LineChartComponent
+          {...args}
+          filter={testFilter}
+          disabledItems={disabledItems}
+          onLegendDataChange={handleLegendDataChange}
+        />
+      </div>
+    );
+  }
+};
+
 export const ColorInitializationTest = {
   args: {
     ...commonProps,
