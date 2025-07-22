@@ -248,20 +248,8 @@ const XaxisLinear: FC<Props> = ({
         });
       });
 
-    // Ensure the first and last ticks align with data points by moving them to exact edge positions
-    if (tickValues.length >= 2) {
-      const range = xScale.range();
-      const firstTickSelector = g.select(".tick:first-child");
-      const lastTickSelector = g.select(".tick:last-child");
-
-      if (!firstTickSelector.empty()) {
-        firstTickSelector.attr("transform", `translate(${range[0]}, 0)`);
-      }
-
-      if (!lastTickSelector.empty()) {
-        lastTickSelector.attr("transform", `translate(${range[1]}, 0)`);
-      }
-    }
+    // Let ticks position naturally based on their actual data values
+    // This ensures proper alignment between axis ticks and data points
 
     // Add grid lines if requested (stop short of axis line to avoid touching circles)
     if (showGrid) {

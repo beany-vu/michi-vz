@@ -213,7 +213,7 @@ const LineChart: FC<LineChartProps> = ({
 
   const xScale = useLineChartXscale(filteredDataSet, width, margin, xAxisDataType);
 
-  useLineChartXtickValues(filteredDataSet, xAxisDataType, width, margin);
+  const tickValues = useLineChartXtickValues(filteredDataSet, xAxisDataType, width, margin);
 
   const { getYValueAtX, getDashArrayMemoized, line, lineData } = useLineChartGeometry({
     dataSet,
@@ -371,6 +371,7 @@ const LineChart: FC<LineChartProps> = ({
               xAxisFormat={xAxisFormat}
               xAxisDataType={xAxisDataType}
               ticks={ticks}
+              tickValues={tickValues}
             />
             <YaxisLinear
               yScale={yScale}
