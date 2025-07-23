@@ -12,7 +12,7 @@ const useFilteredDataSet = (
       const result = dataSet.filter(d => !disabledItems.includes(d.label));
       return {
         filteredData: result,
-        topNItems: result, // For legend purposes, same as filtered data when no filter
+        topNItems: dataSet, // For legend purposes, return ALL items when no filter
       };
     }
 

@@ -160,7 +160,6 @@ export const WithCustomColors = {
     }, []);
 
     const handleColorMappingGenerated = useCallback((mapping: { [key: string]: string }) => {
-      console.log("Generated colors:", mapping);
     }, []);
 
     return (

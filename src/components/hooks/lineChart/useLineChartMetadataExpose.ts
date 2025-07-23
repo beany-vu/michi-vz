@@ -92,7 +92,9 @@ const useLineChartMetadataExpose = (
 
       // Generate legend data with deduplicated labels
       // First, get unique labels while preserving order
-      const uniqueLabels = [...new Set(visibleSeries)].filter(
+      // When filter is null, include all items in legend, otherwise use visibleSeries
+      const labelsForLegend = filter ? visibleSeries : dataSet.map(d => d.label);
+      const uniqueLabels = [...new Set(labelsForLegend)].filter(
         label => dataSet.find(d => d.label === label)?.series.length > 0
       );
 

@@ -816,7 +816,6 @@ This story demonstrates how to provide a custom color palette for automatic colo
   colors={["#e91e63", "#9c27b0", "#673ab7", "#3f51b5"]}  // Material Design colors
   onColorMappingGenerated={(colors) => {
     // colors = { "Category A": "#e91e63", "Category B": "#9c27b0", ... }
-    console.log("Generated mapping:", colors);
   }}
 />
 \`\`\`

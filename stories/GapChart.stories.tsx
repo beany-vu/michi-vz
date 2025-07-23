@@ -1642,12 +1642,10 @@ export const LegendDataExposure: Story = {
     const [metadataInfo, setMetadataInfo] = useState<any>(null);
     
     const handleLegendDataChange = (newLegendData: any[]) => {
-      console.log("Legend data changed:", newLegendData);
       setLegendData(newLegendData);
     };
     
     const handleMetadataChange = (metadata: any) => {
-      console.log("Chart metadata:", metadata);
       setMetadataInfo(metadata);
     };
 

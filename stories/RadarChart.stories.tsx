@@ -106,14 +106,12 @@ const Template: StoryFn<RadarChartProps> = (args: RadarChartProps) => {
 
   const handleHighlightItem = useCallback((labels: string[]) => {
     setHighlightItems(labels);
-    console.log('Highlighted items:', labels);
   }, []);
 
   const handleColorMappingGenerated = useCallback((mapping: { [key: string]: string }) => {
     setColorsMapping(prev => {
       // Only update if mapping actually changed
       if (JSON.stringify(prev) !== JSON.stringify(mapping)) {
-        console.log('Generated color mapping:', mapping);
         return mapping;
       }
       return prev;
@@ -125,7 +123,6 @@ const Template: StoryFn<RadarChartProps> = (args: RadarChartProps) => {
       const newDisabled = prev.includes(label) 
         ? prev.filter(item => item !== label)
         : [...prev, label];
-      console.log('Disabled items:', newDisabled);
       return newDisabled;
     });
   }, []);

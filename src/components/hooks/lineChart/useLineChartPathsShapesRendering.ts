@@ -52,21 +52,16 @@ const useLineChartPathsShapesRendering = (
       }
 
       if (highlightItems.length > 0) {
-        console.log("Setting all items to opacity", opacityUnhighlighted);
         const allGroups = svg.selectAll(`${groupSelector}`);
-        console.log("Found groups:", allGroups.size());
         allGroups.style("opacity", `${opacityUnhighlighted}`);
 
         highlightItems.forEach(item => {
-          console.log("Highlighting item:", item);
           const highlightedGroups = svg.selectAll(
             `${groupSelector}[data-label="${CSS.escape(item)}"]`
           );
-          console.log("Found highlighted groups for", item, ":", highlightedGroups.size());
           highlightedGroups.style("opacity", opacityHighlighted);
         });
       } else {
-        console.log("Resetting all to opacity", opacityHighlighted);
         svg.selectAll(`${groupSelector}`).style("opacity", `${opacityHighlighted}`);
       }
 
@@ -95,16 +90,13 @@ const useLineChartPathsShapesRendering = (
   );
 
   useLayoutEffect(() => {
-    console.log("LineChart highlightItems changed:", highlightItems);
     // Only apply highlighting when there are items to highlight
     if (highlightItems.length > 0) {
-      console.log("Applying highlighting to:", highlightItems);
       handleMouseEnter(null, svgRef, "g.data-group", 0.05, 1, highlightItems);
       if (onHighlightItem) {
         onHighlightItem(highlightItems);
       }
     } else {
-      console.log("Resetting all highlighting");
       // Reset all items to fully visible when nothing is highlighted
       const svg = select(svgRef.current);
       if (svg.node()) {
@@ -315,8 +307,6 @@ const useLineChartPathsShapesRendering = (
 
     // Apply highlighting AFTER rendering is complete
     if (highlightItems.length > 0) {
-      console.log("Applying highlighting after render to:", highlightItems);
-
       // Set all groups to low opacity
       svg.selectAll("g.data-group").style("opacity", 0.05);
 

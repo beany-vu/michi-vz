@@ -1178,7 +1178,6 @@ export const ButtonHoverInteraction = {
     const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
     const [filterDate, setFilterDate] = React.useState("2021");
     
-    console.log("Current highlight state:", currentHighlight);
 
     // Get all available dates from the dataset
     const availableDates = React.useMemo(() => {
@@ -1559,12 +1558,9 @@ export const DisableEnableColorMapping = {
     const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
     const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
     
-    console.log("Current disabled items:", disabledItems);
-    console.log("Current colors mapping:", colorsMapping);
 
     // Handle color mapping generation
     const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
-      console.log("New color mapping generated:", newMapping);
       setColorsMapping(prev => ({ ...prev, ...newMapping }));
     }, []);
 
@@ -2709,6 +2705,7 @@ export const FilterNullWithDisabledItemsTest = {
   render: args => {
     const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
     const [legendData, setLegendData] = React.useState<any[]>([]);
+    const [chartMetadata, setChartMetadata] = React.useState<any>(null);
     const [filterType, setFilterType] = React.useState<'null' | 'object'>('null');
     
     const testFilter = React.useMemo(() => {
@@ -2723,6 +2720,10 @@ export const FilterNullWithDisabledItemsTest = {
 
     const handleLegendDataChange = React.useCallback((newLegendData: any[]) => {
       setLegendData(newLegendData);
+    }, []);
+
+    const handleChartDataProcessed = React.useCallback((metadata: any) => {
+      setChartMetadata(metadata);
     }, []);
 
     const toggleDisabled = React.useCallback((label: string) => {
@@ -2804,6 +2805,39 @@ export const FilterNullWithDisabledItemsTest = {
               <strong>Bug:</strong> When filter is null, disabled items disappear from legend completely
             </div>
           </div>
+
+          <div style={{
+            marginTop: "16px",
+            padding: "12px",
+            backgroundColor: "#fff",
+            border: "1px solid #dee2e6",
+            borderRadius: "4px",
+            fontSize: "12px",
+            fontFamily: "monospace"
+          }}>
+            <strong>Chart Metadata:</strong>
+            <div style={{ marginTop: "8px", maxHeight: "200px", overflowY: "auto" }}>
+              {chartMetadata ? (
+                <div>
+                  <div><strong>Visible Items:</strong> [{chartMetadata.visibleItems?.join(", ")}]</div>
+                  <div><strong>Legend Data:</strong></div>
+                  <div style={{ paddingLeft: "12px", marginTop: "4px" }}>
+                    {legendData.map((item, idx) => (
+                      <div key={idx}>
+                        • {item.label} - Color: {item.color} - Disabled: {item.disabled ? "true" : "false"}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: "8px" }}><strong>Full Metadata:</strong></div>
+                  <pre style={{ fontSize: "10px", maxHeight: "150px", overflowY: "auto", whiteSpace: "pre-wrap" }}>
+                    {JSON.stringify(chartMetadata, null, 2)}
+                  </pre>
+                </div>
+              ) : (
+                <div style={{ color: "#999" }}>No metadata yet...</div>
+              )}
+            </div>
+          </div>
         </div>
 
         <LineChartComponent
@@ -2811,6 +2845,7 @@ export const FilterNullWithDisabledItemsTest = {
           filter={testFilter}
           disabledItems={disabledItems}
           onLegendDataChange={handleLegendDataChange}
+          onChartDataProcessed={handleChartDataProcessed}
         />
       </div>
     );
@@ -2984,7 +3019,6 @@ export const LegendDataExposure = {
 
     const handleHighlightItem = (labels: string[]) => {
       // Handle highlight logic here if needed
-      console.log("Highlighted items:", labels);
     };
 
     const toggleSortDirection = () => {

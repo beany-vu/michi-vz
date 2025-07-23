@@ -473,7 +473,6 @@ export const LegendMetadataExposure = {
     const handleLegendDataChange = React.useCallback((newLegendData: any[]) => {
       setLegendData(prev => {
         if (JSON.stringify(prev) !== JSON.stringify(newLegendData)) {
-          console.log('Legend data changed:', newLegendData);
           return newLegendData;
         }
         return prev;
@@ -483,7 +482,6 @@ export const LegendMetadataExposure = {
     const handleChartDataProcessed = React.useCallback((metadata: any) => {
       setChartMetadata(prev => {
         if (JSON.stringify(prev) !== JSON.stringify(metadata)) {
-          console.log('Chart metadata processed:', metadata);
           return metadata;
         }
         return prev;
@@ -493,7 +491,6 @@ export const LegendMetadataExposure = {
     const handleColorMappingGenerated = React.useCallback((mapping: { [key: string]: string }) => {
       setColorMapping(prev => {
         if (JSON.stringify(prev) !== JSON.stringify(mapping)) {
-          console.log('Color mapping generated:', mapping);
           return mapping;
         }
         return prev;
@@ -603,7 +600,6 @@ export const DynamicLegendMetadata = {
       setLegendData(prev => {
         if (JSON.stringify(prev) !== JSON.stringify(newLegendData)) {
           setUpdateCount(prevCount => {
-            console.log(`Legend update #${prevCount + 1}:`, newLegendData);
             return prevCount + 1;
           });
           return newLegendData;
