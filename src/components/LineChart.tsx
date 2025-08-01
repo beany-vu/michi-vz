@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, FC, useEffect } from "react";
+import React, { useMemo, useCallback, FC, useEffect, useRef } from "react";
 import { select } from "d3";
 import { DataPoint, ChartMetadata, LegendItem } from "../types/data";
 import Title from "./shared/Title";
@@ -20,6 +20,8 @@ import { useLineChartRefsAndState } from "./hooks/lineChart/useLineChartRefsAndS
 import { sanitizeForClassName, getColor } from "./hooks/lineChart/lineChartUtils";
 import { useLineChartGeometry } from "./hooks/lineChart/useLineChartGeometry";
 import useLineChartTooltipToggle from "./hooks/lineChart/useLineChartHandleHover";
+import Overlay from "src/components/shared/Overlay";
+import LineChartMouseLine from "src/components/LineChartMouseLine";
 
 export const DEFAULT_MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 export const DEFAULT_WIDTH = 900 - DEFAULT_MARGIN.left - DEFAULT_MARGIN.right;
@@ -80,6 +82,15 @@ const LineChartContainer = styled.div<LineChartContainerProps>`
     pointer-events: visibleStroke;
     /* Always ensure it's visible for hover but transparent visually */
     opacity: 0.05 !important;
+  }
+
+  .mouseLine {
+    stroke: #a9a9a9;
+    stroke-width: 1px;
+  }
+
+  .mouseLinePoint {
+    fill: #a9a9a9;
   }
 `;
 
@@ -169,6 +180,7 @@ interface LineChartProps {
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
+  enableMouseLine?: boolean;
 }
 
 const LineChart: FC<LineChartProps> = ({
@@ -198,6 +210,7 @@ const LineChart: FC<LineChartProps> = ({
   onLegendDataChange,
   highlightItems = [],
   disabledItems = [],
+  enableMouseLine = true,
 }) => {
   // Use the new hook for refs and state
   const { svgRef, tooltipRef, renderCompleteRef, prevChartDataRef, isInitialMount } =
@@ -208,6 +221,7 @@ const LineChart: FC<LineChartProps> = ({
     filter,
     disabledItems
   );
+  const overlayRef = useRef(null);
 
   const yScale = useLineChartYscale(filteredDataSet, yAxisDomain, height, margin);
 
@@ -362,27 +376,41 @@ const LineChart: FC<LineChartProps> = ({
         <Title x={width / 2} y={margin.top / 2}>
           {title}
         </Title>
-        {filteredDataSet.length > 0 && (
-          <>
-            <XaxisLinear
-              xScale={xScale}
-              height={height}
-              margin={margin}
-              xAxisFormat={xAxisFormat}
-              xAxisDataType={xAxisDataType}
-              ticks={ticks}
-              tickValues={tickValues}
-            />
-            <YaxisLinear
-              yScale={yScale}
-              width={width}
-              height={height}
-              margin={margin}
-              highlightZeroLine={true}
-              yAxisFormat={yAxisFormat}
-            />
-          </>
-        )}
+        <Overlay ref={overlayRef} width={width} height={height}>
+          {filteredDataSet.length > 0 && (
+            <>
+              <XaxisLinear
+                xScale={xScale}
+                height={height}
+                margin={margin}
+                xAxisFormat={xAxisFormat}
+                xAxisDataType={xAxisDataType}
+                ticks={ticks}
+                tickValues={tickValues}
+              />
+              <YaxisLinear
+                yScale={yScale}
+                width={width}
+                height={height}
+                margin={margin}
+                highlightZeroLine={true}
+                yAxisFormat={yAxisFormat}
+              />
+              {enableMouseLine && (
+                <LineChartMouseLine
+                  className="mouseLineContainer"
+                  height={height - (margin.top || 0)}
+                  margin={margin}
+                  xScale={xScale}
+                  yScale={yScale}
+                  data={dataSet}
+                  anchorEl={overlayRef}
+                  xAxisDataType={xAxisDataType}
+                />
+              )}
+            </>
+          )}
+        </Overlay>
       </svg>
 
       {showLoadingIndicator && (
