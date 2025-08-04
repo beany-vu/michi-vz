@@ -403,9 +403,11 @@ const LineChart: FC<LineChartProps> = ({
                   margin={margin}
                   xScale={xScale}
                   yScale={yScale}
-                  data={dataSet}
+                  dataSet={dataSet}
                   anchorEl={overlayRef}
                   xAxisDataType={xAxisDataType}
+                  ticks={ticks}
+                  tickValues={tickValues}
                 />
               )}
             </>

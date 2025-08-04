@@ -1,4 +1,4 @@
-import React, { FC, useRef, useCallback, useEffect } from "react";
+import React, { FC, useRef, useCallback, useEffect, useMemo } from "react";
 import * as d3 from "d3";
 import { DataPoint } from "src/types/data";
 
@@ -21,25 +21,37 @@ interface LineChartMouseLineProps {
   xScale: d3.ScaleLinear<number, number> | d3.ScaleTime<number, number>;
   yScale: d3.ScaleLinear<number, number>;
   height: number;
-  data: DataItem[];
+  dataSet: DataItem[];
   margin: Margin;
   children?: React.ReactNode;
   className?: string;
   anchorEl: React.RefObject<SVGGElement>;
   xAxisDataType: "number" | "date_annual" | "date_monthly";
+  ticks: number;
+  tickValues: (string | number | Date)[];
 }
 
 const LineChartMouseLine: FC<LineChartMouseLineProps> = ({
   xScale,
   yScale,
   height = 0,
-  data = [],
+  dataSet = [],
   margin = { top: 0, right: 0, bottom: 0, left: 0 },
   children,
   anchorEl,
   xAxisDataType,
+  ticks,
+  tickValues,
   ...props
 }) => {
+  const data = useMemo(() => {
+    if (!dataSet || !Array.isArray(dataSet) || !dataSet.length) {
+      return [];
+    }
+    return dataSet.filter(
+      d => d && d.series && Array.isArray(d.series) && d.series.length === tickValues.length
+    );
+  }, [dataSet]);
   const ref = useRef<SVGGElement>(null);
   const drawLine = useCallback(
     (x: number) => {
@@ -110,7 +122,7 @@ const LineChartMouseLine: FC<LineChartMouseLineProps> = ({
         .selectAll(".mouseLinePoint")
         .attr("transform", (cur, i) => {
           const dataItems = data[i]?.series;
-          if (!dataItems) return "translate(-100,-100)";
+          if (!dataItems || !dataItems.length) return "translate(-100,-100)";
 
           const index = bisectDate(dataItems, getStringValueFromData(xDate));
           const d0 = dataItems[index];
