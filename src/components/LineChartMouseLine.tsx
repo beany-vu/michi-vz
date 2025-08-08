@@ -48,9 +48,7 @@ const LineChartMouseLine: FC<LineChartMouseLineProps> = ({
     if (!dataSet || !Array.isArray(dataSet) || !dataSet.length) {
       return [];
     }
-    return dataSet.filter(
-      d => d && d.series && Array.isArray(d.series) && d.series.length === tickValues.length
-    );
+    return dataSet.filter(d => d && d.series && Array.isArray(d.series) && d.series.length > 0);
   }, [dataSet]);
   const ref = useRef<SVGGElement>(null);
   const drawLine = useCallback(
@@ -169,7 +167,7 @@ const LineChartMouseLine: FC<LineChartMouseLineProps> = ({
     if (!anchorEl.current) return;
 
     d3.select(anchorEl.current)
-      .on("mouseout.mouseLineContainer", () => {
+      .on("mouseleave.mouseLineContainer", () => {
         d3.select(ref.current).attr("opacity", 0);
         d3.selectAll(".mouseLineContainer").attr("opacity", 0);
       })
