@@ -188,7 +188,7 @@ const LineChartMouseLine: FC<LineChartMouseLineProps> = ({
     <g ref={ref} opacity={1} {...props}>
       <line className="mouseLine" />
       {data.map(({ label }) => (
-        <circle className="mouseLinePoint" r={1} key={label} opacity={0} />
+        <circle className="mouseLinePoint" r={0} key={label} opacity={0} />
       ))}
       {children}
     </g>

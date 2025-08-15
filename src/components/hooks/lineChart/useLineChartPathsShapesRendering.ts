@@ -1,6 +1,13 @@
-import { useCallback, useEffect, useLayoutEffect } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { pointer, select, ScaleLinear, ScaleTime } from "d3";
 import { DataPoint, LineChartDataItem } from "../../../types/data";
+
+interface TooltipState {
+  x: number;
+  y: number;
+  data: DataPoint;
+  isSticky?: boolean;
+}
 
 const useLineChartPathsShapesRendering = (
   filteredDataSet: LineChartDataItem[],
@@ -28,6 +35,8 @@ const useLineChartPathsShapesRendering = (
   highlightItems: string[],
   onHighlightItem?: (labels: string[]) => void
 ) => {
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+
   const handleMouseEnter = useCallback(
     (
       event: React.MouseEvent | null,
@@ -82,11 +91,11 @@ const useLineChartPathsShapesRendering = (
       svg.selectAll(".data-point").style("opacity", 1);
 
       handleItemHighlight([]);
-      if (tooltipRef.current) {
+      if (!tooltip?.isSticky && tooltipRef.current) {
         tooltipRef.current.style.visibility = "hidden";
       }
     },
-    [handleItemHighlight, tooltipRef]
+    [handleItemHighlight, tooltipRef, tooltip?.isSticky]
   );
 
   useLayoutEffect(() => {
@@ -104,6 +113,46 @@ const useLineChartPathsShapesRendering = (
       }
     }
   }, [highlightItems, visibleDataSets]);
+
+  const handleTooltipPosition = useCallback(
+    (event: MouseEvent, d: DataPoint, data: LineChartDataItem) => {
+      if (tooltipRef?.current && svgRef.current) {
+        const [mouseX, mouseY] = pointer(event, event.currentTarget);
+        const svgRect = svgRef.current.getBoundingClientRect();
+        const tooltip = tooltipRef.current;
+
+        tooltip.style.visibility = "visible";
+        const tooltipRect = tooltip.getBoundingClientRect();
+
+        const xPosition = mouseX + 10;
+        const yPosition = mouseY - 25;
+
+        if (xPosition + tooltipRect.width > svgRect.width - margin.right) {
+          tooltip.style.left = `${mouseX - tooltipRect.width - 10}px`;
+        } else {
+          tooltip.style.left = `${xPosition}px`;
+        }
+
+        if (yPosition < margin.top) {
+          tooltip.style.top = `${mouseY + 10}px`;
+        } else {
+          tooltip.style.top = `${yPosition}px`;
+        }
+
+        const tooltipContent = tooltipFormatter(
+          {
+            ...d,
+            label: data.label,
+          } as DataPoint,
+          data.series,
+          filteredDataSet
+        );
+
+        tooltip.innerHTML = tooltipContent;
+      }
+    },
+    [tooltip, tooltipRef, svgRef, margin]
+  );
 
   useEffect(() => {
     if (!svgRef.current) return;
@@ -263,42 +312,24 @@ const useLineChartPathsShapesRendering = (
       // Add event listeners to all data points after they've been created or updated
       group
         .selectAll(`.data-point`)
+        .on("click", (event, d: DataPoint) => {
+          if (tooltipRef?.current && svgRef.current) {
+            const [mouseX, mouseY] = pointer(event, svgRef.current);
+            setTooltip({
+              x: mouseX,
+              y: mouseY,
+              data: d,
+              isSticky: true,
+            });
+            handleTooltipPosition(event, d, data);
+          }
+        })
         .on("mouseenter", (event, d: DataPoint) => {
           handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1, highlightItems);
 
-          const tooltipContent = tooltipFormatter(
-            {
-              ...d,
-              label: data.label,
-            } as DataPoint,
-            data.series,
-            filteredDataSet
-          );
+          if (tooltip?.isSticky) return;
 
-          if (tooltipRef?.current && svgRef.current) {
-            const [mouseX, mouseY] = pointer(event, event.currentTarget);
-            const svgRect = svgRef.current.getBoundingClientRect();
-            const tooltip = tooltipRef.current;
-
-            tooltip.style.visibility = "visible";
-            tooltip.innerHTML = tooltipContent;
-            const tooltipRect = tooltip.getBoundingClientRect();
-
-            const xPosition = mouseX + 10;
-            const yPosition = mouseY - 25;
-
-            if (xPosition + tooltipRect.width > svgRect.width - margin.right) {
-              tooltip.style.left = `${mouseX - tooltipRect.width - 10}px`;
-            } else {
-              tooltip.style.left = `${xPosition}px`;
-            }
-
-            if (yPosition < margin.top) {
-              tooltip.style.top = `${mouseY + 10}px`;
-            } else {
-              tooltip.style.top = `${yPosition}px`;
-            }
-          }
+          handleTooltipPosition(event, d, data);
         })
         .on("mouseout", () => {
           handleMouseOut(svgRef);
@@ -333,7 +364,33 @@ const useLineChartPathsShapesRendering = (
     highlightItems,
     handleItemHighlight,
     tooltipFormatter,
+    tooltip?.isSticky,
   ]);
+
+  useLayoutEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tooltip?.isSticky) {
+        const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
+        const tooltipElement2 = (event.target as HTMLElement).closest(".data-point");
+
+        if (!tooltipElement && !tooltipElement2) {
+          setTooltip(value => ({
+            ...value,
+            isSticky: false,
+          }));
+          const tooltip = tooltipRef.current;
+          tooltip.style.visibility = "hidden";
+        }
+      }
+    };
+
+    if (tooltip?.isSticky) {
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
+  }, [tooltip?.isSticky]);
 };
 
 export default useLineChartPathsShapesRendering;

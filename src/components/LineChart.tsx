@@ -417,7 +417,7 @@ const LineChart: FC<LineChartProps> = ({
         </LoadingIndicatorContainer>
       )}
 
-      <TooltipStyled ref={tooltipRef} />
+      <TooltipStyled className="tooltip" ref={tooltipRef} />
 
       {displayIsNodata && <>{isNodataComponent}</>}
     </LineChartContainer>
