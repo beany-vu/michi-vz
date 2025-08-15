@@ -276,7 +276,7 @@ const LineChart: FC<LineChartProps> = ({
     onColorMappingGenerated
   );
 
-  useLineChartPathsShapesRendering(
+  const { tooltip } = useLineChartPathsShapesRendering(
     filteredDataSet,
     visibleDataSets,
     width,
@@ -417,7 +417,17 @@ const LineChart: FC<LineChartProps> = ({
         </LoadingIndicatorContainer>
       )}
 
-      <TooltipStyled className="tooltip" ref={tooltipRef} />
+      <TooltipStyled className="tooltip" ref={tooltipRef}>
+        <div className="tooltip-content" />
+        {!tooltip?.isSticky && (
+          <div
+            className="tooltip-hint"
+            style={{ fontSize: "10px", marginTop: "4px", color: "#666", fontStyle: "italic" }}
+          >
+            Click chart or tooltip to pin
+          </div>
+        )}
+      </TooltipStyled>
 
       {displayIsNodata && <>{isNodataComponent}</>}
     </LineChartContainer>

@@ -3,10 +3,11 @@ import { pointer, select, ScaleLinear, ScaleTime } from "d3";
 import { DataPoint, LineChartDataItem } from "../../../types/data";
 
 interface TooltipState {
-  x: number;
-  y: number;
-  data: DataPoint;
+  x?: number;
+  y?: number;
+  data?: DataPoint;
   isSticky?: boolean;
+  isVisible?: boolean;
 }
 
 const useLineChartPathsShapesRendering = (
@@ -35,7 +36,7 @@ const useLineChartPathsShapesRendering = (
   highlightItems: string[],
   onHighlightItem?: (labels: string[]) => void
 ) => {
-  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [tooltipState, setTooltipState] = useState<TooltipState | null>(null);
 
   const handleMouseEnter = useCallback(
     (
@@ -91,11 +92,11 @@ const useLineChartPathsShapesRendering = (
       svg.selectAll(".data-point").style("opacity", 1);
 
       handleItemHighlight([]);
-      if (!tooltip?.isSticky && tooltipRef.current) {
+      if (!tooltipState?.isSticky && tooltipRef.current) {
         tooltipRef.current.style.visibility = "hidden";
       }
     },
-    [handleItemHighlight, tooltipRef, tooltip?.isSticky]
+    [handleItemHighlight, tooltipRef, tooltipState?.isSticky]
   );
 
   useLayoutEffect(() => {
@@ -148,10 +149,11 @@ const useLineChartPathsShapesRendering = (
           filteredDataSet
         );
 
-        tooltip.innerHTML = tooltipContent;
+        const tooltipContentElement = tooltip.querySelector(".tooltip-content");
+        tooltipContentElement.innerHTML = tooltipContent;
       }
     },
-    [tooltip, tooltipRef, svgRef, margin]
+    [tooltipState, tooltipRef, svgRef, margin]
   );
 
   useEffect(() => {
@@ -314,20 +316,17 @@ const useLineChartPathsShapesRendering = (
         .selectAll(`.data-point`)
         .on("click", (event, d: DataPoint) => {
           if (tooltipRef?.current && svgRef.current) {
-            const [mouseX, mouseY] = pointer(event, svgRef.current);
-            setTooltip({
-              x: mouseX,
-              y: mouseY,
-              data: d,
+            setTooltipState({
               isSticky: true,
             });
+
             handleTooltipPosition(event, d, data);
           }
         })
         .on("mouseenter", (event, d: DataPoint) => {
           handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1, highlightItems);
 
-          if (tooltip?.isSticky) return;
+          if (tooltipState?.isSticky) return;
 
           handleTooltipPosition(event, d, data);
         })
@@ -364,33 +363,42 @@ const useLineChartPathsShapesRendering = (
     highlightItems,
     handleItemHighlight,
     tooltipFormatter,
-    tooltip?.isSticky,
   ]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (tooltip?.isSticky) {
+      if (tooltipState?.isSticky) {
         const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
         const tooltipElement2 = (event.target as HTMLElement).closest(".data-point");
 
         if (!tooltipElement && !tooltipElement2) {
-          setTooltip(value => ({
-            ...value,
-            isSticky: false,
-          }));
-          const tooltip = tooltipRef.current;
-          tooltip.style.visibility = "hidden";
+          if (tooltipRef.current) {
+            tooltipRef.current.style.visibility = "hidden";
+          }
+
+          setTimeout(() => {
+            setTooltipState(value => {
+              return {
+                ...value,
+                isSticky: false,
+              };
+            });
+          }, 100);
         }
       }
     };
 
-    if (tooltip?.isSticky) {
+    if (tooltipState?.isSticky) {
       document.addEventListener("click", handleClickOutside);
       return () => {
         document.removeEventListener("click", handleClickOutside);
       };
     }
-  }, [tooltip?.isSticky]);
+  }, [tooltipState?.isSticky]);
+
+  return {
+    tooltip: tooltipState,
+  };
 };
 
 export default useLineChartPathsShapesRendering;
