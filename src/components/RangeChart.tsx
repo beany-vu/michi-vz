@@ -10,6 +10,7 @@ import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
+import TooltipHint from "src/components/shared/TooltipHint";
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
@@ -96,9 +97,11 @@ const RangeChart: React.FC<RangeChartProps> = ({
   const { colorsMapping } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const tooltipContentRef = useRef<HTMLDivElement | null>(null);
   const renderCompleteRef = useRef(false);
   // Add ref for previous data comparison
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
+  const tooltipStickyRef = useRef(false);
 
   // Add filteredDataSet to filter out disabled items first
   const filteredDataSet = useMemo(() => {
@@ -204,11 +207,39 @@ const RangeChart: React.FC<RangeChartProps> = ({
 
   const showLine = (d: DataPointRangeChart) => d.valueMin === d.valueMax;
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tooltipStickyRef.current) {
+        const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
+        const anchorEl = (event.target as HTMLElement).closest(".rect-hover");
+
+        if (!tooltipElement && !anchorEl) {
+          if (tooltipRef.current) {
+            tooltipRef.current.style.opacity = "0";
+          }
+
+          tooltipStickyRef.current = false;
+        }
+      }
+    };
+
+    if (tooltipStickyRef.current) {
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tooltipStickyRef.current]);
+
   const showTooltip = (event: MouseEvent, content: string) => {
+    if (tooltipStickyRef.current) return;
+
     const tooltip = tooltipRef.current;
+    const tooltipContent = tooltipContentRef.current;
     const [x, y] = d3.pointer(event, svgRef.current);
-    if (tooltip) {
-      tooltip.innerHTML = content;
+    if (tooltip && tooltipContent) {
+      tooltipContent.innerHTML = content;
       tooltip.style.opacity = "1";
       tooltip.style.left = x + 10 + "px"; // Offset by 10 pixels to the right
       tooltip.style.top = y - window.scrollY - 10 + "px"; // Offset by 10 pixels to the top, considering scroll position
@@ -216,6 +247,8 @@ const RangeChart: React.FC<RangeChartProps> = ({
   };
 
   const hideTooltip = () => {
+    if (tooltipStickyRef.current) return;
+
     const tooltip = tooltipRef.current;
     if (tooltip) {
       tooltip.style.opacity = "0";
@@ -296,6 +329,11 @@ const RangeChart: React.FC<RangeChartProps> = ({
           event.stopPropagation();
           onHighlightItem([data.label]);
           showTooltip(event, tooltipFormatter(d, data.series, filteredDataSet));
+        })
+        .on("click", (event, d) => {
+          event.preventDefault();
+          event.stopPropagation();
+          tooltipStickyRef.current = true;
         })
         .on("mouseleave", event => {
           event.preventDefault();
@@ -462,9 +500,18 @@ const RangeChart: React.FC<RangeChartProps> = ({
 
       <div
         ref={tooltipRef}
-        className="chart-tooltip"
-        style={{ opacity: 0, pointerEvents: "none", position: "fixed" }}
-      />
+        className="chart-tooltip tooltip"
+        style={{
+          position: "absolute",
+          background: "white",
+          padding: "5px",
+          border: "1px solid #333",
+          zIndex: 1000,
+        }}
+      >
+        <div className="tooltip-content" ref={tooltipContentRef} />
+        {!tooltipStickyRef.current && <TooltipHint />}
+      </div>
     </div>
   );
 };

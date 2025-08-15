@@ -6,6 +6,7 @@ import isEqual from "lodash/isEqual";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
+import TooltipHint from "src/components/shared/TooltipHint";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -50,7 +51,6 @@ const Tooltip = styled.div`
   position: absolute;
   padding: 8px 12px;
   border-radius: 4px;
-  pointer-events: none;
   z-index: 1000;
   transition: opacity 0.3s;
   font-size: 12px;
@@ -159,6 +159,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
+  const [isTooltipSticky, setIsTooltipSticky] = useState(false);
 
   // Process series data based on filter
   const filteredSeries = useMemo(() => {
@@ -517,6 +518,33 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     }
   }, [filteredSeries, poles, processedSeries, disabledItems, onChartDataProcessed]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isTooltipSticky) {
+        const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
+        const anchorEl = (event.target as HTMLElement).closest(".data-points");
+
+        if (!tooltipElement && !anchorEl) {
+          const tooltip = tooltipRef.current;
+          if (tooltip) {
+            tooltip.style.opacity = "0";
+          }
+
+          setTimeout(() => {
+            setIsTooltipSticky(false);
+          }, 100);
+        }
+      }
+    };
+
+    if (isTooltipSticky) {
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
+  }, [isTooltipSticky]);
+
   return (
     <div style={{ position: "relative" }}>
       <Tooltip
@@ -544,6 +572,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
             )}
           </>
         )}
+        {!isTooltipSticky && <TooltipHint />}
       </Tooltip>
 
       <svg
@@ -555,6 +584,8 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           event.preventDefault();
           event.stopPropagation();
           onHighlightItem([]);
+
+          if (isTooltipSticky) return;
           setTooltipData(null);
         }}
       >
@@ -584,6 +615,8 @@ export const RadarChart: React.FC<RadarChartProps> = ({
               }}
               onMouseOut={event => {
                 event.preventDefault();
+
+                if (isTooltipSticky) return;
                 onHighlightItem([]);
               }}
             />
@@ -612,6 +645,25 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                         fill={getColor(generatedColorsMapping[label.replace(/-\d{4}$/, "")], color)}
                         onMouseEnter={e => {
                           onHighlightItem([label]);
+
+                          if (isTooltipSticky) return;
+                          setTooltipData({
+                            date: point.date,
+                            value: point.value,
+                            series: points as never[],
+                          });
+                          if (tooltipRef.current) {
+                            const tooltip = tooltipRef.current;
+                            const svgRect = svgRef.current.getBoundingClientRect();
+                            const x = e.clientX - svgRect.left;
+                            const y = e.clientY - svgRect.top;
+
+                            tooltip.style.left = `${x}px`;
+                            tooltip.style.top = `${y}px`;
+                          }
+                        }}
+                        onClick={e => {
+                          setIsTooltipSticky(true);
                           setTooltipData({
                             date: point.date,
                             value: point.value,
@@ -629,6 +681,8 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                         }}
                         onMouseOut={() => {
                           onHighlightItem([]);
+
+                          if (isTooltipSticky) return;
                           setTooltipData(null);
                         }}
                       />

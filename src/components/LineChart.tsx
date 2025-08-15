@@ -21,6 +21,7 @@ import { sanitizeForClassName, getColor } from "./hooks/lineChart/lineChartUtils
 import { useLineChartGeometry } from "./hooks/lineChart/useLineChartGeometry";
 import useLineChartTooltipToggle from "./hooks/lineChart/useLineChartHandleHover";
 import LineChartMouseLine from "src/components/LineChartMouseLine";
+import TooltipHint from "src/components/shared/TooltipHint";
 
 export const DEFAULT_MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 export const DEFAULT_WIDTH = 900 - DEFAULT_MARGIN.left - DEFAULT_MARGIN.right;
@@ -114,7 +115,6 @@ const TooltipStyled = styled.div`
     opacity 0.1s ease-out;
   will-change: visibility, opacity, top, left;
   z-index: 1000;
-  pointer-events: none;
   padding: 5px;
   border-radius: 4px;
   white-space: nowrap;
@@ -419,14 +419,7 @@ const LineChart: FC<LineChartProps> = ({
 
       <TooltipStyled className="tooltip" ref={tooltipRef}>
         <div className="tooltip-content" />
-        {!tooltip?.isSticky && (
-          <div
-            className="tooltip-hint"
-            style={{ fontSize: "10px", marginTop: "4px", color: "#666", fontStyle: "italic" }}
-          >
-            Click chart or tooltip to pin
-          </div>
-        )}
+        {!tooltip?.isSticky && <TooltipHint />}
       </TooltipStyled>
 
       {displayIsNodata && <>{isNodataComponent}</>}

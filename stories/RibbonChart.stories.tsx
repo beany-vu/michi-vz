@@ -2,7 +2,7 @@ import React, { useState, useCallback } from "react";
 import RibbonChart from "../src/components/RibbonChart";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
 import { Meta } from "@storybook/react";
-import { fn } from '@storybook/test';
+import { fn } from "@storybook/test";
 
 // Define the default metadata for the component
 export default {
@@ -39,14 +39,7 @@ export const Primary = {
       notDutyFree: "#9467BD",
       trQuota: "#8C564B",
     },
-    keys: [
-      "dutyFree",
-      "iTariffPeaks",
-      "nTariffPeaks",
-      "nonAdValorem",
-      "notDutyFree",
-      "trQuota",
-    ],
+    keys: ["dutyFree", "iTariffPeaks", "nTariffPeaks", "nonAdValorem", "notDutyFree", "trQuota"],
     series: [
       {
         date: 2020,
@@ -102,9 +95,10 @@ export const Primary = {
       bottom: 50,
       left: 50,
     },
-    yAxisFormat: (d) => `${d}`, //
+    yAxisFormat: d => `${d}`, //
     title: "My Robbin Chart",
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
   },
 };
 
@@ -130,57 +124,60 @@ export const InteractiveControls = {
 
     const toggleDisabledItem = useCallback((key: string) => {
       setDisabledItems(prev => {
-        const newDisabled = prev.includes(key) 
-          ? prev.filter(item => item !== key)
-          : [...prev, key];
+        const newDisabled = prev.includes(key) ? prev.filter(item => item !== key) : [...prev, key];
         return newDisabled;
       });
     }, []);
 
     return (
-      <div style={{ padding: '20px' }}>
-        <div style={{ marginBottom: '20px' }}>
+      <div style={{ padding: "20px" }}>
+        <div style={{ marginBottom: "20px" }}>
           <h3>Interactive Controls</h3>
-          <div style={{ marginBottom: '10px' }}>
-            <strong>Current Highlighted Items:</strong> {highlightItems.length > 0 ? highlightItems.join(', ') : 'None'}
+          <div style={{ marginBottom: "10px" }}>
+            <strong>Current Highlighted Items:</strong>{" "}
+            {highlightItems.length > 0 ? highlightItems.join(", ") : "None"}
           </div>
-          <div style={{ marginBottom: '10px' }}>
-            <strong>Current Disabled Items:</strong> {disabledItems.length > 0 ? disabledItems.join(', ') : 'None'}
+          <div style={{ marginBottom: "10px" }}>
+            <strong>Current Disabled Items:</strong>{" "}
+            {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}
           </div>
-          <div style={{ marginBottom: '10px' }}>
-            <strong>Generated Colors:</strong> {Object.keys(colorsMapping).length > 0 ? JSON.stringify(colorsMapping) : 'None yet'}
+          <div style={{ marginBottom: "10px" }}>
+            <strong>Generated Colors:</strong>{" "}
+            {Object.keys(colorsMapping).length > 0 ? JSON.stringify(colorsMapping) : "None yet"}
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div style={{ marginBottom: "10px" }}>
             <strong>Instructions:</strong>
             <ul>
               <li>Hover over chart ribbons to highlight categories</li>
               <li>Click on legend items below to disable/enable data keys</li>
             </ul>
           </div>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             {args.keys.map((key: string) => (
               <button
                 key={key}
                 onClick={() => toggleDisabledItem(key)}
                 style={{
-                  padding: '8px 16px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  backgroundColor: disabledItems.includes(key) ? '#f0f0f0' : colorsMapping[key] || '#fff',
-                  color: disabledItems.includes(key) ? '#999' : '#000',
-                  cursor: 'pointer',
-                  textDecoration: disabledItems.includes(key) ? 'line-through' : 'none'
+                  padding: "8px 16px",
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                  backgroundColor: disabledItems.includes(key)
+                    ? "#f0f0f0"
+                    : colorsMapping[key] || "#fff",
+                  color: disabledItems.includes(key) ? "#999" : "#000",
+                  cursor: "pointer",
+                  textDecoration: disabledItems.includes(key) ? "line-through" : "none",
                 }}
               >
-                {key} {disabledItems.includes(key) ? '(Disabled)' : ''}
+                {key} {disabledItems.includes(key) ? "(Disabled)" : ""}
               </button>
             ))}
           </div>
         </div>
-        
+
         <MichiVzProvider>
-          <RibbonChart 
-            {...args} 
+          <RibbonChart
+            {...args}
             colorsMapping={colorsMapping}
             onColorMappingGenerated={handleColorMappingGenerated}
             onHighlightItem={handleHighlightItem}
@@ -192,14 +189,7 @@ export const InteractiveControls = {
     );
   },
   args: {
-    keys: [
-      "dutyFree",
-      "iTariffPeaks",
-      "nTariffPeaks",
-      "nonAdValorem",
-      "notDutyFree",
-      "trQuota",
-    ],
+    keys: ["dutyFree", "iTariffPeaks", "nTariffPeaks", "nonAdValorem", "notDutyFree", "trQuota"],
     series: [
       {
         date: 2020,
@@ -241,7 +231,7 @@ export const InteractiveControls = {
         date: 2019,
         dutyFree: 39.67,
         iTariffPeaks: 41.72,
-        nTariffPeaks: 0.90,
+        nTariffPeaks: 0.9,
         nonAdValorem: 0.3,
         notDutyFree: 60.33,
         trQuota: 0,
@@ -258,6 +248,7 @@ export const InteractiveControls = {
     yAxisFormat: (d: any) => `${d}`,
     title: "Interactive Ribbon Chart with Disable/Enable",
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
   },
 };
 
@@ -267,16 +258,17 @@ export const DisableEnableColorMapping = {
     const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
     const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
     const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
-    
-    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
-      setColorsMapping(prev => ({ ...prev, ...newMapping }));
-    }, []);
+
+    const handleColorMappingGenerated = React.useCallback(
+      (newMapping: { [key: string]: string }) => {
+        setColorsMapping(prev => ({ ...prev, ...newMapping }));
+      },
+      []
+    );
 
     const toggleDisabled = React.useCallback((key: string) => {
-      setDisabledItems(prev => 
-        prev.includes(key) 
-          ? prev.filter(item => item !== key)
-          : [...prev, key]
+      setDisabledItems(prev =>
+        prev.includes(key) ? prev.filter(item => item !== key) : [...prev, key]
       );
     }, []);
 
@@ -325,7 +317,8 @@ export const DisableEnableColorMapping = {
           background: isHighlighted ? color : "white",
           color: isHighlighted ? "white" : color,
         };
-      } else { // disable
+      } else {
+        // disable
         const isDisabled = disabledItems.includes(key);
         return {
           ...baseStyle,
@@ -379,7 +372,7 @@ export const DisableEnableColorMapping = {
               </button>
             </div>
           </div>
-          
+
           <div>
             <div style={sectionLabelStyle}>Disable/Enable Controls:</div>
             <div style={buttonGroupStyle}>
@@ -410,16 +403,22 @@ export const DisableEnableColorMapping = {
               </button>
             </div>
           </div>
-          
+
           <div style={infoPanelStyle}>
-            <div><strong>Disabled Items:</strong> {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}</div>
-            <div><strong>Colors Mapping:</strong> {JSON.stringify(colorsMapping, null, 2)}</div>
+            <div>
+              <strong>Disabled Items:</strong>{" "}
+              {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}
+            </div>
+            <div>
+              <strong>Colors Mapping:</strong> {JSON.stringify(colorsMapping, null, 2)}
+            </div>
           </div>
         </div>
-        
+
         <MichiVzProvider>
-          <RibbonChart 
-            {...args} 
+          <RibbonChart
+            {...args}
+            onLegendDataChange={args.onLegendDataChange}
             onColorMappingGenerated={handleColorMappingGenerated}
             colorsMapping={colorsMapping}
             highlightItems={currentHighlight}
@@ -430,13 +429,7 @@ export const DisableEnableColorMapping = {
     );
   },
   args: {
-    keys: [
-      "category1",
-      "category2", 
-      "category3",
-      "category4",
-      "category5",
-    ],
+    keys: ["category1", "category2", "category3", "category4", "category5"],
     series: [
       {
         date: 2018,
@@ -490,5 +483,6 @@ export const DisableEnableColorMapping = {
     yAxisFormat: (d: any) => `${d}%`,
     title: "Test Disable/Enable with Color Mapping Persistence",
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
   },
 };

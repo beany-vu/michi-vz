@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect, useMemo, useState, useCallback } from "react";
+import React, { useRef, useLayoutEffect, useMemo, useState, useCallback, useEffect } from "react";
 import isEqual from "lodash/isEqual";
 import Title from "./shared/Title";
 import defaultConf from "./hooks/useDefaultConfig";
@@ -9,6 +9,7 @@ import XaxisLinear from "./shared/XaxisLinnearBarBellChart";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
+import TooltipHint from "src/components/shared/TooltipHint";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -97,9 +98,11 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
 }) => {
   const ref = useRef<SVGSVGElement>(null);
   const refTooltip = useRef<HTMLDivElement>(null);
+  const refTooltipContent = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
   const [hoveredYItem, setHoveredYItem] = useState<string | null>(null);
+  const [isTooltipSticky, setIsTooltipSticky] = useState(false);
 
   // Ref to track the last color mapping sent to prevent infinite loops
   const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
@@ -149,39 +152,46 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     renderCompleteRef.current = true;
   }, []);
 
-  const generateTooltip = (
-    d: DataPoint,
-    currentKey: string,
-    currentValue: string | number,
-    event: React.MouseEvent<SVGRectElement | SVGCircleElement | HTMLDivElement>
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const [x, y] = d3.pointer(event, ref.current);
-    let content: string;
-    if (tooltipFormat) {
-      content = tooltipFormat(d, currentKey, currentValue);
-    } else {
-      content = `${d?.date}: ${currentKey} - ${currentValue}`;
-    }
-    const tooltip = refTooltip.current;
+  const generateTooltip = useCallback(
+    (
+      d: DataPoint,
+      currentKey: string,
+      currentValue: string | number,
+      event: React.MouseEvent<SVGRectElement | SVGCircleElement | HTMLDivElement>
+    ) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const [x, y] = d3.pointer(event, ref.current);
+      let content: string;
+      if (tooltipFormat) {
+        content = tooltipFormat(d, currentKey, currentValue);
+      } else {
+        content = `${d?.date}: ${currentKey} - ${currentValue}`;
+      }
+      const tooltip = refTooltip.current;
 
-    if (tooltip) {
-      tooltip.style.top = `${y}px`;
-      tooltip.style.left = `${x}px`;
-      tooltip.style.opacity = "1";
-      tooltip.style.visibility = "visible";
-      tooltip.innerHTML = content;
-    }
-  };
+      if (tooltip) {
+        tooltip.style.top = `${y}px`;
+        tooltip.style.left = `${x}px`;
+        tooltip.style.opacity = "1";
+        tooltip.style.visibility = "visible";
 
-  const hideTooltip = () => {
+        const tooltipContent = refTooltipContent.current;
+        if (tooltipContent) {
+          tooltipContent.innerHTML = content;
+        }
+      }
+    },
+    [tooltipFormat]
+  );
+
+  const hideTooltip = useCallback(() => {
     const tooltip = refTooltip.current;
     if (tooltip) {
       tooltip.style.opacity = "0";
       tooltip.style.visibility = "hidden";
     }
-  };
+  }, []);
 
   const yValues = useMemo(() => dataSet.map(d => d.date).map(date => date), [dataSet]);
 
@@ -355,6 +365,29 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     }
   }, [yValues, maxValueX, keys, disabledItems, dataSet, onChartDataProcessed]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isTooltipSticky) {
+        const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
+
+        if (!tooltipElement) {
+          hideTooltip();
+
+          setTimeout(() => {
+            setIsTooltipSticky(false);
+          }, 100);
+        }
+      }
+    };
+
+    if (isTooltipSticky) {
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
+  }, [hideTooltip, isTooltipSticky]);
+
   return (
     <div style={{ position: "relative" }}>
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
@@ -450,11 +483,18 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                           }}
                           onMouseEnter={event => {
                             onHighlightItem([key]);
+
+                            if (isTooltipSticky) return;
                             generateTooltip(d, key, value, event);
                           }}
                           onMouseLeave={() => {
                             onHighlightItem([]);
+                            if (isTooltipSticky) return;
                             hideTooltip();
+                          }}
+                          onClick={event => {
+                            setIsTooltipSticky(true);
+                            generateTooltip(d, key, value, event);
                           }}
                           data-tooltip={JSON.stringify(d)}
                         />
@@ -478,11 +518,18 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                             style={shapeStyle}
                             onMouseEnter={event => {
                               onHighlightItem([key]);
+
+                              if (isTooltipSticky) return;
                               generateTooltip(d, key, value, event);
                             }}
                             onMouseLeave={() => {
                               onHighlightItem([]);
+                              if (isTooltipSticky) return;
                               hideTooltip();
+                            }}
+                            onClick={event => {
+                              setIsTooltipSticky(true);
+                              generateTooltip(d, key, value, event);
                             }}
                           ></div>
                         </foreignObject>
@@ -505,8 +552,12 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
           backgroundColor: "rgba(0, 0, 0, 0.6)",
           color: "white",
           borderRadius: "5px",
+          zIndex: 1000,
         }}
-      />
+      >
+        <div className="tooltip-content" ref={refTooltipContent} />
+        {!isTooltipSticky && <TooltipHint />}
+      </div>
     </div>
   );
 };

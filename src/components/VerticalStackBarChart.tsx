@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useCallback, useLayoutEffect } from "react";
+import React, { useMemo, useRef, useCallback, useLayoutEffect, useEffect, useState } from "react";
 import * as d3 from "d3";
 import isEqual from "lodash/isEqual";
 import Title from "./shared/Title";
@@ -9,6 +9,7 @@ import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import styled from "styled-components";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import { LegendItem } from "../types/data";
+import TooltipHint from "src/components/shared/TooltipHint";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -159,10 +160,12 @@ const VerticalStackBarChart: React.FC<Props> = ({
 }) => {
   const chartRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const tooltipContentRef = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
   const lastLegendDataRef = useRef<LegendItem[] | null>(null);
   const onHighlightItemRef = useRef(onHighlightItem);
+  const [isTooltipSticky, setIsTooltipSticky] = useState(false);
 
   // Update refs when props change
   onHighlightItemRef.current = onHighlightItem;
@@ -444,32 +447,35 @@ const VerticalStackBarChart: React.FC<Props> = ({
   const handleMouseOver = useCallback(
     (key: string, d: RectData) => {
       onHighlightItem([key]);
-      if (tooltipRef.current) {
+      if (tooltipRef.current && !isTooltipSticky) {
         tooltipRef.current.style.visibility = "visible";
-        tooltipRef.current.innerHTML = generateTooltipContent(
-          d.key,
-          d.seriesKey,
-          d.data,
-          stackedRectData[key]
-            .filter(item => item.seriesKey === d.seriesKey)
-            .map(item => ({
-              label: item.key,
-              value: item.value ?? null,
-              date: item.date,
-              code: item.code,
-            })) as unknown as DataPoint[]
-        );
+
+        if (tooltipContentRef.current) {
+          tooltipContentRef.current.innerHTML = generateTooltipContent(
+            d.key,
+            d.seriesKey,
+            d.data,
+            stackedRectData[key]
+              .filter(item => item.seriesKey === d.seriesKey)
+              .map(item => ({
+                label: item.key,
+                value: item.value ?? null,
+                date: item.date,
+                code: item.code,
+              })) as unknown as DataPoint[]
+          );
+        }
       }
     },
-    [onHighlightItem, generateTooltipContent, stackedRectData]
+    [onHighlightItem, isTooltipSticky, generateTooltipContent, stackedRectData]
   );
 
   const handleMouseOut = useCallback(() => {
     onHighlightItem?.([]);
-    if (tooltipRef.current) {
+    if (tooltipRef.current && !isTooltipSticky) {
       tooltipRef.current.style.visibility = "hidden";
     }
-  }, [onHighlightItem]);
+  }, [onHighlightItem, isTooltipSticky]);
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet: dataSet,
@@ -633,6 +639,32 @@ const VerticalStackBarChart: React.FC<Props> = ({
     }
   }, [xAxisDomain, dates, stackedRectData, filter, onChartDataProcessed, allKeys, disabledItems]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isTooltipSticky) {
+        const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
+        const anchorEl = (event.target as HTMLElement).closest(".bar");
+
+        if (!tooltipElement && !anchorEl) {
+          if (tooltipRef.current) {
+            tooltipRef.current.style.visibility = "hidden";
+          }
+
+          setTimeout(() => {
+            setIsTooltipSticky(false);
+          }, 100);
+        }
+      }
+    };
+
+    if (isTooltipSticky) {
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
+  }, [handleMouseOut, isTooltipSticky]);
+
   return (
     <VerticalStackBarChartStyled>
       <div
@@ -642,14 +674,16 @@ const VerticalStackBarChart: React.FC<Props> = ({
           position: "absolute",
           background: "white",
           padding: "5px",
-          pointerEvents: "none",
           zIndex: 1000,
           visibility: "hidden",
           boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           borderRadius: "4px",
           border: "1px solid #ddd",
         }}
-      />
+      >
+        <div ref={tooltipContentRef} className="tooltip-content" />
+        {!isTooltipSticky && <TooltipHint />}
+      </div>
 
       <svg
         className={"chart"}
@@ -699,8 +733,15 @@ const VerticalStackBarChart: React.FC<Props> = ({
                           highlightItems.length === 0 || highlightItems.includes(key) ? 1 : 0.2
                         }
                         onMouseOver={() => handleMouseOver(key, d)}
-                        onMouseMove={updateTooltipPosition}
+                        onMouseMove={event => {
+                          if (isTooltipSticky) return;
+                          updateTooltipPosition(event);
+                        }}
                         onMouseOut={handleMouseOut}
+                        onClick={event => {
+                          updateTooltipPosition(event);
+                          setIsTooltipSticky(true);
+                        }}
                       />
                       {d.seriesKeyAbbreviation && (
                         <text

@@ -15,6 +15,7 @@ import { useGapChartShapes } from "./hooks/gapChart/useGapChartShapes";
 import { useGapChartRenderer } from "./hooks/gapChart/useGapChartRenderer";
 import { useGapChartLegend } from "./hooks/gapChart/useGapChartLegend";
 import { useGapChartMetadata } from "./hooks/gapChart/useGapChartMetadata";
+import TooltipHint from "src/components/shared/TooltipHint";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -631,11 +632,7 @@ const GapChart: FC<GapChartProps> = ({
               Difference: {tooltip.data.difference}
             </div>
           )}
-          {!tooltip.isSticky && (
-            <div style={{ fontSize: "10px", marginTop: "4px", color: "#666", fontStyle: "italic" }}>
-              Click chart or tooltip to pin
-            </div>
-          )}
+          {!tooltip.isSticky && <TooltipHint />}
         </div>
       )}
 

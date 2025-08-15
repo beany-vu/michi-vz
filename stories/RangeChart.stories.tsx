@@ -156,6 +156,7 @@ export const Primary = {
       return JSON.stringify(d);
     },
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
   },
 };
 
@@ -181,7 +182,7 @@ export const InteractiveControls = {
 
     const toggleDisabledItem = useCallback((label: string) => {
       setDisabledItems(prev => {
-        const newDisabled = prev.includes(label) 
+        const newDisabled = prev.includes(label)
           ? prev.filter(item => item !== label)
           : [...prev, label];
         return newDisabled;
@@ -194,48 +195,53 @@ export const InteractiveControls = {
     }, [args.dataSet]);
 
     return (
-      <div style={{ padding: '20px' }}>
-        <div style={{ marginBottom: '20px' }}>
+      <div style={{ padding: "20px" }}>
+        <div style={{ marginBottom: "20px" }}>
           <h3>Interactive Controls</h3>
-          <div style={{ marginBottom: '10px' }}>
-            <strong>Current Highlighted Items:</strong> {highlightItems.length > 0 ? highlightItems.join(', ') : 'None'}
+          <div style={{ marginBottom: "10px" }}>
+            <strong>Current Highlighted Items:</strong>{" "}
+            {highlightItems.length > 0 ? highlightItems.join(", ") : "None"}
           </div>
-          <div style={{ marginBottom: '10px' }}>
-            <strong>Current Disabled Items:</strong> {disabledItems.length > 0 ? disabledItems.join(', ') : 'None'}
+          <div style={{ marginBottom: "10px" }}>
+            <strong>Current Disabled Items:</strong>{" "}
+            {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}
           </div>
-          <div style={{ marginBottom: '10px' }}>
-            <strong>Generated Colors:</strong> {Object.keys(colorsMapping).length > 0 ? JSON.stringify(colorsMapping) : 'None yet'}
+          <div style={{ marginBottom: "10px" }}>
+            <strong>Generated Colors:</strong>{" "}
+            {Object.keys(colorsMapping).length > 0 ? JSON.stringify(colorsMapping) : "None yet"}
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div style={{ marginBottom: "10px" }}>
             <strong>Instructions:</strong>
             <ul>
               <li>Hover over chart areas to highlight series</li>
               <li>Click on legend items below to disable/enable data series</li>
             </ul>
           </div>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             {allLabels.map((label: string) => (
               <button
                 key={label}
                 onClick={() => toggleDisabledItem(label)}
                 style={{
-                  padding: '8px 16px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  backgroundColor: disabledItems.includes(label) ? '#f0f0f0' : colorsMapping[label] || '#fff',
-                  color: disabledItems.includes(label) ? '#999' : '#000',
-                  cursor: 'pointer',
-                  textDecoration: disabledItems.includes(label) ? 'line-through' : 'none'
+                  padding: "8px 16px",
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                  backgroundColor: disabledItems.includes(label)
+                    ? "#f0f0f0"
+                    : colorsMapping[label] || "#fff",
+                  color: disabledItems.includes(label) ? "#999" : "#000",
+                  cursor: "pointer",
+                  textDecoration: disabledItems.includes(label) ? "line-through" : "none",
                 }}
               >
-                {label} {disabledItems.includes(label) ? '(Disabled)' : ''}
+                {label} {disabledItems.includes(label) ? "(Disabled)" : ""}
               </button>
             ))}
           </div>
         </div>
-        
-        <RangeChartComponent 
-          {...args} 
+
+        <RangeChartComponent
+          {...args}
           colorsMapping={colorsMapping}
           onColorMappingGenerated={handleColorMappingGenerated}
           onHighlightItem={handleHighlightItem}
@@ -383,6 +389,7 @@ export const InteractiveControls = {
       return JSON.stringify(d);
     },
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
   },
 };
 
@@ -392,16 +399,17 @@ export const DisableEnableColorMapping = {
     const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
     const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
     const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
-    
-    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
-      setColorsMapping(prev => ({ ...prev, ...newMapping }));
-    }, []);
+
+    const handleColorMappingGenerated = React.useCallback(
+      (newMapping: { [key: string]: string }) => {
+        setColorsMapping(prev => ({ ...prev, ...newMapping }));
+      },
+      []
+    );
 
     const toggleDisabled = React.useCallback((label: string) => {
-      setDisabledItems(prev => 
-        prev.includes(label) 
-          ? prev.filter(item => item !== label)
-          : [...prev, label]
+      setDisabledItems(prev =>
+        prev.includes(label) ? prev.filter(item => item !== label) : [...prev, label]
       );
     }, []);
 
@@ -450,7 +458,8 @@ export const DisableEnableColorMapping = {
           background: isHighlighted ? color : "white",
           color: isHighlighted ? "white" : color,
         };
-      } else { // disable
+      } else {
+        // disable
         const isDisabled = disabledItems.includes(label);
         return {
           ...baseStyle,
@@ -509,7 +518,7 @@ export const DisableEnableColorMapping = {
               </button>
             </div>
           </div>
-          
+
           <div>
             <div style={sectionLabelStyle}>Disable/Enable Controls:</div>
             <div style={buttonGroupStyle}>
@@ -540,15 +549,20 @@ export const DisableEnableColorMapping = {
               </button>
             </div>
           </div>
-          
+
           <div style={infoPanelStyle}>
-            <div><strong>Disabled Items:</strong> {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}</div>
-            <div><strong>Colors Mapping:</strong> {JSON.stringify(colorsMapping, null, 2)}</div>
+            <div>
+              <strong>Disabled Items:</strong>{" "}
+              {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}
+            </div>
+            <div>
+              <strong>Colors Mapping:</strong> {JSON.stringify(colorsMapping, null, 2)}
+            </div>
           </div>
         </div>
-        
-        <RangeChartComponent 
-          {...args} 
+
+        <RangeChartComponent
+          {...args}
           onColorMappingGenerated={handleColorMappingGenerated}
           colorsMapping={colorsMapping}
           highlightItems={currentHighlight}
@@ -775,5 +789,6 @@ export const DisableEnableColorMapping = {
       return JSON.stringify(d);
     },
     onChartDataProcessed: fn(),
+    onLegendDataChange: fn(),
   },
 };

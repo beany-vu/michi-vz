@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useLayoutEffect } from "react";
+import React, { useMemo, useRef, useLayoutEffect, useState, useEffect } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import XaxisBand from "./shared/XaxisBand";
@@ -9,6 +9,7 @@ import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { LegendItem } from "../types/data";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
+import TooltipHint from "src/components/shared/TooltipHint";
 
 interface DataPoint {
   date: number;
@@ -86,6 +87,7 @@ const RibbonChart: React.FC<Props> = ({
   const ref = useRef<SVGSVGElement>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
+  const [isTooltipSticky, setIsTooltipSticky] = useState(false);
 
   // Add filteredDataSet to filter out disabled items
   const filteredDataSet = useMemo(() => {
@@ -274,6 +276,27 @@ const RibbonChart: React.FC<Props> = ({
     onLegendDataChange,
   ]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isTooltipSticky) {
+        const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
+        const anchorEl = (event.target as HTMLElement).closest(".bar");
+
+        if (!tooltipElement && !anchorEl) {
+          d3.select(".tooltip").style("visibility", "hidden");
+          setIsTooltipSticky(false);
+        }
+      }
+    };
+
+    if (isTooltipSticky) {
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
+  }, [isTooltipSticky]);
+
   return (
     <div style={{ position: "relative" }}>
       <div
@@ -283,10 +306,12 @@ const RibbonChart: React.FC<Props> = ({
           background: "white",
           padding: "5px",
           border: "1px solid #333",
-          pointerEvents: "none",
           zIndex: 1000,
         }}
-      />
+      >
+        <div className="tooltip-content" />
+        {!isTooltipSticky && <TooltipHint />}
+      </div>
 
       <svg
         className={"chart"}
@@ -298,6 +323,8 @@ const RibbonChart: React.FC<Props> = ({
           event.preventDefault();
           event.stopPropagation();
           onHighlightItem([]);
+
+          if (isTooltipSticky) return;
           d3.select(".tooltip").style("visibility", "hidden");
         }}
       >
@@ -370,6 +397,7 @@ const RibbonChart: React.FC<Props> = ({
                             />
                           )}
                           <rect
+                            className="bar"
                             key={`item-${i}`}
                             x={d.x}
                             y={d.y}
@@ -389,13 +417,17 @@ const RibbonChart: React.FC<Props> = ({
                                 d3.select(node)
                                   .on("mouseover", function () {
                                     onHighlightItem([d.key]);
-                                    d3.select(".tooltip")
-                                      .style("visibility", "visible")
-                                      .html(
-                                        tooltipContent?.(d.data) || generateTooltipContent(d.data)
-                                      ); // you can define this function or inline its logic
+
+                                    if (isTooltipSticky) return;
+                                    d3.select(".tooltip").style("visibility", "visible");
+
+                                    d3.select(".tooltip-content").html(
+                                      tooltipContent?.(d.data) || generateTooltipContent(d.data)
+                                    ); // you can define this function or inline its logic
                                   })
                                   .on("mousemove", function (event) {
+                                    if (isTooltipSticky) return;
+
                                     const [x, y] = d3.pointer(event);
                                     const tooltip = d3.select(".tooltip").node() as HTMLElement;
                                     const tooltipWidth = tooltip.getBoundingClientRect().width;
@@ -407,7 +439,21 @@ const RibbonChart: React.FC<Props> = ({
                                   })
                                   .on("mouseout", function () {
                                     onHighlightItem([]);
+
+                                    if (isTooltipSticky) return;
                                     d3.select(".tooltip").style("visibility", "hidden");
+                                  })
+                                  .on("click", function (event) {
+                                    const [x, y] = d3.pointer(event);
+                                    const tooltip = d3.select(".tooltip").node() as HTMLElement;
+                                    const tooltipWidth = tooltip.getBoundingClientRect().width;
+                                    const tooltipHeight = tooltip.getBoundingClientRect().height;
+
+                                    d3.select(".tooltip")
+                                      .style("left", x - tooltipWidth / 2 + "px")
+                                      .style("top", y - tooltipHeight - 10 + "px");
+
+                                    setIsTooltipSticky(true);
                                   });
                               }
                             }}

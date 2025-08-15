@@ -1,4 +1,12 @@
-import React, { Fragment, useMemo, useRef, useState, useLayoutEffect, useCallback } from "react";
+import React, {
+  Fragment,
+  useMemo,
+  useRef,
+  useState,
+  useLayoutEffect,
+  useCallback,
+  useEffect,
+} from "react";
 import * as d3 from "d3";
 import isEqual from "lodash/isEqual";
 import Title from "./shared/Title";
@@ -9,6 +17,7 @@ import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import styled from "styled-components";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
+import TooltipHint from "src/components/shared/TooltipHint";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -121,6 +130,7 @@ const AreaChart: React.FC<Props> = ({
   const [hoveredDate] = useState<number | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
+  const [isTooltipSticky, setIsTooltipSticky] = useState(false);
 
   // Ref to track the last color mapping sent to prevent infinite loops
   const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
@@ -365,6 +375,42 @@ const AreaChart: React.FC<Props> = ({
     }
   }, [series, xAxisDataType, yScaleDomain, keys, disabledItems, filter, onChartDataProcessed]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isTooltipSticky) {
+        const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
+
+        if (!tooltipElement) {
+          d3.select(".tooltip").style("visibility", "hidden");
+
+          setTimeout(() => {
+            setIsTooltipSticky(false);
+          }, 100);
+        }
+      }
+    };
+
+    if (isTooltipSticky) {
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
+  }, [isTooltipSticky]);
+
+  const repositionTooltip = (event: React.MouseEvent, areaData, dataPoint) => {
+    d3.select(".tooltip").style("visibility", "visible");
+
+    d3.select(".tooltip-content").html(handleAreaSegmentHover(dataPoint.data, areaData.key));
+    const [x, y] = d3.pointer(event);
+    const tooltip = d3.select(".tooltip").node() as HTMLElement;
+    const tooltipWidth = tooltip.getBoundingClientRect().width;
+    const tooltipHeight = tooltip.getBoundingClientRect().height;
+    d3.select(".tooltip")
+      .style("left", x - tooltipWidth / 2 + "px")
+      .style("top", y - tooltipHeight - 10 + "px");
+  };
+
   return (
     <AreaChartContainer>
       <div
@@ -373,11 +419,13 @@ const AreaChart: React.FC<Props> = ({
           position: "absolute",
           background: "white",
           padding: "5px",
-          pointerEvents: "none",
           zIndex: 1000,
           visibility: "hidden", // Initially hidden
         }}
-      />
+      >
+        <div className="tooltip-content" />
+        {!isTooltipSticky && <TooltipHint />}
+      </div>
 
       <svg
         className={"chart"}
@@ -389,7 +437,9 @@ const AreaChart: React.FC<Props> = ({
           // Only clear highlight if mouse leaves the SVG container
           const target = event.relatedTarget as HTMLElement;
           if (!target || !target.closest("svg.chart")) {
-            d3.select(".tooltip").style("visibility", "hidden");
+            if (!isTooltipSticky) {
+              d3.select(".tooltip").style("visibility", "hidden");
+            }
             onHighlightItem?.([]);
           }
         }}
@@ -443,6 +493,9 @@ const AreaChart: React.FC<Props> = ({
                     onHighlightItem([]);
                   }
                 }}
+                onClick={() => {
+                  setIsTooltipSticky(true);
+                }}
               />
               {/* Here's the addition*/}
               {areaData.values.map(dataPoint => (
@@ -471,16 +524,9 @@ const AreaChart: React.FC<Props> = ({
                   onMouseEnter={event => {
                     event.stopPropagation();
                     onHighlightItem([areaData.key]);
-                    d3.select(".tooltip")
-                      .style("visibility", "visible")
-                      .html(handleAreaSegmentHover(dataPoint.data, areaData.key));
-                    const [x, y] = d3.pointer(event);
-                    const tooltip = d3.select(".tooltip").node() as HTMLElement;
-                    const tooltipWidth = tooltip.getBoundingClientRect().width;
-                    const tooltipHeight = tooltip.getBoundingClientRect().height;
-                    d3.select(".tooltip")
-                      .style("left", x - tooltipWidth / 2 + "px")
-                      .style("top", y - tooltipHeight - 10 + "px");
+
+                    if (isTooltipSticky) return;
+                    repositionTooltip(event, areaData, dataPoint);
                   }}
                   onMouseOut={event => {
                     // Don't clear highlight if moving to another rect or the path
@@ -492,8 +538,15 @@ const AreaChart: React.FC<Props> = ({
                     ) {
                       event.stopPropagation();
                       onHighlightItem([]);
+
+                      if (isTooltipSticky) return;
                       d3.select(".tooltip").style("visibility", "hidden");
                     }
+                  }}
+                  onClick={event => {
+                    event.stopPropagation();
+                    repositionTooltip(event, areaData, dataPoint);
+                    setIsTooltipSticky(true);
                   }}
                 />
               ))}

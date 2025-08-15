@@ -11,6 +11,7 @@ import useDeepCompareEffect from "use-deep-compare-effect";
 import styled from "styled-components";
 import { LegendItem } from "../types/data";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
+import TooltipHint from "src/components/shared/TooltipHint";
 
 const ComparableHorizontalBarChartStyled = styled.div`
   position: relative;
@@ -140,6 +141,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     y: number;
     data: DataPoint;
     type?: TValueType;
+    isSticky?: boolean;
   } | null>(null);
   const {
     colorsMapping: contextColorsMapping,
@@ -299,7 +301,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   // Memoize event handlers
   const handleMouseOver = useCallback(
     (d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>, type: TValueType) => {
-      if (svgRef.current) {
+      if (svgRef.current && !tooltip?.isSticky) {
         const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
         setTooltip({
           x: mousePoint[0],
@@ -309,12 +311,29 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         });
       }
     },
+    [tooltip?.isSticky]
+  );
+
+  const handleMouseClick = useCallback(
+    (d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>, type: TValueType) => {
+      if (svgRef.current) {
+        const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
+        setTooltip({
+          x: mousePoint[0],
+          y: mousePoint[1],
+          data: d,
+          type,
+          isSticky: true,
+        });
+      }
+    },
     []
   );
 
   const handleMouseOut = useCallback(() => {
+    if (tooltip?.isSticky) return;
     setTooltip(null);
-  }, []);
+  }, [tooltip?.isSticky]);
 
   const handleHighlight = useCallback(
     (label: string) => {
@@ -336,6 +355,26 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
       });
     }
   }, [highlightItems]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tooltip?.isSticky) {
+        const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
+        const anchorEl = (event.target as HTMLElement).closest(".bar");
+
+        if (!tooltipElement && !anchorEl) {
+          setTooltip(null);
+        }
+      }
+    };
+
+    if (tooltip?.isSticky) {
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
+  }, [tooltip?.isSticky]);
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet: dataSet,
@@ -388,6 +427,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event, "compared")}
                   onMouseOut={handleMouseOut}
+                  onClick={event => handleMouseClick(d, event, "compared")}
                   stroke="#fff"
                   strokeWidth={1}
                 />
@@ -402,6 +442,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event, "based")}
                   onMouseOut={handleMouseOut}
+                  onClick={event => handleMouseClick(d, event, "based")}
                   opacity={0.9}
                   stroke="#fff"
                   strokeWidth={1}
@@ -420,6 +461,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event, "based")}
                   onMouseOut={handleMouseOut}
+                  onClick={event => handleMouseClick(d, event, "based")}
                   opacity={0.9}
                   stroke="#fff"
                   strokeWidth={1}
@@ -436,6 +478,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event, "compared")}
                   onMouseOut={handleMouseOut}
+                  onClick={event => handleMouseClick(d, event, "compared")}
                   stroke="#fff"
                   strokeWidth={1}
                 />
@@ -445,19 +488,20 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         );
       });
   }, [
+    visibleItems,
     filteredDataSet,
     disabledItems,
-    visibleItems,
-    margin,
+    margin.left,
     xAxisScale,
     yAxisScale,
     highlightItems,
-    finalColorsMapping,
-    colorsBasedMapping,
-    handleMouseOver,
-    handleMouseOut,
-    handleHighlight,
     handleUnhighlight,
+    finalColorsMapping,
+    handleMouseOut,
+    colorsBasedMapping,
+    handleHighlight,
+    handleMouseOver,
+    handleMouseClick,
   ]);
 
   useLayoutEffect(() => {
@@ -594,6 +638,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
             </div>
           )}
           {tooltipFormatter && tooltipFormatter(tooltip?.data, dataSet, tooltip?.type)}
+          {!tooltip?.isSticky && <TooltipHint />}
         </div>
       )}
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}

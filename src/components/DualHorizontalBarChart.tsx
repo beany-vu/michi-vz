@@ -10,6 +10,7 @@ import YaxisBand from "./shared/YaxisBand";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { LegendItem } from "../types/data";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
+import TooltipHint from "src/components/shared/TooltipHint";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -116,6 +117,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     x: number;
     y: number;
     data: DataPoint;
+    isSticky?: boolean;
   } | null>(null);
   const { visibleItems } = useChartContext();
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -226,21 +228,41 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     .clamp(true)
     .nice(1);
 
-  const handleMouseOver = (d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>) => {
-    if (svgRef.current) {
-      const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
+  const handleMouseOver = useCallback(
+    (d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>) => {
+      if (svgRef.current && !tooltip?.isSticky) {
+        const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
 
-      setTooltip(() => ({
-        x: mousePoint[0],
-        y: mousePoint[1],
-        data: d,
-      }));
-    }
-  };
+        setTooltip(() => ({
+          x: mousePoint[0],
+          y: mousePoint[1],
+          data: d,
+        }));
+      }
+    },
+    [tooltip?.isSticky]
+  );
 
   const handleMouseOut = () => {
+    if (tooltip?.isSticky) return;
     setTooltip(null);
   };
+
+  const handleMouseClick = useCallback(
+    (d: DataPoint, event: React.MouseEvent<SVGRectElement, MouseEvent>) => {
+      if (svgRef.current) {
+        const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
+
+        setTooltip(() => ({
+          x: mousePoint[0],
+          y: mousePoint[1],
+          data: d,
+          isSticky: true,
+        }));
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     d3.select(svgRef.current).select(".bar").attr("opacity", 0.3);
@@ -331,6 +353,26 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
     onLegendDataChange,
   ]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tooltip?.isSticky) {
+        const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
+        const anchorEl = (event.target as HTMLElement).closest(".bar");
+
+        if (!tooltipElement && !anchorEl) {
+          setTooltip(null);
+        }
+      }
+    };
+
+    if (tooltip?.isSticky) {
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }
+  }, [tooltip?.isSticky]);
+
   return (
     <div style={{ position: "relative" }}>
       <svg
@@ -402,6 +444,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event)}
                   onMouseOut={handleMouseOut}
+                  onClick={event => handleMouseClick(d, event)}
                   stroke={"#fff"}
                 />
                 <rect
@@ -415,6 +458,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
                   ry={3}
                   onMouseOver={event => handleMouseOver(d, event)}
                   onMouseOut={handleMouseOut}
+                  onClick={event => handleMouseClick(d, event)}
                   stroke={"#fff"}
                 />
                 {!d.value1 && !d.value2 && (
@@ -430,6 +474,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
                       ry={3}
                       onMouseOver={event => handleMouseOver(d, event)}
                       onMouseOut={handleMouseOut}
+                      onClick={event => handleMouseClick(d, event)}
                     />
                     <text
                       x={width / 2 + 15}
@@ -448,13 +493,13 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
       </svg>
       {tooltip && (
         <div
+          className="tooltip"
           style={{
             position: "absolute",
             left: `${tooltip?.x}px`,
             top: `${tooltip?.y}px`,
             background: "white",
             padding: "5px",
-            pointerEvents: "none",
           }}
         >
           {!tooltipFormatter && (
@@ -463,6 +508,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
             </div>
           )}
           {tooltipFormatter && tooltipFormatter(tooltip?.data)}
+          {!tooltip?.isSticky && <TooltipHint />}
         </div>
       )}
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
