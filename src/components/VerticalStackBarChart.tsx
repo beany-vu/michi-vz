@@ -444,10 +444,9 @@ const VerticalStackBarChart: React.FC<Props> = ({
   }, []);
 
   // Memoize the mouse event handlers
-  const handleMouseOver = useCallback(
+  const handleDataSelection = useCallback(
     (key: string, d: RectData) => {
-      onHighlightItem([key]);
-      if (tooltipRef.current && !isTooltipSticky) {
+      if (tooltipRef.current) {
         tooltipRef.current.style.visibility = "visible";
 
         if (tooltipContentRef.current) {
@@ -467,7 +466,18 @@ const VerticalStackBarChart: React.FC<Props> = ({
         }
       }
     },
-    [onHighlightItem, isTooltipSticky, generateTooltipContent, stackedRectData]
+    [generateTooltipContent, stackedRectData]
+  );
+
+  // Memoize the mouse event handlers
+  const handleMouseOver = useCallback(
+    (key: string, d: RectData) => {
+      onHighlightItem([key]);
+      if (tooltipRef.current && !isTooltipSticky) {
+        handleDataSelection(key, d);
+      }
+    },
+    [onHighlightItem, isTooltipSticky, handleDataSelection]
   );
 
   const handleMouseOut = useCallback(() => {
@@ -739,6 +749,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                         }}
                         onMouseOut={handleMouseOut}
                         onClick={event => {
+                          handleDataSelection(key, d);
                           updateTooltipPosition(event);
                           setIsTooltipSticky(true);
                         }}
