@@ -14,6 +14,7 @@ interface Props {
   ticks?: number;
   showGrid?: boolean;
   showZeroLine?: boolean;
+  showDividerNextToYAxis?: boolean;
   position?: "top" | "bottom";
   isLoading?: boolean;
   isEmpty?: boolean;
@@ -50,6 +51,7 @@ const XaxisLinear: FC<Props> = ({
   ticks = 5,
   showGrid = false,
   showZeroLine = false,
+  showDividerNextToYAxis = false,
   position = "bottom",
   isLoading = false,
   isEmpty = false,
@@ -240,10 +242,18 @@ const XaxisLinear: FC<Props> = ({
       )
       // Add class for tick at 0
       .call(g => {
-        g.selectAll(".tick").each(function (d) {
+        g.selectAll(".tick").each(function (d, index, groups) {
           const tickValue = d instanceof Date ? d.valueOf() : +d;
           if (tickValue === 0) {
             d3.select(this).classed("tick-zero", true);
+          }
+
+          if (index === 0) {
+            d3.select(this).classed("tick-first", true);
+          }
+
+          if (index === groups.length - 1) {
+            d3.select(this).classed("tick-last", true);
           }
         });
       });
@@ -267,6 +277,10 @@ const XaxisLinear: FC<Props> = ({
 
       if (showZeroLine) {
         g.selectAll(".tick-zero line").attr("stroke-dasharray", null);
+      }
+
+      if (showDividerNextToYAxis) {
+        g.selectAll(".tick-last line").attr("stroke-dasharray", null);
       }
     }
 

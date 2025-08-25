@@ -613,6 +613,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
               xAxisDataType={xAxisDataType}
               showGrid={showGrid}
               showZeroLine={showZeroLineForXAxis}
+              showDividerNextToYAxis={showZeroLineForXAxis}
             />
             {memoizedYaxisBand}
           </>

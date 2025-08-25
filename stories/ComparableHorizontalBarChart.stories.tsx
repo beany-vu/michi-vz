@@ -11,9 +11,7 @@ export default {
   tags: ["autodocs"],
   decorators: [
     Story => (
-      <MichiVzProvider
-        visibleItems={["Africa", "Congo", "Egypt", "Madagascar"]}
-      >
+      <MichiVzProvider visibleItems={["Africa", "Congo", "Egypt", "Madagascar"]}>
         <Story />
       </MichiVzProvider>
     ),
@@ -23,6 +21,7 @@ export default {
 // Create a default story using the template
 export const Primary = {
   args: {
+    showGrid: true,
     onChartDataProcessed: fn(),
     onLegendDataChange: fn(),
     onHighlightItem: fn(),
@@ -101,7 +100,7 @@ export const InteractiveControls = {
 
     const toggleDisabledItem = useCallback((label: string) => {
       setDisabledItems(prev => {
-        const newDisabled = prev.includes(label) 
+        const newDisabled = prev.includes(label)
           ? prev.filter(item => item !== label)
           : [...prev, label];
         return newDisabled;
@@ -114,49 +113,54 @@ export const InteractiveControls = {
     }, [args.dataSet]);
 
     return (
-      <div style={{ padding: '20px' }}>
-        <div style={{ marginBottom: '20px' }}>
+      <div style={{ padding: "20px" }}>
+        <div style={{ marginBottom: "20px" }}>
           <h3>Interactive Controls</h3>
-          <div style={{ marginBottom: '10px' }}>
-            <strong>Current Highlighted Items:</strong> {highlightItems.length > 0 ? highlightItems.join(', ') : 'None'}
+          <div style={{ marginBottom: "10px" }}>
+            <strong>Current Highlighted Items:</strong>{" "}
+            {highlightItems.length > 0 ? highlightItems.join(", ") : "None"}
           </div>
-          <div style={{ marginBottom: '10px' }}>
-            <strong>Current Disabled Items:</strong> {disabledItems.length > 0 ? disabledItems.join(', ') : 'None'}
+          <div style={{ marginBottom: "10px" }}>
+            <strong>Current Disabled Items:</strong>{" "}
+            {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}
           </div>
-          <div style={{ marginBottom: '10px' }}>
-            <strong>Generated Colors:</strong> {Object.keys(colorsMapping).length > 0 ? JSON.stringify(colorsMapping) : 'None yet'}
+          <div style={{ marginBottom: "10px" }}>
+            <strong>Generated Colors:</strong>{" "}
+            {Object.keys(colorsMapping).length > 0 ? JSON.stringify(colorsMapping) : "None yet"}
           </div>
-          <div style={{ marginBottom: '10px' }}>
+          <div style={{ marginBottom: "10px" }}>
             <strong>Instructions:</strong>
             <ul>
               <li>Hover over chart bars to highlight items</li>
               <li>Click on legend items below to disable/enable data items</li>
             </ul>
           </div>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             {allLabels.map((label: string) => (
               <button
                 key={label}
                 onClick={() => toggleDisabledItem(label)}
                 style={{
-                  padding: '8px 16px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  backgroundColor: disabledItems.includes(label) ? '#f0f0f0' : colorsMapping[label] || '#fff',
-                  color: disabledItems.includes(label) ? '#999' : '#000',
-                  cursor: 'pointer',
-                  textDecoration: disabledItems.includes(label) ? 'line-through' : 'none'
+                  padding: "8px 16px",
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                  backgroundColor: disabledItems.includes(label)
+                    ? "#f0f0f0"
+                    : colorsMapping[label] || "#fff",
+                  color: disabledItems.includes(label) ? "#999" : "#000",
+                  cursor: "pointer",
+                  textDecoration: disabledItems.includes(label) ? "line-through" : "none",
                 }}
               >
-                {label} {disabledItems.includes(label) ? '(Disabled)' : ''}
+                {label} {disabledItems.includes(label) ? "(Disabled)" : ""}
               </button>
             ))}
           </div>
         </div>
-        
+
         <MichiVzProvider>
-          <ComparableHorizontalBarChart 
-            {...args} 
+          <ComparableHorizontalBarChart
+            {...args}
             colorsMapping={colorsMapping}
             onColorMappingGenerated={handleColorMappingGenerated}
             onHighlightItem={handleHighlightItem}
@@ -168,6 +172,7 @@ export const InteractiveControls = {
     );
   },
   args: {
+    showGrid: true,
     onChartDataProcessed: fn(),
     onLegendDataChange: fn(),
     onHighlightItem: fn(),
@@ -231,23 +236,24 @@ export const DisableEnableColorMapping = {
     const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
     const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
     const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
-    
-    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
-      setColorsMapping(prev => {
-        const updated = { ...prev, ...newMapping };
-        // Only update if the mapping has actually changed
-        if (JSON.stringify(prev) !== JSON.stringify(updated)) {
-          return updated;
-        }
-        return prev;
-      });
-    }, []);
+
+    const handleColorMappingGenerated = React.useCallback(
+      (newMapping: { [key: string]: string }) => {
+        setColorsMapping(prev => {
+          const updated = { ...prev, ...newMapping };
+          // Only update if the mapping has actually changed
+          if (JSON.stringify(prev) !== JSON.stringify(updated)) {
+            return updated;
+          }
+          return prev;
+        });
+      },
+      []
+    );
 
     const toggleDisabled = React.useCallback((label: string) => {
-      setDisabledItems(prev => 
-        prev.includes(label) 
-          ? prev.filter(item => item !== label)
-          : [...prev, label]
+      setDisabledItems(prev =>
+        prev.includes(label) ? prev.filter(item => item !== label) : [...prev, label]
       );
     }, []);
 
@@ -296,7 +302,8 @@ export const DisableEnableColorMapping = {
           background: isHighlighted ? color : "white",
           color: isHighlighted ? "white" : color,
         };
-      } else { // disable
+      } else {
+        // disable
         const isDisabled = disabledItems.includes(label);
         return {
           ...baseStyle,
@@ -355,7 +362,7 @@ export const DisableEnableColorMapping = {
               </button>
             </div>
           </div>
-          
+
           <div>
             <div style={sectionLabelStyle}>Disable/Enable Controls:</div>
             <div style={buttonGroupStyle}>
@@ -386,16 +393,21 @@ export const DisableEnableColorMapping = {
               </button>
             </div>
           </div>
-          
+
           <div style={infoPanelStyle}>
-            <div><strong>Disabled Items:</strong> {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}</div>
-            <div><strong>Colors Mapping:</strong> {JSON.stringify(colorsMapping, null, 2)}</div>
+            <div>
+              <strong>Disabled Items:</strong>{" "}
+              {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}
+            </div>
+            <div>
+              <strong>Colors Mapping:</strong> {JSON.stringify(colorsMapping, null, 2)}
+            </div>
           </div>
         </div>
-        
+
         <MichiVzProvider>
-          <ComparableHorizontalBarChart 
-            {...args} 
+          <ComparableHorizontalBarChart
+            {...args}
             onColorMappingGenerated={handleColorMappingGenerated}
             colorsMapping={colorsMapping}
             highlightItems={currentHighlight}
@@ -406,6 +418,7 @@ export const DisableEnableColorMapping = {
     );
   },
   args: {
+    showGrid: true,
     onChartDataProcessed: fn(),
     onLegendDataChange: fn(),
     onHighlightItem: fn(),
@@ -498,38 +511,70 @@ export const LegendMetadataExposure = {
     }, []);
 
     return (
-      <div style={{ padding: '20px' }}>
-        <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+      <div style={{ padding: "20px" }}>
+        <div
+          style={{
+            marginBottom: "20px",
+            padding: "15px",
+            backgroundColor: "#f5f5f5",
+            borderRadius: "8px",
+          }}
+        >
           <h3>Legend & Metadata Exposure Test</h3>
-          
-          <div style={{ marginBottom: '15px' }}>
+
+          <div style={{ marginBottom: "15px" }}>
             <h4>Legend Data:</h4>
-            <pre style={{ fontSize: '12px', backgroundColor: '#fff', padding: '10px', borderRadius: '4px', overflow: 'auto' }}>
+            <pre
+              style={{
+                fontSize: "12px",
+                backgroundColor: "#fff",
+                padding: "10px",
+                borderRadius: "4px",
+                overflow: "auto",
+              }}
+            >
               {JSON.stringify(legendData, null, 2)}
             </pre>
           </div>
-          
-          <div style={{ marginBottom: '15px' }}>
+
+          <div style={{ marginBottom: "15px" }}>
             <h4>Chart Metadata:</h4>
-            <pre style={{ fontSize: '12px', backgroundColor: '#fff', padding: '10px', borderRadius: '4px', overflow: 'auto' }}>
+            <pre
+              style={{
+                fontSize: "12px",
+                backgroundColor: "#fff",
+                padding: "10px",
+                borderRadius: "4px",
+                overflow: "auto",
+              }}
+            >
               {JSON.stringify(chartMetadata, null, 2)}
             </pre>
           </div>
-          
-          <div style={{ marginBottom: '15px' }}>
+
+          <div style={{ marginBottom: "15px" }}>
             <h4>Color Mapping:</h4>
-            <pre style={{ fontSize: '12px', backgroundColor: '#fff', padding: '10px', borderRadius: '4px', overflow: 'auto' }}>
+            <pre
+              style={{
+                fontSize: "12px",
+                backgroundColor: "#fff",
+                padding: "10px",
+                borderRadius: "4px",
+                overflow: "auto",
+              }}
+            >
               {JSON.stringify(colorMapping, null, 2)}
             </pre>
           </div>
-          
-          <div style={{ fontSize: '14px', color: '#666' }}>
-            <strong>Instructions:</strong> Check the browser console for real-time logging of legend data changes.
+
+          <div style={{ fontSize: "14px", color: "#666" }}>
+            <strong>Instructions:</strong> Check the browser console for real-time logging of legend
+            data changes.
           </div>
         </div>
-        
+
         <MichiVzProvider>
-          <ComparableHorizontalBarChart 
+          <ComparableHorizontalBarChart
             {...args}
             onLegendDataChange={handleLegendDataChange}
             onChartDataProcessed={handleChartDataProcessed}
@@ -540,6 +585,7 @@ export const LegendMetadataExposure = {
     );
   },
   args: {
+    showGrid: true,
     onHighlightItem: fn(),
     isNoDataComponent: <div>No data</div>,
     dataSet: [
@@ -628,40 +674,63 @@ export const DynamicLegendMetadata = {
     }, []);
 
     return (
-      <div style={{ padding: '20px' }}>
-        <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+      <div style={{ padding: "20px" }}>
+        <div
+          style={{
+            marginBottom: "20px",
+            padding: "15px",
+            backgroundColor: "#f5f5f5",
+            borderRadius: "8px",
+          }}
+        >
           <h3>Dynamic Legend Metadata Test</h3>
-          
-          <div style={{ marginBottom: '15px' }}>
-            <button onClick={addRandomDataPoint} style={{ marginRight: '10px', padding: '8px 16px' }}>
+
+          <div style={{ marginBottom: "15px" }}>
+            <button
+              onClick={addRandomDataPoint}
+              style={{ marginRight: "10px", padding: "8px 16px" }}
+            >
               Add Random Item
             </button>
-            <button onClick={removeLastDataPoint} style={{ marginRight: '10px', padding: '8px 16px' }}>
+            <button
+              onClick={removeLastDataPoint}
+              style={{ marginRight: "10px", padding: "8px 16px" }}
+            >
               Remove Last Item
             </button>
-            <button onClick={shuffleData} style={{ padding: '8px 16px' }}>
+            <button onClick={shuffleData} style={{ padding: "8px 16px" }}>
               Shuffle Data
             </button>
           </div>
-          
-          <div style={{ marginBottom: '15px' }}>
+
+          <div style={{ marginBottom: "15px" }}>
             <strong>Legend Updates: {updateCount}</strong>
           </div>
-          
-          <div style={{ marginBottom: '15px' }}>
+
+          <div style={{ marginBottom: "15px" }}>
             <h4>Current Legend Data:</h4>
-            <pre style={{ fontSize: '12px', backgroundColor: '#fff', padding: '10px', borderRadius: '4px', overflow: 'auto', maxHeight: '200px' }}>
+            <pre
+              style={{
+                fontSize: "12px",
+                backgroundColor: "#fff",
+                padding: "10px",
+                borderRadius: "4px",
+                overflow: "auto",
+                maxHeight: "200px",
+              }}
+            >
               {JSON.stringify(legendData, null, 2)}
             </pre>
           </div>
-          
-          <div style={{ fontSize: '14px', color: '#666' }}>
-            <strong>Instructions:</strong> Use the buttons above to modify the data and watch how the legend metadata changes.
+
+          <div style={{ fontSize: "14px", color: "#666" }}>
+            <strong>Instructions:</strong> Use the buttons above to modify the data and watch how
+            the legend metadata changes.
           </div>
         </div>
-        
+
         <MichiVzProvider>
-          <ComparableHorizontalBarChart 
+          <ComparableHorizontalBarChart
             {...args}
             dataSet={currentDataSet}
             onLegendDataChange={handleLegendDataChange}
@@ -674,6 +743,7 @@ export const DynamicLegendMetadata = {
     );
   },
   args: {
+    showGrid: true,
     isNoDataComponent: <div>No data</div>,
     dataSet: [
       {
