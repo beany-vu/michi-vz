@@ -31,10 +31,10 @@ const useLineChartXscale = (
     if (xAxisDataType === "date_annual") {
       // sometimes the first tick is missing, so do a hack here
       const minDate = min(
-        filteredDataSet.flatMap(item => item.series.map(d => new Date(`${d.date}-01-02T00:00:00Z`)))
+        filteredDataSet.flatMap(item => item.series.map(d => new Date(`${d.date}-01-01`)))
       );
       const maxDate = max(
-        filteredDataSet.flatMap(item => item.series.map(d => new Date(`${d.date}-01-02T00:00:00Z`)))
+        filteredDataSet.flatMap(item => item.series.map(d => new Date(`${d.date}-01-01`)))
       );
 
       return scaleTime()
