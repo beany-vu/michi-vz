@@ -121,6 +121,7 @@ interface GapChartProps {
   yAxisFormat?: (d: number) => string;
   xAxisFormat?: (d: number, tickValues?: Array<string | number>) => string;
   ticks?: number;
+  tickValues?: Array<number | Date>;
   width: number;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
@@ -167,6 +168,7 @@ const GapChart: FC<GapChartProps> = ({
   yAxisFormat,
   xAxisFormat,
   ticks = 5,
+  tickValues,
   width = DEFAULT_WIDTH,
   height = DEFAULT_HEIGHT,
   margin = DEFAULT_MARGIN,
@@ -471,6 +473,7 @@ const GapChart: FC<GapChartProps> = ({
           xAxisFormat={xAxisFormat}
           xAxisDataType={xAxisDataType}
           ticks={ticks}
+          tickValues={tickValues}
           showGrid={true}
           showZeroLine={true}
         />
