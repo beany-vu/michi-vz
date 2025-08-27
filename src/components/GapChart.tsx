@@ -204,7 +204,8 @@ const GapChart: FC<GapChartProps> = ({
   const { processedDataSet, yAxisDomain, xAxisDomain, allLabels } = useGapChartData(
     dataSet,
     filter,
-    disabledItems
+    disabledItems,
+    tickValues
   );
 
   // Get scales

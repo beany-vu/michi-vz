@@ -19,7 +19,8 @@ interface Filter {
 export const useGapChartData = (
   dataSet: DataItem[],
   filter: Filter | undefined,
-  disabledItems: string[]
+  disabledItems: string[],
+  tickValues?: Array<number | Date>
 ) => {
   // Calculate differences and filter data
   const processedDataSet = useMemo(() => {
@@ -81,17 +82,25 @@ export const useGapChartData = (
   // Calculate x-axis domain (min and max values)
   const xAxisDomain = useMemo((): [number, number] => {
     if (processedDataSet.length === 0) return [0, 0];
+    if (
+      tickValues &&
+      tickValues.length > 1 &&
+      typeof tickValues[0] === "number" &&
+      typeof tickValues[tickValues.length - 1] === "number"
+    ) {
+      return [tickValues[0], tickValues[tickValues.length - 1] as number];
+    }
 
     const allValues = processedDataSet.flatMap(d => [d.value1, d.value2]);
     const dataMin = Math.min(...allValues);
     const dataMax = Math.max(...allValues);
 
     // If all values are positive, start at 0. If there are negative values, include them.
-    const min = dataMin < 0 ? dataMin * 1.05 : 0; // Start at 0 for positive data
-    const max = dataMax * 1.05; // Add 5% padding to the maximum
+    const min = dataMin < 0 ? dataMin * 1.1 : 0; // Start at 0 for positive data
+    const max = dataMax * 1.1; // Add 10% padding to the maximum
 
     return [min, max];
-  }, [processedDataSet]);
+  }, [processedDataSet, tickValues]);
 
   return {
     processedDataSet,
