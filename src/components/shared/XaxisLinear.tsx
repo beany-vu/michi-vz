@@ -314,6 +314,8 @@ const XaxisLinear: FC<Props> = ({
     defaultFormatter,
     position,
     showGrid,
+    showZeroLine,
+    showDividerNextToYAxis,
   ]);
 
   return <g className="x-axis-container" ref={ref} />;

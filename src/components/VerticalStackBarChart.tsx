@@ -359,7 +359,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                 const rawHeight = yScale(y0) - yScale(y1);
                 // Only apply minimum height if the value exists (even if it's 0)
                 const itemHeight =
-                  value !== undefined && value !== null ? Math.max(3, rawHeight) : 0;
+                  value !== undefined && value !== null ? Math.max(0, rawHeight) : 0;
                 const rectData = {
                   key,
                   height: itemHeight,
