@@ -1,7 +1,7 @@
 import React, { FC, useRef, useState, useMemo, useLayoutEffect } from "react";
 import isEqual from "lodash/isEqual";
 import styled from "styled-components";
-import { ChartMetadata, LegendItem } from "src/types/data";
+import { ChartMetadata, LegendItem, XaxisDataType } from "src/types/data";
 import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
@@ -117,7 +117,7 @@ interface GapChartProps {
     gap?: string;
   };
   legendFormatter?: (items: GapChartLegendItem[]) => GapChartLegendItem[];
-  xAxisDataType: "number" | "date_annual" | "date_monthly";
+  xAxisDataType: XaxisDataType;
   yAxisFormat?: (d: number) => string;
   xAxisFormat?: (d: number, tickValues?: Array<string | number>) => string;
   ticks?: number;

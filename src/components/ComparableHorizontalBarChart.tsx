@@ -9,7 +9,7 @@ import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import styled from "styled-components";
-import { LegendItem } from "../types/data";
+import { LegendItem, XaxisDataType } from "../types/data";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import TooltipHint from "src/components/shared/TooltipHint";
 
@@ -63,7 +63,7 @@ interface LineChartProps {
   xAxisFormat?: (d: number | { valueOf(): number }) => string;
   yAxisFormat?: (d: number | string) => string;
   xAxisPredefinedDomain?: number[];
-  xAxisDataType: "number" | "date_annual" | "date_monthly";
+  xAxisDataType: XaxisDataType;
   title?: string;
   tooltipFormatter?: (
     d: DataPoint | undefined,

@@ -1,8 +1,10 @@
+import { XaxisDataType } from "src/types/data";
+
 /*
   xAxisDataType: "number" | "date_annual" | "date_monthly";
  */
 export default (
-  xAxisDataType: "number" | "date_annual" | "date_monthly"
+  xAxisDataType: XaxisDataType
 ): ((value: string | number | { valueOf(): number }) => string) => {
   switch (xAxisDataType) {
     case "date_annual":

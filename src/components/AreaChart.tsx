@@ -18,6 +18,7 @@ import useDeepCompareEffect from "use-deep-compare-effect";
 import styled from "styled-components";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import TooltipHint from "src/components/shared/TooltipHint";
+import { XaxisDataType } from "src/types/data";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -75,7 +76,7 @@ interface Props {
   yAxisDomain?: [number, number] | null;
   tooltipFormatter?: (d: DataPoint, series: DataPoint[], key: string) => string | null;
   children?: React.ReactNode;
-  xAxisDataType: "number" | "date_annual" | "date_monthly";
+  xAxisDataType: XaxisDataType;
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;

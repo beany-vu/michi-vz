@@ -1,4 +1,4 @@
-import { DataPoint } from "./data";
+import { DataPoint, XaxisDataType } from "./data";
 import { ScaleLinear, ScaleTime } from "d3-scale";
 
 export interface LineChartWorkerData {
@@ -44,7 +44,7 @@ export interface LineChartWorkerInput {
     width: number;
     height: number;
     margin: { top: number; right: number; bottom: number; left: number };
-    xAxisDataType: "number" | "date_annual" | "date_monthly";
+    xAxisDataType: XaxisDataType;
     filter?: {
       limit: number;
       date: number | string;

@@ -8,7 +8,7 @@ import LoadingIndicator from "./shared/LoadingIndicator";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisBand from "./shared/YaxisBand";
 import useDeepCompareEffect from "use-deep-compare-effect";
-import { LegendItem } from "../types/data";
+import { LegendItem, XaxisDataType } from "../types/data";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import TooltipHint from "src/components/shared/TooltipHint";
 
@@ -42,7 +42,7 @@ interface LineChartProps {
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
   xAxisFormat?: (d: number | { valueOf(): number }) => string;
-  xAxisDataType: "number" | "date_annual" | "date_monthly";
+  xAxisDataType: XaxisDataType;
   yAxisFormat?: (d: number | string) => string;
   title?: string;
   tooltipFormatter?: (

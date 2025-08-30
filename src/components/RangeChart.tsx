@@ -1,7 +1,7 @@
 // RangeChart.tsx
 import React, { useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import * as d3 from "d3";
-import { DataPointRangeChart, LegendItem } from "../types/data";
+import { DataPointRangeChart, LegendItem, XaxisDataType } from "../types/data";
 import { useChartContext } from "./MichiVzProvider";
 import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
@@ -29,7 +29,7 @@ interface RangeChartProps {
   yAxisDomain?: [number, number];
   yAxisFormat?: (d: number) => string;
   xAxisFormat?: (d: number) => string;
-  xAxisDataType: "number" | "date_annual" | "date_monthly";
+  xAxisDataType: XaxisDataType;
   tooltipFormatter?: (
     d: DataPointRangeChart,
     series: DataPointRangeChart[],

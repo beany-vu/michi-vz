@@ -7,7 +7,7 @@ import { LineChartDataItem } from "../../../types/data";
 //   filteredDataSet: LineChartDataItem[];
 //   width: number;
 //   margin: { left: number; right: number };
-//   xAxisDataType: "number" | "date_annual" | "date_monthly";
+//   xAxisDataType: XaxisDataType;
 // }
 
 const useLineChartXscale = (
