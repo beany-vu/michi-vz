@@ -1177,7 +1177,6 @@ export const ButtonHoverInteraction = {
   render: args => {
     const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
     const [filterDate, setFilterDate] = React.useState("2021");
-    
 
     // Get all available dates from the dataset
     const availableDates = React.useMemo(() => {
@@ -1302,7 +1301,11 @@ export const ButtonHoverInteraction = {
             Show All
           </button>
         </div>
-        <LineChartComponent {...filteredDataSet} highlightItems={currentHighlight} colorsMapping={fixedColorsMapping} />
+        <LineChartComponent
+          {...filteredDataSet}
+          highlightItems={currentHighlight}
+          colorsMapping={fixedColorsMapping}
+        />
       </div>
     );
   },
@@ -1455,6 +1458,31 @@ export const Monthly = {
   },
 };
 
+export const MonthlyWithATODate = {
+  args: {
+    dataSet: [
+      {
+        label: "Monthly ATO Date",
+        series: [
+          { date: "202301", value: 100, certainty: true },
+          { date: "202302", value: 120, certainty: true },
+          { date: "202303", value: 90, certainty: true },
+          { date: "202304", value: 130, certainty: true },
+          { date: "202305", value: 110, certainty: true },
+        ],
+      },
+    ],
+    width: 700,
+    height: 400,
+    margin: { top: 50, right: 50, bottom: 50, left: 50 },
+    showCombined: false,
+    yAxisFormat: (d: any) => `${d}`,
+    xAxisDataType: "date_monthly",
+    title: "Monthly Data (Small Range)",
+    tooltipFormatter: (dataSet: any, d: any) => JSON.stringify(d),
+  },
+};
+
 export const ManyMonths = {
   args: {
     dataSet: [
@@ -1557,19 +1585,19 @@ export const DisableEnableColorMapping = {
     const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
     const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
     const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
-    
 
     // Handle color mapping generation
-    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
-      setColorsMapping(prev => ({ ...prev, ...newMapping }));
-    }, []);
+    const handleColorMappingGenerated = React.useCallback(
+      (newMapping: { [key: string]: string }) => {
+        setColorsMapping(prev => ({ ...prev, ...newMapping }));
+      },
+      []
+    );
 
     // Toggle disabled state for an item
     const toggleDisabled = React.useCallback((label: string) => {
-      setDisabledItems(prev => 
-        prev.includes(label) 
-          ? prev.filter(item => item !== label)
-          : [...prev, label]
+      setDisabledItems(prev =>
+        prev.includes(label) ? prev.filter(item => item !== label) : [...prev, label]
       );
     }, []);
 
@@ -1622,7 +1650,8 @@ export const DisableEnableColorMapping = {
           background: isHighlighted ? color : "white",
           color: isHighlighted ? "white" : color,
         };
-      } else { // disable
+      } else {
+        // disable
         const isDisabled = disabledItems.includes(label);
         return {
           ...baseStyle,
@@ -1663,8 +1692,10 @@ export const DisableEnableColorMapping = {
                   padding: "8px 16px",
                   border: "2px solid #666",
                   borderRadius: "4px",
-                  background: currentHighlight.length === testDataSetForDisabling.length ? "#666" : "white",
-                  color: currentHighlight.length === testDataSetForDisabling.length ? "white" : "#666",
+                  background:
+                    currentHighlight.length === testDataSetForDisabling.length ? "#666" : "white",
+                  color:
+                    currentHighlight.length === testDataSetForDisabling.length ? "white" : "#666",
                   cursor: "pointer",
                   transition: "all 0.3s ease",
                   fontWeight: 500,
@@ -1677,7 +1708,7 @@ export const DisableEnableColorMapping = {
               </button>
             </div>
           </div>
-          
+
           <div>
             <div style={sectionLabelStyle}>Disable/Enable Controls:</div>
             <div style={buttonGroupStyle}>
@@ -1708,15 +1739,20 @@ export const DisableEnableColorMapping = {
               </button>
             </div>
           </div>
-          
+
           <div style={infoPanelStyle}>
-            <div><strong>Disabled Items:</strong> {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}</div>
-            <div><strong>Colors Mapping:</strong> {JSON.stringify(colorsMapping, null, 2)}</div>
+            <div>
+              <strong>Disabled Items:</strong>{" "}
+              {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}
+            </div>
+            <div>
+              <strong>Colors Mapping:</strong> {JSON.stringify(colorsMapping, null, 2)}
+            </div>
           </div>
         </div>
-        
-        <LineChartComponent 
-          {...args} 
+
+        <LineChartComponent
+          {...args}
           onColorMappingGenerated={handleColorMappingGenerated}
           colorsMapping={colorsMapping}
           highlightItems={currentHighlight}
@@ -1747,21 +1783,22 @@ export const DynamicColorAssignment = {
     const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
     const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
     const [colorAssignmentLog, setColorAssignmentLog] = React.useState<string[]>([]);
-    
+
     // Handle color mapping generation with logging
-    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
-      const timestamp = new Date().toLocaleTimeString();
-      const logEntry = `${timestamp}: ${JSON.stringify(newMapping)}`;
-      setColorAssignmentLog(prev => [logEntry, ...prev.slice(0, 9)]); // Keep last 10 entries
-      setColorsMapping(prev => ({ ...prev, ...newMapping }));
-    }, []);
+    const handleColorMappingGenerated = React.useCallback(
+      (newMapping: { [key: string]: string }) => {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = `${timestamp}: ${JSON.stringify(newMapping)}`;
+        setColorAssignmentLog(prev => [logEntry, ...prev.slice(0, 9)]); // Keep last 10 entries
+        setColorsMapping(prev => ({ ...prev, ...newMapping }));
+      },
+      []
+    );
 
     // Toggle disabled state for an item
     const toggleDisabled = React.useCallback((label: string) => {
-      setDisabledItems(prev => 
-        prev.includes(label) 
-          ? prev.filter(item => item !== label)
-          : [...prev, label]
+      setDisabledItems(prev =>
+        prev.includes(label) ? prev.filter(item => item !== label) : [...prev, label]
       );
     }, []);
 
@@ -1874,7 +1911,7 @@ export const DynamicColorAssignment = {
               </button>
             </div>
           </div>
-          
+
           <div>
             <div style={sectionLabelStyle}>Color Assignment Log:</div>
             <div style={logPanelStyle}>
@@ -1890,9 +1927,9 @@ export const DynamicColorAssignment = {
             </div>
           </div>
         </div>
-        
-        <LineChartComponent 
-          {...args} 
+
+        <LineChartComponent
+          {...args}
           onColorMappingGenerated={handleColorMappingGenerated}
           colorsMapping={colorsMapping}
           disabledItems={disabledItems}
@@ -2105,7 +2142,9 @@ export const PreselectedItemsColorTest = {
     onHighlightItem: fn(),
   },
   render: args => {
-    const [filterType, setFilterType] = React.useState<"preselected" | "top10" | "bottom10" | "none">("none");
+    const [filterType, setFilterType] = React.useState<
+      "preselected" | "top10" | "bottom10" | "none"
+    >("none");
     const [selectedYear, setSelectedYear] = React.useState("2021");
     const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
     const [colorLog, setColorLog] = React.useState<string[]>([]);
@@ -2114,22 +2153,25 @@ export const PreselectedItemsColorTest = {
     const preselectedItems = ["United States", "China", "Japan", "Germany", "India"];
 
     // Handle color mapping generation
-    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
-      const timestamp = new Date().toLocaleTimeString();
-      const logEntry = `${timestamp}: Color mapping updated - ${Object.keys(newMapping).length} items`;
-      setColorLog(prev => [logEntry, ...prev.slice(0, 9)]);
-      setColorsMapping(prev => ({ ...prev, ...newMapping }));
-    }, []);
+    const handleColorMappingGenerated = React.useCallback(
+      (newMapping: { [key: string]: string }) => {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = `${timestamp}: Color mapping updated - ${Object.keys(newMapping).length} items`;
+        setColorLog(prev => [logEntry, ...prev.slice(0, 9)]);
+        setColorsMapping(prev => ({ ...prev, ...newMapping }));
+      },
+      []
+    );
 
     // Create filter based on current state
     const currentFilter = React.useMemo(() => {
       if (filterType === "none") return null;
-      
+
       return {
         limit: filterType === "preselected" ? preselectedItems.length : 10,
         date: selectedYear,
         criteria: "value",
-        sortingDir: filterType === "bottom10" ? "asc" : "desc" as "asc" | "desc",
+        sortingDir: filterType === "bottom10" ? "asc" : ("desc" as "asc" | "desc"),
       };
     }, [filterType, selectedYear]);
 
@@ -2222,7 +2264,7 @@ export const PreselectedItemsColorTest = {
             </div>
             <select
               value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
+              onChange={e => setSelectedYear(e.target.value)}
               style={selectStyle}
             >
               <option value="2019">2019</option>
@@ -2253,7 +2295,8 @@ export const PreselectedItemsColorTest = {
           </div>
 
           <div style={{ fontSize: "12px", color: "#6c757d" }}>
-            <strong>Current Filter:</strong> {filterType === "none" ? "None" : JSON.stringify(currentFilter)}
+            <strong>Current Filter:</strong>{" "}
+            {filterType === "none" ? "None" : JSON.stringify(currentFilter)}
           </div>
         </div>
 
@@ -2294,36 +2337,40 @@ export const YearBasedFilteringColorTest = {
     const [colorConsistencyLog, setColorConsistencyLog] = React.useState<string[]>([]);
 
     // Handle color mapping generation with consistency checking
-    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
-      const timestamp = new Date().toLocaleTimeString();
-      
-      setColorsMapping(prev => {
-        // Check for color consistency using the previous state
-        const existingColors = Object.keys(prev);
-        const newColors = Object.keys(newMapping);
-        const changedColors = existingColors.filter(color => 
-          prev[color] !== newMapping[color]
-        );
-        
-        let logEntry = `${timestamp}: ${newColors.length} items mapped`;
-        if (changedColors.length > 0) {
-          logEntry += ` (${changedColors.length} colors changed)`;
-        } else if (existingColors.length > 0) {
-          logEntry += " (colors consistent)";
-        }
-        
-        setColorConsistencyLog(prevLog => [logEntry, ...prevLog.slice(0, 9)]);
-        return { ...prev, ...newMapping };
-      });
-    }, []);
+    const handleColorMappingGenerated = React.useCallback(
+      (newMapping: { [key: string]: string }) => {
+        const timestamp = new Date().toLocaleTimeString();
+
+        setColorsMapping(prev => {
+          // Check for color consistency using the previous state
+          const existingColors = Object.keys(prev);
+          const newColors = Object.keys(newMapping);
+          const changedColors = existingColors.filter(color => prev[color] !== newMapping[color]);
+
+          let logEntry = `${timestamp}: ${newColors.length} items mapped`;
+          if (changedColors.length > 0) {
+            logEntry += ` (${changedColors.length} colors changed)`;
+          } else if (existingColors.length > 0) {
+            logEntry += " (colors consistent)";
+          }
+
+          setColorConsistencyLog(prevLog => [logEntry, ...prevLog.slice(0, 9)]);
+          return { ...prev, ...newMapping };
+        });
+      },
+      []
+    );
 
     // Create current filter
-    const currentFilter = React.useMemo(() => ({
-      limit: filterLimit,
-      date: selectedYear,
-      criteria: "value",
-      sortingDir: sortDirection,
-    }), [filterLimit, selectedYear, sortDirection]);
+    const currentFilter = React.useMemo(
+      () => ({
+        limit: filterLimit,
+        date: selectedYear,
+        criteria: "value",
+        sortingDir: sortDirection,
+      }),
+      [filterLimit, selectedYear, sortDirection]
+    );
 
     // Style for controls
     const controlsStyle = {
@@ -2390,7 +2437,7 @@ export const YearBasedFilteringColorTest = {
                 min="3"
                 max="15"
                 value={filterLimit}
-                onChange={(e) => setFilterLimit(parseInt(e.target.value))}
+                onChange={e => setFilterLimit(parseInt(e.target.value))}
                 style={inputStyle}
               />
               <span style={{ marginLeft: "8px" }}>{filterLimit}</span>
@@ -2400,7 +2447,7 @@ export const YearBasedFilteringColorTest = {
               <label style={labelStyle}>Reference Year:</label>
               <select
                 value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
+                onChange={e => setSelectedYear(e.target.value)}
                 style={inputStyle}
               >
                 <option value="2019">2019</option>
@@ -2491,33 +2538,39 @@ export const CriteriaBasedFilteringColorTest = {
     const [colorHistory, setColorHistory] = React.useState<{ [key: string]: string[] }>({});
 
     // Handle color mapping generation with history tracking
-    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
-      const timestamp = new Date().toLocaleTimeString();
-      
-      // Track color history for each item using previous state
-      setColorHistory(prevHistory => {
-        const newHistory = { ...prevHistory };
-        Object.keys(newMapping).forEach(item => {
-          if (!newHistory[item]) {
-            newHistory[item] = [];
-          }
-          if (!newHistory[item].includes(newMapping[item])) {
-            newHistory[item] = [...newHistory[item], newMapping[item]];
-          }
+    const handleColorMappingGenerated = React.useCallback(
+      (newMapping: { [key: string]: string }) => {
+        const timestamp = new Date().toLocaleTimeString();
+
+        // Track color history for each item using previous state
+        setColorHistory(prevHistory => {
+          const newHistory = { ...prevHistory };
+          Object.keys(newMapping).forEach(item => {
+            if (!newHistory[item]) {
+              newHistory[item] = [];
+            }
+            if (!newHistory[item].includes(newMapping[item])) {
+              newHistory[item] = [...newHistory[item], newMapping[item]];
+            }
+          });
+          return newHistory;
         });
-        return newHistory;
-      });
-      
-      setColorsMapping(prev => ({ ...prev, ...newMapping }));
-    }, []);
+
+        setColorsMapping(prev => ({ ...prev, ...newMapping }));
+      },
+      []
+    );
 
     // Create current filter
-    const currentFilter = React.useMemo(() => ({
-      limit: filterLimit,
-      date: selectedYear,
-      criteria: "value", // Currently only "value" is supported
-      sortingDir: sortDirection,
-    }), [filterLimit, selectedYear, sortDirection]);
+    const currentFilter = React.useMemo(
+      () => ({
+        limit: filterLimit,
+        date: selectedYear,
+        criteria: "value", // Currently only "value" is supported
+        sortingDir: sortDirection,
+      }),
+      [filterLimit, selectedYear, sortDirection]
+    );
 
     // Style for controls
     const controlsStyle = {
@@ -2584,7 +2637,7 @@ export const CriteriaBasedFilteringColorTest = {
                 min="3"
                 max="15"
                 value={filterLimit}
-                onChange={(e) => setFilterLimit(parseInt(e.target.value))}
+                onChange={e => setFilterLimit(parseInt(e.target.value))}
                 style={inputStyle}
               />
               <span style={{ marginLeft: "8px" }}>{filterLimit}</span>
@@ -2594,7 +2647,7 @@ export const CriteriaBasedFilteringColorTest = {
               <label style={labelStyle}>Reference Year:</label>
               <select
                 value={selectedYear}
-                onChange={(e) => setSelectedYear(e.target.value)}
+                onChange={e => setSelectedYear(e.target.value)}
                 style={inputStyle}
               >
                 <option value="2019">2019</option>
@@ -2630,15 +2683,11 @@ export const CriteriaBasedFilteringColorTest = {
             </div>
             <div style={historyStyle}>
               {Object.keys(colorHistory).length === 0 ? (
-                <div style={{ color: "#6c757d", fontStyle: "italic" }}>
-                  No color history yet
-                </div>
+                <div style={{ color: "#6c757d", fontStyle: "italic" }}>No color history yet</div>
               ) : (
                 Object.entries(colorHistory).map(([item, colors]) => (
                   <div key={item} style={{ marginBottom: "8px" }}>
-                    <div style={{ fontWeight: "bold", color: "#495057" }}>
-                      {item}:
-                    </div>
+                    <div style={{ fontWeight: "bold", color: "#495057" }}>{item}:</div>
                     <div style={{ marginLeft: "12px" }}>
                       {colors.map((color, index) => (
                         <span
@@ -2706,10 +2755,10 @@ export const FilterNullWithDisabledItemsTest = {
     const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
     const [legendData, setLegendData] = React.useState<any[]>([]);
     const [chartMetadata, setChartMetadata] = React.useState<any>(null);
-    const [filterType, setFilterType] = React.useState<'null' | 'object'>('null');
-    
+    const [filterType, setFilterType] = React.useState<"null" | "object">("null");
+
     const testFilter = React.useMemo(() => {
-      if (filterType === 'null') return null;
+      if (filterType === "null") return null;
       return {
         limit: 5,
         date: 2020,
@@ -2727,35 +2776,36 @@ export const FilterNullWithDisabledItemsTest = {
     }, []);
 
     const toggleDisabled = React.useCallback((label: string) => {
-      setDisabledItems(prev => 
-        prev.includes(label) 
-          ? prev.filter(item => item !== label)
-          : [...prev, label]
+      setDisabledItems(prev =>
+        prev.includes(label) ? prev.filter(item => item !== label) : [...prev, label]
       );
     }, []);
 
     return (
       <div>
-        <div style={{
-          padding: "16px",
-          marginBottom: "16px",
-          backgroundColor: "#f8f9fa",
-          borderRadius: "8px",
-          border: "1px solid #e9ecef",
-        }}>
+        <div
+          style={{
+            padding: "16px",
+            marginBottom: "16px",
+            backgroundColor: "#f8f9fa",
+            borderRadius: "8px",
+            border: "1px solid #e9ecef",
+          }}
+        >
           <h4>Filter Null vs Object Test</h4>
           <p style={{ fontSize: "14px", color: "#666", marginBottom: "12px" }}>
-            This demonstrates the bug where disabled items disappear from legend when filter is null.
+            This demonstrates the bug where disabled items disappear from legend when filter is
+            null.
           </p>
-          
+
           <div style={{ marginBottom: "12px" }}>
             <button
-              onClick={() => setFilterType('null')}
+              onClick={() => setFilterType("null")}
               style={{
                 padding: "4px 8px",
                 marginRight: "8px",
-                backgroundColor: filterType === 'null' ? "#007bff" : "#f8f9fa",
-                color: filterType === 'null' ? "white" : "#333",
+                backgroundColor: filterType === "null" ? "#007bff" : "#f8f9fa",
+                color: filterType === "null" ? "white" : "#333",
                 border: "1px solid #ccc",
                 borderRadius: "4px",
               }}
@@ -2763,11 +2813,11 @@ export const FilterNullWithDisabledItemsTest = {
               Filter: null
             </button>
             <button
-              onClick={() => setFilterType('object')}
+              onClick={() => setFilterType("object")}
               style={{
                 padding: "4px 8px",
-                backgroundColor: filterType === 'object' ? "#007bff" : "#f8f9fa",
-                color: filterType === 'object' ? "white" : "#333",
+                backgroundColor: filterType === "object" ? "#007bff" : "#f8f9fa",
+                color: filterType === "object" ? "white" : "#333",
                 border: "1px solid #ccc",
                 borderRadius: "4px",
               }}
@@ -2797,39 +2847,65 @@ export const FilterNullWithDisabledItemsTest = {
           </div>
 
           <div style={{ fontSize: "12px", color: "#666" }}>
-            <div><strong>Current filter:</strong> {filterType}</div>
-            <div><strong>Disabled items:</strong> {disabledItems.join(", ") || "None"}</div>
-            <div><strong>Legend items count:</strong> {legendData.length}</div>
-            <div><strong>Expected behavior:</strong> All items should appear in legend regardless of filter type</div>
+            <div>
+              <strong>Current filter:</strong> {filterType}
+            </div>
+            <div>
+              <strong>Disabled items:</strong> {disabledItems.join(", ") || "None"}
+            </div>
+            <div>
+              <strong>Legend items count:</strong> {legendData.length}
+            </div>
+            <div>
+              <strong>Expected behavior:</strong> All items should appear in legend regardless of
+              filter type
+            </div>
             <div style={{ color: "#dc3545" }}>
-              <strong>Bug:</strong> When filter is null, disabled items disappear from legend completely
+              <strong>Bug:</strong> When filter is null, disabled items disappear from legend
+              completely
             </div>
           </div>
 
-          <div style={{
-            marginTop: "16px",
-            padding: "12px",
-            backgroundColor: "#fff",
-            border: "1px solid #dee2e6",
-            borderRadius: "4px",
-            fontSize: "12px",
-            fontFamily: "monospace"
-          }}>
+          <div
+            style={{
+              marginTop: "16px",
+              padding: "12px",
+              backgroundColor: "#fff",
+              border: "1px solid #dee2e6",
+              borderRadius: "4px",
+              fontSize: "12px",
+              fontFamily: "monospace",
+            }}
+          >
             <strong>Chart Metadata:</strong>
             <div style={{ marginTop: "8px", maxHeight: "200px", overflowY: "auto" }}>
               {chartMetadata ? (
                 <div>
-                  <div><strong>Visible Items:</strong> [{chartMetadata.visibleItems?.join(", ")}]</div>
-                  <div><strong>Legend Data:</strong></div>
+                  <div>
+                    <strong>Visible Items:</strong> [{chartMetadata.visibleItems?.join(", ")}]
+                  </div>
+                  <div>
+                    <strong>Legend Data:</strong>
+                  </div>
                   <div style={{ paddingLeft: "12px", marginTop: "4px" }}>
                     {legendData.map((item, idx) => (
                       <div key={idx}>
-                        • {item.label} - Color: {item.color} - Disabled: {item.disabled ? "true" : "false"}
+                        • {item.label} - Color: {item.color} - Disabled:{" "}
+                        {item.disabled ? "true" : "false"}
                       </div>
                     ))}
                   </div>
-                  <div style={{ marginTop: "8px" }}><strong>Full Metadata:</strong></div>
-                  <pre style={{ fontSize: "10px", maxHeight: "150px", overflowY: "auto", whiteSpace: "pre-wrap" }}>
+                  <div style={{ marginTop: "8px" }}>
+                    <strong>Full Metadata:</strong>
+                  </div>
+                  <pre
+                    style={{
+                      fontSize: "10px",
+                      maxHeight: "150px",
+                      overflowY: "auto",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
                     {JSON.stringify(chartMetadata, null, 2)}
                   </pre>
                 </div>
@@ -2849,7 +2925,7 @@ export const FilterNullWithDisabledItemsTest = {
         />
       </div>
     );
-  }
+  },
 };
 
 export const ColorInitializationTest = {
@@ -2865,18 +2941,21 @@ export const ColorInitializationTest = {
     const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
     const [initializationLog, setInitializationLog] = React.useState<string[]>([]);
     const renderCountRef = React.useRef(0);
-    
+
     // Track render count using ref to avoid infinite loop
     renderCountRef.current += 1;
     const renderCount = renderCountRef.current;
 
     // Handle color mapping generation with initialization tracking
-    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
-      const timestamp = new Date().toLocaleTimeString();
-      const logEntry = `${timestamp}: ${Object.keys(newMapping).length} colors generated`;
-      setInitializationLog(prev => [logEntry, ...prev.slice(0, 9)]);
-      setColorsMapping(newMapping);
-    }, []);
+    const handleColorMappingGenerated = React.useCallback(
+      (newMapping: { [key: string]: string }) => {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = `${timestamp}: ${Object.keys(newMapping).length} colors generated`;
+        setInitializationLog(prev => [logEntry, ...prev.slice(0, 9)]);
+        setColorsMapping(newMapping);
+      },
+      []
+    );
 
     // Style for the test panel
     const testPanelStyle = {
@@ -2918,7 +2997,7 @@ export const ColorInitializationTest = {
           <div style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "8px" }}>
             Color Initialization Test
           </div>
-          
+
           <div style={statusStyle} style={{ backgroundColor: statusColor, color: "white" }}>
             {statusText} (Render #{renderCount})
           </div>
@@ -2974,7 +3053,8 @@ export const ColorInitializationTest = {
           </div>
 
           <div style={{ fontSize: "12px", color: "#6c757d" }}>
-            <strong>Expected Behavior:</strong> Colors should be generated immediately on first render, not after a state change.
+            <strong>Expected Behavior:</strong> Colors should be generated immediately on first
+            render, not after a state change.
           </div>
         </div>
 
@@ -3022,119 +3102,165 @@ export const LegendDataExposure = {
     };
 
     const toggleSortDirection = () => {
-      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+      setSortDirection(prev => (prev === "asc" ? "desc" : "asc"));
     };
 
-    const currentFilter = React.useMemo(() => ({
-      ...args.filter,
-      sortingDir: sortDirection,
-    }), [args.filter, sortDirection]);
+    const currentFilter = React.useMemo(
+      () => ({
+        ...args.filter,
+        sortingDir: sortDirection,
+      }),
+      [args.filter, sortDirection]
+    );
 
     return (
       <div style={{ padding: "20px" }}>
         <h3>Legend Data Exposure Demo</h3>
-        
+
         <div style={{ marginBottom: "20px" }}>
           <h4>Legend Data (sorted by value at filter date: {args.filter?.date}):</h4>
           <button onClick={toggleSortDirection} style={{ marginBottom: "10px" }}>
             Current Sort: {sortDirection.toUpperCase()} - Click to toggle
           </button>
-          
-          <div style={{ 
-            background: "#f5f5f5", 
-            padding: "15px", 
-            borderRadius: "4px",
-            maxHeight: "400px",
-            overflowY: "auto"
-          }}>
+
+          <div
+            style={{
+              background: "#f5f5f5",
+              padding: "15px",
+              borderRadius: "4px",
+              maxHeight: "400px",
+              overflowY: "auto",
+            }}
+          >
             {legendData.length > 0 ? (
               <div style={{ fontSize: "14px" }}>
                 <div style={{ marginBottom: "10px", fontWeight: "bold" }}>
                   Total Items: {legendData.length}
                 </div>
-                
+
                 {legendData.map((item, index) => (
-                  <div key={item.label} style={{ 
-                    marginBottom: "15px",
-                    padding: "10px",
-                    backgroundColor: item.disabled ? "#f8f9fa" : "#ffffff",
-                    border: `1px solid ${item.disabled ? "#dee2e6" : "#e9ecef"}`,
-                    borderRadius: "4px",
-                    opacity: item.disabled ? 0.7 : 1
-                  }}>
+                  <div
+                    key={item.label}
+                    style={{
+                      marginBottom: "15px",
+                      padding: "10px",
+                      backgroundColor: item.disabled ? "#f8f9fa" : "#ffffff",
+                      border: `1px solid ${item.disabled ? "#dee2e6" : "#e9ecef"}`,
+                      borderRadius: "4px",
+                      opacity: item.disabled ? 0.7 : 1,
+                    }}
+                  >
                     <div style={{ display: "flex", alignItems: "center", marginBottom: "8px" }}>
-                      <span style={{ 
-                        display: "inline-block", 
-                        width: "20px", 
-                        height: "20px", 
-                        backgroundColor: item.color,
-                        marginRight: "10px",
-                        borderRadius: "3px",
-                        border: "1px solid #ccc"
-                      }}></span>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          width: "20px",
+                          height: "20px",
+                          backgroundColor: item.color,
+                          marginRight: "10px",
+                          borderRadius: "3px",
+                          border: "1px solid #ccc",
+                        }}
+                      ></span>
                       <strong style={{ fontSize: "16px" }}>{item.label}</strong>
                       {item.disabled && (
-                        <span style={{ 
-                          marginLeft: "10px", 
-                          background: "#dc3545", 
-                          color: "white", 
-                          padding: "2px 6px", 
-                          borderRadius: "3px", 
-                          fontSize: "12px" 
-                        }}>
+                        <span
+                          style={{
+                            marginLeft: "10px",
+                            background: "#dc3545",
+                            color: "white",
+                            padding: "2px 6px",
+                            borderRadius: "3px",
+                            fontSize: "12px",
+                          }}
+                        >
                           DISABLED
                         </span>
                       )}
                     </div>
-                    
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "13px" }}>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "8px",
+                        fontSize: "13px",
+                      }}
+                    >
                       <div>
                         <span style={{ fontWeight: "600", color: "#495057" }}>Order:</span>{" "}
-                        <span style={{ fontFamily: "monospace", background: "#e9ecef", padding: "2px 4px", borderRadius: "2px" }}>
+                        <span
+                          style={{
+                            fontFamily: "monospace",
+                            background: "#e9ecef",
+                            padding: "2px 4px",
+                            borderRadius: "2px",
+                          }}
+                        >
                           {item.order}
                         </span>
                       </div>
-                      
+
                       <div>
                         <span style={{ fontWeight: "600", color: "#495057" }}>Disabled:</span>{" "}
-                        <span style={{ 
-                          fontFamily: "monospace", 
-                          background: item.disabled ? "#f8d7da" : "#d1edcc", 
-                          color: item.disabled ? "#721c24" : "#155724",
-                          padding: "2px 4px", 
-                          borderRadius: "2px" 
-                        }}>
+                        <span
+                          style={{
+                            fontFamily: "monospace",
+                            background: item.disabled ? "#f8d7da" : "#d1edcc",
+                            color: item.disabled ? "#721c24" : "#155724",
+                            padding: "2px 4px",
+                            borderRadius: "2px",
+                          }}
+                        >
                           {item.disabled ? "true" : "false"}
                         </span>
                       </div>
-                      
+
                       <div style={{ gridColumn: "1 / -1" }}>
                         <span style={{ fontWeight: "600", color: "#495057" }}>Color:</span>{" "}
-                        <span style={{ fontFamily: "monospace", background: "#e9ecef", padding: "2px 4px", borderRadius: "2px" }}>
+                        <span
+                          style={{
+                            fontFamily: "monospace",
+                            background: "#e9ecef",
+                            padding: "2px 4px",
+                            borderRadius: "2px",
+                          }}
+                        >
                           {item.color}
                         </span>
                       </div>
-                      
+
                       {item.dataLabelSafe && (
                         <div style={{ gridColumn: "1 / -1" }}>
-                          <span style={{ fontWeight: "600", color: "#495057" }}>CSS Safe Label:</span>{" "}
-                          <span style={{ fontFamily: "monospace", background: "#e9ecef", padding: "2px 4px", borderRadius: "2px" }}>
+                          <span style={{ fontWeight: "600", color: "#495057" }}>
+                            CSS Safe Label:
+                          </span>{" "}
+                          <span
+                            style={{
+                              fontFamily: "monospace",
+                              background: "#e9ecef",
+                              padding: "2px 4px",
+                              borderRadius: "2px",
+                            }}
+                          >
                             {item.dataLabelSafe}
                           </span>
                         </div>
                       )}
-                      
+
                       {item.sortValue !== undefined && (
                         <div style={{ gridColumn: "1 / -1" }}>
                           <span style={{ fontWeight: "600", color: "#495057" }}>Sort Value:</span>{" "}
-                          <span style={{ 
-                            fontFamily: "monospace", 
-                            background: "#fff3cd", 
-                            color: "#856404",
-                            padding: "2px 4px", 
-                            borderRadius: "2px",
-                            fontWeight: "600"
-                          }}>
+                          <span
+                            style={{
+                              fontFamily: "monospace",
+                              background: "#fff3cd",
+                              color: "#856404",
+                              padding: "2px 4px",
+                              borderRadius: "2px",
+                              fontWeight: "600",
+                            }}
+                          >
                             {item.sortValue}
                           </span>
                           <span style={{ fontSize: "11px", color: "#6c757d", marginLeft: "8px" }}>
@@ -3143,17 +3269,19 @@ export const LegendDataExposure = {
                         </div>
                       )}
                     </div>
-                    
+
                     <div style={{ marginTop: "8px", fontSize: "12px", color: "#6c757d" }}>
                       <strong>Raw JSON:</strong>
-                      <pre style={{ 
-                        background: "#f8f9fa", 
-                        padding: "6px", 
-                        borderRadius: "2px", 
-                        margin: "4px 0 0 0",
-                        fontSize: "11px",
-                        overflow: "auto"
-                      }}>
+                      <pre
+                        style={{
+                          background: "#f8f9fa",
+                          padding: "6px",
+                          borderRadius: "2px",
+                          margin: "4px 0 0 0",
+                          fontSize: "11px",
+                          overflow: "auto",
+                        }}
+                      >
                         {JSON.stringify(item, null, 2)}
                       </pre>
                     </div>
@@ -3199,7 +3327,7 @@ export const SynchronizedLegendInteraction = {
         ],
       },
       {
-        label: "Country B", 
+        label: "Country B",
         color: "#ff7f0e",
         series: [
           { date: "2020", value: 75 },
@@ -3210,7 +3338,7 @@ export const SynchronizedLegendInteraction = {
       },
       {
         label: "Country C",
-        color: "#2ca02c", 
+        color: "#2ca02c",
         series: [
           { date: "2020", value: 65 },
           { date: "2021", value: 70 },
@@ -3300,12 +3428,14 @@ export const SynchronizedLegendInteraction = {
   render: (args: any) => {
     const [highlightedItems, setHighlightedItems] = React.useState<string[]>([]);
     const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
-    const [sharedColorMapping, setSharedColorMapping] = React.useState<{[key: string]: string}>({});
+    const [sharedColorMapping, setSharedColorMapping] = React.useState<{ [key: string]: string }>(
+      {}
+    );
     const [filterLimit, setFilterLimit] = React.useState<number>(3);
     const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("desc");
     const [legendData, setLegendData] = React.useState<any[]>([]);
     const [masterChart, setMasterChart] = React.useState<"A" | "B">("A");
-    
+
     const chart2Data = [
       {
         label: "Country A",
@@ -3319,7 +3449,7 @@ export const SynchronizedLegendInteraction = {
       },
       {
         label: "Country B",
-        color: "#ff7f0e", 
+        color: "#ff7f0e",
         series: [
           { date: "2020", value: 110 },
           { date: "2021", value: 115 },
@@ -3413,7 +3543,7 @@ export const SynchronizedLegendInteraction = {
       setHighlightedItems(labels);
     };
 
-    const handleColorMappingGenerated = (colorMapping: {[key: string]: string}) => {
+    const handleColorMappingGenerated = (colorMapping: { [key: string]: string }) => {
       setSharedColorMapping(colorMapping);
     };
 
@@ -3422,8 +3552,8 @@ export const SynchronizedLegendInteraction = {
     };
 
     const handleLegendClick = (seriesLabel: string) => {
-      setDisabledItems(prev => 
-        prev.includes(seriesLabel) 
+      setDisabledItems(prev =>
+        prev.includes(seriesLabel)
           ? prev.filter(item => item !== seriesLabel)
           : [...prev, seriesLabel]
       );
@@ -3443,12 +3573,12 @@ export const SynchronizedLegendInteraction = {
         // If no legend data yet, return empty array to avoid showing all items
         return [];
       }
-      
+
       // Get the labels that are visible in the master chart (not disabled and within limit)
       const visibleLabels = legendData
         .filter(item => !item.disabled && item.order <= filterLimit)
         .map(item => item.label);
-      
+
       // Filter slave chart data to only show the SAME items that are visible in the master chart
       const slaveDataSet = masterChart === "A" ? chart2Data : args.dataSet;
       return slaveDataSet.filter(item => visibleLabels.includes(item.label));
@@ -3458,14 +3588,25 @@ export const SynchronizedLegendInteraction = {
       <div>
         <div style={{ marginBottom: "20px" }}>
           <h3>Master-Slave Chart Filtering</h3>
-          <p>Select which chart acts as the master - its filtering determines which items appear in both charts. Both charts show the SAME items, just with different data values.</p>
-          
-          <div style={{ display: "flex", gap: "20px", marginBottom: "20px", alignItems: "center", flexWrap: "wrap" }}>
+          <p>
+            Select which chart acts as the master - its filtering determines which items appear in
+            both charts. Both charts show the SAME items, just with different data values.
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "20px",
+              marginBottom: "20px",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <div>
               <label>Master Chart: </label>
-              <select 
-                value={masterChart} 
-                onChange={(e) => {
+              <select
+                value={masterChart}
+                onChange={e => {
                   setMasterChart(e.target.value as "A" | "B");
                   setLegendData([]); // Reset legend data when switching master
                 }}
@@ -3475,12 +3616,12 @@ export const SynchronizedLegendInteraction = {
                 <option value="B">Chart B</option>
               </select>
             </div>
-            
+
             <div>
               <label>Show Top: </label>
-              <select 
-                value={filterLimit} 
-                onChange={(e) => setFilterLimit(parseInt(e.target.value))}
+              <select
+                value={filterLimit}
+                onChange={e => setFilterLimit(parseInt(e.target.value))}
                 style={{ padding: "5px", marginLeft: "5px" }}
               >
                 <option value={3}>3 items</option>
@@ -3489,12 +3630,12 @@ export const SynchronizedLegendInteraction = {
                 <option value={10}>All items</option>
               </select>
             </div>
-            
+
             <div>
               <label>Sort by 2023 value: </label>
-              <select 
-                value={sortDirection} 
-                onChange={(e) => setSortDirection(e.target.value as "asc" | "desc")}
+              <select
+                value={sortDirection}
+                onChange={e => setSortDirection(e.target.value as "asc" | "desc")}
                 style={{ padding: "5px", marginLeft: "5px" }}
               >
                 <option value="desc">Highest first</option>
@@ -3531,7 +3672,12 @@ export const SynchronizedLegendInteraction = {
 
         <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
           <div>
-            <h4>Chart A {masterChart === "A" ? "(Master)" : "(Slave)"} {masterChart === "A" ? "- Controls which items appear" : "- Shows same items as Chart B"}</h4>
+            <h4>
+              Chart A {masterChart === "A" ? "(Master)" : "(Slave)"}{" "}
+              {masterChart === "A"
+                ? "- Controls which items appear"
+                : "- Shows same items as Chart B"}
+            </h4>
             <LineChartComponent
               {...args}
               title={`Chart A ${masterChart === "A" ? "(Master)" : "(Slave)"}`}
@@ -3545,9 +3691,14 @@ export const SynchronizedLegendInteraction = {
               onLegendDataChange={masterChart === "A" ? handleLegendDataChange : undefined}
             />
           </div>
-          
+
           <div>
-            <h4>Chart B {masterChart === "B" ? "(Master)" : "(Slave)"} {masterChart === "B" ? "- Controls which items appear" : "- Shows same items as Chart A"}</h4>
+            <h4>
+              Chart B {masterChart === "B" ? "(Master)" : "(Slave)"}{" "}
+              {masterChart === "B"
+                ? "- Controls which items appear"
+                : "- Shows same items as Chart A"}
+            </h4>
             <LineChartComponent
               {...args}
               dataSet={masterChart === "B" ? chart2Data : getFilteredDataForSlave()}
@@ -3557,7 +3708,9 @@ export const SynchronizedLegendInteraction = {
               disabledItems={disabledItems}
               colorsMapping={sharedColorMapping}
               onHighlightItem={handleHighlightItem}
-              onColorMappingGenerated={masterChart === "A" ? handleColorMappingGenerated : undefined}
+              onColorMappingGenerated={
+                masterChart === "A" ? handleColorMappingGenerated : undefined
+              }
               onLegendDataChange={masterChart === "B" ? handleLegendDataChange : undefined}
             />
           </div>
@@ -3565,10 +3718,21 @@ export const SynchronizedLegendInteraction = {
 
         <div style={{ marginTop: "20px" }}>
           <h4>Current State:</h4>
-          <p><strong>Master Chart:</strong> Chart {masterChart}</p>
-          <p><strong>Highlighted Items:</strong> {highlightedItems.join(", ") || "None"}</p>
-          <p><strong>Disabled Items:</strong> {disabledItems.join(", ") || "None"}</p>
-          <p><strong>Items shown in both charts:</strong> {getFilteredDataForSlave().map(item => item.label).join(", ")}</p>
+          <p>
+            <strong>Master Chart:</strong> Chart {masterChart}
+          </p>
+          <p>
+            <strong>Highlighted Items:</strong> {highlightedItems.join(", ") || "None"}
+          </p>
+          <p>
+            <strong>Disabled Items:</strong> {disabledItems.join(", ") || "None"}
+          </p>
+          <p>
+            <strong>Items shown in both charts:</strong>{" "}
+            {getFilteredDataForSlave()
+              .map(item => item.label)
+              .join(", ")}
+          </p>
         </div>
       </div>
     );

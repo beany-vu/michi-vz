@@ -75,6 +75,7 @@ const LineChartMouseLine: FC<LineChartMouseLineProps> = ({
       const [x] = [e.layerX];
       const xDate = xScale.invert(x) as number | Date;
       const bisectDate = d3.bisector((d: DataPoint) => d.date).left;
+
       const getNumericalValueFromData = (data: string | number | Date) => {
         if (typeof data === "number") {
           return data;
@@ -87,11 +88,24 @@ const LineChartMouseLine: FC<LineChartMouseLineProps> = ({
         if (xAxisDataType === "date_annual") {
           return new Date(`${data}-01-01T00:00:00Z`).getTime();
         } else if (xAxisDataType === "date_monthly") {
-          return new Date(`${data}-01T00:00:00Z`).getTime();
+          // Check if data is in YYYY-MM-DD format
+          if (/\d{4}-\d{2}-\d{2}/.test(String(data))) {
+            return new Date(`${data}T00:00:00Z`).getTime();
+          } else if (/\d{4}-\d{2}/.test(String(data))) {
+            return new Date(`${data}-01T00:00:00Z`).getTime();
+          } else if (/\d{6}/.test(String(data))) {
+            // Handle YYYYMM format
+            const str = String(data);
+            const year = str.slice(0, 4);
+            const month = str.slice(4, 6);
+            return new Date(`${year}-${month}-01T00:00:00Z`).getTime();
+          }
+          return new Date(`${data}T00:00:00Z`).getTime();
         }
 
         return Number(data);
       };
+
       const getStringValueFromData = (data: string | number | Date) => {
         if (typeof data === "string") {
           return data;
@@ -160,7 +174,7 @@ const LineChartMouseLine: FC<LineChartMouseLineProps> = ({
 
       drawLine(baseXPos);
     },
-    [drawLine, xScale, yScale, data]
+    [xScale, drawLine, xAxisDataType, data, yScale]
   );
 
   useEffect(() => {
