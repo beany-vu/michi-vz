@@ -17,6 +17,7 @@ interface Props {
   hoveredItem?: string | null;
   tickHtmlWidth?: number;
   enableTransitions?: boolean;
+  defaultTickPosition?: { x: number; y: number };
 }
 
 const YaxisBand: FC<Props> = ({
@@ -29,6 +30,7 @@ const YaxisBand: FC<Props> = ({
   hoveredItem,
   tickHtmlWidth = 100,
   enableTransitions = true,
+  defaultTickPosition = { x: -100, y: -10 },
 }) => {
   const ref = useRef<SVGGElement>(null);
   const renderedRef = useRef(false);
@@ -92,8 +94,8 @@ const YaxisBand: FC<Props> = ({
     g.selectAll(".tick")
       .append("foreignObject")
       .attr("class", "tick-html")
-      .attr("x", -100)
-      .attr("y", -10)
+      .attr("x", defaultTickPosition.x)
+      .attr("y", defaultTickPosition.y)
       .attr("width", tickHtmlWidth)
       .attr("height", 20)
       .html(
@@ -123,7 +125,17 @@ const YaxisBand: FC<Props> = ({
       .attr("y2", 0)
       .style("stroke-dasharray", "1.5")
       .style("stroke", showGrid ? "lightgray" : "transparent");
-  }, [axisGenerator, margin.left, showGrid, width, margin.right, onHover, tickHtmlWidth]);
+  }, [
+    margin.left,
+    margin.right,
+    axisGenerator,
+    defaultTickPosition.x,
+    defaultTickPosition.y,
+    tickHtmlWidth,
+    width,
+    showGrid,
+    onHover,
+  ]);
 
   useLayoutEffect(() => {
     if (!renderedRef.current) {

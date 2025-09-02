@@ -39,6 +39,7 @@ export const VALUE_TYPE = {
 export type TValueType = (typeof VALUE_TYPE)[keyof typeof VALUE_TYPE];
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
+const PADDING = { top: 0, right: 0, bottom: 0, left: 0 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
 const HEIGHT = 480 - MARGIN.top - MARGIN.bottom;
 
@@ -60,6 +61,8 @@ interface LineChartProps {
   width: number;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
+  padding?: { top: number; right: number; bottom: number; left: number };
+  horizontalTickPosition?: { x: number; y: number };
   xAxisFormat?: (d: number | { valueOf(): number }) => string;
   yAxisFormat?: (d: number | string) => string;
   xAxisPredefinedDomain?: number[];
@@ -114,6 +117,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   width = WIDTH,
   height = HEIGHT,
   margin = MARGIN,
+  padding = PADDING,
+  horizontalTickPosition,
   yAxisFormat,
   xAxisFormat,
   xAxisPredefinedDomain = [],
@@ -275,14 +280,14 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         ? d3
             .scaleLinear()
             .domain(xAxisDomain)
-            .range([width - margin.left, margin.right])
+            .range([width - margin.left - padding.left, margin.right])
             .clamp(true)
             .nice()
         : d3
             .scaleTime()
             .domain(xAxisDomain)
-            .range([width - margin.left, margin.right]),
-    [xAxisDomain, width, margin, xAxisDataType]
+            .range([width - margin.left - padding.left, margin.right]),
+    [xAxisDataType, xAxisDomain, width, margin.left, margin.right, padding.left]
   );
 
   // Memoize the YaxisBand component
@@ -294,9 +299,10 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         margin={margin}
         yAxisFormat={yAxisFormat}
         tickHtmlWidth={tickHtmlWidth}
+        defaultTickPosition={horizontalTickPosition}
       />
     );
-  }, [yAxisScale, width, margin, yAxisFormat, tickHtmlWidth]);
+  }, [yAxisScale, width, margin, yAxisFormat, tickHtmlWidth, horizontalTickPosition]);
 
   // Memoize event handlers
   const handleMouseOver = useCallback(
@@ -393,8 +399,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
           : !disabledItems.includes(d?.label) && visibleItems.includes(d?.label)
       )
       .map((d, i) => {
-        const x1 = margin.left + xAxisScale(Math.min(0, d.valueBased)) - margin.left;
-        const x2 = margin.left + xAxisScale(Math.min(0, d.valueCompared)) - margin.left;
+        const x1 = xAxisScale(Math.min(0, d.valueBased)) + padding.left;
+        const x2 = xAxisScale(Math.min(0, d.valueCompared)) + padding.left;
         const width1 = Math.abs(xAxisScale(d.valueBased) - xAxisScale(0));
         const width2 = Math.abs(xAxisScale(d.valueCompared) - xAxisScale(0));
 
@@ -491,7 +497,6 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     visibleItems,
     filteredDataSet,
     disabledItems,
-    margin.left,
     xAxisScale,
     yAxisScale,
     highlightItems,
@@ -502,6 +507,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     handleHighlight,
     handleMouseOver,
     handleMouseClick,
+    padding.left,
   ]);
 
   useLayoutEffect(() => {
@@ -609,6 +615,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
               xScale={xAxisScale}
               height={height}
               margin={margin}
+              padding={padding}
               xAxisFormat={xAxisFormat}
               xAxisDataType={xAxisDataType}
               showGrid={showGrid}

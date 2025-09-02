@@ -6,6 +6,7 @@ interface Props {
   xScale: ScaleTime<number, number> | ScaleLinear<number, number>;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
+  padding?: { top: number; right: number; bottom: number; left: number };
   xAxisFormat?: (
     d: number | { valueOf(): number } | string,
     tickValues?: Array<string | number>
@@ -47,6 +48,7 @@ const XaxisLinear: FC<Props> = ({
   xScale = d3.scaleLinear().domain([0, 100]),
   height,
   margin,
+  padding = { top: 0, right: 0, bottom: 0, left: 0 },
   xAxisFormat,
   xAxisDataType = "number",
   ticks = 5,
@@ -227,8 +229,8 @@ const XaxisLinear: FC<Props> = ({
     g.attr("class", "x-axis x-axis-linear").attr(
       "style",
       position === "top"
-        ? `transform:translate(0, ${margin.top}px)`
-        : `transform:translate(0, ${height - margin.bottom}px)`
+        ? `transform:translate(${padding.left}px, ${margin.top}px)`
+        : `transform:translate(${padding.left}px, ${height - margin.bottom}px)`
     );
 
     // Call the axis
