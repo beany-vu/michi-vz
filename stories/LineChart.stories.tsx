@@ -1453,23 +1453,50 @@ export const Monthly = {
     showCombined: false,
     yAxisFormat: (d: any) => `${d}`,
     xAxisDataType: "date_monthly",
-    title: "Monthly Data (Small Range)",
+    title: "Monthly Data (Small Range) - YYYY-MM-DD Format",
     tooltipFormatter: (dataSet: any, d: any) => JSON.stringify(d),
   },
 };
 
-export const MonthlyWithATODate = {
+export const MonthlyWithYYYYMM = {
   args: {
     dataSet: [
       {
-        label: "Monthly ATO Date",
+        label: "Monthly Sales",
         series: [
-          { date: "202301", value: 100, certainty: true },
-          { date: "202302", value: 120, certainty: true },
-          { date: "202303", value: 90, certainty: true },
-          { date: "202304", value: 130, certainty: true },
-          { date: "202305", value: 110, certainty: true },
+          {
+            date: "202307",
+            certainty: true,
+            value: 10,
+          },
+          {
+            date: "202308",
+            certainty: true,
+            value: 20,
+          },
+          {
+            date: "202309",
+            certainty: true,
+            value: 60,
+          },
+          {
+            date: "202310",
+            certainty: true,
+            value: 70,
+          },
+          {
+            date: "202311",
+            certainty: false,
+            value: 40,
+          },
+          {
+            date: "202312",
+            certainty: true,
+            value: 0,
+          },
         ],
+        color: "#1F77B4",
+        shape: "triangle",
       },
     ],
     width: 700,
@@ -1478,7 +1505,7 @@ export const MonthlyWithATODate = {
     showCombined: false,
     yAxisFormat: (d: any) => `${d}`,
     xAxisDataType: "date_monthly",
-    title: "Monthly Data (Small Range)",
+    title: "Monthly Data (Small Range) - YYYYMM Format",
     tooltipFormatter: (dataSet: any, d: any) => JSON.stringify(d),
   },
 };

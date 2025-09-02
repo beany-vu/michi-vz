@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, FC, useEffect } from "react";
 import { select } from "d3";
-import { DataPoint, ChartMetadata, LegendItem } from "../types/data";
+import { DataPoint, ChartMetadata, LegendItem, XaxisDataType } from "../types/data";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
 import XaxisLinear from "./shared/XaxisLinear";
@@ -135,7 +135,7 @@ interface LineChartProps {
   yAxisDomain?: [number, number];
   yAxisFormat?: (d: number) => string;
   xAxisFormat?: (d: number) => string;
-  xAxisDataType: "number" | "date_annual" | "date_monthly";
+  xAxisDataType: XaxisDataType;
   tooltipFormatter?: (
     d: DataPoint,
     series: DataPoint[],

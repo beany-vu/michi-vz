@@ -1,11 +1,12 @@
 import { useCallback, useMemo } from "react";
 import * as d3 from "d3";
-import { DataPoint } from "../../../types/data";
+import { DataPoint, XaxisDataType } from "../../../types/data";
 import { getPathLengthAtX } from "./lineChartUtils";
+import { parseDate } from "./lineChartUtils";
 
 interface UseLineChartGeometryArgs {
   dataSet: { label: string; color: string; series: DataPoint[] }[];
-  xAxisDataType: "number" | "date_annual" | "date_monthly";
+  xAxisDataType: XaxisDataType;
   xScale: d3.ScaleLinear<number, number> | d3.ScaleTime<number, number>;
   yScale: d3.ScaleLinear<number, number>;
 }
@@ -17,14 +18,19 @@ export function useLineChartGeometry({
   yScale,
 }: UseLineChartGeometryArgs) {
   // Get Y value at X
-  const getYValueAtX = useCallback((series: DataPoint[], x: number | Date): number | undefined => {
-    if (x instanceof Date) {
-      const dataPoint = series.find(d => new Date(d.date).getTime() === x.getTime());
+  const getYValueAtX = useCallback(
+    (series: DataPoint[], x: number | Date): number | undefined => {
+      if (x instanceof Date) {
+        const dataPoint = series.find(
+          d => (parseDate(d.date, xAxisDataType) as Date).getTime() === x.getTime()
+        );
+        return dataPoint ? dataPoint.value : undefined;
+      }
+      const dataPoint = series.find(d => Number(d.date) === x);
       return dataPoint ? dataPoint.value : undefined;
-    }
-    const dataPoint = series.find(d => Number(d.date) === x);
-    return dataPoint ? dataPoint.value : undefined;
-  }, []);
+    },
+    [xAxisDataType]
+  );
 
   // D3 line generator
   const line = useCallback(
@@ -32,13 +38,8 @@ export function useLineChartGeometry({
       return d3
         .line<DataPoint>()
         .x(d => {
-          if (xAxisDataType === "number") {
-            return xScale(Number(d.date));
-          } else if (xAxisDataType === "date_annual") {
-            return xScale(new Date(`${d.date}-01-01`));
-          } else {
-            return xScale(new Date(d.date));
-          }
+          const value = parseDate(d.date, xAxisDataType);
+          return xScale(value);
         })
         .y(d => yScale(d.value))
         .curve(d3?.[curve] ?? d3.curveBumpX)(d);
@@ -54,7 +55,9 @@ export function useLineChartGeometry({
       xScale: d3.ScaleLinear<number, number> | d3.ScaleTime<number, number>
     ) => {
       const totalLength = pathNode.getTotalLength();
-      const lengths = series.map(d => getPathLengthAtX(pathNode, xScale(new Date(d.date))));
+      const lengths = series.map(d =>
+        getPathLengthAtX(pathNode, xScale(parseDate(d.date, xAxisDataType)))
+      );
 
       const DASH_LENGTH = 4;
       const DASH_SEPARATOR_LENGTH = 4;
@@ -87,7 +90,7 @@ export function useLineChartGeometry({
       }
       return dashArray.join(",");
     };
-  }, []);
+  }, [xAxisDataType]);
 
   // Memoized line data
   const lineData = useMemo(

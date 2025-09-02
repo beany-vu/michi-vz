@@ -1,22 +1,7 @@
 import { useMemo } from "react";
 import { XaxisDataType, Margin, LineChartDataItem } from "../../../types/data";
 import { CONST_DATE_ANNUAL, CONST_DATE_MONTHLY, CONST_NUMBER } from "../../../types/constants";
-
-function parseDate(value: number | string): Date | null {
-  const str = String(value);
-
-  // Must be exactly 6 digits
-  if (/^\d{6}$/.test(str)) {
-    const year = parseInt(str.slice(0, 4), 10);
-    const month = parseInt(str.slice(4, 6), 10);
-
-    const isYYYYMM = year > 0 && month >= 1 && month <= 12;
-    return isYYYYMM ? new Date(year, month - 1, 1) : null;
-  }
-
-  const date = new Date(value);
-  return isNaN(date.getTime()) ? null : date;
-}
+import { parseDate } from "./lineChartUtils";
 
 const useLineChartXtickValues = (
   filteredDataSet: LineChartDataItem[],
@@ -67,7 +52,7 @@ const useLineChartXtickValues = (
       const months = filteredDataSet
         .flatMap(item =>
           item.series.map(d => {
-            return parseDate(d.date);
+            return parseDate(d.date, xAxisDataType);
           })
         )
         .filter((d): d is Date => d !== null);

@@ -1,6 +1,7 @@
 import { scaleLinear, scaleTime, min, max } from "d3";
 import { useMemo } from "react";
 import { LineChartDataItem } from "../../../types/data";
+import { parseDate } from "src/components/hooks/lineChart/lineChartUtils";
 
 // Interface for potential future use
 // interface UseLineChartXscaleProps {
@@ -45,8 +46,12 @@ const useLineChartXscale = (
         .range([margin.left, width - margin.right]);
     }
 
-    const minDate = min(filteredDataSet.flatMap(item => item.series.map(d => new Date(d.date))));
-    const maxDate = max(filteredDataSet.flatMap(item => item.series.map(d => new Date(d.date))));
+    const minDate = min(
+      filteredDataSet.flatMap(item => item.series.map(d => parseDate(d.date, xAxisDataType)))
+    );
+    const maxDate = max(
+      filteredDataSet.flatMap(item => item.series.map(d => parseDate(d.date, xAxisDataType)))
+    );
 
     return scaleTime()
       .domain([
