@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { pointer, select, ScaleLinear, ScaleTime } from "d3";
-import { DataPoint, LineChartDataItem, XaxisDataType } from "../../../types/data";
-import { parseDate } from "src/components/hooks/lineChart/lineChartUtils";
+import { DataPoint, LineChartDataItem } from "../../../types/data";
 
 interface TooltipState {
   x?: number;
@@ -17,7 +16,7 @@ const useLineChartPathsShapesRendering = (
   width: number,
   height: number,
   margin: { top: number; right: number; bottom: number; left: number },
-  xAxisDataType: XaxisDataType,
+  xAxisDataType: string,
   getDashArrayMemoized: (
     series: DataPoint[],
     pathNode: SVGPathElement,
@@ -245,7 +244,7 @@ const useLineChartPathsShapesRendering = (
 
       if (shape === "circle") {
         points
-          .attr("cx", d => xScale(parseDate(d.date, xAxisDataType)))
+          .attr("cx", d => xScale(new Date(d.date)))
           .attr("cy", d => yScale(d.value))
           .attr("fill", color);
         points
@@ -255,7 +254,7 @@ const useLineChartPathsShapesRendering = (
           .attr("data-label", data.label)
           .attr("data-label-safe", safeLabelClass)
           .attr("data-key", uniqueKey)
-          .attr("cx", d => xScale(parseDate(d.date, xAxisDataType)))
+          .attr("cx", d => xScale(new Date(d.date)))
           .attr("cy", d => yScale(d.value))
           .attr("r", circleSize)
           .attr("fill", color)
@@ -264,7 +263,7 @@ const useLineChartPathsShapesRendering = (
           .attr("cursor", "crosshair");
       } else if (shape === "square") {
         points
-          .attr("x", d => xScale(parseDate(d.date, xAxisDataType)) - squareSize)
+          .attr("x", d => xScale(new Date(d.date)) - squareSize)
           .attr("y", d => yScale(d.value) - squareSize)
           .attr("fill", color);
         points
@@ -274,7 +273,7 @@ const useLineChartPathsShapesRendering = (
           .attr("data-label", data.label)
           .attr("data-label-safe", safeLabelClass)
           .attr("data-key", uniqueKey)
-          .attr("x", d => xScale(parseDate(d.date, xAxisDataType)) - squareSize)
+          .attr("x", d => xScale(new Date(d.date)) - squareSize)
           .attr("y", d => yScale(d.value) - squareSize)
           .attr("width", squareSize * 2)
           .attr("height", squareSize * 2)
@@ -289,7 +288,7 @@ const useLineChartPathsShapesRendering = (
         };
         points
           .attr("d", d => {
-            const x = xScale(parseDate(d.date, xAxisDataType));
+            const x = xScale(new Date(d.date));
             const y = yScale(d.value);
             return generateTrianglePath(x, y);
           })
@@ -302,7 +301,7 @@ const useLineChartPathsShapesRendering = (
           .attr("data-label-safe", safeLabelClass)
           .attr("data-key", uniqueKey)
           .attr("d", d => {
-            const x = xScale(parseDate(d.date, xAxisDataType));
+            const x = xScale(new Date(d.date));
             const y = yScale(d.value);
             return generateTrianglePath(x, y);
           })

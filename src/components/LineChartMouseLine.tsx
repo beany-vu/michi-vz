@@ -1,6 +1,14 @@
 import React, { FC, useRef, useCallback, useEffect, useMemo } from "react";
 import * as d3 from "d3";
-import { DataPoint, LineChartDataItem, XaxisDataType } from "src/types/data";
+import { DataPoint } from "src/types/data";
+
+interface DataItem {
+  label: string;
+  color: string;
+  shape?: "circle" | "square" | "triangle";
+  curve?: "curveBumpX" | "curveLinear";
+  series: DataPoint[];
+}
 
 interface Margin {
   top: number;
@@ -13,12 +21,12 @@ interface LineChartMouseLineProps {
   xScale: d3.ScaleLinear<number, number> | d3.ScaleTime<number, number>;
   yScale: d3.ScaleLinear<number, number>;
   height: number;
-  dataSet: LineChartDataItem[];
+  dataSet: DataItem[];
   margin: Margin;
   children?: React.ReactNode;
   className?: string;
   anchorEl: React.RefObject<SVGGElement>;
-  xAxisDataType: XaxisDataType;
+  xAxisDataType: "number" | "date_annual" | "date_monthly";
   ticks: number;
   tickValues: (string | number | Date)[];
 }
@@ -66,16 +74,7 @@ const LineChartMouseLine: FC<LineChartMouseLineProps> = ({
     (e: MouseEvent) => {
       const [x] = [e.layerX];
       const xDate = xScale.invert(x) as number | Date;
-      const bisectDate = d3.bisector((d: DataPoint) => {
-        if (xAxisDataType === "date_monthly" && /^\d{6}$/.test(String(d.date))) {
-          const str = String(d.date);
-          const year = parseInt(str.slice(0, 4), 10);
-          const month = parseInt(str.slice(4, 6), 10);
-          const isYYYYMM = year > 0 && month >= 1 && month <= 12;
-          return isYYYYMM ? `${year}-${String(month).padStart(2, "0")}` : str;
-        }
-        return d.date;
-      }).left;
+      const bisectDate = d3.bisector((d: DataPoint) => d.date).left;
 
       const getNumericalValueFromData = (data: string | number | Date) => {
         if (typeof data === "number") {
@@ -108,37 +107,25 @@ const LineChartMouseLine: FC<LineChartMouseLineProps> = ({
       };
 
       const getStringValueFromData = (data: string | number | Date) => {
-        if (xAxisDataType === "number") {
+        if (typeof data === "string") {
+          return data;
+        }
+
+        if (typeof data === "number") {
           return String(data);
         }
 
-        if (xAxisDataType === "date_annual") {
-          if (data instanceof Date) {
-            return String(data.getFullYear());
+        if (data instanceof Date) {
+          if (xAxisDataType === "date_annual") {
+            return data.getFullYear().toString();
           }
 
-          return String(data);
-        }
-
-        if (xAxisDataType === "date_monthly") {
-          if (data instanceof Date) {
+          if (xAxisDataType === "date_monthly") {
             return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}`;
           }
-
-          if (/^\d{6}$/.test(String(data))) {
-            const str = String(data);
-            const year = str.slice(0, 4);
-            const month = str.slice(4, 6);
-            return `${year}-${month}`;
-          }
-
-          const date = new Date(data);
-          return isNaN(date.getTime())
-            ? String(data)
-            : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
         }
 
-        return String(data);
+        return data;
       };
 
       let baseXPos = 0;
@@ -152,7 +139,6 @@ const LineChartMouseLine: FC<LineChartMouseLineProps> = ({
           const index = bisectDate(dataItems, getStringValueFromData(xDate));
           const d0 = dataItems[index];
           const d1 = dataItems[index + 1];
-
           let d;
 
           if (d0 == null && d1 != null) {
