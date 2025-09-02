@@ -19,6 +19,7 @@ interface Props {
   isLoading?: boolean;
   isEmpty?: boolean;
   tickValues?: (number | Date)[]; // <-- new prop
+  enableExplicitTickValues?: boolean;
 }
 
 const checkIsTimeScale = (
@@ -56,6 +57,7 @@ const XaxisLinear: FC<Props> = ({
   isLoading = false,
   isEmpty = false,
   tickValues: tickValuesProp, // <-- new prop
+  enableExplicitTickValues = true,
 }) => {
   const ref = useRef<SVGGElement>(null);
   const isTimeScale = checkIsTimeScale(xScale, xAxisDataType);
@@ -204,9 +206,13 @@ const XaxisLinear: FC<Props> = ({
     g.selectAll("*").remove();
 
     // Create the axis and use our calculated tickValues
-    const axisBottom = d3
-      .axisBottom(xScale)
-      .tickValues(tickValues)
+    let axisBottom = d3.axisBottom(xScale);
+
+    if (enableExplicitTickValues) {
+      axisBottom = axisBottom.tickValues(tickValues);
+    }
+
+    axisBottom = axisBottom
       .tickFormat((domainValue: number | Date | { valueOf(): number }) =>
         xAxisFormat
           ? xAxisFormat(

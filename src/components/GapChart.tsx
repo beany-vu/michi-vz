@@ -122,6 +122,7 @@ interface GapChartProps {
   xAxisFormat?: (d: number, tickValues?: Array<string | number>) => string;
   ticks?: number;
   tickValues?: Array<number | Date>;
+  enableExplicitTickValues?: boolean; // false to use d3 internal tick calculator
   width: number;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
@@ -169,6 +170,7 @@ const GapChart: FC<GapChartProps> = ({
   xAxisFormat,
   ticks = 5,
   tickValues,
+  enableExplicitTickValues = true,
   width = DEFAULT_WIDTH,
   height = DEFAULT_HEIGHT,
   margin = DEFAULT_MARGIN,
@@ -477,6 +479,7 @@ const GapChart: FC<GapChartProps> = ({
           tickValues={tickValues}
           showGrid={true}
           showZeroLine={true}
+          enableExplicitTickValues={enableExplicitTickValues}
         />
 
         <YaxisBand

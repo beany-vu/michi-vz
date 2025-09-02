@@ -15,7 +15,8 @@ export const useGapChartScales = (
       return d3
         .scaleLinear()
         .domain(xAxisDomain as [number, number])
-        .range([margin.left, width - margin.right]);
+        .range([margin.left, width - margin.right])
+        .nice();
     } else if (xAxisDataType === "date_annual") {
       const [min, max] = xAxisDomain;
       return d3
