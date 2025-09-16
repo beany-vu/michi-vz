@@ -1,4 +1,4 @@
-import React, { FC, useRef, useState, useMemo, useLayoutEffect } from "react";
+import React, { FC, useRef, useState, useMemo, useLayoutEffect, useCallback } from "react";
 import isEqual from "lodash/isEqual";
 import styled from "styled-components";
 import { ChartMetadata, LegendItem, XaxisDataType } from "src/types/data";
@@ -16,6 +16,7 @@ import { useGapChartRenderer } from "./hooks/gapChart/useGapChartRenderer";
 import { useGapChartLegend } from "./hooks/gapChart/useGapChartLegend";
 import { useGapChartMetadata } from "./hooks/gapChart/useGapChartMetadata";
 import TooltipHint from "src/components/shared/TooltipHint";
+import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 
 const DEFAULT_COLORS = [
   "#1f77b4",
@@ -241,9 +242,17 @@ const GapChart: FC<GapChartProps> = ({
     }
   }, [generatedColorsMapping, onColorMappingGenerated]);
 
+  // Handle tooltip sticky change
+  const handleTooltipStickyChange = useCallback((isSticky: boolean) => {
+    if (isSticky) {
+      // When tooltip becomes sticky, reset hoveredYItem to restore all items highlighting
+      setHoveredYItem(null);
+    }
+  }, []);
+
   // Get tooltip handlers
   const { tooltip, handleMouseOver, handleMouseOut, handleChartElementClick, handleTooltipClick } =
-    useGapChartTooltip(svgRef, containerRef, onHighlightItem);
+    useGapChartTooltip(svgRef, containerRef, onHighlightItem, handleTooltipStickyChange);
 
   // Get shape generation function
   const { getShapePath, getSquareDimensions } = useGapChartShapes();
@@ -301,10 +310,12 @@ const GapChart: FC<GapChartProps> = ({
         {/* First layer: Render all gap bars and lines */}
         {elements.map(
           ({ d, i, y, barHeight, gapColor, x1, x2, barWidth, barOpacity, markerOpacity }) => (
-            <g key={`gap-base-${d.label}-${i}`}>
+            <g key={`gap-base-${sanitizeForClassName(d.label)}-${i}`}>
               {/* Gap bar */}
               <rect
                 className="gap-bar"
+                data-label={d.label}
+                data-label-safe={sanitizeForClassName(d.label)}
                 x={x1}
                 y={y + barHeight / 2 - 4}
                 width={barWidth}
@@ -325,6 +336,8 @@ const GapChart: FC<GapChartProps> = ({
               {/* Connecting line */}
               <line
                 className="gap-line"
+                data-label={d.label}
+                data-label-safe={sanitizeForClassName(d.label)}
                 x1={x1}
                 y1={y + barHeight / 2}
                 x2={x2}
@@ -342,13 +355,15 @@ const GapChart: FC<GapChartProps> = ({
 
         {/* Second layer: Render all square shapes */}
         {squares.map(({ d, i, y, barHeight, value1Color, value2Color, markerOpacity }) => (
-          <g key={`gap-squares-${d.label}-${i}`}>
+          <g key={`gap-squares-${sanitizeForClassName(d.label)}-${i}`}>
             {shapeValue1 === "square" &&
               (() => {
                 const dims = getSquareDimensions();
                 return (
                   <rect
                     className="gap-marker value1-marker"
+                    data-label={d.label}
+                    data-label-safe={sanitizeForClassName(d.label)}
                     x={xScale(d.value1) + dims.x}
                     y={y + barHeight / 2 + dims.y}
                     width={dims.width}
@@ -374,6 +389,8 @@ const GapChart: FC<GapChartProps> = ({
                 return (
                   <rect
                     className="gap-marker value2-marker"
+                    data-label={d.label}
+                    data-label-safe={sanitizeForClassName(d.label)}
                     x={xScale(d.value2) + dims.x}
                     y={y + barHeight / 2 + dims.y}
                     width={dims.width}
@@ -397,10 +414,12 @@ const GapChart: FC<GapChartProps> = ({
 
         {/* Third layer: Render all circle and triangle shapes */}
         {nonSquares.map(({ d, i, y, barHeight, value1Color, value2Color, markerOpacity }) => (
-          <g key={`gap-nonSquares-${d.label}-${i}`}>
+          <g key={`gap-nonSquares-${sanitizeForClassName(d.label)}-${i}`}>
             {shapeValue1 !== "square" && (
               <path
                 className="gap-marker value1-marker"
+                data-label={d.label}
+                data-label-safe={sanitizeForClassName(d.label)}
                 d={getShapePath(shapeValue1) || ""}
                 transform={`translate(${xScale(d.value1)}, ${y + barHeight / 2})`}
                 fill={value1Color}
@@ -418,6 +437,8 @@ const GapChart: FC<GapChartProps> = ({
             {shapeValue2 !== "square" && (
               <path
                 className="gap-marker value2-marker"
+                data-label={d.label}
+                data-label-safe={sanitizeForClassName(d.label)}
                 d={getShapePath(shapeValue2) || ""}
                 transform={`translate(${xScale(d.value2)}, ${y + barHeight / 2})`}
                 fill={value2Color}

@@ -20,7 +20,8 @@ interface TooltipState {
 export const useGapChartTooltip = (
   svgRef: RefObject<SVGSVGElement>,
   containerRef: RefObject<HTMLDivElement>,
-  onHighlightItem?: (item: DataItem) => void
+  onHighlightItem?: (item: DataItem) => void,
+  onTooltipStickyChange?: (isSticky: boolean) => void
 ) => {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
@@ -65,9 +66,10 @@ export const useGapChartTooltip = (
           isSticky: true,
         });
         onHighlightItem?.(d);
+        onTooltipStickyChange?.(true);
       }
     },
-    [onHighlightItem, svgRef]
+    [onHighlightItem, onTooltipStickyChange, svgRef]
   );
 
   // Handle tooltip click to make it sticky
@@ -76,9 +78,10 @@ export const useGapChartTooltip = (
       event.stopPropagation();
       if (tooltip && !tooltip.isSticky) {
         setTooltip({ ...tooltip, isSticky: true });
+        onTooltipStickyChange?.(true);
       }
     },
-    [tooltip]
+    [tooltip, onTooltipStickyChange]
   );
 
   // Handle click outside to close sticky tooltip
@@ -88,6 +91,7 @@ export const useGapChartTooltip = (
         const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
         if (!tooltipElement) {
           setTooltip(null);
+          // No need to call callback when unsticky - normal mouse events will handle highlighting
         }
       }
     };
