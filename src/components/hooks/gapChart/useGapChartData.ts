@@ -38,10 +38,11 @@ export const useGapChartData = (
       ? dataWithDifference.filter(d => d.date === filter.date)
       : dataWithDifference;
 
-    // Sort by difference
+    // Sort by the specified criteria field
     const sortedData = dateFilteredData.slice().sort((a, b) => {
-      const diff =
-        filter.sortingDir === "desc" ? b.difference - a.difference : a.difference - b.difference;
+      const aValue = a[filter.criteria as keyof DataItem] as number;
+      const bValue = b[filter.criteria as keyof DataItem] as number;
+      const diff = filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
       return diff;
     });
 
@@ -65,10 +66,11 @@ export const useGapChartData = (
       ? dataWithDifference.filter(d => d.date === filter.date)
       : dataWithDifference;
 
-    // Sort by difference
+    // Sort by the specified criteria field
     const sortedData = dateFilteredData.slice().sort((a, b) => {
-      const diff =
-        filter.sortingDir === "desc" ? b.difference - a.difference : a.difference - b.difference;
+      const aValue = a[filter.criteria as keyof DataItem] as number;
+      const bValue = b[filter.criteria as keyof DataItem] as number;
+      const diff = filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
       return diff;
     });
 
