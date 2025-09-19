@@ -304,6 +304,7 @@ const GapChart: FC<GapChartProps> = ({
   // Render gap bars and shapes in layers
   const renderGapBars = useMemo(() => {
     const { elements, squares, nonSquares } = renderData;
+    const transitionStyle = enableTransitions ? "all 0.1s ease-in-out" : "none";
 
     return (
       <>
@@ -329,7 +330,7 @@ const GapChart: FC<GapChartProps> = ({
                 onClick={e => handleChartElementClick(d, e)}
                 style={{
                   cursor: "pointer",
-                  transition: "none",
+                  transition: transitionStyle,
                 }}
               />
 
@@ -346,7 +347,7 @@ const GapChart: FC<GapChartProps> = ({
                 strokeDasharray={d.difference < 0 ? "4,2" : "0"}
                 opacity={markerOpacity}
                 style={{
-                  transition: "none",
+                  transition: transitionStyle,
                 }}
               />
             </g>
@@ -377,7 +378,7 @@ const GapChart: FC<GapChartProps> = ({
                     onClick={e => handleChartElementClick(d, e)}
                     style={{
                       cursor: "pointer",
-                      transition: "none",
+                      transition: transitionStyle,
                       filter: shadowFilter,
                     }}
                   />
@@ -404,7 +405,7 @@ const GapChart: FC<GapChartProps> = ({
                     onClick={e => handleChartElementClick(d, e)}
                     style={{
                       cursor: "pointer",
-                      transition: "none",
+                      transition: transitionStyle,
                     }}
                   />
                 );
@@ -448,7 +449,7 @@ const GapChart: FC<GapChartProps> = ({
                 onClick={e => handleChartElementClick(d, e)}
                 style={{
                   cursor: "pointer",
-                  transition: "none",
+                  transition: transitionStyle,
                 }}
               />
             )}
@@ -465,11 +466,22 @@ const GapChart: FC<GapChartProps> = ({
     handleMouseOut,
     handleChartElementClick,
     getShapePath,
+    enableTransitions,
   ]);
 
   return (
-    <GapChartStyled ref={containerRef} $enableTransitions={enableTransitions}>
-      <svg ref={svgRef} width={width} height={height} style={{ overflow: "visible" }}>
+    <GapChartStyled
+      ref={containerRef}
+      $enableTransitions={enableTransitions}
+      onMouseLeave={() => setHoveredYItem(null)}
+    >
+      <svg
+        ref={svgRef}
+        width={width}
+        height={height}
+        style={{ overflow: "visible" }}
+        onMouseLeave={() => setHoveredYItem(null)}
+      >
         {/* Shadow filter definition */}
         {enableShadow && (
           <defs>
