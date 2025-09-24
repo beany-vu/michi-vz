@@ -1,6 +1,7 @@
 import React, { FC, useRef, useCallback, useMemo, useLayoutEffect } from "react";
 import { ScaleTime, ScaleLinear } from "d3-scale";
 import * as d3 from "d3";
+import { addMonths, differenceInCalendarMonths, isAfter, isBefore } from "date-fns";
 
 interface Props {
   xScale: ScaleTime<number, number> | ScaleLinear<number, number>;
@@ -153,6 +154,47 @@ const XaxisLinear: FC<Props> = ({
       return result;
     }
 
+    if (isTimeScale && xAxisDataType === "date_monthly") {
+      const firstDate = first instanceof Date ? first : new Date(+first);
+      const lastDate = last instanceof Date ? last : new Date(+last);
+
+      const monthCount = differenceInCalendarMonths(lastDate, firstDate) + 1;
+
+      // If we have a reasonable number of months, show all of them
+      if (monthCount <= 10) {
+        let current = new Date(firstDate);
+        while (!isAfter(current, lastDate)) {
+          result.push(new Date(current));
+          current = addMonths(current, 1);
+        }
+        return result;
+      }
+
+      // For many months, pick a sensible spacing
+      // Always include first month
+      result.push(new Date(firstDate));
+
+      // Calculate step size based on available space
+      const stepSize = Math.max(1, Math.ceil(monthCount / 10));
+      let current = addMonths(firstDate, stepSize);
+
+      // Add intermediate months at regular intervals
+      while (isBefore(current, lastDate)) {
+        result.push(new Date(current));
+        current = addMonths(current, stepSize);
+      }
+
+      // Add the last month if not already included
+      if (
+        !(
+          result[result.length - 1].getFullYear() === lastDate.getFullYear() &&
+          result[result.length - 1].getMonth() === lastDate.getMonth()
+        )
+      ) {
+        result.push(new Date(lastDate));
+      }
+    }
+
     // For numeric scales, ensure 0 is the first tick if domain starts at 0
     if (!isTimeScale && +first === 0) {
       result.push(0); // Start with 0
@@ -167,6 +209,10 @@ const XaxisLinear: FC<Props> = ({
 
       result.push(last);
     } else {
+      if (["date_annual", "date_monthly"].includes(xAxisDataType)) {
+        return result;
+      }
+
       // For other cases, use the standard approach
       result.push(first);
 

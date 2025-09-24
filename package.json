@@ -1,6 +1,6 @@
 {
   "name": "michi-vz",
-  "version": "0.5.33",
+  "version": "0.5.34",
   "description": "a visualization library based on d3 and react",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -28,6 +28,7 @@
     "@storybook/test": "^8.5.3",
     "d3": "^7.9.0",
     "d3-scale": "^4.0.2",
+    "date-fns": "^4.1.0",
     "lodash": "^4.17.21",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
