@@ -377,7 +377,7 @@ const LineChart: FC<LineChartProps> = ({
         <Title x={width / 2} y={margin.top / 2}>
           {title}
         </Title>
-        {filteredDataSet.length > 0 && (
+        {!displayIsNodata && filteredDataSet.length > 0 && (
           <>
             <XaxisLinear
               xScale={xScale}
