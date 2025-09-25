@@ -226,7 +226,7 @@ const LineChart: FC<LineChartProps> = ({
   const showLoadingIndicator = isLoading || !isInitialMount.current;
 
   const visibleDataSets = useMemo(() => {
-    return filteredDataSet.filter(d => d.series.length > 1);
+    return filteredDataSet.filter(d => d.series.length > 0);
   }, [filteredDataSet]);
 
   // Memoize callback functions to prevent infinite loops
