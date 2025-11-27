@@ -1,4 +1,4 @@
-import React, { FC, useRef, useState, useMemo, useLayoutEffect, useCallback } from "react";
+import React, { FC, useRef, useMemo, useLayoutEffect, useCallback } from "react";
 import isEqual from "lodash/isEqual";
 import styled from "styled-components";
 import { ChartMetadata, LegendItem, XaxisDataType } from "src/types/data";
@@ -186,7 +186,6 @@ const GapChart: FC<GapChartProps> = ({
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [hoveredYItem, setHoveredYItem] = useState<string | null>(null);
 
   const highlightItems = propsHighlightItems || [];
   const disabledItems = propsDisabledItems || [];
@@ -230,17 +229,9 @@ const GapChart: FC<GapChartProps> = ({
     }
   }, [generatedColorsMapping, onColorMappingGenerated]);
 
-  // Handle tooltip sticky change
-  const handleTooltipStickyChange = useCallback((isSticky: boolean) => {
-    if (isSticky) {
-      // When tooltip becomes sticky, reset hoveredYItem to restore all items highlighting
-      setHoveredYItem(null);
-    }
-  }, []);
-
   // Get tooltip handlers
   const { tooltip, handleMouseOver, handleMouseOut, handleChartElementClick, handleTooltipClick } =
-    useGapChartTooltip(svgRef, containerRef, onHighlightItem, handleTooltipStickyChange);
+    useGapChartTooltip(svgRef, containerRef, onHighlightItem);
 
   // Get shape generation function
   const { getShapePath, getSquareDimensions } = useGapChartShapes();
@@ -259,7 +250,6 @@ const GapChart: FC<GapChartProps> = ({
     highlightItems,
     shapeValue1,
     shapeValue2,
-    hoveredYItem,
   });
 
   // Get legend items
@@ -458,18 +448,8 @@ const GapChart: FC<GapChartProps> = ({
   ]);
 
   return (
-    <GapChartStyled
-      ref={containerRef}
-      $enableTransitions={enableTransitions}
-      onMouseLeave={() => setHoveredYItem(null)}
-    >
-      <svg
-        ref={svgRef}
-        width={width}
-        height={height}
-        style={{ overflow: "visible" }}
-        onMouseLeave={() => setHoveredYItem(null)}
-      >
+    <GapChartStyled ref={containerRef} $enableTransitions={enableTransitions}>
+      <svg ref={svgRef} width={width} height={height} style={{ overflow: "visible" }}>
         {/* Shadow filter definition */}
         {enableShadow && (
           <defs>
@@ -509,8 +489,6 @@ const GapChart: FC<GapChartProps> = ({
           margin={margin}
           yAxisFormat={yAxisFormat}
           showGrid={true}
-          onHover={setHoveredYItem}
-          hoveredItem={hoveredYItem}
           tickHtmlWidth={tickHtmlWidth}
           enableTransitions={enableTransitions}
         />

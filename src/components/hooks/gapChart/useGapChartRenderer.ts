@@ -20,7 +20,6 @@ interface UseGapChartRendererProps {
   highlightItems: string[];
   shapeValue1: "circle" | "square" | "triangle";
   shapeValue2: "circle" | "square" | "triangle";
-  hoveredYItem: string | null;
 }
 
 export const useGapChartRenderer = ({
@@ -33,7 +32,6 @@ export const useGapChartRenderer = ({
   highlightItems,
   shapeValue1,
   shapeValue2,
-  hoveredYItem,
 }: UseGapChartRendererProps) => {
   const renderData = useMemo(() => {
     const elements = processedDataSet.map((d, i) => {
@@ -55,24 +53,9 @@ export const useGapChartRenderer = ({
       // Determine if highlighted
       const isHighlighted = highlightItems.length === 0 || highlightItems.includes(d.label);
 
-      // Determine opacity based on hover state and animation
-      const baseBarOpacity =
-        hoveredYItem !== null
-          ? hoveredYItem === d.label
-            ? isHighlighted
-              ? 0.7
-              : 0.3
-            : 0.3
-          : isHighlighted
-            ? 0.7
-            : 0.3;
-
-      const baseMarkerOpacity =
-        hoveredYItem !== null ? (hoveredYItem === d.label ? 1 : 0.3) : isHighlighted ? 1 : 0.3;
-
-      // Use base opacity directly
-      const barOpacity = baseBarOpacity;
-      const markerOpacity = baseMarkerOpacity;
+      // Determine opacity based on highlight state
+      const barOpacity = isHighlighted ? 0.7 : 0.3;
+      const markerOpacity = isHighlighted ? 1 : 0.3;
 
       return {
         d,
@@ -121,7 +104,6 @@ export const useGapChartRenderer = ({
     highlightItems,
     shapeValue1,
     shapeValue2,
-    hoveredYItem,
   ]);
 
   return renderData;

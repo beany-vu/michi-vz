@@ -153,7 +153,7 @@ const useLineChartPathsShapesRendering = (
         tooltipContentElement.innerHTML = tooltipContent;
       }
     },
-    [tooltipState, tooltipRef, svgRef, margin]
+    [tooltipState, tooltipRef, svgRef, margin, tooltipFormatter, filteredDataSet]
   );
 
   useEffect(() => {
