@@ -13,6 +13,7 @@ import * as d3 from "d3";
 import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import XaxisBand from "./shared/XaxisBand";
+import { DEFAULT_COLORS } from "./shared/colors";
 import YaxisLinear from "./shared/YaxisLinear";
 import { drawHalfLeftCircle } from "../components/shared/helpers";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
@@ -21,19 +22,6 @@ import useDeepCompareEffect from "use-deep-compare-effect";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import TooltipHint from "src/components/shared/TooltipHint";
-
-const DEFAULT_COLORS = [
-  "#1f77b4",
-  "#ff7f0e",
-  "#2ca02c",
-  "#d62728",
-  "#9467bd",
-  "#8c564b",
-  "#e377c2",
-  "#7f7f7f",
-  "#bcbd22",
-  "#17becf",
-];
 
 function getColor(mappedColor?: string, dataColor?: string): string {
   const FALLBACK_COLOR = "rgba(253, 253, 253, 0.5)";

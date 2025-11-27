@@ -11,6 +11,7 @@ import useDeepCompareEffect from "use-deep-compare-effect";
 import styled from "styled-components";
 import { LegendItem, XaxisDataType } from "../types/data";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
+import { DEFAULT_COLORS } from "./shared/colors";
 import TooltipHint from "src/components/shared/TooltipHint";
 
 const ComparableHorizontalBarChartStyled = styled.div`
@@ -42,19 +43,6 @@ const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const PADDING = { top: 0, right: 0, bottom: 0, left: 0 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
 const HEIGHT = 480 - MARGIN.top - MARGIN.bottom;
-
-const DEFAULT_COLORS = [
-  "#1f77b4",
-  "#ff7f0e",
-  "#2ca02c",
-  "#d62728",
-  "#9467bd",
-  "#8c564b",
-  "#e377c2",
-  "#7f7f7f",
-  "#bcbd22",
-  "#17becf",
-];
 
 interface LineChartProps {
   dataSet: DataPoint[];

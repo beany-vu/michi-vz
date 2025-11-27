@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, FC, useEffect } from "react";
 import { select } from "d3";
 import { DataPoint, ChartMetadata, LegendItem } from "../types/data";
+import { DEFAULT_COLORS } from "./shared/colors";
 import Title from "./shared/Title";
 import YaxisLinear from "./shared/YaxisLinear";
 import XaxisLinear from "./shared/XaxisLinear";
@@ -29,18 +30,6 @@ export const DEFAULT_HEIGHT = 480 - DEFAULT_MARGIN.top - DEFAULT_MARGIN.bottom;
 export const OPACITY_DEFAULT = 1;
 export const OPACITY_NOT_HIGHLIGHTED = 0.05;
 const TRANSITION_DURATION = 100;
-const DEFAULT_COLORS = [
-  "#1f77b4",
-  "#ff7f0e",
-  "#2ca02c",
-  "#d62728",
-  "#9467bd",
-  "#8c564b",
-  "#e377c2",
-  "#7f7f7f",
-  "#bcbd22",
-  "#17becf",
-];
 
 interface LineChartContainerProps {
   width: number;
@@ -237,7 +226,7 @@ const LineChart: FC<LineChartProps> = ({
   const showLoadingIndicator = isLoading || !isInitialMount.current;
 
   const visibleDataSets = useMemo(() => {
-    return filteredDataSet.filter(d => d.series.length > 1);
+    return filteredDataSet.filter(d => d.series.length > 0);
   }, [filteredDataSet]);
 
   // Memoize callback functions to prevent infinite loops
@@ -388,7 +377,7 @@ const LineChart: FC<LineChartProps> = ({
         <Title x={width / 2} y={margin.top / 2}>
           {title}
         </Title>
-        {filteredDataSet.length > 0 && (
+        {!displayIsNodata && filteredDataSet.length > 0 && (
           <>
             <XaxisLinear
               xScale={xScale}

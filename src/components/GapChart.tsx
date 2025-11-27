@@ -17,19 +17,7 @@ import { useGapChartLegend } from "./hooks/gapChart/useGapChartLegend";
 import { useGapChartMetadata } from "./hooks/gapChart/useGapChartMetadata";
 import TooltipHint from "src/components/shared/TooltipHint";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
-
-const DEFAULT_COLORS = [
-  "#1f77b4",
-  "#ff7f0e",
-  "#2ca02c",
-  "#d62728",
-  "#9467bd",
-  "#8c564b",
-  "#e377c2",
-  "#7f7f7f",
-  "#bcbd22",
-  "#17becf",
-];
+import { DEFAULT_COLORS } from "./shared/colors";
 
 const DEFAULT_WIDTH = 1000;
 const DEFAULT_HEIGHT = 500;

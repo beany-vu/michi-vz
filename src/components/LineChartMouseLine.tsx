@@ -159,9 +159,7 @@ const LineChartMouseLine: FC<LineChartMouseLineProps> = ({
           }
 
           const xPos = xScale(new Date(getNumericalValueFromData(d.date)));
-          if (i === 0) {
-            baseXPos = xPos;
-          }
+          baseXPos = xPos;
 
           let isVisible = true;
           if (xPos !== baseXPos) {

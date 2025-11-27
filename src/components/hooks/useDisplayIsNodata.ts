@@ -29,6 +29,16 @@ export function useDisplayIsNodata<T>({
 
     // Check if array is empty
     if (Array.isArray(dataSet)) {
+      if (
+        dataSet.length > 0 &&
+        typeof dataSet[0] === "object" &&
+        dataSet[0] !== null &&
+        "series" in dataSet[0]
+      ) {
+        // Special case for series data
+        return dataSet.every(d => !(Array.isArray(d.series) && d.series.length > 0));
+      }
+
       return dataSet.length === 0;
     }
 
