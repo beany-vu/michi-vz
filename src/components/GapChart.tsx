@@ -187,6 +187,10 @@ const GapChart: FC<GapChartProps> = ({
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  // Use ref to capture latest tooltipFormatter to avoid stale closure issues
+  const tooltipFormatterRef = useRef(tooltipFormatter);
+  tooltipFormatterRef.current = tooltipFormatter;
+
   const highlightItems = propsHighlightItems || [];
   const disabledItems = propsDisabledItems || [];
 
@@ -625,8 +629,8 @@ const GapChart: FC<GapChartProps> = ({
           }}
           onClick={handleTooltipClick}
         >
-          {tooltipFormatter ? (
-            tooltipFormatter(tooltip.data)
+          {tooltipFormatterRef.current ? (
+            tooltipFormatterRef.current(tooltip.data)
           ) : (
             <div>
               <strong>{tooltip.data.label}</strong>

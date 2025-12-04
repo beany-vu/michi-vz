@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState, useRef } from "react";
 import { pointer, select, ScaleLinear, ScaleTime } from "d3";
 import { DataPoint, LineChartDataItem } from "../../../types/data";
 
@@ -37,6 +37,10 @@ const useLineChartPathsShapesRendering = (
   onHighlightItem?: (labels: string[]) => void
 ) => {
   const [tooltipState, setTooltipState] = useState<TooltipState | null>(null);
+
+  // Use ref to capture latest tooltipFormatter to avoid stale closure issues
+  const tooltipFormatterRef = useRef(tooltipFormatter);
+  tooltipFormatterRef.current = tooltipFormatter;
 
   const handleMouseEnter = useCallback(
     (
@@ -140,7 +144,7 @@ const useLineChartPathsShapesRendering = (
           tooltip.style.top = `${yPosition}px`;
         }
 
-        const tooltipContent = tooltipFormatter(
+        const tooltipContent = tooltipFormatterRef.current(
           {
             ...d,
             label: data.label,
@@ -153,7 +157,7 @@ const useLineChartPathsShapesRendering = (
         tooltipContentElement.innerHTML = tooltipContent;
       }
     },
-    [tooltipState, tooltipRef, svgRef, margin, tooltipFormatter, filteredDataSet]
+    [tooltipState, tooltipRef, svgRef, margin, filteredDataSet]
   );
 
   useEffect(() => {
@@ -362,7 +366,6 @@ const useLineChartPathsShapesRendering = (
     sanitizeForClassName,
     highlightItems,
     handleItemHighlight,
-    tooltipFormatter,
   ]);
 
   useEffect(() => {

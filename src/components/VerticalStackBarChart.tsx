@@ -152,6 +152,10 @@ const VerticalStackBarChart: React.FC<Props> = ({
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
   const lastLegendDataRef = useRef<LegendItem[] | null>(null);
+
+  // Use ref to capture latest tooltipFormatter to avoid stale closure issues
+  const tooltipFormatterRef = useRef(tooltipFormatter);
+  tooltipFormatterRef.current = tooltipFormatter;
   const onHighlightItemRef = useRef(onHighlightItem);
   const [isTooltipSticky, setIsTooltipSticky] = useState(false);
 
@@ -387,8 +391,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
   // Memoize the tooltip content generation
   const generateTooltipContent = useCallback(
     (key: string, seriesKey: string, data: DataPoint, series: DataPoint[]) => {
-      if (tooltipFormatter) {
-        return tooltipFormatter({
+      if (tooltipFormatterRef.current) {
+        return tooltipFormatterRef.current({
           item: data,
           key: key,
           seriesKey: seriesKey,
@@ -416,7 +420,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                       .join("")}
                 </div>`;
     },
-    [tooltipFormatter, showCombined, generatedColorsMapping]
+    [showCombined, generatedColorsMapping]
   );
 
   // Memoize the tooltip position update

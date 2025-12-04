@@ -167,6 +167,10 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
   const [isTooltipSticky, setIsTooltipSticky] = useState(false);
 
+  // Use ref to capture latest tooltipFormatter to avoid stale closure issues
+  const tooltipFormatterRef = useRef(tooltipFormatter);
+  tooltipFormatterRef.current = tooltipFormatter;
+
   // Generate colors for data points that don't have colors in colorsMapping
   const generatedColorsMapping = useMemo(() => {
     const newMapping = { ...colorsMapping };
@@ -347,8 +351,8 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
 
       // Create tooltip content
       let content = "";
-      if (tooltipFormatter) {
-        content = tooltipFormatter(d);
+      if (tooltipFormatterRef.current) {
+        content = tooltipFormatterRef.current(d);
       } else {
         content = `
           <div>
@@ -365,7 +369,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
       tooltipRef.current.style.top = `${y - 10}px`;
       tooltipRef.current.style.display = "block";
     },
-    [isTooltipSticky, onHighlightItem, tooltipFormatter, xAxisFormat, yAxisFormat]
+    [isTooltipSticky, onHighlightItem, xAxisFormat, yAxisFormat]
   );
 
   const handleSvgMouseMove = useCallback(

@@ -103,6 +103,10 @@ const RangeChart: React.FC<RangeChartProps> = ({
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
   const tooltipStickyRef = useRef(false);
 
+  // Use ref to capture latest tooltipFormatter to avoid stale closure issues
+  const tooltipFormatterRef = useRef(tooltipFormatter);
+  tooltipFormatterRef.current = tooltipFormatter;
+
   // Add filteredDataSet to filter out disabled items first
   const filteredDataSet = useMemo(() => {
     return dataSet.filter(d => !disabledItems.includes(d.label));
@@ -328,7 +332,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
           event.preventDefault();
           event.stopPropagation();
           onHighlightItem([data.label]);
-          showTooltip(event, tooltipFormatter(d, data.series, filteredDataSet));
+          showTooltip(event, tooltipFormatterRef.current(d, data.series, filteredDataSet));
         })
         .on("click", (event, d) => {
           event.preventDefault();

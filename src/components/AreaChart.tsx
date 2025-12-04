@@ -1,5 +1,4 @@
 import React, {
-  Fragment,
   useMemo,
   useRef,
   useState,
@@ -24,11 +23,15 @@ import { XaxisDataType } from "src/types/data";
 const AreaChartContainer = styled.div`
   position: relative;
   path {
-    transition:
-      fill 0.1s ease-out,
-      opacity 0.1s ease-out;
-    will-change: fill, opacity;
-    transition-behavior: allow-discrete;
+    transition: opacity 0.05s ease-out;
+    will-change: opacity;
+  }
+  .tooltip {
+    pointer-events: none;
+    will-change: transform;
+  }
+  .hover-line {
+    pointer-events: none;
   }
 `;
 
@@ -82,6 +85,13 @@ interface Props {
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
+  /**
+   * Force Y axis to always show 0-100% range regardless of data values.
+   * - When true: Y axis is fixed at [0, 100], even if data exceeds 100%
+   * - When false (default): Y axis shows [0, 100] minimum, but extends higher if data exceeds 100%
+   * Useful for percentage-based charts where you always want to show the full 0-100% scale.
+   */
+  forcePercentageScale?: boolean;
 }
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
@@ -114,12 +124,22 @@ const AreaChart: React.FC<Props> = ({
   onColorMappingGenerated,
   highlightItems = [],
   disabledItems = [],
+  forcePercentageScale = false,
 }) => {
   const ref = useRef<SVGSVGElement>(null);
-  const [hoveredDate] = useState<number | null>(null);
+  const [hoverInfo, setHoverInfo] = useState<{
+    dataPoint: DataPoint;
+    x: number;
+    areaKey: string;
+  } | null>(null);
   const renderCompleteRef = useRef(false);
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
   const [isTooltipSticky, setIsTooltipSticky] = useState(false);
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
+
+  // Tooltip refs for direct DOM access (performance optimization)
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const tooltipContentRef = useRef<HTMLDivElement>(null);
 
   // Ref to track the last color mapping sent to prevent infinite loops
   const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
@@ -166,47 +186,96 @@ const AreaChart: React.FC<Props> = ({
 
   // yScale
   const yScaleDomain = useMemo(() => {
+    // Force 0-100% scale if forcePercentageScale is enabled
+    // This is useful when you want to always show the full percentage range
+    // even if data values exceed 100%
+    if (forcePercentageScale) {
+      return [0, 100];
+    }
+
     if (yAxisDomain) {
       return yAxisDomain;
     }
-    // return the max value of the sum of all the keys, don't count the date
-    const max = d3.max(
+
+    // Calculate the max stacked sum across all data points
+    // Only sum the keys that are currently active (not disabled)
+    const maxStackedSum = d3.max(
       series,
       d =>
         d3.sum(
-          Object.keys(d)
-            .filter(key => !disabledItems.includes(key))
-            .map(key => (key === "date" ? 0 : d[key] || 0))
+          keys.map(key => {
+            const val = d[key];
+            return val != null && !isNaN(val as number) ? (val as number) : 0;
+          })
         ) || 0
-    );
+    ) || 0;
 
-    return [0, max];
-  }, [series, keys]);
+    // Minimum domain is [0, 100] for percentage charts, but extend if data exceeds 100
+    return [0, Math.max(100, maxStackedSum)];
+  }, [series, keys, yAxisDomain, forcePercentageScale]);
 
   const yScale = useMemo(
-    () =>
-      d3
+    () => {
+      const scale = d3
         .scaleLinear()
         .domain(yScaleDomain)
         .range([height - margin.bottom, margin.top])
-        .clamp(true)
-        .nice(),
-    [series, width, height, margin]
+        .clamp(true);
+
+      // Only apply .nice() when not forcing percentage scale
+      // .nice() extends domain to "nicer" round numbers which we don't want when forcing 100%
+      return forcePercentageScale ? scale : scale.nice();
+    },
+    [yScaleDomain, height, margin, forcePercentageScale]
   );
 
   const stackedData = useMemo(() => {
     return d3.stack<DataPoint, string>().keys(keys)(series);
   }, [series, keys]);
 
-  const prepareAreaData = () => {
-    return stackedData.map((keyData, index) => {
-      return {
-        key: keys[index],
-        values: keyData,
-        fill: colorsMapping[keys[index]] || colors[index % colors.length], // fallback for safety
-      };
-    });
-  };
+  // Memoized area data to avoid recreating on every render
+  const areaData = useMemo(() => {
+    return stackedData.map((keyData, index) => ({
+      key: keys[index],
+      values: keyData,
+      fill: colorsMapping[keys[index]] || colors[index % colors.length],
+    }));
+  }, [stackedData, keys, colorsMapping, colors]);
+
+  // Helper to get date value for bisector comparison
+  const getDateValue = useCallback(
+    (d: DataPoint) => {
+      if (xAxisDataType === "number") return d.date;
+      return new Date(xAxisDataType === "date_annual" ? `${d.date} 01 01` : d.date).getTime();
+    },
+    [xAxisDataType]
+  );
+
+  // Bisector for finding nearest data point
+  const bisect = useMemo(() => {
+    return d3.bisector((d: DataPoint) => getDateValue(d)).left;
+  }, [getDateValue]);
+
+  // Find which area the mouse is over by Y position
+  const findAreaAtPosition = useCallback(
+    (mouseY: number, dataPoint: DataPoint): string | null => {
+      // Get the stacked values for this data point for each key
+      for (let i = areaData.length - 1; i >= 0; i--) {
+        const area = areaData[i];
+        const pointData = area.values.find(v => v.data.date === dataPoint.date);
+        if (pointData) {
+          const y0 = yScale(pointData[0] || 0);
+          const y1 = yScale(pointData[1] || 0);
+          if (mouseY >= y1 && mouseY <= y0) {
+            return area.key;
+          }
+        }
+      }
+      // Return null if mouse is not over any area (e.g., white space when total < 100%)
+      return null;
+    },
+    [areaData, yScale]
+  );
 
   const areaGenerator = d3
     .area<AreaDataPoint>()
@@ -223,17 +292,20 @@ const AreaChart: React.FC<Props> = ({
     .y1(d => yScale(d[1] || 0))
     .curve(d3.curveMonotoneX);
 
-  const handleAreaSegmentHover = (dataPoint: DataPoint, key: string) => {
-    if (tooltipFormatter) {
-      return tooltipFormatter(dataPoint, series, key);
-    }
+  const handleAreaSegmentHover = useCallback(
+    (dataPoint: DataPoint, key: string) => {
+      if (tooltipFormatter) {
+        return tooltipFormatter(dataPoint, series, key);
+      }
 
-    return `
+      return `
         <div style="background: #fff; padding: 5px">
             <p>${dataPoint.date}</p>
             <p style="color:${colorsMapping[key]}">${key}: ${dataPoint[key] ?? "N/A"}</p>
         </div>`;
-  };
+    },
+    [tooltipFormatter, series, colorsMapping]
+  );
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet: series,
@@ -366,15 +438,14 @@ const AreaChart: React.FC<Props> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (isTooltipSticky) {
+      if (isTooltipSticky && tooltipRef.current) {
         const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
+        const chartElement = (event.target as HTMLElement).closest("svg.chart");
 
-        if (!tooltipElement) {
-          d3.select(".tooltip").style("visibility", "hidden");
-
-          setTimeout(() => {
-            setIsTooltipSticky(false);
-          }, 100);
+        // Only reset if click was OUTSIDE BOTH tooltip AND chart
+        if (!tooltipElement && !chartElement) {
+          setIsTooltipVisible(false);
+          setIsTooltipSticky(false);
         }
       }
     };
@@ -387,34 +458,166 @@ const AreaChart: React.FC<Props> = ({
     }
   }, [isTooltipSticky]);
 
-  const repositionTooltip = (event: React.MouseEvent, areaData, dataPoint) => {
-    d3.select(".tooltip").style("visibility", "visible");
+  // Tooltip positioning using refs and CSS transform
+  const repositionTooltip = useCallback(
+    (event: React.MouseEvent, areaKey: string, dataPoint: DataPoint, forceReposition = false) => {
+      // Skip repositioning if tooltip is sticky (pinned) unless force flag is set
+      if (!forceReposition && isTooltipSticky) return;
 
-    d3.select(".tooltip-content").html(handleAreaSegmentHover(dataPoint.data, areaData.key));
-    const [x, y] = d3.pointer(event);
-    const tooltip = d3.select(".tooltip").node() as HTMLElement;
-    const tooltipWidth = tooltip.getBoundingClientRect().width;
-    const tooltipHeight = tooltip.getBoundingClientRect().height;
-    d3.select(".tooltip")
-      .style("left", x - tooltipWidth / 2 + "px")
-      .style("top", y - tooltipHeight - 10 + "px");
-  };
+      if (!tooltipRef.current || !tooltipContentRef.current) return;
+
+      // Update content first
+      tooltipContentRef.current.innerHTML = handleAreaSegmentHover(dataPoint, areaKey);
+
+      // Get position
+      const [x, y] = d3.pointer(event);
+
+      // Update position
+      const tooltipWidth = tooltipRef.current.offsetWidth;
+      const tooltipHeight = tooltipRef.current.offsetHeight;
+
+      setIsTooltipVisible(true);
+      tooltipRef.current.style.transform = `translate(${x - tooltipWidth / 2}px, ${y - tooltipHeight - 10}px)`;
+    },
+    [handleAreaSegmentHover, isTooltipSticky]
+  );
+
+  // Handle mouse move with bisector to find nearest data point
+  const handleChartMouseMove = useCallback(
+    (event: React.MouseEvent) => {
+      // Skip if tooltip is sticky (pinned) or no data
+      if (isTooltipSticky || series.length === 0) return;
+
+      const [mouseX, mouseY] = d3.pointer(event);
+
+      // Convert pixel position to date value
+      const x0 = xScale.invert(mouseX);
+      const index = bisect(series, xAxisDataType === "number" ? (x0 as number) : (x0 as Date).getTime());
+
+      // Get closest data point (compare distance to neighbors)
+      const d0 = series[index - 1];
+      const d1 = series[index];
+
+      let dataPoint: DataPoint;
+      if (!d0) {
+        dataPoint = d1;
+      } else if (!d1) {
+        dataPoint = d0;
+      } else {
+        const x0Val = xAxisDataType === "number" ? (x0 as number) : (x0 as Date).getTime();
+        dataPoint = x0Val - getDateValue(d0) > getDateValue(d1) - x0Val ? d1 : d0;
+      }
+
+      if (!dataPoint) return;
+
+      // Find which area the mouse is over (by Y position)
+      const areaKey = findAreaAtPosition(mouseY, dataPoint);
+
+      // If mouse is in white space (no area), hide tooltip and clear hover
+      if (!areaKey) {
+        setIsTooltipVisible(false);
+        setHoverInfo(null);
+        onHighlightItem?.([]);
+        return;
+      }
+
+      // Calculate x position for the vertical line
+      const xPos = xScale(
+        xAxisDataType === "number"
+          ? dataPoint.date
+          : new Date(xAxisDataType === "date_annual" ? `${dataPoint.date} 01 01` : dataPoint.date)
+      );
+
+      setHoverInfo({ dataPoint, x: xPos, areaKey });
+      onHighlightItem?.([areaKey]);
+
+      // Update tooltip
+      repositionTooltip(event, areaKey, dataPoint);
+    },
+    [
+      isTooltipSticky,
+      series,
+      xScale,
+      bisect,
+      xAxisDataType,
+      getDateValue,
+      findAreaAtPosition,
+      onHighlightItem,
+      repositionTooltip,
+    ]
+  );
+
+  // Handle mouse out
+  const handleChartMouseOut = useCallback(
+    (event: React.MouseEvent) => {
+      // Skip if tooltip is sticky (pinned)
+      if (isTooltipSticky) return;
+
+      const target = event.relatedTarget as HTMLElement;
+      if (!target || !target.closest("svg.chart")) {
+        setIsTooltipVisible(false);
+        setHoverInfo(null);
+        onHighlightItem?.([]);
+      }
+    },
+    [isTooltipSticky, onHighlightItem]
+  );
+
+  // Handle click on chart
+  const handleChartClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (hoverInfo) {
+        // Force reposition first to ensure tooltip content is set
+        repositionTooltip(event, hoverInfo.areaKey, hoverInfo.dataPoint, true);
+        // Then set sticky state - both states together
+        setIsTooltipSticky(true);
+        setIsTooltipVisible(true);
+      }
+    },
+    [hoverInfo, repositionTooltip]
+  );
 
   return (
     <AreaChartContainer>
       <div
+        ref={tooltipRef}
         className={"tooltip"}
         style={{
           position: "absolute",
+          top: 0,
+          left: 0,
           background: "white",
           padding: "5px",
           zIndex: 1000,
-          visibility: "hidden", // Initially hidden
+          visibility: isTooltipVisible ? "visible" : "hidden",
+          pointerEvents: isTooltipSticky ? "auto" : "none",
         }}
       >
-        <div className="tooltip-content" />
+        <div ref={tooltipContentRef} className="tooltip-content" />
         {!isTooltipSticky && <TooltipHint />}
       </div>
+
+      {/* Overlay when sticky - blocks mouse events on chart */}
+      {isTooltipSticky && (
+        <div
+          className="tooltip-overlay"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "transparent",
+            zIndex: 999,
+            cursor: "pointer",
+          }}
+          onClick={() => {
+            setIsTooltipSticky(false);
+            setIsTooltipVisible(false);
+            setHoverInfo(null);
+          }}
+        />
+      )}
 
       <svg
         className={"chart"}
@@ -422,16 +625,9 @@ const AreaChart: React.FC<Props> = ({
         width={width}
         height={height}
         style={{ overflow: "visible" }}
-        onMouseOut={event => {
-          // Only clear highlight if mouse leaves the SVG container
-          const target = event.relatedTarget as HTMLElement;
-          if (!target || !target.closest("svg.chart")) {
-            if (!isTooltipSticky) {
-              d3.select(".tooltip").style("visibility", "hidden");
-            }
-            onHighlightItem?.([]);
-          }
-        }}
+        onMouseMove={handleChartMouseMove}
+        onMouseOut={handleChartMouseOut}
+        onClick={handleChartClick}
       >
         {children}
         <Title x={width / 2} y={MARGIN.top / 2}>
@@ -458,100 +654,63 @@ const AreaChart: React.FC<Props> = ({
           </>
         )}
         <g>
-          {prepareAreaData().map(areaData => (
-            <Fragment key={areaData.key}>
-              <path
-                d={areaGenerator(areaData.values)}
-                fill={areaData.fill ? areaData.fill : "#fdfdfd"}
-                stroke={"#fff"}
-                strokeWidth={1}
-                opacity={
-                  highlightItems.length === 0 || highlightItems.includes(areaData.key) ? 1 : 0.05
-                }
-                data-label={areaData.key}
-                data-label-safe={sanitizeForClassName(areaData.key)}
-                onMouseMove={event => {
-                  event.stopPropagation();
-                  onHighlightItem([areaData.key]);
-                }}
-                onMouseOut={event => {
-                  // Don't clear highlight if moving to a rect element
-                  const target = event.relatedTarget as HTMLElement;
-                  if (!target || !target.classList.contains("rect-hover")) {
-                    event.stopPropagation();
-                    onHighlightItem([]);
-                  }
-                }}
-                onClick={() => {
-                  setIsTooltipSticky(true);
-                }}
-              />
-              {/* Here's the addition*/}
-              {areaData.values.map(dataPoint => (
-                <rect
-                  key={`${areaData.key}-${dataPoint.data.date}`}
-                  className="rect-hover"
-                  x={
-                    xScale(
-                      xAxisDataType === "number"
-                        ? dataPoint.data.date
-                        : new Date(dataPoint.data.date)
-                    ) - 2
-                  }
-                  y={yScale(dataPoint[1] || 0)} // Handle null values
-                  width={8}
-                  strokeWidth={1}
-                  rx={3}
-                  ry={3}
-                  stroke={"#ccc"}
-                  // Handle null values
-                  height={yScale(dataPoint[0] || 0) - yScale(dataPoint[1] || 0)}
-                  fill="#fff"
-                  opacity={highlightItems.includes(areaData.key) ? 0.5 : 0}
-                  data-label={areaData.key}
-                  data-label-safe={sanitizeForClassName(areaData.key)}
-                  onMouseEnter={event => {
-                    event.stopPropagation();
-                    onHighlightItem([areaData.key]);
-
-                    if (isTooltipSticky) return;
-                    repositionTooltip(event, areaData, dataPoint);
-                  }}
-                  onMouseOut={event => {
-                    // Don't clear highlight if moving to another rect or the path
-                    const target = event.relatedTarget as HTMLElement;
-                    if (
-                      !target ||
-                      (!target.classList.contains("rect-hover") &&
-                        target.tagName.toLowerCase() !== "path")
-                    ) {
-                      event.stopPropagation();
-                      onHighlightItem([]);
-
-                      if (isTooltipSticky) return;
-                      d3.select(".tooltip").style("visibility", "hidden");
-                    }
-                  }}
-                  onClick={event => {
-                    event.stopPropagation();
-                    repositionTooltip(event, areaData, dataPoint);
-                    setIsTooltipSticky(true);
-                  }}
-                />
-              ))}
-              {hoveredDate !== null && (
-                <line
-                  className={"hover-line"}
-                  x1={xScale(hoveredDate)}
-                  x2={xScale(hoveredDate)}
-                  y1={margin.top}
-                  y2={height - margin.bottom}
-                  stroke={"#666"}
-                  strokeWidth={1}
-                />
-              )}
-            </Fragment>
+          {areaData.map(areaDataItem => (
+            <path
+              key={areaDataItem.key}
+              d={areaGenerator(areaDataItem.values)}
+              fill={areaDataItem.fill ? areaDataItem.fill : "#fdfdfd"}
+              stroke={"#fff"}
+              strokeWidth={1}
+              opacity={
+                highlightItems.length === 0 || highlightItems.includes(areaDataItem.key) ? 1 : 0.05
+              }
+              data-label={areaDataItem.key}
+              data-label-safe={sanitizeForClassName(areaDataItem.key)}
+              style={{ pointerEvents: "none" }}
+            />
           ))}
+          {/* Thin vertical lines per area to indicate which dates have data */}
+          {areaData.map(areaDataItem =>
+            areaDataItem.values.map(dataPoint => {
+              const xPos = xScale(
+                xAxisDataType === "number"
+                  ? dataPoint.data.date
+                  : new Date(dataPoint.data.date)
+              );
+              const y0 = yScale(dataPoint[0] || 0);
+              const y1 = yScale(dataPoint[1] || 0);
+              const segmentHeight = y0 - y1;
+              // Only show indicator if segment has height (data exists)
+              if (segmentHeight <= 0) return null;
+              return (
+                <line
+                  key={`data-indicator-${areaDataItem.key}-${dataPoint.data.date}`}
+                  className="data-indicator"
+                  x1={xPos}
+                  x2={xPos}
+                  y1={y1}
+                  y2={y0}
+                  stroke="#ccc"
+                  strokeWidth={1}
+                  opacity={1}
+                  pointerEvents="none"
+                />
+              );
+            })
+          )}
+          {/* Vertical indicator line at hover position */}
+          {hoverInfo && (
+            <line
+              className="hover-line"
+              x1={hoverInfo.x}
+              x2={hoverInfo.x}
+              y1={margin.top}
+              y2={height - margin.bottom}
+              stroke="#666"
+              strokeWidth={2}
+              pointerEvents="none"
+            />
+          )}
         </g>
       </svg>
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}

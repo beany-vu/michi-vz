@@ -87,6 +87,7 @@ interface LineChartProps {
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
+  hideTickLabels?: boolean;
 }
 
 interface ChartMetadata {
@@ -128,6 +129,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   tickHtmlWidth,
   highlightItems = [],
   disabledItems = [],
+  hideTickLabels = false,
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
@@ -288,9 +290,10 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         yAxisFormat={yAxisFormat}
         tickHtmlWidth={tickHtmlWidth}
         defaultTickPosition={horizontalTickPosition}
+        hideTickLabels={hideTickLabels}
       />
     );
-  }, [yAxisScale, width, margin, yAxisFormat, tickHtmlWidth, horizontalTickPosition]);
+  }, [yAxisScale, width, margin, yAxisFormat, tickHtmlWidth, horizontalTickPosition, hideTickLabels]);
 
   // Memoize event handlers
   const handleMouseOver = useCallback(

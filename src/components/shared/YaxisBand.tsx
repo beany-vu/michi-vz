@@ -18,6 +18,7 @@ interface Props {
   tickHtmlWidth?: number;
   enableTransitions?: boolean;
   defaultTickPosition?: { x: number; y: number };
+  hideTickLabels?: boolean;
 }
 
 const YaxisBand: FC<Props> = ({
@@ -31,6 +32,7 @@ const YaxisBand: FC<Props> = ({
   tickHtmlWidth = 100,
   enableTransitions = true,
   defaultTickPosition = { x: -100, y: -10 },
+  hideTickLabels = false,
 }) => {
   const ref = useRef<SVGGElement>(null);
   const renderedRef = useRef(false);
@@ -90,28 +92,30 @@ const YaxisBand: FC<Props> = ({
     // Remove existing tick lines
     g.selectAll(".tick-line").remove();
 
-    // Append foreignObject for HTML content
-    g.selectAll(".tick")
-      .append("foreignObject")
-      .attr("class", "tick-html")
-      .attr("x", defaultTickPosition.x)
-      .attr("y", defaultTickPosition.y)
-      .attr("width", tickHtmlWidth)
-      .attr("height", 20)
-      .html(
-        d =>
-          `<div style="display:flex;align-items:center;height:100%;cursor:pointer" title="${d}"><span>${d}</span></div>`
-      )
-      .on("mouseenter", function (_, d) {
-        if (onHover) {
-          onHover(d as string);
-        }
-      })
-      .on("mouseleave", function () {
-        if (onHover) {
-          onHover(null);
-        }
-      });
+    // Append foreignObject for HTML content (only if not hidden)
+    if (!hideTickLabels) {
+      g.selectAll(".tick")
+        .append("foreignObject")
+        .attr("class", "tick-html")
+        .attr("x", defaultTickPosition.x)
+        .attr("y", defaultTickPosition.y)
+        .attr("width", tickHtmlWidth)
+        .attr("height", 20)
+        .html(
+          d =>
+            `<div style="display:flex;align-items:center;height:100%;cursor:pointer" title="${d}"><span>${d}</span></div>`
+        )
+        .on("mouseenter", function (_, d) {
+          if (onHover) {
+            onHover(d as string);
+          }
+        })
+        .on("mouseleave", function () {
+          if (onHover) {
+            onHover(null);
+          }
+        });
+    }
 
     // Add dashed lines on each tick (full width from Y-axis to right edge)
     // Grid lines should start at x=0 (Y-axis position) and extend the full width
@@ -135,6 +139,7 @@ const YaxisBand: FC<Props> = ({
     width,
     showGrid,
     onHover,
+    hideTickLabels,
   ]);
 
   useLayoutEffect(() => {
