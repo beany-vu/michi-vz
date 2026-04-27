@@ -21,6 +21,13 @@ export default {
       description: "Number of items to show when filtering",
     },
   },
+  args: {
+    showDataPoints: true,
+    onHighlightItem: fn(),
+    onChartDataProcessed: fn(),
+    onColorMappingGenerated: fn(),
+    onLegendDataChange: fn(),
+  },
 } as Meta;
 
 // Sample data sets for reuse in stories
@@ -808,6 +815,25 @@ export const MultiSeriesNoFilter = {
     dataSet: multiSeriesData,
     title: "Multi-Series Line Chart (No Filter)",
     filter: null,
+  },
+};
+
+// Dots hidden — hover any line to see the nearest-point tooltip via per-line bisection.
+export const NoDots = {
+  args: {
+    ...commonProps,
+    dataSet: multiSeriesData,
+    title: "No Dots (hover any line for tooltip)",
+    filter: null,
+    showDataPoints: false,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "With `showDataPoints={false}`, per-point shapes are hidden. Hovering anywhere along a line resolves the nearest point in that series and renders the tooltip via your `tooltipFormatter` prop. Highlight + tooltip happen together, mirroring the per-dot UX.",
+      },
+    },
   },
 };
 

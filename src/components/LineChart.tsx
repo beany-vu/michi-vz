@@ -169,6 +169,13 @@ interface LineChartProps {
   highlightItems?: string[];
   disabledItems?: string[];
   enableMouseLine?: boolean;
+  /**
+   * Render per-point shapes (circle/square/triangle) on each data point.
+   * Defaults to false — hover tooltips work via per-line bisection on the line-overlay.
+   * Set to true to restore the classic per-dot rendering and per-dot hover tooltips.
+   * Note: single-point series will be invisible when false.
+   */
+  showDataPoints?: boolean;
 }
 
 const LineChart: FC<LineChartProps> = ({
@@ -199,6 +206,7 @@ const LineChart: FC<LineChartProps> = ({
   highlightItems = [],
   disabledItems = [],
   enableMouseLine = true,
+  showDataPoints = false,
 }) => {
   // Use the new hook for refs and state
   const { svgRef, tooltipRef, renderCompleteRef, prevChartDataRef, isInitialMount } =
@@ -285,7 +293,8 @@ const LineChart: FC<LineChartProps> = ({
     getColor,
     sanitizeForClassName,
     highlightItems,
-    undefined // Remove the callback since color generation is handled by useGenerateColorMapping
+    undefined, // Remove the callback since color generation is handled by useGenerateColorMapping
+    showDataPoints
   );
 
   useLineChartColorMapping(generatedColorMapping, getColor, svgRef, TRANSITION_DURATION);

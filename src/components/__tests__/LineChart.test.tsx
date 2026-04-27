@@ -85,6 +85,39 @@ describe("LineChart", () => {
     }).not.toThrow();
   });
 
+  test("hides data points by default (showDataPoints defaults to false)", async () => {
+    const { container } = customRender(
+      <LineChart
+        dataSet={transformedData}
+        {...defaultChartProps}
+        xAxisDataType="date_annual"
+        onHighlightItem={() => {}}
+      />
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector("svg")).toBeInTheDocument();
+    });
+
+    expect(container.querySelectorAll(".data-point").length).toBe(0);
+  });
+
+  test("renders data points when showDataPoints={true}", async () => {
+    const { container } = customRender(
+      <LineChart
+        dataSet={transformedData}
+        {...defaultChartProps}
+        xAxisDataType="date_annual"
+        onHighlightItem={() => {}}
+        showDataPoints={true}
+      />
+    );
+
+    await waitFor(() => {
+      expect(container.querySelectorAll(".data-point").length).toBeGreaterThan(0);
+    });
+  });
+
   test.skip("renders with tooltip", async () => {
     const { container } = customRender(
       <LineChart

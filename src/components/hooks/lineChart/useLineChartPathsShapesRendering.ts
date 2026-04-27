@@ -34,7 +34,8 @@ const useLineChartPathsShapesRendering = (
   getColor: (color: string | undefined, fallback: string | null) => string,
   sanitizeForClassName: (str: string) => string,
   highlightItems: string[],
-  onHighlightItem?: (labels: string[]) => void
+  onHighlightItem?: (labels: string[]) => void,
+  showDataPoints: boolean = false
 ) => {
   const [tooltipState, setTooltipState] = useState<TooltipState | null>(null);
 
@@ -239,104 +240,122 @@ const useLineChartPathsShapesRendering = (
         })
         .on("mouseout", () => handleMouseOut(svgRef));
 
-      // --- POINTS ---
-      // Update and enter points
-      const points = group.selectAll(`.data-point`).data(data.series, pointKeyFn);
-
-      // Handle the exit selection - remove points that no longer exist in the data
-      points.exit().remove();
-
-      if (shape === "circle") {
-        points
-          .attr("cx", d => xScale(new Date(d.date)))
-          .attr("cy", d => yScale(d.value))
-          .attr("fill", color);
-        points
-          .enter()
-          .append("circle")
-          .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
-          .attr("data-label", data.label)
-          .attr("data-label-safe", safeLabelClass)
-          .attr("data-key", uniqueKey)
-          .attr("cx", d => xScale(new Date(d.date)))
-          .attr("cy", d => yScale(d.value))
-          .attr("r", circleSize)
-          .attr("fill", color)
-          .attr("stroke", "#fdfdfd")
-          .attr("stroke-width", 2)
-          .attr("cursor", "crosshair");
-      } else if (shape === "square") {
-        points
-          .attr("x", d => xScale(new Date(d.date)) - squareSize)
-          .attr("y", d => yScale(d.value) - squareSize)
-          .attr("fill", color);
-        points
-          .enter()
-          .append("rect")
-          .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
-          .attr("data-label", data.label)
-          .attr("data-label-safe", safeLabelClass)
-          .attr("data-key", uniqueKey)
-          .attr("x", d => xScale(new Date(d.date)) - squareSize)
-          .attr("y", d => yScale(d.value) - squareSize)
-          .attr("width", squareSize * 2)
-          .attr("height", squareSize * 2)
-          .attr("fill", color)
-          .attr("stroke", "#fdfdfd")
-          .attr("stroke-width", 2)
-          .attr("cursor", "crosshair");
-      } else if (shape === "triangle") {
-        const generateTrianglePath = (x: number, y: number, size: number = triangleSize) => {
-          const height = (size * Math.sqrt(3)) / 2;
-          return `M ${x} ${y - height * 0.7} L ${x + size / 2} ${y + height * 0.3} L ${x - size / 2} ${y + height * 0.3} Z`;
-        };
-        points
-          .attr("d", d => {
-            const x = xScale(new Date(d.date));
-            const y = yScale(d.value);
-            return generateTrianglePath(x, y);
-          })
-          .attr("fill", color);
-        points
-          .enter()
-          .append("path")
-          .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
-          .attr("data-label", data.label)
-          .attr("data-label-safe", safeLabelClass)
-          .attr("data-key", uniqueKey)
-          .attr("d", d => {
-            const x = xScale(new Date(d.date));
-            const y = yScale(d.value);
-            return generateTrianglePath(x, y);
-          })
-          .attr("fill", color)
-          .attr("stroke", "#fdfdfd")
-          .attr("stroke-width", 2)
-          .attr("cursor", "crosshair");
+      if (!showDataPoints && data.series.length > 0) {
+        overlayPath.on("mousemove", function (event) {
+          if (tooltipState?.isSticky) return;
+          const [mouseX] = pointer(event, this);
+          const xValue = xScale.invert(mouseX);
+          const target = xAxisDataType === "number" ? Number(xValue) : +new Date(xValue as Date);
+          const toNum = (d: DataPoint) =>
+            xAxisDataType === "number" ? Number(d.date) : +new Date(d.date);
+          const nearest = data.series.reduce(
+            (best, d) => (Math.abs(toNum(d) - target) < Math.abs(toNum(best) - target) ? d : best),
+            data.series[0]
+          );
+          handleTooltipPosition(event, nearest, data);
+        });
       }
 
-      // Add event listeners to all data points after they've been created or updated
-      group
-        .selectAll(`.data-point`)
-        .on("click", (event, d: DataPoint) => {
-          if (tooltipRef?.current && svgRef.current) {
-            setTooltipState({
-              isSticky: true,
-            });
+      // --- POINTS ---
+      if (showDataPoints) {
+        // Update and enter points
+        const points = group.selectAll(`.data-point`).data(data.series, pointKeyFn);
+
+        // Handle the exit selection - remove points that no longer exist in the data
+        points.exit().remove();
+
+        if (shape === "circle") {
+          points
+            .attr("cx", d => xScale(new Date(d.date)))
+            .attr("cy", d => yScale(d.value))
+            .attr("fill", color);
+          points
+            .enter()
+            .append("circle")
+            .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
+            .attr("data-label", data.label)
+            .attr("data-label-safe", safeLabelClass)
+            .attr("data-key", uniqueKey)
+            .attr("cx", d => xScale(new Date(d.date)))
+            .attr("cy", d => yScale(d.value))
+            .attr("r", circleSize)
+            .attr("fill", color)
+            .attr("stroke", "#fdfdfd")
+            .attr("stroke-width", 2)
+            .attr("cursor", "crosshair");
+        } else if (shape === "square") {
+          points
+            .attr("x", d => xScale(new Date(d.date)) - squareSize)
+            .attr("y", d => yScale(d.value) - squareSize)
+            .attr("fill", color);
+          points
+            .enter()
+            .append("rect")
+            .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
+            .attr("data-label", data.label)
+            .attr("data-label-safe", safeLabelClass)
+            .attr("data-key", uniqueKey)
+            .attr("x", d => xScale(new Date(d.date)) - squareSize)
+            .attr("y", d => yScale(d.value) - squareSize)
+            .attr("width", squareSize * 2)
+            .attr("height", squareSize * 2)
+            .attr("fill", color)
+            .attr("stroke", "#fdfdfd")
+            .attr("stroke-width", 2)
+            .attr("cursor", "crosshair");
+        } else if (shape === "triangle") {
+          const generateTrianglePath = (x: number, y: number, size: number = triangleSize) => {
+            const height = (size * Math.sqrt(3)) / 2;
+            return `M ${x} ${y - height * 0.7} L ${x + size / 2} ${y + height * 0.3} L ${x - size / 2} ${y + height * 0.3} Z`;
+          };
+          points
+            .attr("d", d => {
+              const x = xScale(new Date(d.date));
+              const y = yScale(d.value);
+              return generateTrianglePath(x, y);
+            })
+            .attr("fill", color);
+          points
+            .enter()
+            .append("path")
+            .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
+            .attr("data-label", data.label)
+            .attr("data-label-safe", safeLabelClass)
+            .attr("data-key", uniqueKey)
+            .attr("d", d => {
+              const x = xScale(new Date(d.date));
+              const y = yScale(d.value);
+              return generateTrianglePath(x, y);
+            })
+            .attr("fill", color)
+            .attr("stroke", "#fdfdfd")
+            .attr("stroke-width", 2)
+            .attr("cursor", "crosshair");
+        }
+
+        // Add event listeners to all data points after they've been created or updated
+        group
+          .selectAll(`.data-point`)
+          .on("click", (event, d: DataPoint) => {
+            if (tooltipRef?.current && svgRef.current) {
+              setTooltipState({
+                isSticky: true,
+              });
+
+              handleTooltipPosition(event, d, data);
+            }
+          })
+          .on("mouseenter", (event, d: DataPoint) => {
+            handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1, highlightItems);
+
+            if (tooltipState?.isSticky) return;
 
             handleTooltipPosition(event, d, data);
-          }
-        })
-        .on("mouseenter", (event, d: DataPoint) => {
-          handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1, highlightItems);
-
-          if (tooltipState?.isSticky) return;
-
-          handleTooltipPosition(event, d, data);
-        })
-        .on("mouseout", () => {
-          handleMouseOut(svgRef);
-        });
+          })
+          .on("mouseout", () => {
+            handleMouseOut(svgRef);
+          });
+      }
     }
 
     // Apply highlighting AFTER rendering is complete
@@ -366,6 +385,7 @@ const useLineChartPathsShapesRendering = (
     sanitizeForClassName,
     highlightItems,
     handleItemHighlight,
+    showDataPoints,
   ]);
 
   useEffect(() => {
