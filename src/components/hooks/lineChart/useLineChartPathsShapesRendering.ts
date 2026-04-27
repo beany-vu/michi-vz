@@ -43,6 +43,27 @@ const useLineChartPathsShapesRendering = (
   const tooltipFormatterRef = useRef(tooltipFormatter);
   tooltipFormatterRef.current = tooltipFormatter;
 
+  // Grace-period timer for the bisection tooltip in no-dots mode.
+  // Lets the user travel from line to tooltip without the tooltip vanishing.
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isStickyRef = useRef(false);
+  isStickyRef.current = !!tooltipState?.isSticky;
+  const clearHideTimer = () => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  };
+  const scheduleHide = () => {
+    clearHideTimer();
+    hideTimerRef.current = setTimeout(() => {
+      hideTimerRef.current = null;
+      if (!isStickyRef.current && tooltipRef.current) {
+        tooltipRef.current.style.visibility = "hidden";
+      }
+    }, 400);
+  };
+
   const handleMouseEnter = useCallback(
     (
       event: React.MouseEvent | null,
@@ -241,18 +262,40 @@ const useLineChartPathsShapesRendering = (
         .on("mouseout", () => handleMouseOut(svgRef));
 
       if (!showDataPoints && data.series.length > 0) {
-        overlayPath.on("mousemove", function (event) {
-          if (tooltipState?.isSticky) return;
-          const [mouseX] = pointer(event, this);
+        overlayPath.style("cursor", "pointer");
+        const toNum = (d: DataPoint) =>
+          xAxisDataType === "number" ? Number(d.date) : +new Date(d.date);
+        const findNearest = (mouseX: number) => {
           const xValue = xScale.invert(mouseX);
           const target = xAxisDataType === "number" ? Number(xValue) : +new Date(xValue as Date);
-          const toNum = (d: DataPoint) =>
-            xAxisDataType === "number" ? Number(d.date) : +new Date(d.date);
-          const nearest = data.series.reduce(
+          return data.series.reduce(
             (best, d) => (Math.abs(toNum(d) - target) < Math.abs(toNum(best) - target) ? d : best),
             data.series[0]
           );
-          handleTooltipPosition(event, nearest, data);
+        };
+        overlayPath.on("mousemove", function (event) {
+          if (isStickyRef.current) return;
+          clearHideTimer();
+          const [mouseX] = pointer(event, this);
+          handleTooltipPosition(event, findNearest(mouseX), data);
+        });
+        overlayPath.on("click", function (event) {
+          clearHideTimer();
+          const [mouseX] = pointer(event, this);
+          setTooltipState({ isSticky: true });
+          handleTooltipPosition(event, findNearest(mouseX), data);
+        });
+        // Override mouseout: reset line-highlight, then start the grace-period
+        // hide timer so the user has time to travel into the tooltip.
+        // The tooltip's own mouseenter/mouseleave (see effect below) cancels/restarts.
+        overlayPath.on("mouseout", () => {
+          const svg = select(svgRef.current);
+          if (!svg.node()) return;
+          svg.selectAll(".data-group").style("opacity", 1);
+          svg.selectAll(".series-group").style("opacity", 1);
+          svg.selectAll(".line").style("opacity", 1);
+          handleItemHighlight([]);
+          if (!isStickyRef.current) scheduleHide();
         });
       }
 
@@ -388,13 +431,30 @@ const useLineChartPathsShapesRendering = (
     showDataPoints,
   ]);
 
+  // Keep the tooltip visible while the cursor is over it (no-dots mode UX).
+  // Cancel the hide timer on mouseenter, restart it on mouseleave.
+  useEffect(() => {
+    const el = tooltipRef.current;
+    if (!el) return;
+    const onEnter = () => clearHideTimer();
+    const onLeave = () => scheduleHide();
+    el.addEventListener("mouseenter", onEnter);
+    el.addEventListener("mouseleave", onLeave);
+    return () => {
+      el.removeEventListener("mouseenter", onEnter);
+      el.removeEventListener("mouseleave", onLeave);
+      clearHideTimer();
+    };
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (tooltipState?.isSticky) {
         const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
         const tooltipElement2 = (event.target as HTMLElement).closest(".data-point");
+        const lineOverlayElement = (event.target as Element).closest(".line-overlay");
 
-        if (!tooltipElement && !tooltipElement2) {
+        if (!tooltipElement && !tooltipElement2 && !lineOverlayElement) {
           if (tooltipRef.current) {
             tooltipRef.current.style.visibility = "hidden";
           }
