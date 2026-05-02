@@ -2,6 +2,42 @@
 
 A React-based data visualization library built with D3.js and TypeScript.
 
+## External-color mode (`skipColorMappingDispatch`)
+
+Every chart component (`LineChart`, `AreaChart`, `BarBellChart`,
+`ComparableHorizontalBarChart`, `DualHorizontalBarChart`, `GapChart`,
+`RadarChart`, `ScatterPlotChart`, `VerticalStackBarChart`) accepts an optional
+`skipColorMappingDispatch?: boolean` prop. Default `false` preserves the
+original behaviour.
+
+Set it to `true` when an external mechanism — typically CSS rules with
+`!important`, or a Redux-side color generator that feeds both the chart and an
+external legend — is the single source of truth for colors. In that mode:
+
+- The chart does **not** call `onColorMappingGenerated`. No mapping leaks into
+  the consumer's legend store.
+- Labels with no entry in `colorsMapping` and no `item.color` resolve to
+  `"transparent"` instead of cycling through the COLORS array. The chart
+  paints invisibly until the consumer's external colors arrive — preventing
+  the "wrong colors flash" that would otherwise happen on first paint.
+- Labels that DO have `item.color` or are present in `colorsMapping` paint
+  with their proper color from frame 1.
+
+Without the flag, the chart's auto-generated COLORS-array fallback can leak
+into the consumer's legend store and produce a visible mismatch between the
+chart and the legend that labels it.
+
+```jsx
+// Typical use: chart wrapped by an external CSS-injection layer
+<LineChart
+  dataSet={...}
+  colors={...}
+  colorsMapping={...}
+  onColorMappingGenerated={...}  // still accepted, just won't be called
+  skipColorMappingDispatch       // <-- opt in
+/>
+```
+
 ## Recent Updates (v0.5.2)
 - ✅ **Fixed infinite loop issues** in LineChart and GapChart components 
 - ✅ **Improved stability** - resolved "Maximum update depth exceeded" errors

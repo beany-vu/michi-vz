@@ -88,6 +88,26 @@ interface Props {
   colorsMapping?: { [key: string]: string };
   // Callback to notify parent about generated color mapping
   onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
+  /**
+   * When true, the chart opts into "wait-for-legend" / external-color mode:
+   *  - it does NOT call `onColorMappingGenerated` (no Redux ping-pong with the
+   *    consumer's legend store)
+   *  - the auto-generated COLORS-array fallback is replaced with `"transparent"`
+   *    so any label without an entry in `colorsMapping` and no `item.color`
+   *    paints invisibly until the consumer provides its color (typically via
+   *    CSS rules with `!important`, or a Redux-side color generator that feeds
+   *    both chart and legend from a single source of truth)
+   *  - labels that DO have `item.color` or are in `colorsMapping` paint with
+   *    their proper color from frame 1
+   *
+   * Set this when the chart is wrapped by an external coloring system. Without
+   * it, the chart's auto-generated COLORS-array mapping leaks into the
+   * consumer's legend store and produces a visible mismatch (chart and legend
+   * disagree on what color a given label should be).
+   *
+   * Default `false` preserves backward-compatible behaviour.
+   */
+  skipColorMappingDispatch?: boolean;
   // Callback to notify parent about legend data changes
   onLegendDataChange?: (legendData: LegendItem[]) => void;
   // highlightItems and disabledItems as props for better performance
@@ -142,6 +162,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   colors = DEFAULT_COLORS,
   colorsMapping = {},
   onColorMappingGenerated,
+  skipColorMappingDispatch = false,
   onLegendDataChange,
   highlightItems = [],
   disabledItems = [],
@@ -183,7 +204,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
       let colorIndex = Object.keys(colorsMapping).length;
       for (const key of allKeys) {
         if (!newMapping[key]) {
-          newMapping[key] = colors[colorIndex % colors.length];
+          newMapping[key] = skipColorMappingDispatch ? "transparent" : colors[colorIndex % colors.length];
           colorIndex++;
         }
       }
@@ -199,6 +220,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
   useLayoutEffect(() => {
     if (
+      !skipColorMappingDispatch &&
       onColorMappingGeneratedRef.current &&
       !isEqual(generatedColorsMapping, lastColorMappingSentRef.current)
     ) {

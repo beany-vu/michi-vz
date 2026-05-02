@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.47] - 2026-05-02
+
+### Added
+- **🎨 `skipColorMappingDispatch` prop on all chart components**: opt-in
+  "wait-for-legend" / external-color mode for consumers that own colors via
+  CSS injection or a Redux-side color generator.
+  - Available on `LineChart`, `AreaChart`, `BarBellChart`,
+    `ComparableHorizontalBarChart`, `DualHorizontalBarChart`, `GapChart`,
+    `RadarChart`, `ScatterPlotChart`, `VerticalStackBarChart`.
+  - When `true`:
+    - The chart does NOT call `onColorMappingGenerated`, preventing the
+      auto-generated COLORS-array mapping from leaking into the consumer's
+      legend store.
+    - Labels with no entry in `colorsMapping` and no `item.color` resolve to
+      `"transparent"` rather than the COLORS palette, eliminating the
+      "wrong colors flash" before the consumer's CSS / Redux colors arrive.
+    - Labels that DO have `item.color` or `colorsMapping[label]` set paint
+      with their proper color from frame 1.
+  - Default `false` preserves the original behaviour. Backward compatible.
+  - See README "External-color mode" section for full details.
+
 ## [0.5.2] - 2025-06-17
 
 ### Fixed

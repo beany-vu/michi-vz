@@ -9,7 +9,12 @@ export const useGapChartColors = (
     value1?: string;
     value2?: string;
     gap?: string;
-  }
+  },
+  // See LineChart's useGenerateColorMapping for the full doc; in short, when
+  // true, labels with no entry in `colorsMapping` resolve to "transparent"
+  // instead of cycling through the COLORS palette — wait-for-legend semantics
+  // for consumers that own colors externally.
+  skipColorMappingDispatch: boolean = false
 ) => {
   // Cache for generated colors (currently unused but kept for future optimization)
   // const colorCacheRef = useRef<Record<string, string>>({});
@@ -36,7 +41,7 @@ export const useGapChartColors = (
 
     for (const label of labels) {
       if (!newMapping[label]) {
-        newMapping[label] = colorPalette[colorIndex % colorPalette.length];
+        newMapping[label] = skipColorMappingDispatch ? "transparent" : colorPalette[colorIndex % colorPalette.length];
         colorIndex++;
       }
     }
