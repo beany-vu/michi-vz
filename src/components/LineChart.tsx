@@ -377,10 +377,19 @@ const LineChart: FC<LineChartProps> = ({
     topNItems
   );
 
-  useEffect(() => {
-    // Set render complete flag
-    renderCompleteRef.current = true;
+  // Set render complete flag synchronously in render. The metadata-expose
+  // useEffect (inside useLineChartMetadataExpose above) is gated on
+  // `renderCompleteRef.current`. When this flag was set inside its own
+  // useEffect declared AFTER useLineChartMetadataExpose, React fired the
+  // metadata effect first (declaration order) — found the ref still false
+  // — and skipped the dispatch. With nothing to re-trigger the effect, the
+  // chart's first dispatch was lost: legendData stayed empty in Redux,
+  // legends rendered nothing, and stroke colors fell back to d3's default
+  // tab10 palette. Setting the ref in render ensures it's true by the time
+  // the effect runs after commit.
+  renderCompleteRef.current = true;
 
+  useEffect(() => {
     return () => {
       // Clean up when component unmounts
       renderCompleteRef.current = false;

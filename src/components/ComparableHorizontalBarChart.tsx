@@ -100,7 +100,7 @@ interface LineChartProps {
    *
    * Default `false` preserves backward-compatible behaviour.
    */
-  skipColorMappingDispatch?: boolean;
+  skipColorMappingDispatch?: boolean;
   showGrid?: boolean;
   showZeroLineForXAxis?: boolean;
   tickHtmlWidth?: number;
@@ -537,14 +537,35 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         const yMin = Number(domain[0]);
         const yMax = Number(domain[1]);
 
-        // Generate legend data (include disabled items)
-        const legendData: LegendItem[] = filteredDataSet.map((item, index) => ({
-          label: item.label,
-          color: finalColorsMapping[item.label] || item.color || "#000000",
-          order: index,
-          disabled: disabledItems.includes(item.label),
-          dataLabelSafe: sanitizeForClassName(item.label),
-        }));
+        // Generate legend data (include disabled items).
+        //
+        // `finalColorsMapping[label]` may be the literal string "transparent"
+        // when the chart was opted into wait-for-legend mode (skipColorMappingDispatch=true).
+        // That sentinel is fine for the chart's OWN rendering — it produces
+        // invisible bars until the consumer's external CSS paints over them —
+        // but it must NOT leak into the legendData we expose to consumers.
+        // Consumers (e.g. project-side `useGeneratedColor` CSS injectors that
+        // read `chartMetadata.legendData[i].color`, or callers who build SVG
+        // <pattern> defs whose stroke comes from `legendData[i].color`) need
+        // a real color. LineChart's metadata-expose hook always produces real
+        // colors via DEFAULT_COLORS regardless of the flag — this aligns
+        // ComparableHorizontalBarChart with that contract by treating
+        // "transparent" as "no color resolved" and falling through to the
+        // standard fallback chain.
+        const legendData: LegendItem[] = filteredDataSet.map((item, index) => {
+          const mapped = finalColorsMapping[item.label];
+          const resolvedColor =
+            mapped && mapped !== "transparent"
+              ? mapped
+              : item.color || colors[index % colors.length] || "#000000";
+          return {
+            label: item.label,
+            color: resolvedColor,
+            order: index,
+            disabled: disabledItems.includes(item.label),
+            dataLabelSafe: sanitizeForClassName(item.label),
+          };
+        });
 
         const currentMetadata: ChartMetadata = {
           xAxisDomain: uniqueLabels,

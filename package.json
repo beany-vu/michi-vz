@@ -1,9 +1,25 @@
 {
   "name": "michi-vz",
-  "version": "0.5.47",
-  "description": "a visualization library based on d3 and react",
+  "version": "0.5.49",
+  "description": "A React + D3 chart library: ready-made line, area, bar, radar, and scatter charts with shared theming.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "homepage": "https://github.com/beany-vu/michi-vz#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/beany-vu/michi-vz.git"
+  },
+  "bugs": {
+    "url": "https://github.com/beany-vu/michi-vz/issues"
+  },
+  "keywords": [
+    "react",
+    "d3",
+    "charts",
+    "visualization",
+    "typescript",
+    "data-viz"
+  ],
   "files": [
     "dist/**/*"
   ],
@@ -13,6 +29,7 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "build": "tsc --pretty && tsc-alias",
+    "build:to-thd": "npm run build && rm -rf /mnt/c/Coding/thd/frontend/node_modules/michi-vz/dist && cp -r ./dist /mnt/c/Coding/thd/frontend/node_modules/michi-vz/dist && echo '✓ michi-vz dist copied to thd/frontend/node_modules. Restart the dev server to pick it up.'",
     "build:files": "tsc --pretty --listFiles && tsc-alias",
     "build:debug": "tsc --pretty --extendedDiagnostics && tsc-alias",
     "build:trace": "tsc --pretty --traceResolution && tsc-alias",

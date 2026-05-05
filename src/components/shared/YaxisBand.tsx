@@ -152,6 +152,15 @@ const YaxisBand: FC<Props> = ({
       renderedRef.current = true;
     }
     updateAxis();
+
+    // Cleanup: cancel in-flight d3 transitions on unmount/re-run.
+    return () => {
+      const node = ref.current;
+      if (!node) return;
+      const sel = d3.select(node);
+      sel.interrupt();
+      sel.selectAll("*").interrupt();
+    };
   }, [updateAxis, enableTransitions]);
 
   // Separate effect for hover state changes and rendering state

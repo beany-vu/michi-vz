@@ -1,219 +1,104 @@
-# Overview
+# michi-vz
 
-A React-based data visualization library built with D3.js and TypeScript.
+**Ready-made charts for React.** Drop in a component, pass your data, get a polished chart powered by [D3](https://d3js.org/) and TypeScript.
 
-## External-color mode (`skipColorMappingDispatch`)
+[![npm](https://img.shields.io/npm/v/michi-vz.svg)](https://www.npmjs.com/package/michi-vz)
+[![GitHub](https://img.shields.io/badge/GitHub-michi--vz-181717?logo=github)](https://github.com/beany-vu/michi-vz)
 
-Every chart component (`LineChart`, `AreaChart`, `BarBellChart`,
-`ComparableHorizontalBarChart`, `DualHorizontalBarChart`, `GapChart`,
-`RadarChart`, `ScatterPlotChart`, `VerticalStackBarChart`) accepts an optional
-`skipColorMappingDispatch?: boolean` prop. Default `false` preserves the
-original behaviour.
+> Repository: **<https://github.com/beany-vu/michi-vz>**
 
-Set it to `true` when an external mechanism — typically CSS rules with
-`!important`, or a Redux-side color generator that feeds both the chart and an
-external legend — is the single source of truth for colors. In that mode:
+---
 
-- The chart does **not** call `onColorMappingGenerated`. No mapping leaks into
-  the consumer's legend store.
-- Labels with no entry in `colorsMapping` and no `item.color` resolve to
-  `"transparent"` instead of cycling through the COLORS array. The chart
-  paints invisibly until the consumer's external colors arrive — preventing
-  the "wrong colors flash" that would otherwise happen on first paint.
-- Labels that DO have `item.color` or are present in `colorsMapping` paint
-  with their proper color from frame 1.
+## Why use it?
 
-Without the flag, the chart's auto-generated COLORS-array fallback can leak
-into the consumer's legend store and produce a visible mismatch between the
-chart and the legend that labels it.
+- **Just works.** No glue code between React and D3 — pass `data`, get a chart.
+- **Looks consistent.** A single `MichiVzProvider` themes every chart in your app.
+- **Built for dashboards.** Cross-chart highlighting, shared color mappings, and disabled-item filtering are first-class.
+- **Typed end-to-end.** Full TypeScript types for every prop and data shape.
+
+## Charts included
+
+| Chart | Use it for |
+| --- | --- |
+| `LineChart` | Trends over time |
+| `AreaChart` | Filled trends, stacked totals |
+| `BarBellChart` | Comparing two values per category |
+| `RadarChart` | Multi-axis comparisons |
+| `RangeChart` | Min/max ranges over a series |
+| `RibbonChart` | Flowing band visualizations |
+| `ScatterPlotChart` | Two-variable distributions |
+| `VerticalStackBarChart` | Stacked bars over time |
+| `ComparableHorizontalBarChart` | Side-by-side ranking |
+| `DualHorizontalBarChart` | Two-direction comparisons |
+| `GapChart` | Gap-between-values displays |
+
+## Install
+
+```bash
+npm install michi-vz
+```
+
+## Quick start
 
 ```jsx
-// Typical use: chart wrapped by an external CSS-injection layer
+import { LineChart, MichiVzProvider } from "michi-vz";
+
+<MichiVzProvider>
+  <LineChart
+    dataSet={[
+      {
+        seriesKey: "Sales",
+        series: [
+          { date: "2024", Sales: 120 },
+          { date: "2025", Sales: 180 },
+          { date: "2026", Sales: 240 },
+        ],
+      },
+    ]}
+    width={600}
+    height={300}
+  />
+</MichiVzProvider>
+```
+
+That's the whole quickstart — see [Storybook](https://beany-vu.github.io/michi-vz/) for live examples of every chart.
+
+## Color control
+
+Three ways to color your charts, pick what fits:
+
+1. **Auto** — pass nothing, the chart picks colors for you.
+2. **Explicit** — pass `colorsMapping={{ Sales: "#1f77b4" }}`.
+3. **External** — pass `skipColorMappingDispatch` when something else (CSS rules, Redux, etc.) owns colors. The chart then waits for your colors instead of flashing wrong ones on first paint.
+
+```jsx
 <LineChart
   dataSet={...}
-  colors={...}
-  colorsMapping={...}
-  onColorMappingGenerated={...}  // still accepted, just won't be called
-  skipColorMappingDispatch       // <-- opt in
+  colorsMapping={externalColors}
+  skipColorMappingDispatch  // chart will not emit its own mapping
 />
 ```
 
-## Recent Updates (v0.5.2)
-- ✅ **Fixed infinite loop issues** in LineChart and GapChart components 
-- ✅ **Improved stability** - resolved "Maximum update depth exceeded" errors
-- ✅ **Better debugging** - added source maps for clearer stack traces in consuming projects
-- ✅ **Code cleanup** - removed unused Redux/worker files for smaller bundle size
-- ✅ **Better performance** - optimized useEffect dependencies across components
+## Cross-chart sync
 
-## Tech Stack
-- `react`/`typescript`
-- `storybook` for component development
-- `eslint` and `prettier` to harmonize the code base
-- `styled-components` for styling
-- `d3` for data visualization
+For dashboards where hovering one chart highlights every chart, lift state up — either with `MichiVzProvider`, Redux, or your own context — and pass `highlightItems` / `disabledItems` to each chart. See the [Storybook examples](https://beany-vu.github.io/michi-vz/) for working patterns.
 
-# Project structure
+## Requirements
 
-    - `/src`: all source files go here
-        - `/components`: individual components shared across the project
-        - `/components/__tests__`: test files for components
-    - `/node_modules`: handled by npm, don't touch this
-    - `stories`: contains stories for storybook
+- React **19+**
+- A bundler that handles ESM (Vite, Next.js, webpack 5, etc.)
 
-# Configure your project
+## Contributing
 
-1. **Install dependencies**:
-   ```
-   npm install
-   ```
-
-2. **Configure TypeScript**:
-   - The `tsconfig.json` file is already set up to handle both source code and Storybook stories
-   - Make sure your stories match the component interfaces to avoid type errors
-
-3. **Setup Storybook**:
-   - Storybook is configured to run on port 6006
-   - Component stories should be placed in the `stories/` directory
-   - Use the MichiVzProvider to provide theme and color settings for your components
-
-4. **Linting and Formatting**:
-   - Run `npm run lint` to check for linting errors
-   - Run `npm run lint:fix` to automatically fix linting issues
-
-# Testing
-
-1. **Running Tests**:
-   ```
-   npm run test          # Run all tests
-   npm run test:watch    # Run tests in watch mode
-   npm run test -- -u    # Update snapshots
-   ```
-
-2. **Test Structure**:
-   - Tests are located in `src/components/__tests__/`
-   - Each component should have a corresponding `ComponentName.test.tsx` file
-   - Utility functions and mocks are in `test-utils.tsx`
-   - Global mocks for React 19 are in `setupTests.js`
-
-3. **React 19 Compatibility**:
-   - Tests are set up to handle React 19's concurrent rendering features
-   - We use longer timeouts for async operations due to React 19's rendering behavior
-   - Some React 19 APIs are mocked in the test environment for stability
-   - Make sure to use the latest `@testing-library/react` (v15+) for compatibility
-
-4. **Writing Tests**:
-   - Use the `customRender` function from test-utils to render components with the MichiVzProvider
-   - SVG methods used by D3 are automatically mocked
-   - Sample data is provided for common chart types
-   - Use `waitFor` with increased timeouts for React 19 asynchronous rendering
-
-5. **Code Coverage**:
-   ```
-   npm run test -- --coverage
-   ```
-   - This will generate a coverage report in the `/coverage` directory
-
-# Color Management & State Integration
-
-## Self-Generated Colors
-
-Both `AreaChart` and `LineChart` support automatic color generation:
-
-```jsx
-// Automatic color generation
-<AreaChart
-  keys={["Sales", "Marketing", "Development"]}
-  colors={["#1f77b4", "#ff7f0e", "#2ca02c"]} // Optional custom palette
-  onColorMappingGenerated={(colors) => {
-    // colors = { "Sales": "#1f77b4", "Marketing": "#ff7f0e", "Development": "#2ca02c" }
-    console.log("Generated colors:", colors);
-  }}
-  {...otherProps}
-/>
+```bash
+npm install
+npm run storybook    # play with components on :6006
+npm run test         # run the test suite
+npm run build        # produce dist/
 ```
 
-## Redux Integration Pattern
+Issues and PRs welcome at [github.com/beany-vu/michi-vz](https://github.com/beany-vu/michi-vz).
 
-Use `onColorMappingGenerated` to store colors in Redux for cross-chart synchronization:
+## License
 
-```jsx
-// Redux slice
-const chartSlice = createSlice({
-  name: 'charts',
-  initialState: { colorMappings: {}, highlightItems: [] },
-  reducers: {
-    setColorMapping: (state, action) => {
-      const { chartId, colors } = action.payload;
-      state.colorMappings[chartId] = colors;
-    },
-    setHighlightItems: (state, action) => {
-      state.highlightItems = action.payload;
-    }
-  }
-});
-
-// Component usage
-const Dashboard = () => {
-  const dispatch = useDispatch();
-  const { colorMappings, highlightItems } = useSelector(state => state.charts);
-
-  return (
-    <div>
-      {/* Master chart generates colors */}
-      <AreaChart
-        onColorMappingGenerated={(colors) => 
-          dispatch(setColorMapping({ chartId: 'global', colors }))
-        }
-        onHighlightItem={(items) => dispatch(setHighlightItems(items))}
-        {...chart1Props}
-      />
-      
-      {/* Slave charts use generated colors */}
-      <AreaChart
-        colorsMapping={colorMappings.global || {}}
-        {...chart2Props}
-      />
-      <LineChart
-        colorsMapping={colorMappings.global || {}}
-        {...chart3Props}
-      />
-    </div>
-  );
-};
-```
-
-## Color Management Options
-
-1. **Self-Generated (Default)**: Charts automatically assign colors from palette
-2. **Explicit Mapping**: Provide specific colors via `colorsMapping` prop
-3. **Context-Based**: Use `MichiVzProvider` for shared colors across charts
-4. **Hybrid**: Combine context + component-specific overrides
-
-## Interactive Features
-
-- **Highlighting**: Use `onHighlightItem` callback and `highlightItems` prop/context
-- **Disabled Items**: Use `disabledItems` prop/context to hide categories
-- **Cross-Chart Sync**: Store state in Redux/context for synchronized interactions
-
-See Storybook examples for detailed implementation patterns.
-
-# Console commands
-
-## Development
-- `npm run storybook`: start dev server  
-- `npm run test`: run tests
-- `npm run test:watch`: run tests in watch mode
-
-## Building  
-- `npm run build`: standard build with prettier output
-- `npm run build:files`: build with file listing (shows all processed files)
-- `npm run build:debug`: build with performance metrics and timing breakdown
-- `npm run build:trace`: build with module resolution tracing
-- `npm run type-check`: type checking only (no file output)
-
-## Linting
-- `npm run lint`: check for linting errors
-- `npm run lint:fix`: automatically fix linting issues
-
-## Publishing
-- `npm publish`: publish the package to npm (update package.json version first)
+ISC © Hoang VQ

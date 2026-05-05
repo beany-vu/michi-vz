@@ -203,6 +203,15 @@ const XaxisBand: FC<Props> = ({
       .on("mouseout", function () {
         d3.select(this).attr("r", 2).attr("fill", "lightgray");
       });
+
+    // Cleanup: cancel any in-flight d3 transitions on unmount/re-run.
+    return () => {
+      const node = ref.current;
+      if (!node) return;
+      const sel = d3.select(node);
+      sel.interrupt();
+      sel.selectAll("*").interrupt();
+    };
   }, [xScale, height, margin, tickValues, formatter]);
 
   return <g ref={ref} className="x-axis x-axis-band" />;

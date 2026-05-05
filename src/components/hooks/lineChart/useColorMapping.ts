@@ -34,6 +34,15 @@ const useLineChartColorMapping = (colorsMapping, getColor, svgRef, TRANSITION_DU
         .ease(easeQuadOut) // Add consistent easing
         .attr("stroke", getColor(colorsMapping[key], null));
     }
+
+    // Cleanup: interrupt any in-flight color transitions on unmount/re-run
+    // so they can't continue mutating SVG nodes after React has moved on.
+    return () => {
+      const node = svgRef.current;
+      if (!node) return;
+      const cleanupSvg = select(node);
+      cleanupSvg.selectAll("*").interrupt();
+    };
   }, [colorsMapping]);
 };
 

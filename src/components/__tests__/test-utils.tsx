@@ -52,8 +52,8 @@ const mockSVGFunctions = () => {
   }
 
   // Mock SVG element prototype methods
-  global.SVGElement.prototype.getBBox =
-    global.SVGElement.prototype.getBBox ||
+  globalThis.SVGElement.prototype.getBBox =
+    globalThis.SVGElement.prototype.getBBox ||
     (() => ({
       x: 0,
       y: 0,
@@ -61,11 +61,11 @@ const mockSVGFunctions = () => {
       height: 100,
     }));
 
-  global.SVGElement.prototype.getComputedTextLength =
-    global.SVGElement.prototype.getComputedTextLength || (() => 100);
+  globalThis.SVGElement.prototype.getComputedTextLength =
+    globalThis.SVGElement.prototype.getComputedTextLength || (() => 100);
 
-  global.SVGElement.prototype.getPointAtLength =
-    global.SVGElement.prototype.getPointAtLength || (() => ({ x: 0, y: 0 }));
+  globalThis.SVGElement.prototype.getPointAtLength =
+    globalThis.SVGElement.prototype.getPointAtLength || (() => ({ x: 0, y: 0 }));
 
   // Add required properties without redefining them if they already exist
   const svgProps = {
@@ -127,8 +127,8 @@ const mockSVGFunctions = () => {
 
   // Only define properties that don't already exist
   Object.keys(svgProps).forEach(key => {
-    if (!Object.getOwnPropertyDescriptor(global.SVGElement.prototype, key)) {
-      Object.defineProperty(global.SVGElement.prototype, key, svgProps[key]);
+    if (!Object.getOwnPropertyDescriptor(globalThis.SVGElement.prototype, key)) {
+      Object.defineProperty(globalThis.SVGElement.prototype, key, svgProps[key]);
     }
   });
 
@@ -138,9 +138,9 @@ const mockSVGFunctions = () => {
 
 // Clear the mocks
 const clearMocks = () => {
-  delete global.SVGElement.prototype.getBBox;
-  delete global.SVGElement.prototype.getComputedTextLength;
-  delete global.SVGElement.prototype.getPointAtLength;
+  delete globalThis.SVGElement.prototype.getBBox;
+  delete globalThis.SVGElement.prototype.getComputedTextLength;
+  delete globalThis.SVGElement.prototype.getPointAtLength;
   delete global.ResizeObserver;
 };
 
