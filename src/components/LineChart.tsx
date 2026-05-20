@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, FC, useEffect } from "react";
+import React, { useMemo, useCallback, FC, useEffect, useRef } from "react";
 import { select } from "d3";
 import { DataPoint, ChartMetadata, LegendItem } from "../types/data";
 import { DEFAULT_COLORS } from "./shared/colors";
@@ -13,12 +13,14 @@ import useLineChartYscale from "./hooks/lineChart/useLineChartYscale";
 import useLineChartXscale from "./hooks/lineChart/useLineChartXscale";
 import useLineChartXtickValues from "./hooks/lineChart/useXtickValues";
 import useLineChartPathsShapesRendering from "./hooks/lineChart/useLineChartPathsShapesRendering";
+import useLineChartDecimatedData from "./hooks/lineChart/useLineChartDecimatedData";
+import useLineChartCanvasRendering from "./hooks/lineChart/useLineChartCanvasRendering";
 import useLineChartMouseInteractionCombinedMode from "./hooks/lineChart/useLineChartMouseInteractionCombinedMode";
 import useLineChartMetadataExpose from "./hooks/lineChart/useLineChartMetadataExpose";
 import useLineChartColorMapping from "./hooks/lineChart/useColorMapping";
 import useGenerateColorMapping from "./hooks/lineChart/useGenerateColorMapping";
 import { useLineChartRefsAndState } from "./hooks/lineChart/useLineChartRefsAndState";
-import { sanitizeForClassName, getColor } from "./hooks/lineChart/lineChartUtils";
+import { sanitizeForClassName, getColor, parseXValue } from "./hooks/lineChart/lineChartUtils";
 import { useLineChartGeometry } from "./hooks/lineChart/useLineChartGeometry";
 import useLineChartTooltipToggle from "./hooks/lineChart/useLineChartHandleHover";
 import LineChartMouseLine from "src/components/LineChartMouseLine";
@@ -40,12 +42,15 @@ const LineChartContainer = styled.div<LineChartContainerProps>`
   position: relative;
   width: ${props => `${props.width}px`};
   height: ${props => `${props.height}px`};
+  /* No blanket will-change: it keeps a compositor layer alive per element for
+     as long as the rule applies. On a bare path/circle/rect selector that cost
+     scales with the dataset size and becomes a jank source on large charts.
+     The short transitions below are kept for the colour/opacity cross-fade —
+     a transition only promotes a layer while it is actually animating. */
   path {
     transition:
       stroke 0.1s ease-out,
       opacity 0.1s ease-out;
-    transition-behavior: allow-discrete;
-    will-change: stroke, opacity, d;
   }
 
   circle,
@@ -55,7 +60,6 @@ const LineChartContainer = styled.div<LineChartContainerProps>`
       fill 0.1s ease-out,
       stroke 0.1s ease-out,
       opacity 0.1s ease-out;
-    will-change: fill, stroke, opacity;
   }
 
   .data-group-wrapper {
@@ -196,6 +200,14 @@ interface LineChartProps {
    * Default `false` preserves backward-compatible behaviour.
    */
   skipColorMappingDispatch?: boolean;
+  /**
+   * Rendering backend for the line geometry.
+   *  - "svg" (default): the original SVG/D3 rendering, unchanged.
+   *  - "canvas": draw lines/points onto a <canvas> with LTTB decimation, for
+   *    large datasets (thousands+ of points). Axes, title, mouse-line and the
+   *    tooltip are unchanged in both modes.
+   */
+  renderer?: "svg" | "canvas";
 }
 
 const LineChart: FC<LineChartProps> = ({
@@ -228,10 +240,12 @@ const LineChart: FC<LineChartProps> = ({
   enableMouseLine = true,
   showDataPoints = false,
   skipColorMappingDispatch = false,
+  renderer = "svg",
 }) => {
   // Use the new hook for refs and state
   const { svgRef, tooltipRef, renderCompleteRef, prevChartDataRef, isInitialMount } =
     useLineChartRefsAndState();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const { filteredData: filteredDataSet, topNItems } = useFilteredDataSet(
     dataSet,
@@ -245,12 +259,28 @@ const LineChart: FC<LineChartProps> = ({
 
   const tickValues = useLineChartXtickValues(filteredDataSet, xAxisDataType, width, margin);
 
-  const { getYValueAtX, getDashArrayMemoized, line, lineData } = useLineChartGeometry({
+  const { getYValueAtX, getRuns, line, lineData } = useLineChartGeometry({
     dataSet,
     xAxisDataType,
     xScale,
     yScale,
   });
+
+  // Pixel-x projector shared by LTTB decimation and the Canvas renderer.
+  const getPixelX = useCallback(
+    (d: DataPoint) => xScale(parseXValue(d.date, xAxisDataType)),
+    [xScale, xAxisDataType]
+  );
+
+  // LTTB decimation — active only in canvas mode; an identity passthrough
+  // otherwise, so the SVG path is provably unaffected.
+  const { drawData } = useLineChartDecimatedData(
+    filteredDataSet,
+    getRuns,
+    getPixelX,
+    width,
+    renderer === "canvas"
+  );
 
   const showLoadingIndicator = isLoading || !isInitialMount.current;
 
@@ -302,7 +332,7 @@ const LineChart: FC<LineChartProps> = ({
     height,
     margin,
     xAxisDataType,
-    getDashArrayMemoized,
+    getRuns,
     colors,
     generatedColorMapping, // Use the generated mapping here
     line,
@@ -316,10 +346,34 @@ const LineChart: FC<LineChartProps> = ({
     sanitizeForClassName,
     highlightItems,
     undefined, // Remove the callback since color generation is handled by useGenerateColorMapping
-    showDataPoints
+    showDataPoints,
+    renderer
   );
 
   useLineChartColorMapping(generatedColorMapping, getColor, svgRef, TRANSITION_DURATION);
+
+  // Canvas renderer — active only when renderer="canvas".
+  useLineChartCanvasRendering({
+    enabled: renderer === "canvas",
+    canvasRef,
+    svgRef,
+    tooltipRef,
+    drawData,
+    fullData: filteredDataSet,
+    width,
+    height,
+    margin,
+    xScale,
+    yScale,
+    xAxisDataType,
+    colorsMapping: generatedColorMapping,
+    getColor,
+    getRuns,
+    highlightItems,
+    showDataPoints,
+    tooltipFormatter,
+    onHighlightItem: memoizedOnHighlightItem,
+  });
 
   const handleTooltipToggle = useLineChartTooltipToggle(
     xScale,
@@ -398,7 +452,20 @@ const LineChart: FC<LineChartProps> = ({
 
   return (
     <LineChartContainer width={width} height={height}>
-      <svg xmlns="http://www.w3.org/2000/svg" ref={svgRef} width={width} height={height}>
+      {renderer === "canvas" && (
+        <canvas
+          ref={canvasRef}
+          className="line-chart-canvas"
+          style={{ position: "absolute", top: 0, left: 0 }}
+        />
+      )}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        ref={svgRef}
+        width={width}
+        height={height}
+        style={{ position: "relative" }}
+      >
         {children}
         {enableMouseLine && (
           <LineChartMouseLine

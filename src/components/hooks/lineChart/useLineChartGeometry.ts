@@ -10,6 +10,11 @@ interface UseLineChartGeometryArgs {
   yScale: d3.ScaleLinear<number, number>;
 }
 
+export interface SeriesRun {
+  points: DataPoint[];
+  certain: boolean;
+}
+
 export function useLineChartGeometry({
   dataSet,
   xAxisDataType,
@@ -46,47 +51,39 @@ export function useLineChartGeometry({
     [xScale, yScale, xAxisDataType]
   );
 
-  // Memoized dash array generator
-  const getDashArrayMemoized = useMemo(() => {
-    return (
-      series: DataPoint[],
-      pathNode: SVGPathElement,
-      xScale: d3.ScaleLinear<number, number> | d3.ScaleTime<number, number>
-    ) => {
-      const totalLength = pathNode.getTotalLength();
-      const lengths = series.map(d => getPathLengthAtX(pathNode, xScale(new Date(d.date))));
+  // Split a series into contiguous runs of same certainty.
+  // Each run is rendered as a single <path> with a constant stroke-dasharray:
+  // certain runs are solid, uncertain runs use a 4,4 dash pattern.
+  // Adjacent runs share their boundary point so the visual line stays continuous.
+  // Avoids the layout-blocking SVG calls (getTotalLength / getPointAtLength)
+  // the previous implementation made per data point on every render.
+  const getRuns = useCallback((series: DataPoint[]): SeriesRun[] => {
+    if (!series || series.length === 0) return [];
+    if (series.length === 1) return [{ points: [series[0]], certain: true }];
 
-      const DASH_LENGTH = 4;
-      const DASH_SEPARATOR_LENGTH = 4;
-      const dashArray = [];
+    const runs: SeriesRun[] = [];
+    // The certainty between point i-1 and point i is determined by series[i].certainty.
+    // Start the first run at series[0]; its successor (i=1) decides the run's certainty.
+    let runStart = 0;
+    let runCertain = !!series[1]?.certainty;
 
-      for (let i = 1; i <= series.length; i++) {
-        const segmentLength =
-          i === series.length - 1 ? totalLength - lengths[i - 1] : lengths[i] - lengths[i - 1];
-
-        if (!series[i]?.certainty) {
-          const dashes = Math.floor(segmentLength / (DASH_LENGTH + DASH_SEPARATOR_LENGTH));
-          const remainder = Math.ceil(
-            segmentLength - dashes * (DASH_LENGTH + DASH_SEPARATOR_LENGTH)
-          );
-
-          for (let j = 0; j < dashes; j++) {
-            dashArray.push(DASH_LENGTH);
-            dashArray.push(DASH_SEPARATOR_LENGTH);
-          }
-
-          if (remainder > 0) dashArray.push(remainder);
-        } else {
-          if (dashArray.length % 2 === 1) {
-            dashArray.push(0);
-            dashArray.push(segmentLength);
-          } else {
-            dashArray.push(segmentLength);
-          }
-        }
+    for (let i = 2; i < series.length; i++) {
+      const segCertain = !!series[i]?.certainty;
+      if (segCertain !== runCertain) {
+        runs.push({
+          points: series.slice(runStart, i),
+          certain: runCertain,
+        });
+        // Share the boundary point so the next run starts where this one ends.
+        runStart = i - 1;
+        runCertain = segCertain;
       }
-      return dashArray.join(",");
-    };
+    }
+    runs.push({
+      points: series.slice(runStart),
+      certain: runCertain,
+    });
+    return runs;
   }, []);
 
   // Memoized line data
@@ -103,7 +100,7 @@ export function useLineChartGeometry({
   return {
     getYValueAtX,
     getPathLengthAtX,
-    getDashArrayMemoized,
+    getRuns,
     line,
     lineData,
   };

@@ -1,48 +1,69 @@
 import { easeQuadOut, select } from "d3";
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useRef } from "react";
+
+// Above this many colour changes in a single pass, skip the per-node tween:
+// N simultaneous 100ms transitions is itself a jank source, so set the
+// colours directly instead.
+const COLOR_TWEEN_MAX_KEYS = 200;
 
 const useLineChartColorMapping = (colorsMapping, getColor, svgRef, TRANSITION_DURATION) => {
+  // Colours this hook last applied. Lets an unchanged colorsMapping (new object
+  // identity but identical values — common with Redux / inline-object props)
+  // skip re-running 100ms transitions on every series.
+  const appliedRef = useRef<Record<string, string>>({});
+
   useLayoutEffect(() => {
-    const svg = select(svgRef.current);
-
-    // Use for loop instead of forEach for better performance
-    for (const key of Object.keys(colorsMapping)) {
-      // Update circle/point colors with transitions
-      svg
-        .selectAll(
-          `circle[data-label="${key}"], rect[data-label="${key}"], path.data-point[data-label="${key}"]`
-        )
-        .transition()
-        .duration(TRANSITION_DURATION)
-        .ease(easeQuadOut) // Add consistent easing
-        .attr("fill", getColor(colorsMapping[key], null));
-
-      // Update path colors with proper selectors and transitions
-      svg
-        .selectAll(`.line[data-label="${key}"]`)
-        .transition()
-        .duration(TRANSITION_DURATION)
-        .ease(easeQuadOut) // Add consistent easing
-        .attr("stroke", getColor(colorsMapping[key], null))
-        .attr("stroke-width", 2.5);
-
-      // Update path overlay colors with transitions
-      svg
-        .selectAll(`.line-overlay[data-label="${key}"]`)
-        .transition()
-        .duration(TRANSITION_DURATION)
-        .ease(easeQuadOut) // Add consistent easing
-        .attr("stroke", getColor(colorsMapping[key], null));
-    }
-
     // Cleanup: interrupt any in-flight color transitions on unmount/re-run
     // so they can't continue mutating SVG nodes after React has moved on.
-    return () => {
+    const cleanup = () => {
       const node = svgRef.current;
-      if (!node) return;
-      const cleanupSvg = select(node);
-      cleanupSvg.selectAll("*").interrupt();
+      if (node) select(node).selectAll("*").interrupt();
     };
+
+    const svg = select(svgRef.current);
+    if (!svg.node()) return cleanup;
+
+    // Only the keys whose resolved colour actually changed since the last apply.
+    const changed: Array<[string, string]> = [];
+    for (const key of Object.keys(colorsMapping)) {
+      const color = getColor(colorsMapping[key], null);
+      if (color !== appliedRef.current[key]) changed.push([key, color]);
+    }
+
+    if (changed.length > 0) {
+      const animate = changed.length <= COLOR_TWEEN_MAX_KEYS;
+
+      for (const [key, color] of changed) {
+        appliedRef.current[key] = color;
+
+        const points = svg.selectAll(
+          `circle[data-label="${key}"], rect[data-label="${key}"], path.data-point[data-label="${key}"]`
+        );
+        const lines = svg.selectAll(`.line[data-label="${key}"]`);
+        const overlays = svg.selectAll(`.line-overlay[data-label="${key}"]`);
+
+        if (animate) {
+          points.transition().duration(TRANSITION_DURATION).ease(easeQuadOut).attr("fill", color);
+          lines
+            .transition()
+            .duration(TRANSITION_DURATION)
+            .ease(easeQuadOut)
+            .attr("stroke", color)
+            .attr("stroke-width", 2.5);
+          overlays
+            .transition()
+            .duration(TRANSITION_DURATION)
+            .ease(easeQuadOut)
+            .attr("stroke", color);
+        } else {
+          points.attr("fill", color);
+          lines.attr("stroke", color).attr("stroke-width", 2.5);
+          overlays.attr("stroke", color);
+        }
+      }
+    }
+
+    return cleanup;
   }, [colorsMapping]);
 };
 

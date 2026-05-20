@@ -1,14 +1,7 @@
-import { scaleLinear, scaleTime, min, max } from "d3";
+import { scaleLinear, scaleTime } from "d3";
 import { useMemo } from "react";
 import { LineChartDataItem } from "../../../types/data";
-
-// Interface for potential future use
-// interface UseLineChartXscaleProps {
-//   filteredDataSet: LineChartDataItem[];
-//   width: number;
-//   margin: { left: number; right: number };
-//   xAxisDataType: XaxisDataType;
-// }
+import { getXScaleDomain } from "./lineChartUtils";
 
 const useLineChartXscale = (
   filteredDataSet: LineChartDataItem[],
@@ -17,42 +10,22 @@ const useLineChartXscale = (
   xAxisDataType: "number" | "date_annual" | "date_monthly"
 ) => {
   return useMemo(() => {
+    // getXScaleDomain replaces the previous double flatMap + min()/max() scans
+    // (and their per-point Date allocation) with a single pass over the data.
+    const [lo, hi] = getXScaleDomain(filteredDataSet, xAxisDataType);
+
     if (xAxisDataType === "number") {
       return scaleLinear()
-        .domain([
-          min(filteredDataSet.flatMap(item => item.series.map(d => Number(d.date)))) || 0,
-          max(filteredDataSet.flatMap(item => item.series.map(d => Number(d.date)))) || 1,
-        ])
+        .domain([lo || 0, hi || 1])
         .range([margin.left, width - margin.right])
         .clamp(true)
         .nice();
     }
 
-    if (xAxisDataType === "date_annual") {
-      // sometimes the first tick is missing, so do a hack here
-      const minDate = min(
-        filteredDataSet.flatMap(item => item.series.map(d => new Date(`${d.date}-01-01`)))
-      );
-      const maxDate = max(
-        filteredDataSet.flatMap(item => item.series.map(d => new Date(`${d.date}-01-01`)))
-      );
-
-      return scaleTime()
-        .domain([
-          minDate instanceof Date ? minDate : new Date(minDate || 0),
-          maxDate instanceof Date ? maxDate : new Date(maxDate || 1),
-        ])
-        .range([margin.left, width - margin.right]);
-    }
-
-    const minDate = min(filteredDataSet.flatMap(item => item.series.map(d => new Date(d.date))));
-    const maxDate = max(filteredDataSet.flatMap(item => item.series.map(d => new Date(d.date))));
-
+    // date_annual / date_monthly: lo/hi are epoch ms (0 / 1 for empty data),
+    // matching the previous `new Date(minDate || 0)` / `new Date(maxDate || 1)`.
     return scaleTime()
-      .domain([
-        minDate instanceof Date ? minDate : new Date(minDate || 0),
-        maxDate instanceof Date ? maxDate : new Date(maxDate || 1),
-      ])
+      .domain([new Date(lo), new Date(hi)])
       .range([margin.left, width - margin.right]);
   }, [filteredDataSet, width, margin, xAxisDataType]);
 };

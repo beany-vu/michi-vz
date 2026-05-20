@@ -11,6 +11,9 @@ module.exports = {
     "node_modules/(?!(d3|d3-array|d3-scale|d3-interpolate|d3-color|d3-format|d3-time|d3-time-format|d3-shape|internmap)/)",
   ],
   moduleNameMapper: {
+    // Resolve the "src/..." path alias used across the component imports.
+    // (package.json carries this mapping too, but jest only reads jest.config.js.)
+    "^src/(.*)$": "<rootDir>/src/$1",
     d3: "<rootDir>/node_modules/d3/dist/d3.min.js",
     "d3-array": "<rootDir>/node_modules/d3-array/dist/d3-array.min.js",
     "d3-scale": "<rootDir>/node_modules/d3-scale/dist/d3-scale.min.js",

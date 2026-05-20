@@ -27,18 +27,20 @@ const useLineChartXtickValues = (
   // Compute unique sorted x values for axis ticks
   return useMemo((): (number | Date)[] => {
     if (xAxisDataType === CONST_DATE_ANNUAL) {
-      // Get all years from data
-      const years = filteredDataSet
-        .flatMap(item =>
-          item.series.map(d => {
-            const year = new Date(d.date).getFullYear();
-            return isNaN(year) ? null : year;
-          })
-        )
-        .filter((y): y is number => y !== null);
-      if (years.length === 0) return [];
-      const minYear = Math.min(...years);
-      const maxYear = Math.max(...years);
+      // Single pass over all points for the min/max year — avoids the flatMap
+      // allocation and the Math.min(...spread) that can overflow the call stack
+      // on very large datasets.
+      let minYear = Infinity;
+      let maxYear = -Infinity;
+      for (const item of filteredDataSet) {
+        for (const d of item.series) {
+          const year = new Date(d.date).getFullYear();
+          if (isNaN(year)) continue;
+          if (year < minYear) minYear = year;
+          if (year > maxYear) maxYear = year;
+        }
+      }
+      if (minYear === Infinity) return [];
       const allYears = [];
       for (let y = minYear; y <= maxYear; y++) {
         allYears.push(new Date(`${y}-01-01`));
@@ -63,18 +65,23 @@ const useLineChartXtickValues = (
       return result;
     }
     if (xAxisDataType === CONST_DATE_MONTHLY) {
-      // Get all months from data
-      const months = filteredDataSet
-        .flatMap(item =>
-          item.series.map(d => {
-            return parseDate(d.date);
-          })
-        )
-        .filter((d): d is Date => d !== null);
-      if (months.length === 0) return [];
-      // Find min and max month
-      const minMonth = new Date(Math.min(...months.map(d => d.getTime())));
-      const maxMonth = new Date(Math.max(...months.map(d => d.getTime())));
+      // Single pass over all points for the min/max month — avoids the flatMap
+      // allocation and the Math.min(...spread) that can overflow the call stack
+      // on very large datasets.
+      let minTime = Infinity;
+      let maxTime = -Infinity;
+      for (const item of filteredDataSet) {
+        for (const d of item.series) {
+          const parsed = parseDate(d.date);
+          if (parsed === null) continue;
+          const t = parsed.getTime();
+          if (t < minTime) minTime = t;
+          if (t > maxTime) maxTime = t;
+        }
+      }
+      if (minTime === Infinity) return [];
+      const minMonth = new Date(minTime);
+      const maxMonth = new Date(maxTime);
       // Generate all months in range
       const allMonths = [];
       const current = new Date(minMonth.getFullYear(), minMonth.getMonth(), 1);
@@ -103,12 +110,15 @@ const useLineChartXtickValues = (
       return result;
     }
     if (xAxisDataType === CONST_NUMBER) {
-      let values = Array.from(
-        new Set(filteredDataSet.flatMap(item => item.series.map(d => Number(d.date))))
-      );
-      values = values.filter((v): v is number => typeof v === CONST_NUMBER && !isNaN(v));
-      values.sort((a, b) => a - b);
-      return values;
+      // Single pass: dedupe into a Set directly instead of flatMap + new Set.
+      const values = new Set<number>();
+      for (const item of filteredDataSet) {
+        for (const d of item.series) {
+          const n = Number(d.date);
+          if (!isNaN(n)) values.add(n);
+        }
+      }
+      return Array.from(values).sort((a, b) => a - b);
     } else {
       // Handle all date cases (monthly, annual, and default)
       const values = Array.from(

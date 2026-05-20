@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useState, useRef } from "react";
 import { pointer, select, ScaleLinear, ScaleTime } from "d3";
+import DOMPurify from "dompurify";
 import { DataPoint, LineChartDataItem } from "../../../types/data";
+import type { SeriesRun } from "./useLineChartGeometry";
 
 interface TooltipState {
   x?: number;
@@ -10,6 +12,30 @@ interface TooltipState {
   isVisible?: boolean;
 }
 
+// Convert a data point's x-value to a comparable number for the given axis type.
+const toComparableX = (d: DataPoint, xAxisDataType: string): number =>
+  xAxisDataType === "number" ? Number(d.date) : +new Date(d.date);
+
+// Nearest data point (by x) to a pixel x-position — drives the no-dots
+// bisection tooltip. Module-scope so it is not re-created per group per render.
+const findNearestPoint = (
+  series: DataPoint[],
+  mouseX: number,
+  xScale: ScaleLinear<number, number> | ScaleTime<number, number>,
+  xAxisDataType: string
+): DataPoint => {
+  const xValue = xScale.invert(mouseX);
+  const target = xAxisDataType === "number" ? Number(xValue) : +new Date(xValue as Date);
+  return series.reduce(
+    (best, d) =>
+      Math.abs(toComparableX(d, xAxisDataType) - target) <
+      Math.abs(toComparableX(best, xAxisDataType) - target)
+        ? d
+        : best,
+    series[0]
+  );
+};
+
 const useLineChartPathsShapesRendering = (
   filteredDataSet: LineChartDataItem[],
   visibleDataSets: LineChartDataItem[],
@@ -17,11 +43,11 @@ const useLineChartPathsShapesRendering = (
   height: number,
   margin: { top: number; right: number; bottom: number; left: number },
   xAxisDataType: string,
-  getDashArrayMemoized: (
-    series: DataPoint[],
-    pathNode: SVGPathElement,
-    xScale: ScaleLinear<number, number> | ScaleTime<number, number>
-  ) => string,
+  // getRuns splits a series into contiguous runs of same certainty (see useLineChartGeometry).
+  // Each run renders as a separate <path> with a constant stroke-dasharray, replacing the
+  // older approach that called pathNode.getTotalLength() / getPointAtLength() per data point —
+  // those are layout-blocking SVG calls and dominated render cost on monthly data.
+  getRuns: (series: DataPoint[]) => SeriesRun[],
   colors: string[],
   colorsMapping: { [key: string]: string },
   line: (options: { d: DataPoint[]; curve: string }) => string,
@@ -35,7 +61,10 @@ const useLineChartPathsShapesRendering = (
   sanitizeForClassName: (str: string) => string,
   highlightItems: string[],
   onHighlightItem?: (labels: string[]) => void,
-  showDataPoints: boolean = false
+  showDataPoints: boolean = false,
+  // When "canvas", the SVG line/point rendering is skipped — the Canvas
+  // renderer owns the drawing. Default "svg" keeps the original behaviour.
+  renderer: "svg" | "canvas" = "svg"
 ) => {
   const [tooltipState, setTooltipState] = useState<TooltipState | null>(null);
 
@@ -176,7 +205,7 @@ const useLineChartPathsShapesRendering = (
         );
 
         const tooltipContentElement = tooltip.querySelector(".tooltip-content");
-        tooltipContentElement.innerHTML = tooltipContent;
+        tooltipContentElement.innerHTML = DOMPurify.sanitize(tooltipContent);
       }
     },
     [tooltipState, tooltipRef, svgRef, margin, filteredDataSet]
@@ -187,75 +216,131 @@ const useLineChartPathsShapesRendering = (
 
     const svg = select(svgRef.current);
 
-    // IMPORTANT: Clear everything and redraw from scratch on every render
-    // This ensures we don't have any stale elements lingering around
-    // when the filter changes
-    svg.selectAll(".data-point, .line, .line-overlay, .series-group, .data-group").remove();
+    // When the Canvas renderer is active it owns the line/point drawing.
+    // Drop any SVG line groups (e.g. left over from a renderer switch) and
+    // skip the SVG render path entirely.
+    if (renderer === "canvas") {
+      svg.selectAll("g.data-group").remove();
+      return;
+    }
 
-    // Now draw all elements for each series inside a <g>
-    for (let i = 0; i < visibleDataSets.length; i++) {
-      const data = visibleDataSets[i];
-      const shape = data.shape || "circle";
-      const circleSize = 5;
-      const squareSize = 6;
-      const triangleSize = 16;
-      const color = getColor(colorsMapping[data.label], data.color);
+    const circleSize = 5;
+    const squareSize = 6;
+    const triangleSize = 16;
+
+    const groupKey = (d: LineChartDataItem) => d.label;
+    const pointKey = (d: DataPoint) => String(d.date);
+    const linePathFor = (data: LineChartDataItem) =>
+      line({ d: data.series, curve: data?.curve ?? "curveBumpX" });
+    // Stroke dash pattern used for "uncertain" runs (segments where the data point
+    // for the previous time period is missing). Certain runs use no dash array.
+    const UNCERTAIN_DASH_PATTERN = "4,4";
+    // Key for a run's <path> based on its start date and certainty. Reusing path
+    // nodes across renders means d3's data join can update only the `d` attribute
+    // when geometry changes, instead of destroying and re-creating SVG nodes.
+    const runKey = (run: SeriesRun) => `${run.certain ? "c" : "u"}-${run.points[0]?.date ?? ""}`;
+
+    const generateTrianglePath = (x: number, y: number, size: number = triangleSize) => {
+      const h = (size * Math.sqrt(3)) / 2;
+      return `M ${x} ${y - h * 0.7} L ${x + size / 2} ${y + h * 0.3} L ${x - size / 2} ${y + h * 0.3} Z`;
+    };
+
+    // --- GROUPS: enter/update/exit join ---
+    // Reuse existing <g> nodes for series whose label is still present so the browser
+    // doesn't tear down and rebuild SVG subtrees on every dataset update.
+    const groups = svg
+      .selectAll<SVGGElement, LineChartDataItem>("g.data-group")
+      .data(visibleDataSets, groupKey);
+
+    groups.exit().remove();
+
+    const groupsEnter = groups.enter().append("g").attr("class", "data-group series-group");
+
+    // Skeleton for new groups:
+    //  - <g class="line-runs">: container for one or more <path> elements, one per
+    //    contiguous run of same-certainty points. Lets the browser handle dashing
+    //    natively along the true curve geometry, no JS path-length math required.
+    //  - <path class="line-overlay">: a single thicker, near-transparent path for hover
+    //    hit detection. Doesn't need dashing so it stays as one path regardless of runs.
+    groupsEnter.append("g").attr("class", "line-runs").attr("pointer-events", "none");
+    groupsEnter
+      .append("path")
+      .attr("class", "line-overlay data-group-overlay")
+      .attr("fill", "none")
+      .attr("stroke-width", 6)
+      .attr("pointer-events", "stroke")
+      .style("opacity", 0.05);
+
+    const groupsAll = groupsEnter.merge(groups as typeof groupsEnter);
+
+    // Update group-level attributes (index-derived classes change when ordering changes).
+    groupsAll.each(function (data, i) {
       const safeLabelClass = sanitizeForClassName(data.label);
       const uniqueKey = `${data.label}__${i}`;
+      const color = getColor(colorsMapping[data.label], data.color);
+      const g = select(this);
 
-      // Use a composite key that includes both dataset label and point date to ensure uniqueness
-      const pointKeyFn = (d: DataPoint) => `${uniqueKey}-${d.date}`;
-
-      // --- GROUP ---
-      // Always create a new group since we cleared all groups above
-      const group = svg
-        .append("g")
-        .attr("class", `data-group series-group series-group-${i} series-group-${safeLabelClass}`)
+      g.attr("class", `data-group series-group series-group-${i} series-group-${safeLabelClass}`)
         .attr("data-label", data.label)
         .attr("data-label-safe", safeLabelClass)
         .attr("data-key", uniqueKey);
 
-      // --- LINE ---
-      // No need to clear since we're creating a fresh group
+      // --- LINE (rendered as one <path> per certainty run) ---
+      // Each run is a contiguous stretch of points sharing the same `certainty`.
+      // Adjacent runs share their boundary point so the visual line stays connected.
+      // For typical continuous data, runs.length is 1 (all certain) or 2 (one uncertain
+      // stretch at the start). The browser handles dashing for each path via CSS
+      // stroke-dasharray, avoiding any per-point getTotalLength()/getPointAtLength()
+      // calls that previously dominated render time on monthly charts.
+      const runs = getRuns(data.series);
+      // Defensive: ensure the runs container exists. It's created on first render via
+      // groupsEnter, but a stale group surviving across hot-reloads might lack it.
+      let runsContainer = g.select<SVGGElement>("g.line-runs");
+      if (runsContainer.empty()) {
+        runsContainer = g
+          .append<SVGGElement>("g")
+          .attr("class", "line-runs")
+          .attr("pointer-events", "none");
+      }
+      const runPaths = runsContainer
+        .selectAll<SVGPathElement, SeriesRun>("path.line")
+        .data(runs, runKey);
 
-      // Create new line path with updated data
-      const linePath = group
+      runPaths.exit().remove();
+
+      const runPathsEnter = runPaths
+        .enter()
         .append("path")
-        .attr("class", `line line-${i} data-group data-group-${i}`);
+        .attr("fill", "none")
+        .attr("stroke-width", 2.5);
 
-      linePath
+      runPathsEnter
+        .merge(runPaths as typeof runPathsEnter)
+        .attr("class", `line line-${i} data-group data-group-${i}`)
         .attr("data-label", data.label)
         .attr("data-label-safe", safeLabelClass)
         .attr("data-key", uniqueKey)
-        .attr("d", line({ d: data.series, curve: data?.curve ?? "curveBumpX" }))
-        .attr("stroke-width", 2.5)
-        .attr("pointer-events", "none")
+        .attr("d", run => line({ d: run.points, curve: data?.curve ?? "curveBumpX" }))
         .attr("stroke", color)
-        .attr("fill", "none")
-        .each(function () {
-          const pathNode = this as SVGPathElement;
-          const dashArray = getDashArrayMemoized(data.series, pathNode, xScale);
-          select(this).attr("stroke-dasharray", dashArray);
-        });
+        // Solid for certain runs, dashed for uncertain runs. d3 understands "null"
+        // as "remove the attribute" — preferred over "none" to keep markup clean.
+        .attr("stroke-dasharray", run => (run.certain ? null : UNCERTAIN_DASH_PATTERN));
 
       // --- LINE OVERLAY ---
-      const overlayPath = group
-        .append("path")
+      const overlayPath = g.select<SVGPathElement>("path.line-overlay");
+      overlayPath
         .attr(
           "class",
           `line-overlay line-overlay-${i} data-group-overlay data-group-${i} data-group data-group-overlay-${safeLabelClass} line-group-overlay-${safeLabelClass}`
-        );
-
-      overlayPath
+        )
         .attr("data-label", data.label)
         .attr("data-label-safe", safeLabelClass)
         .attr("data-key", uniqueKey)
-        .attr("d", line({ d: data.series, curve: data?.curve ?? "curveBumpX" }))
-        .attr("stroke", color)
-        .attr("stroke-width", 6)
-        .attr("fill", "none")
-        .attr("pointer-events", "stroke")
-        .style("opacity", 0.05)
+        .attr("d", linePathFor(data))
+        .attr("stroke", color);
+
+      // Re-bind overlay event handlers each update (closures capture latest data/highlightItems).
+      overlayPath
         .on("mouseenter", event => {
           handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1, highlightItems);
         })
@@ -263,143 +348,134 @@ const useLineChartPathsShapesRendering = (
 
       if (!showDataPoints && data.series.length > 0) {
         overlayPath.style("cursor", "pointer");
-        const toNum = (d: DataPoint) =>
-          xAxisDataType === "number" ? Number(d.date) : +new Date(d.date);
-        const findNearest = (mouseX: number) => {
-          const xValue = xScale.invert(mouseX);
-          const target = xAxisDataType === "number" ? Number(xValue) : +new Date(xValue as Date);
-          return data.series.reduce(
-            (best, d) => (Math.abs(toNum(d) - target) < Math.abs(toNum(best) - target) ? d : best),
-            data.series[0]
-          );
-        };
-        overlayPath.on("mousemove", function (event) {
-          if (isStickyRef.current) return;
-          clearHideTimer();
-          const [mouseX] = pointer(event, this);
-          handleTooltipPosition(event, findNearest(mouseX), data);
-        });
-        overlayPath.on("click", function (event) {
-          clearHideTimer();
-          const [mouseX] = pointer(event, this);
-          setTooltipState({ isSticky: true });
-          handleTooltipPosition(event, findNearest(mouseX), data);
-        });
-        // Override mouseout: reset line-highlight, then start the grace-period
-        // hide timer so the user has time to travel into the tooltip.
-        // The tooltip's own mouseenter/mouseleave (see effect below) cancels/restarts.
-        overlayPath.on("mouseout", () => {
-          const svg = select(svgRef.current);
-          if (!svg.node()) return;
-          svg.selectAll(".data-group").style("opacity", 1);
-          svg.selectAll(".series-group").style("opacity", 1);
-          svg.selectAll(".line").style("opacity", 1);
-          handleItemHighlight([]);
-          if (!isStickyRef.current) scheduleHide();
-        });
+        overlayPath
+          .on("mousemove", function (event) {
+            if (isStickyRef.current) return;
+            clearHideTimer();
+            const [mouseX] = pointer(event, this);
+            handleTooltipPosition(
+              event,
+              findNearestPoint(data.series, mouseX, xScale, xAxisDataType),
+              data
+            );
+          })
+          .on("click", function (event) {
+            clearHideTimer();
+            const [mouseX] = pointer(event, this);
+            setTooltipState({ isSticky: true });
+            handleTooltipPosition(
+              event,
+              findNearestPoint(data.series, mouseX, xScale, xAxisDataType),
+              data
+            );
+          })
+          // Override mouseout: reset line-highlight, then start the grace-period
+          // hide timer so the user has time to travel into the tooltip.
+          .on("mouseout", () => {
+            const svgSel = select(svgRef.current);
+            if (!svgSel.node()) return;
+            svgSel.selectAll(".data-group").style("opacity", 1);
+            svgSel.selectAll(".series-group").style("opacity", 1);
+            svgSel.selectAll(".line").style("opacity", 1);
+            handleItemHighlight([]);
+            if (!isStickyRef.current) scheduleHide();
+          });
+      } else {
+        overlayPath.style("cursor", null);
+        overlayPath.on("mousemove", null).on("click", null);
       }
 
       // --- POINTS ---
       if (showDataPoints) {
-        // Update and enter points
-        const points = group.selectAll(`.data-point`).data(data.series, pointKeyFn);
+        const shape = data.shape || "circle";
+        const tag = shape === "square" ? "rect" : shape === "triangle" ? "path" : "circle";
 
-        // Handle the exit selection - remove points that no longer exist in the data
+        // Remove any points belonging to a different shape (e.g., shape changed across renders).
+        g.selectAll<SVGElement, DataPoint>(".data-point")
+          .filter(function () {
+            return (this as SVGElement).tagName.toLowerCase() !== tag;
+          })
+          .remove();
+
+        const points = g
+          .selectAll<SVGElement, DataPoint>(`${tag}.data-point`)
+          .data(data.series, pointKey);
+
         points.exit().remove();
 
         if (shape === "circle") {
-          points
-            .attr("cx", d => xScale(new Date(d.date)))
-            .attr("cy", d => yScale(d.value))
-            .attr("fill", color);
-          points
+          const enter = points
             .enter()
             .append("circle")
             .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
             .attr("data-label", data.label)
             .attr("data-label-safe", safeLabelClass)
             .attr("data-key", uniqueKey)
-            .attr("cx", d => xScale(new Date(d.date)))
-            .attr("cy", d => yScale(d.value))
             .attr("r", circleSize)
-            .attr("fill", color)
             .attr("stroke", "#fdfdfd")
             .attr("stroke-width", 2)
             .attr("cursor", "crosshair");
-        } else if (shape === "square") {
-          points
-            .attr("x", d => xScale(new Date(d.date)) - squareSize)
-            .attr("y", d => yScale(d.value) - squareSize)
+          enter
+            .merge(points as typeof enter)
+            .attr("cx", d => xScale(new Date(d.date)))
+            .attr("cy", d => yScale(d.value))
             .attr("fill", color);
-          points
+        } else if (shape === "square") {
+          const enter = points
             .enter()
             .append("rect")
             .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
             .attr("data-label", data.label)
             .attr("data-label-safe", safeLabelClass)
             .attr("data-key", uniqueKey)
-            .attr("x", d => xScale(new Date(d.date)) - squareSize)
-            .attr("y", d => yScale(d.value) - squareSize)
             .attr("width", squareSize * 2)
             .attr("height", squareSize * 2)
-            .attr("fill", color)
             .attr("stroke", "#fdfdfd")
             .attr("stroke-width", 2)
             .attr("cursor", "crosshair");
-        } else if (shape === "triangle") {
-          const generateTrianglePath = (x: number, y: number, size: number = triangleSize) => {
-            const height = (size * Math.sqrt(3)) / 2;
-            return `M ${x} ${y - height * 0.7} L ${x + size / 2} ${y + height * 0.3} L ${x - size / 2} ${y + height * 0.3} Z`;
-          };
-          points
-            .attr("d", d => {
-              const x = xScale(new Date(d.date));
-              const y = yScale(d.value);
-              return generateTrianglePath(x, y);
-            })
+          enter
+            .merge(points as typeof enter)
+            .attr("x", d => xScale(new Date(d.date)) - squareSize)
+            .attr("y", d => yScale(d.value) - squareSize)
             .attr("fill", color);
-          points
+        } else if (shape === "triangle") {
+          const enter = points
             .enter()
             .append("path")
             .attr("class", `data-point data-point-${safeLabelClass} data-point-${i}`)
             .attr("data-label", data.label)
             .attr("data-label-safe", safeLabelClass)
             .attr("data-key", uniqueKey)
-            .attr("d", d => {
-              const x = xScale(new Date(d.date));
-              const y = yScale(d.value);
-              return generateTrianglePath(x, y);
-            })
-            .attr("fill", color)
             .attr("stroke", "#fdfdfd")
             .attr("stroke-width", 2)
             .attr("cursor", "crosshair");
+          enter
+            .merge(points as typeof enter)
+            .attr("d", d => generateTrianglePath(xScale(new Date(d.date)), yScale(d.value)))
+            .attr("fill", color);
         }
 
-        // Add event listeners to all data points after they've been created or updated
-        group
-          .selectAll(`.data-point`)
-          .on("click", (event, d: DataPoint) => {
+        // Re-bind point event handlers each update (closures capture latest data).
+        g.selectAll<SVGElement, DataPoint>(".data-point")
+          .on("click", (event, d) => {
             if (tooltipRef?.current && svgRef.current) {
-              setTooltipState({
-                isSticky: true,
-              });
-
+              setTooltipState({ isSticky: true });
               handleTooltipPosition(event, d, data);
             }
           })
-          .on("mouseenter", (event, d: DataPoint) => {
+          .on("mouseenter", (event, d) => {
             handleMouseEnter(event, svgRef, "g.data-group", 0.05, 1, highlightItems);
-
             if (tooltipState?.isSticky) return;
-
             handleTooltipPosition(event, d, data);
           })
           .on("mouseout", () => {
             handleMouseOut(svgRef);
           });
+      } else {
+        // showDataPoints toggled off: remove any leftover points from a previous render.
+        g.selectAll(".data-point").remove();
       }
-    }
+    });
 
     // Apply highlighting AFTER rendering is complete
     if (highlightItems.length > 0) {
@@ -429,6 +505,7 @@ const useLineChartPathsShapesRendering = (
     highlightItems,
     handleItemHighlight,
     showDataPoints,
+    renderer,
   ]);
 
   // Keep the tooltip visible while the cursor is over it (no-dots mode UX).
