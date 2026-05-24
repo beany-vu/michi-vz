@@ -638,7 +638,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
         }}
       >
         <div className="tooltip-content" ref={refTooltipContent} />
-        {!isTooltipSticky && <TooltipHint />}
+        {!isTooltipSticky && !canvasTooltip.isSticky && <TooltipHint />}
       </div>
     </div>
   );

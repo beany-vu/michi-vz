@@ -59,3 +59,23 @@ The `MichiVzProvider` component provides theme and color configuration context t
 
 ### Note for development
 - On adding new features, remember to has default value if needed to avoid breaking other parts of the lib
+
+## Canvas renderer: consumer CSS contract
+
+Charts that opt into `renderer="canvas"` resolve mark colors via an SVG probe element (`src/components/hooks/canvas/resolveMarkColors.ts`). The contract is narrower than SVG and easy to violate:
+
+- **The probe only reads `fill` and `stroke`** (passed in `colorProp`, which may be `["fill", "stroke"]` to try fill first then fall back to stroke). Each property is skipped if its computed value is `none`, empty, or starts with `url(` (SVG pattern/gradient — canvas can't paint those). The first usable value wins; otherwise the consumer-supplied `fallback` is used.
+- **`opacity`, `visibility`, `display`, `transform` and other CSS are NOT read.** Rules like `.value-based { opacity: 0; visibility: hidden; }` hide nothing in canvas — the probe still reads a real `fill`/`stroke` from the matched rule (or the XML attribute fallback) and the renderer paints it.
+- **To hide a mark in canvas mode**, set both `fill: transparent` and `stroke: transparent`. `"transparent"` resolves to `rgba(0, 0, 0, 0)` which is a valid, "usable" color the probe picks → renderer paints a fully transparent shape.
+- **Sub-bar charts (e.g. `ComparableHorizontalBarChart`)**: each sub-bar (`value-based`, `value-compared`) is probed independently. Consumer CSS must cover **all visible sub-bars** under `skipColorMappingDispatch`, because the chart's internal `finalColorsMapping` defaults to `"transparent"` for unmapped labels (the spread order means it overrides any `MichiVzProvider` context colors). Missing CSS for one sub-bar → that sub-bar is invisible.
+
+When debugging an invisible canvas chart, first check what CSS rules the consumer is injecting against `.{markClassName}[data-label-safe="..."]` — most "blank chart" regressions come down to a missing or `url(...)`-only `<style>` block.
+
+## VerticalStackBarChart: marker rect `hasOwnProperty` rule
+
+`prepareStackedData` iterates `effectiveKeys` (the union of all keys across all visible DataSets) per yearData. The `missingDataMarker` feature must distinguish two cases that both produce `value === undefined`:
+
+1. **Data gap** — the key IS a property of `yearData` (with `null` / `NaN` / `undefined`). This DataSet "owns" the key but has no value for this date. Emit a marker.
+2. **Different DataSet's slot** — the key is NOT a property of `yearData`. It belongs to another DataSet entirely; its bar (or its own marker) belongs in that DataSet's slot, not here.
+
+The marker emission is guarded with `Object.prototype.hasOwnProperty.call(yearData, key)`. Without this guard, every yearData gets a stub for every key it doesn't own → a continuous "strip" of stubs across the bottom of the chart in every group's slot. Tests in `__tests__/VerticalStackBarChart.test.tsx` cover both cases — keep them passing if you refactor the marker emission.

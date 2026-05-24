@@ -444,7 +444,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
 
   // Opt-in Canvas 2D renderer — active only when renderer="canvas". Paints the
   // point cloud onto a <canvas> behind the SVG; axes/title/legend stay SVG.
-  useScatterPlotChartCanvasRendering({
+  const canvasTooltip = useScatterPlotChartCanvasRendering({
     enabled: renderer === "canvas",
     canvasRef,
     svgRef,
@@ -629,7 +629,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                 ref={tooltipRef}
               >
                 <div className="tooltip-content" ref={tooltipContentRef} />
-                {!isTooltipSticky && <TooltipHint />}
+                {!isTooltipSticky && !canvasTooltip.isSticky && <TooltipHint />}
               </div>
 
               <svg

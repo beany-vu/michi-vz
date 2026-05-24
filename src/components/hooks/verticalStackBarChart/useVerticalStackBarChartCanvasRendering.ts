@@ -20,7 +20,7 @@ interface DataPoint {
 const RECT_RADIUS = 2;
 const RECT_STROKE = "#fff";
 const OPACITY_NOT_HIGHLIGHTED = 0.2;
-const LABEL_FONT = "12px sans-serif";
+const LABEL_FONT_SIZE_PX = 12;
 const LABEL_FILL = "#000";
 
 interface DrawParams {
@@ -36,6 +36,10 @@ interface DrawParams {
   // Per-key fill colour resolved from the DOM (honours consumer CSS such as
   // skipColorMappingDispatch's injected `.bar[data-label-safe] { fill }`).
   resolvedColors: Map<string, string>;
+  // Font family used for the series-key abbreviation labels under each group.
+  // Sourced from MichiVzProvider context so a host app's theme font is used
+  // instead of the generic "sans-serif" fallback.
+  fontFamily: string;
 }
 
 // Pure draw routine — clears the canvas and repaints every stacked rect plus
@@ -92,7 +96,7 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
           ctx.save();
           ctx.globalAlpha = 1;
           ctx.fillStyle = LABEL_FILL;
-          ctx.font = LABEL_FONT;
+          ctx.font = `${LABEL_FONT_SIZE_PX}px ${p.fontFamily}`;
           ctx.textAlign = "center";
           ctx.textBaseline = "alphabetic";
           ctx.fillText(d.seriesKeyAbbreviation, labelX, p.height - p.margin.bottom + 15);
@@ -117,12 +121,15 @@ export interface VerticalStackBarCanvasOptions {
   keys: string[];
   highlightItems: string[];
   colorCallbackFn?: (key: string, d: RectData) => string;
+  // Font family for canvas-rendered text; flows through from MichiVzProvider.
+  fontFamily: string;
   // Produces the tooltip HTML string (showCombined logic lives inside it).
   generateTooltipContent: (
     key: string,
     seriesKey: string,
     data: DataPoint,
-    series: DataPoint[]
+    series: DataPoint[],
+    isMissing?: boolean
   ) => string;
   onHighlightItem?: (labels: string[]) => void;
 }
@@ -141,6 +148,7 @@ const useVerticalStackBarChartCanvasRendering = (
     keys,
     highlightItems,
     colorCallbackFn,
+    fontFamily,
   } = opts;
 
   // Latest options for the once-bound hover listener (avoids stale closures).
@@ -193,6 +201,7 @@ const useVerticalStackBarChartCanvasRendering = (
       hoveredKey: hoveredRef.current,
       colorCallbackFn,
       resolvedColors,
+      fontFamily,
     });
   });
 
@@ -216,6 +225,7 @@ const useVerticalStackBarChartCanvasRendering = (
         hoveredKey: hoveredRef.current,
         colorCallbackFn: o.colorCallbackFn,
         resolvedColors: resolvedColorsRef.current,
+        fontFamily: o.fontFamily,
       });
     };
 
@@ -271,7 +281,13 @@ const useVerticalStackBarChartCanvasRendering = (
       // Sanitize the consumer's tooltipFormatter HTML before injecting it
       // (the SVG renderer does the same — see VerticalStackBarChart).
       const safeHtml = DOMPurify.sanitize(
-        o.generateTooltipContent(rect.key, rect.seriesKey, rect.data as DataPoint, series)
+        o.generateTooltipContent(
+          rect.key,
+          rect.seriesKey,
+          rect.data as DataPoint,
+          series,
+          rect.isMissing
+        )
       );
       contentEl.innerHTML = safeHtml;
     };

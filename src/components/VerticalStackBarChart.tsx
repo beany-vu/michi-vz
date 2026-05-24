@@ -13,6 +13,7 @@ import TooltipHint from "src/components/shared/TooltipHint";
 import { DEFAULT_COLORS } from "./shared/colors";
 import MichiVzCredit from "./shared/MichiVzCredit";
 import useVerticalStackBarChartCanvasRendering from "./hooks/verticalStackBarChart/useVerticalStackBarChartCanvasRendering";
+import { useChartContext } from "./MichiVzProvider";
 
 function getColor(mappedColor?: string, dataColor?: string): string {
   const FALLBACK_COLOR = "rgba(253, 253, 253, 0.5)";
@@ -45,6 +46,8 @@ interface TooltipData {
   key: string;
   seriesKey: string;
   series: DataPoint[];
+  /** True when this hover targets a missing-data stub bar (no real value). */
+  isMissing?: boolean;
 }
 
 // Add the ChartMetadata interface to define what data we'll expose
@@ -83,6 +86,16 @@ interface Props {
    * non-dense charts.
    */
   minBarWidth?: number;
+  /**
+   * When set, draws a thin stub bar of `height` pixels for any
+   * (date × series × key) where the key is selected (not in `disabledItems`)
+   * but its value is missing/null/NaN. Signals "selected but no data" rather
+   * than silently omitting the bar; the stub uses the series' resolved color
+   * and sits on the zero line. Tooltip data for stub bars carries
+   * `isMissing: true` so `tooltipFormatter` can render an appropriate
+   * "data not available" message. Default: undefined (no stubs).
+   */
+  missingDataMarker?: { height: number };
   // New: filter prop for sorting entire DataSet based on total value
   filter?: {
     limit: number;
@@ -147,6 +160,8 @@ export interface RectData {
   value: number | null;
   date: number;
   code?: string;
+  /** True when this rect is a missing-data stub (rendered via `missingDataMarker`). */
+  isMissing?: boolean;
 }
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
@@ -176,6 +191,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   isNodata,
   colorCallbackFn,
   minBarWidth = 1,
+  missingDataMarker,
   filter,
   onChartDataProcessed,
   onHighlightItem,
@@ -378,16 +394,49 @@ const VerticalStackBarChart: React.FC<Props> = ({
               .reverse()
               .forEach(key => {
                 const value = yearData[key];
-                // Skip if value is undefined or null
-                if (value === undefined || value === null) {
-                  return;
-                }
+                const numericValue =
+                  typeof value === "string" ? parseFloat(value) : (value as number);
+                const isMissingValue =
+                  value === undefined || value === null || isNaN(numericValue);
 
-                // Parse the value to float safely, handling string values
-                const numericValue = typeof value === "string" ? parseFloat(value) : value;
-
-                // Skip if the parsed value is NaN
-                if (isNaN(numericValue)) {
+                if (isMissingValue) {
+                  // Stub marker (opt-in via `missingDataMarker`): a thin bar on
+                  // the zero line that says "selected but no data here". y0 is
+                  // intentionally left untouched so the marker doesn't shift
+                  // the stack height for any real bars below/above it.
+                  //
+                  // hasOwnProperty guard: only emit a marker if the key is
+                  // explicitly present on this data point (with a null/NaN/
+                  // undefined value). A key that is simply absent from the
+                  // data point means "this DataSet doesn't own this key" — its
+                  // bar belongs to a different DataSet's slot, not this one,
+                  // so emitting a marker here would paint a stub in every
+                  // group's slot for every other group's missing key.
+                  const isExplicitlyMissing = Object.prototype.hasOwnProperty.call(yearData, key);
+                  if (missingDataMarker && isExplicitlyMissing) {
+                    const markerHeight = missingDataMarker.height;
+                    const markerRect = {
+                      key,
+                      height: markerHeight,
+                      width: Math.max(groupWidth - 4, minBarWidth),
+                      y: yScale(0) - markerHeight,
+                      x:
+                        xScale(String(yearData.date)) +
+                        groupWidth * groupIndex +
+                        groupWidth / 2 -
+                        groupWidth / 2 +
+                        2,
+                      fill: getColor(generatedColorsMapping[key]),
+                      data: yearData,
+                      seriesKey: dataItem.seriesKey,
+                      seriesKeyAbbreviation: dataItem.seriesKeyAbbreviation,
+                      value: null,
+                      date: yearData.date,
+                      code: yearData.code,
+                      isMissing: true,
+                    };
+                    stackedData[key].push(markerRect as unknown as RectData);
+                  }
                   return;
                 }
 
@@ -425,7 +474,15 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
       return stackedData;
     },
-    [effectiveKeys, disabledItems, xScale, yScale, generatedColorsMapping, minBarWidth]
+    [
+      effectiveKeys,
+      disabledItems,
+      xScale,
+      yScale,
+      generatedColorsMapping,
+      minBarWidth,
+      missingDataMarker,
+    ]
   );
 
   // Memoize the stacked rect data
@@ -436,13 +493,20 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
   // Memoize the tooltip content generation
   const generateTooltipContent = useCallback(
-    (key: string, seriesKey: string, data: DataPoint, series: DataPoint[]) => {
+    (
+      key: string,
+      seriesKey: string,
+      data: DataPoint,
+      series: DataPoint[],
+      isMissing?: boolean
+    ) => {
       if (tooltipFormatterRef.current) {
         return tooltipFormatterRef.current({
           item: data,
           key: key,
           seriesKey: seriesKey,
           series: series,
+          isMissing: isMissing,
         });
       }
 
@@ -499,7 +563,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
                 value: item.value ?? null,
                 date: item.date,
                 code: item.code,
-              })) as unknown as DataPoint[]
+              })) as unknown as DataPoint[],
+            d.isMissing
           );
         }
       }
@@ -528,7 +593,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
   // Canvas renderer — active only when renderer="canvas". Reuses the existing
   // prepareStackedData() output and tooltip-content generator so stacking and
   // tooltip behaviour are renderer-agnostic.
-  useVerticalStackBarChartCanvasRendering({
+  const { fontFamily } = useChartContext();
+  const canvasTooltip = useVerticalStackBarChartCanvasRendering({
     enabled: renderer === "canvas",
     canvasRef,
     svgRef: chartRef,
@@ -541,6 +607,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
     keys,
     highlightItems,
     colorCallbackFn,
+    fontFamily,
     generateTooltipContent,
     onHighlightItem,
   });
@@ -750,7 +817,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
         }}
       >
         <div ref={tooltipContentRef} className="tooltip-content" />
-        {!isTooltipSticky && <TooltipHint />}
+        {!isTooltipSticky && !canvasTooltip.isSticky && <TooltipHint />}
       </div>
 
       <svg
@@ -759,7 +826,13 @@ const VerticalStackBarChart: React.FC<Props> = ({
         width={width}
         height={height}
         style={{ overflow: "visible", position: "relative" }}
-        onMouseOut={handleMouseOut}
+        // In canvas mode the canvas hook owns hover/leave handling via native
+        // listeners and respects its own sticky-pin state. Binding React's
+        // onMouseOut here would hide the pinned tooltip whenever the cursor
+        // crosses an svg descendant (axis tick, label) since the parent's
+        // isTooltipSticky stays false while the canvas hook is the source of
+        // truth for sticky in canvas mode.
+        onMouseOut={renderer === "canvas" ? undefined : handleMouseOut}
       >
         <MichiVzCredit />
         {children}

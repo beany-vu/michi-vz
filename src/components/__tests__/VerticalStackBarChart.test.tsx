@@ -97,4 +97,125 @@ describe("VerticalStackBarChart", () => {
       );
     }).not.toThrow();
   });
+
+  test("missingDataMarker emits stub rect for null values", async () => {
+    const mockCallback = jest.fn();
+    const dataWithGap = [
+      {
+        seriesKey: "Africa",
+        seriesKeyAbbreviation: "Africa",
+        // Three dates but the 2002 value is missing.
+        series: [
+          { date: "2001", Africa: "10" },
+          { date: "2002", Africa: null },
+          { date: "2003", Africa: "30" },
+        ],
+      },
+    ];
+
+    customRender(
+      <VerticalStackBarChart
+        dataSet={dataWithGap}
+        {...defaultChartProps}
+        missingDataMarker={{ height: 2 }}
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(
+      () => {
+        expect(mockCallback).toHaveBeenCalled();
+      },
+      { timeout: 5000 }
+    );
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    const africaRects = metadata.renderedData?.Africa ?? [];
+    // Two real rects (2001, 2003) plus one missing-data stub (2002).
+    expect(africaRects).toHaveLength(3);
+    const stubs = africaRects.filter((r: { isMissing?: boolean }) => r.isMissing);
+    expect(stubs).toHaveLength(1);
+    expect(stubs[0]).toMatchObject({
+      isMissing: true,
+      height: 2,
+      value: null,
+      date: "2002",
+    });
+  });
+
+  test("missingDataMarker: no stub for keys absent from the data point", async () => {
+    // Reproduces the "stub line across every bar" regression: when iterating
+    // keys per DataSet, keys that aren't on this data point at all (because
+    // they belong to other DataSets' slots) must NOT get a stub here.
+    const mockCallback = jest.fn();
+    const twoDataSets = [
+      {
+        seriesKey: "Africa",
+        seriesKeyAbbreviation: "Africa",
+        series: [{ date: "2001", Africa: "10" }],
+      },
+      {
+        seriesKey: "Asia",
+        seriesKeyAbbreviation: "Asia",
+        series: [{ date: "2001", Asia: "20" }],
+      },
+    ];
+
+    customRender(
+      <VerticalStackBarChart
+        dataSet={twoDataSets}
+        {...defaultChartProps}
+        missingDataMarker={{ height: 2 }}
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(() => expect(mockCallback).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    // Each DataSet contributes exactly one real bar — no stubs, because
+    // "Asia" is not a property on Africa's data point (and vice versa).
+    const africaRects = metadata.renderedData?.Africa ?? [];
+    const asiaRects = metadata.renderedData?.Asia ?? [];
+    expect(africaRects).toHaveLength(1);
+    expect(asiaRects).toHaveLength(1);
+    expect(africaRects.every((r: { isMissing?: boolean }) => !r.isMissing)).toBe(true);
+    expect(asiaRects.every((r: { isMissing?: boolean }) => !r.isMissing)).toBe(true);
+  });
+
+  test("missingDataMarker omitted: no stub rect emitted (backward compat)", async () => {
+    const mockCallback = jest.fn();
+    const dataWithGap = [
+      {
+        seriesKey: "Africa",
+        seriesKeyAbbreviation: "Africa",
+        series: [
+          { date: "2001", Africa: "10" },
+          { date: "2002", Africa: null },
+          { date: "2003", Africa: "30" },
+        ],
+      },
+    ];
+
+    customRender(
+      <VerticalStackBarChart
+        dataSet={dataWithGap}
+        {...defaultChartProps}
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(
+      () => {
+        expect(mockCallback).toHaveBeenCalled();
+      },
+      { timeout: 5000 }
+    );
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    const africaRects = metadata.renderedData?.Africa ?? [];
+    // Only the two real rects — no stub when missingDataMarker is omitted.
+    expect(africaRects).toHaveLength(2);
+    expect(africaRects.every((r: { isMissing?: boolean }) => !r.isMissing)).toBe(true);
+  });
 });
