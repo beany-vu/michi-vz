@@ -1,6 +1,8 @@
-import React, { FC, useLayoutEffect, useRef, useMemo, useCallback } from "react";
+import React, { FC, useLayoutEffect, useRef, useMemo, useCallback, useEffect } from "react";
 import { ScaleBand } from "d3-scale";
 import * as d3 from "d3";
+import { chooseAxisMode, AxisMode } from "./xaxisBand/chooseAxisMode";
+import { measureLabelWidth } from "./xaxisBand/measureLabelWidth";
 
 interface Props {
   xScale: ScaleBand<string>;
@@ -11,6 +13,8 @@ interface Props {
   ticks?: number;
   isLoading?: boolean;
   isEmpty?: boolean;
+  xAxisLabelMode?: "auto" | "horizontal";
+  onAxisModeChange?: (mode: AxisMode) => void;
 }
 
 const XaxisBand: FC<Props> = ({
@@ -24,72 +28,13 @@ const XaxisBand: FC<Props> = ({
   ticks = 15,
   isLoading = false,
   isEmpty = false,
+  xAxisLabelMode = "auto",
+  onAxisModeChange,
 }) => {
   const ref = useRef<SVGGElement>(null);
   const renderedRef = useRef(false);
+  const prevModeRef = useRef<AxisMode | null>(null);
 
-  // Memoize the tick values calculation - select evenly spaced ticks
-  const tickValues = useMemo(() => {
-    // Don't generate ticks if loading or empty
-    if (isLoading || isEmpty) {
-      return [];
-    }
-
-    const domain = xScale.domain();
-
-    // Early return if domain is empty
-    if (domain.length === 0) return [];
-
-    // If only one item, just return it
-    if (domain.length === 1) return domain;
-
-    // Always include first and last
-    const first = domain[0];
-    const last = domain[domain.length - 1];
-
-    // Calculate available width for ticks
-    const availableWidth = xScale.range()[1] - xScale.range()[0];
-
-    // Estimate space needed per tick (average label width + padding)
-    const estimatedTickWidth = 80; // Base estimate in pixels
-
-    // Calculate how many ticks can fit
-    const maxFittingTicks = Math.floor(availableWidth / estimatedTickWidth);
-
-    // Use the smaller of maxFittingTicks or requested ticks
-    const effectiveTicks = Math.max(2, Math.min(maxFittingTicks, ticks));
-
-    // If we only want two ticks or have only two items, return first and last
-    if (effectiveTicks <= 2 || domain.length <= 2) {
-      return [first, last];
-    }
-
-    // If we have very few items, just show them all
-    if (domain.length <= effectiveTicks) {
-      return domain;
-    }
-
-    // Generate evenly spaced index positions
-    const result = [first]; // Always include first
-
-    if (effectiveTicks > 2) {
-      // Calculate step size to create evenly spaced ticks
-      const step = (domain.length - 1) / (effectiveTicks - 1);
-
-      // Add intermediate ticks at even intervals (skip first and last)
-      for (let i = 1; i < effectiveTicks - 1; i++) {
-        const index = Math.round(i * step);
-        if (index > 0 && index < domain.length - 1) {
-          result.push(domain[index]);
-        }
-      }
-    }
-
-    result.push(last); // Always include last
-    return result;
-  }, [xScale, ticks, isLoading, isEmpty]);
-
-  // Memoize the formatter function
   const formatter = useCallback(
     (d: string | number): string => {
       if (xAxisFormat) {
@@ -99,6 +44,28 @@ const XaxisBand: FC<Props> = ({
     },
     [xAxisFormat]
   );
+
+  const { mode, tickValues } = useMemo<{ mode: AxisMode; tickValues: string[] }>(() => {
+    if (isLoading || isEmpty) {
+      return { mode: "horizontal", tickValues: [] };
+    }
+    return chooseAxisMode({
+      domain: xScale.domain(),
+      formatter: (d) => formatter(d),
+      bandWidth: xScale.step(),
+      measure: measureLabelWidth,
+      maxTicks: ticks,
+      forceMode: xAxisLabelMode,
+    });
+  }, [xScale, formatter, ticks, isLoading, isEmpty, xAxisLabelMode]);
+
+  // Notify parent when mode changes (used by VerticalStackBarChart to reserve
+  // extra bottom space for rotated labels).
+  useEffect(() => {
+    if (!onAxisModeChange) return;
+    if (prevModeRef.current === mode) return;
+    onAxisModeChange(mode);
+  }, [mode, onAxisModeChange]);
 
   useLayoutEffect(() => {
     if (!ref.current || !xScale || renderedRef.current) return;
