@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import isEqual from "lodash/isEqual";
 import Title from "./shared/Title";
 import XaxisBand from "./shared/XaxisBand";
+import type { AxisMode } from "./shared/xaxisBand/chooseAxisMode";
 import YaxisLinear from "./shared/YaxisLinear";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
@@ -145,6 +146,13 @@ interface Props {
    *    tooltip are unchanged in both modes.
    */
   renderer?: "svg" | "canvas";
+  /**
+   * Controls x-axis label crowding behavior.
+   *  - "auto" (default): labels render horizontally if they fit; rotate to -45°
+   *    if not; fall back to evenly-spaced sampling if even rotation overflows.
+   *  - "horizontal": forces the legacy skip-with-dots behavior.
+   */
+  xAxisLabelMode?: "auto" | "horizontal";
 }
 
 export interface RectData {
@@ -203,6 +211,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   highlightItems = [],
   disabledItems = [],
   renderer = "svg",
+  xAxisLabelMode = "auto",
 }) => {
   const chartRef = useRef<SVGSVGElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -217,6 +226,17 @@ const VerticalStackBarChart: React.FC<Props> = ({
   tooltipFormatterRef.current = tooltipFormatter;
   const onHighlightItemRef = useRef(onHighlightItem);
   const [isTooltipSticky, setIsTooltipSticky] = useState(false);
+
+  const [axisMode, setAxisMode] = useState<AxisMode>("horizontal");
+
+  const ROTATED_BOTTOM_RESERVE = 35;
+  const effectiveMargin = useMemo(
+    () => ({
+      ...margin,
+      bottom: margin.bottom + (axisMode === "rotated" ? ROTATED_BOTTOM_RESERVE : 0),
+    }),
+    [margin, axisMode]
+  );
 
   // Update refs when props change
   onHighlightItemRef.current = onHighlightItem;
@@ -356,10 +376,10 @@ const VerticalStackBarChart: React.FC<Props> = ({
       d3
         .scaleLinear()
         .domain(yScaleDomain)
-        .range([height - margin.bottom, margin.top])
+        .range([height - effectiveMargin.bottom, effectiveMargin.top])
         .clamp(true)
         .nice(),
-    [flattenedDataSet, width, height, margin, disabledItems]
+    [flattenedDataSet, width, height, effectiveMargin, disabledItems]
   );
 
   // Memoize the stacked data preparation
@@ -841,7 +861,14 @@ const VerticalStackBarChart: React.FC<Props> = ({
         </Title>
         {filteredDataSet.length > 0 && !isLoading && (
           <>
-            <XaxisBand xScale={xScale} height={height} margin={margin} xAxisFormat={xAxisFormat} />
+            <XaxisBand
+              xScale={xScale}
+              height={height}
+              margin={effectiveMargin}
+              xAxisFormat={xAxisFormat}
+              xAxisLabelMode={xAxisLabelMode}
+              onAxisModeChange={setAxisMode}
+            />
             <YaxisLinear
               yScale={yScale}
               width={width}
@@ -892,7 +919,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                       {d.seriesKeyAbbreviation && (
                         <text
                           x={d.x + d.width / 2}
-                          y={height - margin.bottom + 15}
+                          y={height - effectiveMargin.bottom + 15}
                           textAnchor="middle"
                           fontSize="12"
                           fill="#000"
