@@ -11,12 +11,24 @@ import { resolveMarkColors, ColorProbe } from "../canvas/resolveMarkColors";
 
 const POINT_RADIUS = 5;
 const POLYGON_STROKE_WIDTH = 2;
-// Pole-point opacity: invisible by default, faintly visible on highlight —
-// mirrors the SVG renderer's `.data-point` opacity logic (0 vs 0.3).
+// When any series in the chart is `dimmed: true`, the non-dimmed series get a
+// thicker stroke so the highlighted subset stands out. Gated on "anyone is
+// dimmed" rather than just `!dimmed` so consumers who don't use the field
+// keep the original 2-px stroke (backward compatible).
+const POLYGON_STROKE_WIDTH_HIGHLIGHT = 3;
+// Pole-point opacity: invisible by default, fully opaque when the series is
+// hovered/highlighted so the user sees a clear marker at the vertex they're
+// inspecting. (SVG path used 0.3 historically; the brighter 1.0 gives canvas
+// hover a stronger affordance, which the consumer asked for.)
 const POINT_OPACITY_DEFAULT = 0;
-const POINT_OPACITY_HIGHLIGHT = 0.3;
+const POINT_OPACITY_HIGHLIGHT = 1;
 // Non-highlighted series are dimmed to 0.5 when any series is highlighted.
 const SERIES_DIM_OPACITY = 0.5;
+// Per-series `dimmed: true` reduces alpha by this factor on top of any
+// highlight-based dim. Lets consumers express "highlight a subset, fade the
+// rest" via the data instead of post-paint CSS (which doesn't apply to
+// <canvas>).
+const SERIES_DIMMED_FLAG_OPACITY = 0.2;
 const FILL_OPACITY_CAP = 0.6;
 
 // A drawn polygon vertex (one per pole), kept after the paint pass so the
@@ -62,6 +74,9 @@ export interface RadarSeries {
   label: string;
   color?: string;
   data: { value: number | string; date: string }[];
+  // Optional per-series visual dim. Multiplies with the highlight-based dim
+  // (no replacement) so the two can compose. See SERIES_DIMMED_FLAG_OPACITY.
+  dimmed?: boolean;
 }
 
 // Strip a trailing year suffix ("China-2021" -> "China") so the colour lookup
@@ -168,6 +183,10 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): SeriesHit[]
   const highlightSet = new Set(p.highlightItems);
   if (p.hoveredLabel) highlightSet.add(p.hoveredLabel);
   const anyHighlight = highlightSet.size > 0;
+  // Track whether the consumer is using `dimmed` at all so we can promote
+  // non-dimmed series to a thicker stroke without changing behaviour for
+  // consumers who never set the field.
+  const anyDimmed = p.series.some(s => s.dimmed);
 
   const hits: SeriesHit[] = [];
 
@@ -185,7 +204,12 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): SeriesHit[]
       p.getColor(p.colorsMapping[baseLabel(item.label)], item.color);
     const highlighted = highlightSet.has(item.label);
     // Series dimming: non-highlighted series fade to 0.5 when any is highlighted.
-    const seriesAlpha = anyHighlight && !highlighted ? SERIES_DIM_OPACITY : 1;
+    // Per-series `dimmed: true` multiplies an additional factor on top — lets
+    // consumers express data-driven dim (e.g. "all polygons except current
+    // year") that can't be done with `highlightItems` alone.
+    const highlightAlpha = anyHighlight && !highlighted ? SERIES_DIM_OPACITY : 1;
+    const dimmedAlpha = item.dimmed ? SERIES_DIMMED_FLAG_OPACITY : 1;
+    const seriesAlpha = highlightAlpha * dimmedAlpha;
 
     // --- polygon path ---
     ctx.beginPath();
@@ -209,10 +233,12 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): SeriesHit[]
       ctx.fill();
     }
 
-    // Stroke (always drawn, width 2).
+    // Stroke. When the chart is in "highlight subset via dimmed" mode
+    // (anyDimmed=true), promote non-dimmed series to a thicker stroke so the
+    // kept subset reads stronger against the faded background.
     ctx.globalAlpha = seriesAlpha;
     ctx.strokeStyle = color;
-    ctx.lineWidth = POLYGON_STROKE_WIDTH;
+    ctx.lineWidth = anyDimmed && !item.dimmed ? POLYGON_STROKE_WIDTH_HIGHLIGHT : POLYGON_STROKE_WIDTH;
     ctx.lineJoin = "round";
     ctx.stroke();
 

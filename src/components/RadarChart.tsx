@@ -61,6 +61,16 @@ interface DataPoint {
     date: string;
   }[];
   color?: string;
+  /**
+   * When true, fade this series visually (canvas renderer only). Use for
+   * "highlight a subset, dim the rest" UX where the dimmed set is data-
+   * driven (e.g. all polygons except the current year). Independent of and
+   * composable with `highlightItems` — the two effects multiply.
+   *
+   * SVG-renderer consumers can achieve the same effect via CSS targeting the
+   * `<g class="series" data-label="...">` nodes.
+   */
+  dimmed?: boolean;
 }
 
 interface ChartMetadata {
@@ -465,6 +475,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           label: item.label,
           color: item.color,
           data: item.data,
+          dimmed: item.dimmed,
         }))
       : [],
     poleLabels: poles?.labels ?? [],

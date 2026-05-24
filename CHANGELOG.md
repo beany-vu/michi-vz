@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2026-05-24
+
+### Changed
+- **🎨 `RadarChart` canvas hover-dot opacity**: the pole-point circle on a
+  hovered/highlighted series is now fully opaque (`1.0`, was `0.3`) so the
+  vertex under the cursor reads as a clear marker. Diverges from the SVG
+  renderer's historical 0.3 — intentional, since the canvas hover affordance
+  benefits from a stronger visual anchor.
+
+## [0.6.2] - 2026-05-24
+
+### Changed
+- **🎨 `RadarChart` canvas `dimmed` visual tuning**: the dim factor is now
+  `0.2` (was `0.3`) and non-dimmed series get a thicker stroke (`3px` vs `2px`)
+  when the chart has any `dimmed: true` series. The thicker stroke is gated on
+  "anyone is dimmed" so consumers that never set the field keep the original
+  `2px` stroke (backward compatible). Goal: push the visual hierarchy harder
+  between the highlighted subset and the faded background.
+
+## [0.6.1] - 2026-05-24
+
+### Added
+- **🎨 `dimmed` per-series field on `RadarChart` (canvas renderer)**: opt-in
+  visual fade for individual series, applied at paint time on `<canvas>`.
+  - Set `dimmed: true` on any series item and that polygon (and its pole
+    points) paint at reduced alpha (0.3 by default).
+  - Independent of and composable with `highlightItems` — the two effects
+    multiply, so a dimmed-and-non-highlighted series is faintest.
+  - Intended for "highlight a subset, fade the rest" UX patterns that are
+    data-driven (e.g. "all years except the current one") and can't be
+    expressed via `highlightItems` (which is typically reserved for hover).
+  - Default `undefined` preserves the original behaviour. Backward compatible.
+  - Canvas-only: SVG consumers can achieve the same effect via CSS targeting
+    `<g class="series" data-label="...">` nodes.
+
 ## [0.5.47] - 2026-05-02
 
 ### Added
