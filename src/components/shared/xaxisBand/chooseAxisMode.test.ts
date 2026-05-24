@@ -7,7 +7,7 @@ describe("chooseAxisMode", () => {
   test("returns horizontal when widest label + padding fits a single band", () => {
     const result = chooseAxisMode({
       domain: ["01-2023", "02-2023", "03-2023"],
-      formatter: (d) => String(d),
+      formatter: d => String(d),
       bandWidth: 80,
       measure,
       padding: 8,
@@ -22,7 +22,7 @@ describe("chooseAxisMode", () => {
     // 49 * cos(45°) ≈ 34.6, plus padding 8 = 42.6, which fits a 50px band.
     const result = chooseAxisMode({
       domain: ["01-2023", "02-2023", "03-2023"],
-      formatter: (d) => String(d),
+      formatter: d => String(d),
       bandWidth: 50,
       measure,
       padding: 8,
@@ -39,7 +39,7 @@ describe("chooseAxisMode", () => {
     // estimatedTickWidth fallback uses 80px → max 1 tick fits, clamped to 2 → first + last.
     const result = chooseAxisMode({
       domain: ["12-01-23", "12-02-23", "12-03-23", "12-04-23", "12-05-23"],
-      formatter: (d) => String(d),
+      formatter: d => String(d),
       bandWidth: 20,
       measure,
       padding: 8,
@@ -56,7 +56,7 @@ describe("chooseAxisMode", () => {
     const domain = Array.from({ length: 10 }, (_, i) => `2023-${String(i).padStart(2, "0")}`);
     const result = chooseAxisMode({
       domain,
-      formatter: (d) => String(d),
+      formatter: d => String(d),
       bandWidth: 25,
       measure,
       padding: 8,
@@ -70,7 +70,7 @@ describe("chooseAxisMode", () => {
   test("empty domain returns horizontal with no ticks", () => {
     const result = chooseAxisMode({
       domain: [],
-      formatter: (d) => String(d),
+      formatter: d => String(d),
       bandWidth: 80,
       measure,
     });
@@ -82,7 +82,7 @@ describe("chooseAxisMode", () => {
   test("single item always fits horizontally regardless of band width", () => {
     const result = chooseAxisMode({
       domain: ["only-one-very-long-label"],
-      formatter: (d) => String(d),
+      formatter: d => String(d),
       bandWidth: 5,
       measure,
     });
@@ -94,7 +94,7 @@ describe("chooseAxisMode", () => {
   test("forceMode='horizontal' skips rotation and falls back to current sampling", () => {
     const result = chooseAxisMode({
       domain: ["01-2023", "02-2023", "03-2023", "04-2023", "05-2023"],
-      formatter: (d) => String(d),
+      formatter: d => String(d),
       bandWidth: 50, // would normally choose rotated
       measure,
       padding: 8,

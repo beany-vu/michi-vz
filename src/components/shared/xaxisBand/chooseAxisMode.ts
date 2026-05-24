@@ -62,7 +62,7 @@ export function chooseAxisMode(params: ChooseAxisModeParams): ChooseAxisModeResu
   if (domain.length === 0) return { mode: "horizontal", tickValues: [] };
   if (domain.length === 1) return { mode: "horizontal", tickValues: domain };
 
-  const labels = domain.map((d) => formatter(d));
+  const labels = domain.map(d => formatter(d));
   const maxLabelWidth = labels.reduce((max, label) => Math.max(max, measure(label)), 0);
 
   if (maxLabelWidth + padding <= bandWidth) {

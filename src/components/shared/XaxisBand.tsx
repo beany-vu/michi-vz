@@ -51,7 +51,7 @@ const XaxisBand: FC<Props> = ({
     }
     return chooseAxisMode({
       domain: xScale.domain(),
-      formatter: (d) => formatter(d),
+      formatter: d => formatter(d),
       bandWidth: xScale.step(),
       measure: measureLabelWidth,
       maxTicks: ticks,
