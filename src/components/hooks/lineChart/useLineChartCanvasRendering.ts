@@ -1,9 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { line as d3line, curveBumpX, curveLinear, pointer } from "d3";
 import type { ScaleLinear, ScaleTime } from "d3";
 import DOMPurify from "dompurify";
 import { DataPoint, LineChartDataItem } from "../../../types/data";
 import type { SeriesRun } from "./useLineChartGeometry";
+import { sanitizeForClassName } from "./lineChartUtils";
 
 // Opt-in Canvas 2D renderer for LineChart. Draws the line geometry and points
 // onto a single <canvas> instead of thousands of retained SVG nodes — the DOM
@@ -28,6 +29,44 @@ const projectXValue = (d: DataPoint, xScale: XScale, xAxisDataType: string): num
   return xScale(new Date(d.date));
 };
 
+// Resolve each series' stroke colour the way the SVG renderer ends up coloured,
+// honouring consumer CSS. In skipColorMappingDispatch / external-CSS setups the
+// data colour is the "transparent" placeholder and the real colour is applied by
+// a rule like `.line[data-label-safe="X"] { stroke: ...!important }`. Canvas
+// pixels can't be styled by CSS, so we read the colour off a probe <path> via
+// getComputedStyle. Probes are appended as a batch, then read, so the browser
+// does a single style recalc for the whole batch.
+const resolveSeriesColors = (
+  svgEl: SVGSVGElement | null,
+  drawData: LineChartDataItem[],
+  colorsMapping: { [key: string]: string },
+  getColor: (color: string | undefined, fallback: string | null) => string
+): Map<string, string> => {
+  const resolved = new Map<string, string>();
+  if (!svgEl) {
+    drawData.forEach(item =>
+      resolved.set(item.label, getColor(colorsMapping[item.label], item.color))
+    );
+    return resolved;
+  }
+  const probes: Array<{ label: string; node: SVGPathElement; fallback: string }> = [];
+  drawData.forEach(item => {
+    const fallback = getColor(colorsMapping[item.label], item.color);
+    const node = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    node.setAttribute("class", "line");
+    node.setAttribute("data-label-safe", sanitizeForClassName(item.label));
+    node.setAttribute("stroke", fallback);
+    svgEl.appendChild(node);
+    probes.push({ label: item.label, node, fallback });
+  });
+  probes.forEach(({ label, node, fallback }) => {
+    const computed = window.getComputedStyle(node).stroke;
+    resolved.set(label, computed && computed !== "none" ? computed : fallback);
+  });
+  probes.forEach(({ node }) => svgEl.removeChild(node));
+  return resolved;
+};
+
 interface DrawParams {
   width: number;
   height: number;
@@ -35,8 +74,8 @@ interface DrawParams {
   xScale: XScale;
   yScale: YScale;
   xAxisDataType: string;
-  colorsMapping: { [key: string]: string };
-  getColor: (color: string | undefined, fallback: string | null) => string;
+  // Per-series stroke colour, already resolved (honours consumer CSS).
+  resolvedColors: Map<string, string>;
   getRuns: (series: DataPoint[]) => SeriesRun[];
   highlightItems: string[];
   showDataPoints: boolean;
@@ -73,7 +112,7 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
 
   for (const item of p.drawData) {
     if (!item.series || item.series.length === 0) continue;
-    const color = p.getColor(p.colorsMapping[item.label], item.color);
+    const color = p.resolvedColors.get(item.label) || "transparent";
     ctx.globalAlpha = anyHighlight && !highlightSet.has(item.label) ? OPACITY_NOT_HIGHLIGHTED : 1;
 
     // --- line: one sub-path per certainty run (solid vs 4,4 dashed) ---
@@ -151,7 +190,7 @@ export interface CanvasRenderingOptions {
   onHighlightItem?: (labels: string[]) => void;
 }
 
-const useLineChartCanvasRendering = (opts: CanvasRenderingOptions): void => {
+const useLineChartCanvasRendering = (opts: CanvasRenderingOptions): { isSticky: boolean } => {
   const {
     enabled,
     canvasRef,
@@ -176,9 +215,25 @@ const useLineChartCanvasRendering = (opts: CanvasRenderingOptions): void => {
   // Currently hovered series label — drives the dim/highlight on redraw.
   const hoveredRef = useRef<string | null>(null);
 
-  // Redraw whenever the data, scales, size, colours or highlight change.
+  // Sticky tooltip: a click on a line pins the tooltip; a click off it unpins.
+  const [isSticky, setIsSticky] = useState(false);
+  const isStickyRef = useRef(false);
+  isStickyRef.current = isSticky;
+
+  // Per-series colours resolved from the DOM (honouring consumer CSS), reused by
+  // the hover redraw so it doesn't re-probe the DOM on every hover.
+  const resolvedColorsRef = useRef<Map<string, string>>(new Map());
+
+  // Redraw on EVERY render (intentionally not a dep-gated effect). Consumer CSS
+  // colouring (skipColorMappingDispatch) arrives a render or two after mount via
+  // the metadata round-trip, and a <canvas> — unlike an SVG <path> — does not
+  // auto-repaint when CSS changes. Re-resolving + redrawing each render keeps it
+  // in sync. drawChart works on decimated data and the colour probe is a single
+  // batched style recalc, so this stays cheap.
   useEffect(() => {
     if (!enabled) return;
+    const resolvedColors = resolveSeriesColors(svgRef.current, drawData, colorsMapping, getColor);
+    resolvedColorsRef.current = resolvedColors;
     drawChart(canvasRef.current, {
       width,
       height,
@@ -186,31 +241,17 @@ const useLineChartCanvasRendering = (opts: CanvasRenderingOptions): void => {
       xScale,
       yScale,
       xAxisDataType,
-      colorsMapping,
-      getColor,
+      resolvedColors,
       getRuns,
       highlightItems,
       showDataPoints,
       hoveredLabel: hoveredRef.current,
     });
-  }, [
-    enabled,
-    canvasRef,
-    width,
-    height,
-    drawData,
-    xScale,
-    yScale,
-    xAxisDataType,
-    colorsMapping,
-    getColor,
-    getRuns,
-    highlightItems,
-    showDataPoints,
-  ]);
+  });
 
-  // Hover: hit-test against the full data, drive the HTML tooltip + highlight.
-  // Bound once on the SVG (which sits above the canvas and receives the events).
+  // Hover + click-to-pin: hit-test against the full data, drive the HTML
+  // tooltip + highlight. Bound once on the SVG (which sits above the canvas
+  // and receives the events).
   useEffect(() => {
     if (!enabled) return undefined;
     const svg = svgRef.current;
@@ -225,8 +266,7 @@ const useLineChartCanvasRendering = (opts: CanvasRenderingOptions): void => {
         xScale: o.xScale,
         yScale: o.yScale,
         xAxisDataType: o.xAxisDataType,
-        colorsMapping: o.colorsMapping,
-        getColor: o.getColor,
+        resolvedColors: resolvedColorsRef.current,
         getRuns: o.getRuns,
         highlightItems: o.highlightItems,
         showDataPoints: o.showDataPoints,
@@ -239,12 +279,17 @@ const useLineChartCanvasRendering = (opts: CanvasRenderingOptions): void => {
       if (tip) tip.style.visibility = "hidden";
     };
 
-    const handleMove = (event: MouseEvent) => {
-      const o = optsRef.current;
-      const [mx, my] = pointer(event, svg);
+    const setHovered = (label: string | null) => {
+      if (hoveredRef.current === label) return;
+      hoveredRef.current = label;
+      redraw();
+      optsRef.current.onHighlightItem?.(label ? [label] : []);
+    };
 
-      // Pick the series whose nearest-by-x point is vertically closest to the
-      // cursor — the line under (or near) the pointer.
+    // The series whose nearest-by-x point is vertically closest to the cursor
+    // — the line under (or near) the pointer — or null if none is close.
+    const hitTest = (mx: number, my: number) => {
+      const o = optsRef.current;
       let hitItem: LineChartDataItem | null = null;
       let hitPoint: DataPoint | null = null;
       let best = HIT_VERTICAL_TOLERANCE;
@@ -266,62 +311,97 @@ const useLineChartCanvasRendering = (opts: CanvasRenderingOptions): void => {
           hitPoint = nearest;
         }
       }
+      return hitItem && hitPoint ? { item: hitItem, point: hitPoint } : null;
+    };
 
-      if (hitItem && hitPoint) {
-        if (hoveredRef.current !== hitItem.label) {
-          hoveredRef.current = hitItem.label;
-          redraw();
-          o.onHighlightItem?.([hitItem.label]);
-        }
-        const tip = o.tooltipRef.current;
-        if (tip) {
-          tip.style.visibility = "visible";
-          const tipRect = tip.getBoundingClientRect();
-          const svgRect = svg.getBoundingClientRect();
-          const xPos = mx + 10;
-          const yPos = my - 25;
-          tip.style.left =
-            xPos + tipRect.width > svgRect.width - o.margin.right
-              ? `${mx - tipRect.width - 10}px`
-              : `${xPos}px`;
-          tip.style.top = yPos < o.margin.top ? `${my + 10}px` : `${yPos}px`;
-          const contentEl = tip.querySelector(".tooltip-content");
-          if (contentEl) {
-            // Sanitize the consumer's tooltipFormatter HTML before injecting it
-            // (the SVG renderer does the same — see useLineChartPathsShapesRendering).
-            contentEl.innerHTML = DOMPurify.sanitize(
-              o.tooltipFormatter(
-                { ...hitPoint, label: hitItem.label } as DataPoint,
-                hitItem.series,
-                o.fullData
-              )
-            );
-          }
-        }
+    // Position + fill the HTML tooltip for a hit at pixel (mx, my).
+    const showTooltip = (mx: number, my: number, item: LineChartDataItem, point: DataPoint) => {
+      const o = optsRef.current;
+      const tip = o.tooltipRef.current;
+      if (!tip) return;
+      tip.style.visibility = "visible";
+      const tipRect = tip.getBoundingClientRect();
+      const svgRect = svg.getBoundingClientRect();
+      const xPos = mx + 10;
+      const yPos = my - 25;
+      tip.style.left =
+        xPos + tipRect.width > svgRect.width - o.margin.right
+          ? `${mx - tipRect.width - 10}px`
+          : `${xPos}px`;
+      tip.style.top = yPos < o.margin.top ? `${my + 10}px` : `${yPos}px`;
+      const contentEl = tip.querySelector(".tooltip-content");
+      if (contentEl) {
+        // Sanitize the consumer's tooltipFormatter HTML before injecting it
+        // (the SVG renderer does the same — see useLineChartPathsShapesRendering).
+        contentEl.innerHTML = DOMPurify.sanitize(
+          o.tooltipFormatter({ ...point, label: item.label } as DataPoint, item.series, o.fullData)
+        );
+      }
+    };
+
+    const handleMove = (event: MouseEvent) => {
+      // A pinned tooltip is not moved or dismissed by the pointer.
+      if (isStickyRef.current) return;
+      const [mx, my] = pointer(event, svg);
+      const hit = hitTest(mx, my);
+      if (hit) {
+        setHovered(hit.item.label);
+        showTooltip(mx, my, hit.item, hit.point);
       } else if (hoveredRef.current) {
-        hoveredRef.current = null;
-        redraw();
-        o.onHighlightItem?.([]);
+        setHovered(null);
         hideTooltip();
       }
     };
 
     const handleLeave = () => {
-      if (hoveredRef.current) {
-        hoveredRef.current = null;
-        redraw();
-        optsRef.current.onHighlightItem?.([]);
+      // A pinned tooltip survives the cursor leaving the chart.
+      if (isStickyRef.current) return;
+      setHovered(null);
+      hideTooltip();
+    };
+
+    // Click on a line pins the tooltip there; click on empty chart area unpins.
+    const handleClick = (event: MouseEvent) => {
+      const [mx, my] = pointer(event, svg);
+      const hit = hitTest(mx, my);
+      if (hit) {
+        isStickyRef.current = true;
+        setIsSticky(true);
+        setHovered(hit.item.label);
+        showTooltip(mx, my, hit.item, hit.point);
+      } else {
+        isStickyRef.current = false;
+        setIsSticky(false);
+        setHovered(null);
+        hideTooltip();
       }
+    };
+
+    // A click anywhere outside the chart and the tooltip unpins it.
+    const handleDocClick = (event: MouseEvent) => {
+      if (!isStickyRef.current) return;
+      const target = event.target as Node | null;
+      const tip = optsRef.current.tooltipRef.current;
+      if (target && (svg.contains(target) || (tip && tip.contains(target)))) return;
+      isStickyRef.current = false;
+      setIsSticky(false);
+      setHovered(null);
       hideTooltip();
     };
 
     svg.addEventListener("mousemove", handleMove);
     svg.addEventListener("mouseleave", handleLeave);
+    svg.addEventListener("click", handleClick);
+    document.addEventListener("click", handleDocClick);
     return () => {
       svg.removeEventListener("mousemove", handleMove);
       svg.removeEventListener("mouseleave", handleLeave);
+      svg.removeEventListener("click", handleClick);
+      document.removeEventListener("click", handleDocClick);
     };
   }, [enabled, svgRef]);
+
+  return { isSticky };
 };
 
 export default useLineChartCanvasRendering;

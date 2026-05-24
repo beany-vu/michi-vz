@@ -1,577 +1,270 @@
-import React, { useState, useCallback } from "react";
+import React from "react";
 import ScatterPlot from "../src/components/ScatterPlotChart";
-import { Meta, StoryFn } from "@storybook/react";
+import { Meta } from "@storybook/react";
 import { fn } from "@storybook/test";
 
-interface ScatterPlotChartProps {
-  dataSet: Array<{
-    x: number;
-    y: number;
-    label: string;
-    color?: string;
-    d: number;
-    meta?: never;
-    shape?: "square" | "circle" | "triangle";
-    date?: string;
-  }>;
-  width: number;
-  height: number;
-  margin: { top: number; right: number; bottom: number; left: number };
-  title: string;
-  children?: React.ReactNode;
-  isLoading?: boolean;
-  isLoadingComponent?: React.ReactNode;
-  isNodataComponent?: React.ReactNode;
-  isNodata?: boolean | ((dataSet: any[]) => boolean);
-  xAxisFormat?: (d: number | string) => string;
-  yAxisFormat?: (d: number | string) => string;
-  yTicksQty?: number;
-  xAxisDataType?: "number" | "date_annual" | "date_monthly" | "band";
-  tooltipFormatter?: (d: any) => string;
-  showGrid?: { x: boolean; y: boolean };
-  xAxisDomain?: [any, any];
-  yAxisDomain?: [any, any];
-  dScaleLegend?: {
-    title?: string;
-    valueFormatter?: (d: number) => string;
-  };
-  dScaleLegendFormatter?: (domain: number[], dScale: any) => string;
-  filter?: {
-    limit: number;
-    criteria: "x" | "y" | "d";
-    sortingDir: "asc" | "desc";
-    date?: string;
-  };
-  onChartDataProcessed?: (metadata: any) => void;
-  onHighlightItem?: (labels: string[]) => void;
-  colors?: string[];
-  colorsMapping?: { [key: string]: string };
-  onColorMappingGenerated?: (colorsMapping: { [key: string]: string }) => void;
-}
+// Storybook stories for the ScatterPlotChart component — a lean, analyst-curated
+// set. Each story demonstrates a real analytical use: spotting a correlation,
+// encoding a third metric as bubble size, or surfacing clusters and outliers.
+
+// --- Shared data ------------------------------------------------------------
+
+// Country-level development indicators (2021, World Bank / UN figures, rounded).
+// x = GDP per capita ($k PPP), y = life expectancy (years), d = population (millions).
+// A classic two-metric correlation with population as the bubble dimension.
+const countryDevelopment = [
+  { date: "2021", x: 69.3, y: 76.3, d: 332, label: "United States", color: "#1F77B4" },
+  { date: "2021", x: 17.6, y: 78.2, d: 1412, label: "China", color: "#D62728" },
+  { date: "2021", x: 7.2, y: 67.2, d: 1408, label: "India", color: "#FF7F0E" },
+  { date: "2021", x: 54.0, y: 81.0, d: 83, label: "Germany", color: "#2CA02C" },
+  { date: "2021", x: 42.9, y: 84.5, d: 125, label: "Japan", color: "#9467BD" },
+  { date: "2021", x: 14.9, y: 72.8, d: 214, label: "Brazil", color: "#8C564B" },
+  { date: "2021", x: 27.9, y: 70.1, d: 144, label: "Russia", color: "#E377C2" },
+  { date: "2021", x: 13.0, y: 66.1, d: 213, label: "Nigeria", color: "#BCBD22" },
+  { date: "2021", x: 49.0, y: 83.0, d: 26, label: "Australia", color: "#17BECF" },
+  { date: "2021", x: 5.5, y: 64.1, d: 109, label: "Ethiopia", color: "#7F7F7F" },
+];
+
+// Mid-range SUV models (2023 US market). x = starting price ($k), y = owner
+// satisfaction (0-100), d = annual units sold (thousands). Shows price/quality
+// trade-off with sales volume as the third dimension.
+const suvModels = [
+  { x: 28.6, y: 82, d: 351, label: "Toyota RAV4", color: "#1F77B4" },
+  { x: 28.4, y: 79, d: 393, label: "Honda CR-V", color: "#FF7F0E" },
+  { x: 27.5, y: 71, d: 196, label: "Ford Escape", color: "#2CA02C" },
+  { x: 26.6, y: 68, d: 152, label: "Chevrolet Equinox", color: "#D62728" },
+  { x: 31.2, y: 88, d: 124, label: "Subaru Outback", color: "#9467BD" },
+  { x: 45.9, y: 91, d: 87, label: "BMW X3", color: "#8C564B" },
+  { x: 44.5, y: 86, d: 78, label: "Audi Q5", color: "#E377C2" },
+  { x: 27.0, y: 65, d: 110, label: "Nissan Rogue", color: "#BCBD22" },
+];
+
+// Sales reps positioned by deal activity. x = deals closed, y = avg deal size
+// ($k), d = total revenue ($k). Two natural clusters: high-volume/low-value
+// "transactional" reps vs low-volume/high-value "enterprise" reps.
+const salesReps = [
+  { x: 62, y: 4.1, d: 254, label: "Transactional — Rivera", shape: "circle" as const },
+  { x: 58, y: 3.8, d: 220, label: "Transactional — Okafor", shape: "circle" as const },
+  { x: 71, y: 4.5, d: 320, label: "Transactional — Lindqvist", shape: "circle" as const },
+  { x: 66, y: 3.5, d: 231, label: "Transactional — Tanaka", shape: "circle" as const },
+  { x: 9, y: 47.0, d: 423, label: "Enterprise — Adeyemi", shape: "square" as const },
+  { x: 12, y: 39.5, d: 474, label: "Enterprise — Novak", shape: "square" as const },
+  { x: 7, y: 52.0, d: 364, label: "Enterprise — Costa", shape: "square" as const },
+  { x: 11, y: 44.0, d: 484, label: "Enterprise — Haddad", shape: "square" as const },
+  { x: 38, y: 12.0, d: 456, label: "Outlier — Bergström", shape: "triangle" as const },
+];
+
+// --- Common props -----------------------------------------------------------
+
+// Repeated args shared by the args-based stories.
+const commonProps = {
+  width: 900,
+  height: 500,
+  margin: { top: 50, right: 60, bottom: 60, left: 70 },
+  xAxisDataType: "number" as const,
+  onChartDataProcessed: fn(),
+  onHighlightItem: fn(),
+  onColorMappingGenerated: fn(),
+};
 
 export default {
   title: "Charts/Scatter Plot",
   component: ScatterPlot,
   tags: ["autodocs"],
-  argTypes: {},
-} as Meta;
-
-const Template: StoryFn<ScatterPlotChartProps> = (args: ScatterPlotChartProps) => {
-  const [highlightItems, setHighlightItems] = useState<string[]>([]);
-  const [disabledItems, setDisabledItems] = useState<string[]>([]);
-  const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>({});
-
-  const handleHighlightItem = useCallback((labels: string[]) => {
-    setHighlightItems(labels);
-  }, []);
-
-  const handleColorMappingGenerated = useCallback((mapping: { [key: string]: string }) => {
-    setColorsMapping(prev => {
-      // Only update if mapping actually changed
-      if (JSON.stringify(prev) !== JSON.stringify(mapping)) {
-        return mapping;
-      }
-      return prev;
-    });
-  }, []);
-
-  const toggleDisabledItem = useCallback((label: string) => {
-    setDisabledItems(prev => {
-      const newDisabled = prev.includes(label)
-        ? prev.filter(item => item !== label)
-        : [...prev, label];
-      return newDisabled;
-    });
-  }, []);
-
-  return (
-    <div style={{ padding: "20px" }}>
-      <div style={{ marginBottom: "20px" }}>
-        <h3>Interactive Controls</h3>
-        <div style={{ marginBottom: "10px" }}>
-          <strong>Current Highlighted Items:</strong>{" "}
-          {highlightItems.length > 0 ? highlightItems.join(", ") : "None"}
-        </div>
-        <div style={{ marginBottom: "10px" }}>
-          <strong>Current Disabled Items:</strong>{" "}
-          {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}
-        </div>
-        <div style={{ marginBottom: "10px" }}>
-          <strong>Generated Colors:</strong>{" "}
-          {Object.keys(colorsMapping).length > 0 ? JSON.stringify(colorsMapping) : "None yet"}
-        </div>
-        <div style={{ marginBottom: "10px" }}>
-          <strong>Instructions:</strong>
-          <ul>
-            <li>Hover over scatter plot points to highlight items</li>
-            <li>Click on legend items below to disable/enable data points</li>
-          </ul>
-        </div>
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          {args.dataSet?.map(dataPoint => (
-            <button
-              key={dataPoint.label}
-              onClick={() => toggleDisabledItem(dataPoint.label)}
-              style={{
-                padding: "8px 16px",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                backgroundColor: disabledItems.includes(dataPoint.label)
-                  ? "#f0f0f0"
-                  : colorsMapping[dataPoint.label] || "#fff",
-                color: disabledItems.includes(dataPoint.label) ? "#999" : "#000",
-                cursor: "pointer",
-                textDecoration: disabledItems.includes(dataPoint.label) ? "line-through" : "none",
-              }}
-            >
-              {dataPoint.label} {disabledItems.includes(dataPoint.label) ? "(Disabled)" : ""}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <ScatterPlot
-        {...args}
-        colorsMapping={colorsMapping}
-        onColorMappingGenerated={handleColorMappingGenerated}
-        onHighlightItem={handleHighlightItem}
-        highlightItems={highlightItems}
-        disabledItems={disabledItems}
-      />
-    </div>
-  );
-};
-
-export const Primary = Template.bind({});
-Primary.args = {
-  onChartDataProcessed: fn(),
-  width: 900,
-  height: 400,
-  margin: {
-    top: 50,
-    right: 50,
-    bottom: 50,
-    left: 50,
-  },
-  yAxisDomain: [0, 25],
-  xAxisFormat: d => `${d}%`,
-  xAxisDataType: "number",
-  yAxisFormat: d => `${d}%`,
-  title: "My Scatter Plot",
-  filter: {
-    limit: 5,
-    date: "202009",
-    sortingDir: "desc",
-    criteria: "d",
-  },
-  dataSet: [
-    {
-      date: "202009",
-      sector: "10",
-      x: 70,
-      y: 20.5,
-      d: 3860,
-      label: "Beauty products & perfumes",
-      color: "#1F77B4",
-      code: 123,
-    },
-    {
-      date: "202009",
-      sector: "22",
-      x: 64.28571,
-      y: 8.035714,
-      d: 1320,
-      label: "Unknown",
-      color: "#17BECF",
-    },
-    {
-      date: "202009",
-      sector: "30",
-      x: 90.90909,
-      y: 37.585,
-      d: 5330,
-      label: "Ferrous metals",
-      color: "#FF7F0E",
-    },
-    {
-      date: "202009",
-      sector: "48",
-      x: 4.761905,
-      y: 12.4569,
-      d: 2240,
-      label: "Machinery",
-      color: "#D62728",
-    },
-    {
-      date: "202009",
-      sector: "62",
-      x: 4,
-      y: 12.4569,
-      d: 3270,
-      label: "Motor vehicles & parts",
-      color: "#9467BD",
-    },
-    {
-      date: "202009",
-      sector: "68",
-      x: 87.5,
-      y: 13.33333,
-      d: 2420,
-      label: "Paper products",
-      color: "#8C564B",
-    },
-    {
-      date: "202009",
-      sector: "70",
-      x: 2.941176,
-      y: 0.5,
-      d: 1480,
-      label: "Pharmaceutical components",
-      color: "#E377C2",
-    },
-    {
-      date: "202009",
-      sector: "71",
-      x: 78.04878,
-      y: 9.939024,
-      d: 2780,
-      label: "Plastics & rubber",
-      color: "#7F7F7F",
-    },
-    {
-      date: "202009",
-      sector: "92",
-      x: 10,
-      y: 25,
-      d: 10200,
-      label: "Tobacco & tobacco products",
-      color: "#BCBD22",
-    },
-    {
-      date: "202009",
-      sector: "99",
-      x: 5,
-      y: 3.240741,
-      d: 904,
-      label: "Waste, n.e.s.",
-      color: "#2CA02C",
-    },
-    {
-      date: "202009",
-      sector: "101",
-      x: 0,
-      y: 10,
-      d: 206,
-      label: "Wood & vegetable material",
-      color: "#0CF823",
-    },
-  ],
-};
-
-// Generate comprehensive dataset for legend testing
-const generateLargeScatterDataset = () => {
-  const industries = [
-    "Technology",
-    "Healthcare",
-    "Finance",
-    "Manufacturing",
-    "Retail",
-    "Energy",
-    "Education",
-    "Transportation",
-    "Real Estate",
-    "Agriculture",
-    "Aerospace",
-    "Automotive",
-    "Telecommunications",
-    "Construction",
-    "Entertainment",
-    "Food & Beverage",
-    "Chemicals",
-    "Pharmaceuticals",
-    "Banking",
-    "Insurance",
-    "Consulting",
-    "Media",
-    "Tourism",
-    "Mining",
-    "Textile",
-    "Electronics",
-    "Software",
-    "Biotechnology",
-    "Renewable Energy",
-    "Logistics",
-    "Gaming",
-    "Sports",
-    "Fashion",
-    "Furniture",
-    "Jewelry",
-    "Cosmetics",
-    "Publishing",
-    "Photography",
-    "Architecture",
-    "Legal Services",
-    "Accounting",
-    "Marketing",
-    "HR Services",
-    "Security",
-    "Cleaning",
-    "Catering",
-    "Event Management",
-    "Translation",
-    "Fitness",
-    "Beauty",
-  ];
-
-  const dates = ["2020", "2021", "2022", "2023"];
-
-  return industries.map((industry, index) => ({
-    x: Math.random() * 100, // Market Share %
-    y: Math.random() * 50, // Growth Rate %
-    d: Math.random() * 10000 + 1000, // Market Size
-    label: industry,
-    date: dates[index % dates.length],
-    shape: ["circle", "square", "triangle"][index % 3] as "circle" | "square" | "triangle",
-  }));
-};
-
-export const LegendWithFilterControls = {
-  render: (args: any) => {
-    const [filter, setFilter] = useState({
-      limit: 15,
-      criteria: "d" as "x" | "y" | "d",
-      sortingDir: "desc" as "asc" | "desc",
-      date: "2023",
-    });
-    const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>({});
-    const [legendData, setLegendData] = useState<any[]>([]);
-    const [originalLegendOrder, setOriginalLegendOrder] = useState<any[]>([]);
-    const [disabledItems, setDisabledItems] = useState<string[]>([]);
-
-    const handleChartDataProcessed = useCallback(
-      (metadata: any) => {
-        if (metadata.legendData) {
-          setLegendData(metadata.legendData);
-
-          // Store original legend order when first loaded or when no items are disabled
-          if (disabledItems.length === 0) {
-            setOriginalLegendOrder(metadata.legendData);
-          }
-        }
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "**ScatterPlotChart** plots one record per point in x/y space, making it the go-to chart for revealing the *relationship between two metrics* — correlation, clustering, and outliers. " +
+          "Each datum needs `x` and `y`; an optional `d` value drives **bubble size** so you can layer in a third dimension, and an optional per-point `shape` (circle / square / triangle) encodes a category. " +
+          "Points may carry their own `color`, or colours are auto-generated per `label`. An optional `date` field enables the `filter` prop (e.g. keep the top N by a criterion). " +
+          "Reach for it when you want to ask *\"does X move with Y, and where do the exceptions sit?\"* rather than tracking a value over time.",
       },
-      [disabledItems.length]
-    );
-
-    const handleColorMappingGenerated = useCallback((colors: { [key: string]: string }) => {
-      setColorsMapping(colors);
-    }, []);
-
-    const toggleItemDisabled = useCallback((label: string) => {
-      setDisabledItems(prev =>
-        prev.includes(label) ? prev.filter(item => item !== label) : [...prev, label]
-      );
-    }, []);
-
-    return (
-      <div>
-        <div
-          style={{
-            marginBottom: "20px",
-            padding: "10px",
-            border: "1px solid #ddd",
-            borderRadius: "4px",
-          }}
-        >
-          <h3>🎨 Legend-Based Color Assignment Test</h3>
-          <p>
-            This story tests the new legend-based color assignment approach for ScatterPlotChart.
-          </p>
-
-          <div
-            style={{
-              display: "flex",
-              gap: "20px",
-              marginBottom: "15px",
-              alignItems: "center",
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <label style={{ marginRight: "5px" }}>Sort By:</label>
-              <select
-                value={filter.criteria}
-                onChange={e =>
-                  setFilter(prev => ({ ...prev, criteria: e.target.value as "x" | "y" | "d" }))
-                }
-                style={{ padding: "4px" }}
-              >
-                <option value="x">Market Share (X)</option>
-                <option value="y">Growth Rate (Y)</option>
-                <option value="d">Market Size (D)</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ marginRight: "5px" }}>Direction:</label>
-              <select
-                value={filter.sortingDir}
-                onChange={e =>
-                  setFilter(prev => ({ ...prev, sortingDir: e.target.value as "asc" | "desc" }))
-                }
-                style={{ padding: "4px" }}
-              >
-                <option value="desc">Highest First</option>
-                <option value="asc">Lowest First</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ marginRight: "5px" }}>Date Filter:</label>
-              <select
-                value={filter.date}
-                onChange={e => setFilter(prev => ({ ...prev, date: e.target.value }))}
-                style={{ padding: "4px" }}
-              >
-                <option value="2020">2020</option>
-                <option value="2021">2021</option>
-                <option value="2022">2022</option>
-                <option value="2023">2023</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ marginRight: "5px" }}>Limit:</label>
-              <select
-                value={filter.limit}
-                onChange={e => setFilter(prev => ({ ...prev, limit: parseInt(e.target.value) }))}
-                style={{ padding: "4px" }}
-              >
-                <option value={10}>Top 10</option>
-                <option value={15}>Top 15</option>
-                <option value={25}>Top 25</option>
-                <option value={50}>All 50</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: "10px", marginBottom: "10px", flexWrap: "wrap" }}>
-            <button
-              onClick={() =>
-                setFilter({ limit: 10, criteria: "d", sortingDir: "desc", date: "2023" })
-              }
-            >
-              💰 Market Size: High→Low (10)
-            </button>
-            <button
-              onClick={() =>
-                setFilter({ limit: 15, criteria: "y", sortingDir: "desc", date: "2022" })
-              }
-            >
-              📈 Growth: High→Low (15)
-            </button>
-            <button
-              onClick={() =>
-                setFilter({ limit: 25, criteria: "x", sortingDir: "asc", date: "2021" })
-              }
-            >
-              📊 Market Share: Low→High (25)
-            </button>
-            <button
-              onClick={() =>
-                setFilter({ limit: 50, criteria: "d", sortingDir: "desc", date: "2020" })
-              }
-            >
-              🔄 All 2020: Size High→Low
-            </button>
-          </div>
-
-          <div style={{ marginTop: "15px" }}>
-            <strong>Legend Data (First 10 items):</strong>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-                gap: "5px",
-                marginTop: "5px",
-                maxHeight: "120px",
-                overflowY: "auto",
-              }}
-            >
-              {(originalLegendOrder.length > 0 ? originalLegendOrder : legendData)
-                .slice(0, 10)
-                .map((originalItem, index) => {
-                  // Find current status from legendData
-                  const currentItem = legendData.find(item => item.label === originalItem.label);
-                  const displayItem = currentItem || originalItem;
-
-                  return (
-                    <div
-                      key={displayItem.label}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        padding: "2px 5px",
-                        fontSize: "12px",
-                        cursor: "pointer",
-                        backgroundColor: disabledItems.includes(displayItem.label)
-                          ? "#f5f5f5"
-                          : "transparent",
-                        textDecoration: disabledItems.includes(displayItem.label)
-                          ? "line-through"
-                          : "none",
-                      }}
-                      onClick={() => toggleItemDisabled(displayItem.label)}
-                    >
-                      <div
-                        style={{
-                          width: "12px",
-                          height: "12px",
-                          backgroundColor: originalItem.color,
-                          marginRight: "5px",
-                          border: "1px solid #ccc",
-                        }}
-                      />
-                      <span>
-                        #{originalItem.order + 1} {displayItem.label}
-                      </span>
-                    </div>
-                  );
-                })}
-            </div>
-            {legendData.length > 10 && (
-              <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
-                ... and {legendData.length - 10} more items
-              </p>
-            )}
-          </div>
-        </div>
-
-        <ScatterPlot
-          {...args}
-          filter={filter}
-          colorsMapping={colorsMapping}
-          disabledItems={disabledItems}
-          onChartDataProcessed={handleChartDataProcessed}
-          onColorMappingGenerated={handleColorMappingGenerated}
-        />
-      </div>
-    );
+    },
   },
   args: {
-    dataSet: generateLargeScatterDataset(),
-    width: 900,
-    height: 600,
-    margin: { top: 50, right: 50, bottom: 80, left: 80 },
-    title: "ScatterPlotChart - Legend-Based Color Assignment Test",
-    xAxisFormat: (d: any) => `${d.toFixed(1)}%`,
-    yAxisFormat: (d: any) => `${d.toFixed(1)}%`,
-    xAxisDataType: "number",
-    yAxisDomain: [0, 50],
-    tooltipFormatter: (d: any) => `${d.label}: Market Share ${d.x}%, Growth ${d.y}%, Size $${d.d}M`,
+    onChartDataProcessed: fn(),
+    onHighlightItem: fn(),
+    onColorMappingGenerated: fn(),
+  },
+} as Meta;
+
+// --- Stories ----------------------------------------------------------------
+
+// Primary showcase: the classic wealth-vs-health correlation with population
+// encoded as bubble size — the canonical "why you'd use a bubble plot" example.
+export const WealthVsHealth = {
+  args: {
+    ...commonProps,
+    dataSet: countryDevelopment,
+    title: "GDP per Capita vs Life Expectancy (2021)",
+    xAxisFormat: (d: number | string) => `$${d}k`,
+    yAxisFormat: (d: number | string) => `${d} yrs`,
+    yAxisDomain: [60, 88] as [number, number],
     showGrid: { x: true, y: true },
     dScaleLegend: {
-      title: "Market Size ($M)",
-      valueFormatter: (d: number) => `$${(d / 1000).toFixed(1)}B`,
+      title: "Population",
+      valueFormatter: (d: number) => `${Math.round(d)}M`,
+    },
+    tooltipFormatter: (d: { label: string; x: number; y: number; d: number }) =>
+      `<strong>${d.label}</strong><br/>GDP/capita: $${d.x}k · Life exp: ${d.y} yrs<br/>Population: ${d.d}M`,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "The canonical bubble-plot question: richer countries live longer. Wealth (x) and life expectancy (y) rise together along a clear curve, while bubble size (`d`) shows population — note how India and China are huge bubbles sitting low on the income axis, and Japan is the longevity outlier above the trend.",
+      },
+    },
+  },
+};
+
+// Price-vs-quality trade-off with sales volume as bubble size.
+export const PriceVsSatisfaction = {
+  args: {
+    ...commonProps,
+    dataSet: suvModels,
+    title: "SUV Price vs Owner Satisfaction (2023 US market)",
+    xAxisFormat: (d: number | string) => `$${d}k`,
+    yAxisFormat: (d: number | string) => `${d}/100`,
+    yAxisDomain: [60, 95] as [number, number],
+    showGrid: { x: true, y: true },
+    dScaleLegend: {
+      title: "Units sold",
+      valueFormatter: (d: number) => `${Math.round(d)}k`,
+    },
+    tooltipFormatter: (d: { label: string; x: number; y: number; d: number }) =>
+      `<strong>${d.label}</strong><br/>Price: $${d.x}k · Satisfaction: ${d.y}/100<br/>Units sold: ${d.d}k`,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Spot the price-quality trade-off: satisfaction climbs with price toward the premium German models in the top-right. But bubble size (`d`, units sold) tells the commercial story — the best-sellers cluster in the affordable, high-satisfaction sweet spot, while pricier badges trade volume for ratings.",
+      },
+    },
+  },
+};
+
+// Per-point shapes encode a category, revealing two distinct clusters.
+export const ClustersAndOutlier = {
+  args: {
+    ...commonProps,
+    dataSet: salesReps,
+    title: "Sales Reps — Deal Volume vs Deal Size",
+    xAxisFormat: (d: number | string) => `${d}`,
+    yAxisFormat: (d: number | string) => `$${d}k`,
+    showGrid: { x: true, y: true },
+    dScaleLegend: {
+      title: "Total revenue",
+      valueFormatter: (d: number) => `$${Math.round(d)}k`,
+    },
+    tooltipFormatter: (d: { label: string; x: number; y: number; d: number }) =>
+      `<strong>${d.label}</strong><br/>Deals closed: ${d.x} · Avg size: $${d.y}k<br/>Total revenue: $${d.d}k`,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Two sales strategies separate into clear clusters: high-volume / low-value 'transactional' reps (circles, bottom-right) and low-volume / high-value 'enterprise' reps (squares, top-left). The triangle is the outlier — a balanced rep whose large bubble (`d`, total revenue) shows the hybrid approach can out-earn either cluster.",
+      },
+    },
+  },
+};
+
+// Custom size legend rendered via dScaleLegendFormatter.
+export const CustomSizeLegend = {
+  args: {
+    ...commonProps,
+    dataSet: countryDevelopment,
+    title: "GDP per Capita vs Life Expectancy — Custom Size Legend",
+    xAxisFormat: (d: number | string) => `$${d}k`,
+    yAxisFormat: (d: number | string) => `${d} yrs`,
+    yAxisDomain: [60, 88] as [number, number],
+    showGrid: { x: true, y: true },
+    tooltipFormatter: (d: { label: string; x: number; y: number; d: number }) =>
+      `<strong>${d.label}</strong><br/>GDP/capita: $${d.x}k · Life exp: ${d.y} yrs<br/>Population: ${d.d}M`,
+    dScaleLegendFormatter: (domain: number[]) => (
+      <text x={680} y={70} fontSize={12} fill="#444">
+        {`Bubble = population: ${Math.round(domain[0])}M – ${Math.round(domain[1])}M`}
+      </text>
+    ),
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Same wealth-vs-health data, but the bubble-size key is drawn by your own code: `dScaleLegendFormatter` receives the `d` domain and returns custom SVG, so the legend can match a house style or explain the encoding in plain words.",
+      },
+    },
+  },
+};
+
+// Parity check: SVG vs Canvas renderer on the same dataset.
+export const RendererComparison = {
+  render: (args: Record<string, unknown>) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div>
+        <h4 style={{ font: "600 13px/1 sans-serif", margin: "0 0 8px" }}>renderer=&quot;svg&quot;</h4>
+        <ScatterPlot {...(args as any)} renderer="svg" />
+      </div>
+      <div>
+        <h4 style={{ font: "600 13px/1 sans-serif", margin: "0 0 8px" }}>
+          renderer=&quot;canvas&quot;
+        </h4>
+        <ScatterPlot {...(args as any)} renderer="canvas" />
+      </div>
+    </div>
+  ),
+  args: {
+    ...commonProps,
+    dataSet: countryDevelopment,
+    title: "GDP per Capita vs Life Expectancy (2021)",
+    xAxisFormat: (d: number | string) => `$${d}k`,
+    yAxisFormat: (d: number | string) => `${d} yrs`,
+    yAxisDomain: [60, 88] as [number, number],
+    showGrid: { x: true, y: true },
+    dScaleLegend: {
+      title: "Population",
+      valueFormatter: (d: number) => `${Math.round(d)}M`,
+    },
+    tooltipFormatter: (d: { label: string; x: number; y: number; d: number }) =>
+      `<strong>${d.label}</strong><br/>GDP/capita: $${d.x}k · Life exp: ${d.y} yrs<br/>Population: ${d.d}M`,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Parity check for the opt-in Canvas 2D renderer. The exact same dataset is rendered twice — once with `renderer=\"svg\"` (one DOM node per point) and once with `renderer=\"canvas\"` (every point painted onto a single `<canvas>`). The two should be visually identical: same point positions, shapes, sizes, colours, bubble-size legend, axes and hover/click tooltip behaviour. Canvas mode is the recommended choice for large point clouds where the per-point DOM node count makes the SVG renderer janky.",
+      },
+    },
+  },
+};
+
+// Filtering a larger set down to the points worth comparing.
+export const TopByPopulation = {
+  args: {
+    ...commonProps,
+    dataSet: countryDevelopment,
+    title: "Five Most Populous Countries — Wealth vs Health",
+    xAxisFormat: (d: number | string) => `$${d}k`,
+    yAxisFormat: (d: number | string) => `${d} yrs`,
+    yAxisDomain: [60, 88] as [number, number],
+    showGrid: { x: true, y: true },
+    dScaleLegend: {
+      title: "Population",
+      valueFormatter: (d: number) => `${Math.round(d)}M`,
+    },
+    tooltipFormatter: (d: { label: string; x: number; y: number; d: number }) =>
+      `<strong>${d.label}</strong><br/>GDP/capita: $${d.x}k · Life exp: ${d.y} yrs<br/>Population: ${d.d}M`,
+    filter: { limit: 5, date: "2021", criteria: "d" as const, sortingDir: "desc" as const },
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "The `filter` prop trims the field to what matters: here, the five most populous countries by `d` (population) for 2021. Use it to keep a busy plot legible — the spread between low-income, high-population India and the wealthier, longer-lived US/Japan stands out once the smaller economies drop away.",
+      },
     },
   },
 };

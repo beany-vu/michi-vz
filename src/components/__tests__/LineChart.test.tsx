@@ -141,4 +141,55 @@ describe("LineChart", () => {
     // This check might need adjusting based on your tooltip implementation
     expect(tooltipContainer).toBeDefined();
   });
+
+  // Regression: in canvas mode the Canvas renderer owns the whole tooltip
+  // lifecycle, including click-to-pin. The SVG renderer's 400ms grace-hide
+  // timer must NOT run there — its hide callback only consults the SVG
+  // renderer's sticky flag, so it would hide a canvas-pinned tooltip ~400ms
+  // after the cursor merely crossed the tooltip.
+  test("canvas renderer: SVG grace timer does not hide the tooltip", async () => {
+    const { container } = customRender(
+      <LineChart
+        dataSet={transformedData}
+        {...defaultChartProps}
+        xAxisDataType="date_annual"
+        renderer="canvas"
+        onHighlightItem={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(container.querySelector(".tooltip")).toBeInTheDocument());
+    const tooltip = container.querySelector(".tooltip") as HTMLElement;
+
+    // Tooltip shown, then the cursor leaves it (as a real mouse does — the
+    // tooltip sits only a few px from the cursor and is crossed constantly).
+    tooltip.style.visibility = "visible";
+    tooltip.dispatchEvent(new MouseEvent("mouseleave"));
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    expect(tooltip.style.visibility).toBe("visible");
+  });
+
+  // Contrast case: proves the test above is meaningful — in svg mode the same
+  // grace timer IS active and does hide the tooltip after mouseleave.
+  test("svg renderer: grace timer hides the tooltip on mouseleave", async () => {
+    const { container } = customRender(
+      <LineChart
+        dataSet={transformedData}
+        {...defaultChartProps}
+        xAxisDataType="date_annual"
+        renderer="svg"
+        onHighlightItem={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(container.querySelector(".tooltip")).toBeInTheDocument());
+    const tooltip = container.querySelector(".tooltip") as HTMLElement;
+
+    tooltip.style.visibility = "visible";
+    tooltip.dispatchEvent(new MouseEvent("mouseleave"));
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    expect(tooltip.style.visibility).toBe("hidden");
+  });
 });

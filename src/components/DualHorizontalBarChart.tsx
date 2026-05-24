@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 
 import isEqual from "lodash/isEqual";
 import { useChartContext } from "../components/MichiVzProvider";
 import Title from "../components/shared/Title";
+import MichiVzCredit from "./shared/MichiVzCredit";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import XaxisLinear from "./shared/XaxisLinear";
@@ -80,7 +81,7 @@ interface LineChartProps {
    *
    * Default `false` preserves backward-compatible behaviour.
    */
-  skipColorMappingDispatch?: boolean;
+  skipColorMappingDispatch?: boolean;
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
@@ -395,6 +396,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
           onHighlightItem([]);
         }}
       >
+        <MichiVzCredit />
         {children}
         <Title x={width / 2} y={margin.top / 2}>
           {title}

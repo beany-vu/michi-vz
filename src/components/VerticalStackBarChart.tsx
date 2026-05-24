@@ -11,6 +11,8 @@ import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import { LegendItem } from "../types/data";
 import TooltipHint from "src/components/shared/TooltipHint";
 import { DEFAULT_COLORS } from "./shared/colors";
+import MichiVzCredit from "./shared/MichiVzCredit";
+import useVerticalStackBarChartCanvasRendering from "./hooks/verticalStackBarChart/useVerticalStackBarChartCanvasRendering";
 
 function getColor(mappedColor?: string, dataColor?: string): string {
   const FALLBACK_COLOR = "rgba(253, 253, 253, 0.5)";
@@ -72,6 +74,15 @@ interface Props {
   isNodataComponent?: React.ReactNode;
   isNodata?: boolean | ((dataSet: DataSet[]) => boolean);
   colorCallbackFn?: (key: string, d: RectData) => string;
+  /**
+   * Minimum drawn width (px) for each bar. When the dataset is dense the band
+   * scale shrinks each bar; without a floor they become sub-pixel and vanish
+   * (worst on the Canvas renderer). The bar width is clamped to at least this
+   * value — when that exceeds the available band, bars overlap rather than
+   * disappear. Default `1` keeps every bar visible with negligible effect on
+   * non-dense charts.
+   */
+  minBarWidth?: number;
   // New: filter prop for sorting entire DataSet based on total value
   filter?: {
     limit: number;
@@ -107,12 +118,20 @@ interface Props {
    *
    * Default `false` preserves backward-compatible behaviour.
    */
-  skipColorMappingDispatch?: boolean;
+  skipColorMappingDispatch?: boolean;
   // Callback to notify parent about legend data changes
   onLegendDataChange?: (legendData: LegendItem[]) => void;
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
+  /**
+   * Rendering backend for the stacked bars.
+   *  - "svg" (default): the original SVG/D3 rendering, unchanged.
+   *  - "canvas": draw the stacked bars + series labels onto a <canvas>, for
+   *    large datasets (many dates × series × keys). Axes, title and the
+   *    tooltip are unchanged in both modes.
+   */
+  renderer?: "svg" | "canvas";
 }
 
 export interface RectData {
@@ -156,6 +175,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   isNodataComponent,
   isNodata,
   colorCallbackFn,
+  minBarWidth = 1,
   filter,
   onChartDataProcessed,
   onHighlightItem,
@@ -166,8 +186,10 @@ const VerticalStackBarChart: React.FC<Props> = ({
   onLegendDataChange,
   highlightItems = [],
   disabledItems = [],
+  renderer = "svg",
 }) => {
   const chartRef = useRef<SVGSVGElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const tooltipContentRef = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
@@ -377,7 +399,9 @@ const VerticalStackBarChart: React.FC<Props> = ({
                 const rectData = {
                   key,
                   height: itemHeight,
-                  width: groupWidth - 4,
+                  // Clamp to `minBarWidth` so dense datasets (tiny band width)
+                  // don't shrink bars to sub-pixel and make them disappear.
+                  width: Math.max(groupWidth - 4, minBarWidth),
                   y: yScale(y1),
                   x:
                     xScale(String(yearData.date)) +
@@ -401,7 +425,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
       return stackedData;
     },
-    [effectiveKeys, disabledItems, xScale, yScale, generatedColorsMapping]
+    [effectiveKeys, disabledItems, xScale, yScale, generatedColorsMapping, minBarWidth]
   );
 
   // Memoize the stacked rect data
@@ -500,6 +524,26 @@ const VerticalStackBarChart: React.FC<Props> = ({
       tooltipRef.current.style.visibility = "hidden";
     }
   }, [onHighlightItem, isTooltipSticky]);
+
+  // Canvas renderer — active only when renderer="canvas". Reuses the existing
+  // prepareStackedData() output and tooltip-content generator so stacking and
+  // tooltip behaviour are renderer-agnostic.
+  useVerticalStackBarChartCanvasRendering({
+    enabled: renderer === "canvas",
+    canvasRef,
+    svgRef: chartRef,
+    tooltipRef,
+    tooltipContentRef,
+    width,
+    height,
+    margin,
+    stackedRectData,
+    keys,
+    highlightItems,
+    colorCallbackFn,
+    generateTooltipContent,
+    onHighlightItem,
+  });
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet: dataSet,
@@ -714,9 +758,10 @@ const VerticalStackBarChart: React.FC<Props> = ({
         ref={chartRef}
         width={width}
         height={height}
-        style={{ overflow: "visible" }}
+        style={{ overflow: "visible", position: "relative" }}
         onMouseOut={handleMouseOut}
       >
+        <MichiVzCredit />
         {children}
         <Title x={width / 2} y={MARGIN.top / 2}>
           {title}
@@ -734,6 +779,9 @@ const VerticalStackBarChart: React.FC<Props> = ({
             />
           </>
         )}
+        {/* Stacked bars + series labels: SVG renderer only. In canvas mode
+            these are painted on the <canvas> behind the SVG instead. */}
+        {renderer !== "canvas" && (
         <g>
           {keys.map(key => {
             return (
@@ -786,7 +834,17 @@ const VerticalStackBarChart: React.FC<Props> = ({
             );
           })}
         </g>
+        )}
       </svg>
+
+      {renderer === "canvas" && (
+        <canvas
+          ref={canvasRef}
+          className="vertical-stack-bar-canvas"
+          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}
+        />
+      )}
+
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
       {displayIsNodata && <>{isNodataComponent}</>}

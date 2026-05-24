@@ -4,6 +4,7 @@ import * as d3 from "d3";
 import { DataPointRangeChart, LegendItem, XaxisDataType } from "../types/data";
 import { useChartContext } from "./MichiVzProvider";
 import Title from "./shared/Title";
+import MichiVzCredit from "./shared/MichiVzCredit";
 import XaxisLinear from "./shared/XaxisLinear";
 import YaxisLinear from "./shared/YaxisLinear";
 import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
@@ -471,6 +472,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
           ref={svgRef}
           style={{ overflow: "visible" }}
         >
+          <MichiVzCredit />
           {title && (
             <text x={width / 2} y={margin.top / 2} textAnchor="middle" className="chart-title">
               {title}

@@ -7,3 +7,4 @@ export { default as RadarChart } from "./components/RadarChart";
 export { default as RangeChart } from "./components/RangeChart";
 export { default as ScatterPlotChart } from "./components/ScatterPlotChart";
 export { default as BarBellChart } from "./components/BarBellChart";
+export { createHatchPattern } from "./components/hooks/canvas/createHatchPattern";

@@ -510,7 +510,14 @@ const useLineChartPathsShapesRendering = (
 
   // Keep the tooltip visible while the cursor is over it (no-dots mode UX).
   // Cancel the hide timer on mouseenter, restart it on mouseleave.
+  //
+  // Skipped entirely in canvas mode: there the Canvas renderer owns the whole
+  // tooltip lifecycle, including its own click-to-pin sticky state. This grace
+  // timer's hide callback only consults the SVG renderer's `isStickyRef`
+  // (always false when renderer="canvas"), so leaving it active would hide a
+  // canvas-pinned tooltip ~400ms after the cursor merely crossed the tooltip.
   useEffect(() => {
+    if (renderer === "canvas") return;
     const el = tooltipRef.current;
     if (!el) return;
     const onEnter = () => clearHideTimer();
@@ -522,7 +529,7 @@ const useLineChartPathsShapesRendering = (
       el.removeEventListener("mouseleave", onLeave);
       clearHideTimer();
     };
-  }, []);
+  }, [renderer]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useLayoutEffect, useState, useEffect } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
+import MichiVzCredit from "./shared/MichiVzCredit";
 import XaxisBand from "./shared/XaxisBand";
 import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
@@ -328,6 +329,7 @@ const RibbonChart: React.FC<Props> = ({
           d3.select(".tooltip").style("visibility", "hidden");
         }}
       >
+        <MichiVzCredit />
         {children}
         <Title x={width / 2} y={MARGIN.top / 2}>
           {title}

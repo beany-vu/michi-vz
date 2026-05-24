@@ -22,6 +22,8 @@ import useDeepCompareEffect from "use-deep-compare-effect";
 import LoadingIndicator from "./shared/LoadingIndicator";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import TooltipHint from "src/components/shared/TooltipHint";
+import MichiVzCredit from "./shared/MichiVzCredit";
+import useScatterPlotChartCanvasRendering from "./hooks/scatterPlotChart/useScatterPlotChartCanvasRendering";
 
 function getColor(mappedColor?: string, dataColor?: string): string {
   const FALLBACK_COLOR = "rgba(253, 253, 253, 0.5)";
@@ -143,10 +145,19 @@ interface ScatterPlotChartProps<T extends number | string> {
    *
    * Default `false` preserves backward-compatible behaviour.
    */
-  skipColorMappingDispatch?: boolean;
+  skipColorMappingDispatch?: boolean;
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
+  /**
+   * Rendering backend for the point cloud.
+   *  - "svg" (default): the original SVG/D3 rendering, unchanged — one DOM
+   *    node per point.
+   *  - "canvas": draw every point onto a single <canvas>, for large datasets
+   *    (thousands+ of points). Axes, title, d-scale legend and the tooltip are
+   *    unchanged in both modes.
+   */
+  renderer?: "svg" | "canvas";
 }
 
 const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
@@ -179,11 +190,13 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   skipColorMappingDispatch = false,
   highlightItems = [],
   disabledItems = [],
+  renderer = "svg",
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const tooltipContentRef = useRef<HTMLDivElement>(null);
   const svgContainerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [activePoint, setActivePoint] = useState<DataPoint | null>(null);
   const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
   const [isTooltipSticky, setIsTooltipSticky] = useState(false);
@@ -429,6 +442,32 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     isNodata,
   });
 
+  // Opt-in Canvas 2D renderer — active only when renderer="canvas". Paints the
+  // point cloud onto a <canvas> behind the SVG; axes/title/legend stay SVG.
+  useScatterPlotChartCanvasRendering({
+    enabled: renderer === "canvas",
+    canvasRef,
+    svgRef,
+    tooltipRef,
+    tooltipContentRef,
+    renderData: renderOrderedDataSet,
+    width,
+    height,
+    margin,
+    xScale,
+    yScale,
+    dScale,
+    xAxisDataType,
+    disabledItems,
+    highlightItems,
+    getColor,
+    colorsMapping: generatedColorsMapping,
+    tooltipFormatter,
+    xAxisFormat,
+    yAxisFormat,
+    onHighlightItem,
+  });
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isTooltipSticky) {
@@ -593,16 +632,25 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                 {!isTooltipSticky && <TooltipHint />}
               </div>
 
-              <svg width={width} height={height} ref={svgRef} onMouseMove={handleSvgMouseMove}>
+              <svg
+                width={width}
+                height={height}
+                ref={svgRef}
+                onMouseMove={handleSvgMouseMove}
+                style={{ position: "relative" }}
+              >
+                <MichiVzCredit />
                 <Title x={width / 2} y={margin.top / 2}>
                   {title}
                 </Title>
                 {children}
 
                 {/* Use renderOrderedDataSet instead of filteredDataSet for proper rendering order */}
-                {renderOrderedDataSet
-                  .filter(d => !disabledItems.includes(d.label))
-                  .map((d, i) => {
+                {/* In canvas mode the point marks are painted on the <canvas>; skip the SVG marks. */}
+                {renderer !== "canvas" &&
+                  renderOrderedDataSet
+                    .filter(d => !disabledItems.includes(d.label))
+                    .map((d, i) => {
                     const x = getXValue(d);
                     const y = yScale(d.y);
                     const size = xAxisDataType === "band" ? d.d / 2 : dScale(d.d);
@@ -721,6 +769,13 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                   </>
                 )}
               </svg>
+              {renderer === "canvas" && (
+                <canvas
+                  ref={canvasRef}
+                  className="scatter-plot-canvas"
+                  style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}
+                />
+              )}
             </div>
           </Suspense>
         )}

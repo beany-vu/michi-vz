@@ -3,6 +3,7 @@ import { select } from "d3";
 import { DataPoint, ChartMetadata, LegendItem } from "../types/data";
 import { DEFAULT_COLORS } from "./shared/colors";
 import Title from "./shared/Title";
+import MichiVzCredit from "./shared/MichiVzCredit";
 import YaxisLinear from "./shared/YaxisLinear";
 import XaxisLinear from "./shared/XaxisLinear";
 import LoadingIndicator from "./shared/LoadingIndicator";
@@ -353,7 +354,7 @@ const LineChart: FC<LineChartProps> = ({
   useLineChartColorMapping(generatedColorMapping, getColor, svgRef, TRANSITION_DURATION);
 
   // Canvas renderer — active only when renderer="canvas".
-  useLineChartCanvasRendering({
+  const canvasTooltip = useLineChartCanvasRendering({
     enabled: renderer === "canvas",
     canvasRef,
     svgRef,
@@ -452,13 +453,6 @@ const LineChart: FC<LineChartProps> = ({
 
   return (
     <LineChartContainer width={width} height={height}>
-      {renderer === "canvas" && (
-        <canvas
-          ref={canvasRef}
-          className="line-chart-canvas"
-          style={{ position: "absolute", top: 0, left: 0 }}
-        />
-      )}
       <svg
         xmlns="http://www.w3.org/2000/svg"
         ref={svgRef}
@@ -466,6 +460,7 @@ const LineChart: FC<LineChartProps> = ({
         height={height}
         style={{ position: "relative" }}
       >
+        <MichiVzCredit />
         {children}
         {enableMouseLine && (
           <LineChartMouseLine
@@ -507,6 +502,14 @@ const LineChart: FC<LineChartProps> = ({
         )}
       </svg>
 
+      {renderer === "canvas" && (
+        <canvas
+          ref={canvasRef}
+          className="line-chart-canvas"
+          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}
+        />
+      )}
+
       {showLoadingIndicator && (
         <LoadingIndicatorContainer>
           {isLoadingComponent || <LoadingIndicator />}
@@ -515,7 +518,7 @@ const LineChart: FC<LineChartProps> = ({
 
       <TooltipStyled className="tooltip" ref={tooltipRef}>
         <div className="tooltip-content" />
-        {!tooltip?.isSticky && <TooltipHint />}
+        {!tooltip?.isSticky && !canvasTooltip.isSticky && <TooltipHint />}
       </TooltipStyled>
 
       {displayIsNodata && <>{isNodataComponent}</>}

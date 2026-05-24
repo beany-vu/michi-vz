@@ -15,6 +15,8 @@ import { useGapChartShapes } from "./hooks/gapChart/useGapChartShapes";
 import { useGapChartRenderer } from "./hooks/gapChart/useGapChartRenderer";
 import { useGapChartLegend } from "./hooks/gapChart/useGapChartLegend";
 import { useGapChartMetadata } from "./hooks/gapChart/useGapChartMetadata";
+import useGapChartCanvasRendering from "./hooks/gapChart/useGapChartCanvasRendering";
+import MichiVzCredit from "./shared/MichiVzCredit";
 import TooltipHint from "src/components/shared/TooltipHint";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import { DEFAULT_COLORS } from "./shared/colors";
@@ -155,8 +157,20 @@ interface GapChartProps {
    *
    * Default `false` preserves backward-compatible behaviour.
    */
-  skipColorMappingDispatch?: boolean;
+  skipColorMappingDispatch?: boolean;
   onLegendDataChange?: (legendData: LegendItem[]) => void;
+  /**
+   * Rendering backend for the gap bars, connector lines and value markers.
+   *  - "svg" (default): the classic retained-SVG renderer — one <g> + <rect> +
+   *    <line> + two markers per item. Unchanged, byte-identical default.
+   *  - "canvas": draws the bars / connectors / markers onto a single <canvas>
+   *    layered behind the <svg>, for large datasets where the SVG node count
+   *    causes jank. The YaxisBand HTML labels, axes, title, legend and tooltip
+   *    stay in the SVG/HTML layer above the canvas.
+   *
+   * Default `"svg"` preserves backward-compatible behaviour.
+   */
+  renderer?: "svg" | "canvas";
 }
 
 const GapChart: FC<GapChartProps> = ({
@@ -204,9 +218,12 @@ const GapChart: FC<GapChartProps> = ({
   onColorMappingGenerated,
   skipColorMappingDispatch = false,
   onLegendDataChange,
+  renderer = "svg",
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasTooltipRef = useRef<HTMLDivElement | null>(null);
 
   // Use ref to capture latest tooltipFormatter to avoid stale closure issues
   const tooltipFormatterRef = useRef(tooltipFormatter);
@@ -296,6 +313,30 @@ const GapChart: FC<GapChartProps> = ({
     xAxisDomain,
     onChartDataProcessed,
     globalLegendItems,
+  });
+
+  // Opt-in Canvas 2D renderer — active only when renderer="canvas". Reuses the
+  // chart's existing scales + useGapChartRenderer's `elements`; the YaxisBand
+  // HTML labels, axes, title and legend stay in the SVG layer above.
+  const canvasRendering = useGapChartCanvasRendering({
+    enabled: renderer === "canvas",
+    canvasRef,
+    svgRef,
+    tooltipRef: canvasTooltipRef,
+    width,
+    height,
+    margin,
+    elements: renderData.elements,
+    xScale,
+    yScale,
+    shapeValue1,
+    shapeValue2,
+    squareRadius,
+    enableShadow,
+    shadowConfig,
+    colorMode,
+    tooltipFormatter,
+    onHighlightItem,
   });
 
   // Check if no data
@@ -476,7 +517,13 @@ const GapChart: FC<GapChartProps> = ({
 
   return (
     <GapChartStyled ref={containerRef} $enableTransitions={enableTransitions}>
-      <svg ref={svgRef} width={width} height={height} style={{ overflow: "visible" }}>
+      <svg
+        ref={svgRef}
+        width={width}
+        height={height}
+        style={{ overflow: "visible", position: "relative" }}
+      >
+        <MichiVzCredit />
         {/* Shadow filter definition */}
         {enableShadow && (
           <defs>
@@ -520,7 +567,9 @@ const GapChart: FC<GapChartProps> = ({
           enableTransitions={enableTransitions}
         />
 
-        <g className="gap-chart-content">{renderGapBars}</g>
+        {/* SVG mark layers — suppressed in canvas mode; the bars / connectors
+            / markers are drawn on the <canvas> behind this <svg> instead. */}
+        {renderer !== "canvas" && <g className="gap-chart-content">{renderGapBars}</g>}
 
         {/* Legend */}
         {shapesLabelsMapping && legendItems.length > 0 && (
@@ -643,6 +692,14 @@ const GapChart: FC<GapChartProps> = ({
         )}
       </svg>
 
+      {renderer === "canvas" && (
+        <canvas
+          ref={canvasRef}
+          className="gap-chart-canvas"
+          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}
+        />
+      )}
+
       {tooltip && (
         <div
           className={`tooltip ${tooltip.isSticky ? "sticky" : ""}`}
@@ -666,6 +723,19 @@ const GapChart: FC<GapChartProps> = ({
             </div>
           )}
           {!tooltip.isSticky && <TooltipHint />}
+        </div>
+      )}
+
+      {/* Canvas-mode tooltip — the canvas renderer has no retained SVG nodes to
+          attach React mouse handlers to, so its hook positions and fills this
+          plain div directly. Hidden until a hover/click hit. */}
+      {renderer === "canvas" && (
+        <div
+          ref={canvasTooltipRef}
+          className={`tooltip ${canvasRendering.isSticky ? "sticky" : ""}`}
+          style={{ visibility: "hidden", left: 0, top: 0 }}
+        >
+          <div className="tooltip-content" />
         </div>
       )}
 

@@ -9,6 +9,7 @@ import React, {
 import * as d3 from "d3";
 import isEqual from "lodash/isEqual";
 import Title from "./shared/Title";
+import MichiVzCredit from "./shared/MichiVzCredit";
 import YaxisLinear from "./shared/YaxisLinear";
 import XaxisLinear from "./shared/XaxisLinear";
 import LoadingIndicator from "./shared/LoadingIndicator";
@@ -17,6 +18,7 @@ import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import styled from "styled-components";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
+import useAreaChartCanvasRendering from "./hooks/areaChart/useAreaChartCanvasRendering";
 import TooltipHint from "src/components/shared/TooltipHint";
 import { XaxisDataType } from "src/types/data";
 
@@ -101,7 +103,7 @@ interface Props {
    *
    * Default `false` preserves backward-compatible behaviour.
    */
-  skipColorMappingDispatch?: boolean;
+  skipColorMappingDispatch?: boolean;
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
@@ -112,6 +114,17 @@ interface Props {
    * Useful for percentage-based charts where you always want to show the full 0-100% scale.
    */
   forcePercentageScale?: boolean;
+  /**
+   * Rendering backend for the stacked area geometry.
+   *  - "svg" (default): the original SVG/D3 rendering, unchanged.
+   *  - "canvas": draw the stacked areas, data-indicator lines and hover line
+   *    onto a <canvas> instead of retained SVG nodes, for large datasets.
+   *    Axes, title, the HTML tooltip and loading/no-data overlays are
+   *    unchanged in both modes.
+   *
+   * Default `"svg"` keeps behaviour byte-identical.
+   */
+  renderer?: "svg" | "canvas";
 }
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
@@ -146,8 +159,11 @@ const AreaChart: React.FC<Props> = ({
   highlightItems = [],
   disabledItems = [],
   forcePercentageScale = false,
+  renderer = "svg",
 }) => {
   const ref = useRef<SVGSVGElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isCanvas = renderer === "canvas";
   const [hoverInfo, setHoverInfo] = useState<{
     dataPoint: DataPoint;
     x: number;
@@ -329,6 +345,27 @@ const AreaChart: React.FC<Props> = ({
     },
     [tooltipFormatter, series, colorsMapping]
   );
+
+  // Opt-in Canvas 2D renderer — active only when renderer="canvas". Draws the
+  // stacked areas, data-indicator lines and hover line onto the <canvas>.
+  const canvasTooltip = useAreaChartCanvasRendering({
+    enabled: isCanvas,
+    canvasRef,
+    svgRef: ref,
+    tooltipRef,
+    tooltipContentRef,
+    series,
+    areaData,
+    width,
+    height,
+    margin,
+    xScale,
+    yScale,
+    xAxisDataType,
+    highlightItems,
+    tooltipFormatter: handleAreaSegmentHover,
+    onHighlightItem,
+  });
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet: series,
@@ -612,15 +649,20 @@ const AreaChart: React.FC<Props> = ({
           background: "white",
           padding: "5px",
           zIndex: 1000,
-          visibility: isTooltipVisible ? "visible" : "hidden",
-          pointerEvents: isTooltipSticky ? "auto" : "none",
+          // In canvas mode the canvas hook owns tooltip visibility imperatively
+          // (via refs, no React re-render on hover); leave it unset here so a
+          // React render does not overwrite the hook's value.
+          ...(isCanvas
+            ? {}
+            : { visibility: isTooltipVisible ? "visible" : "hidden" }),
+          pointerEvents: isTooltipSticky || canvasTooltip.isSticky ? "auto" : "none",
         }}
       >
         <div ref={tooltipContentRef} className="tooltip-content" />
-        {!isTooltipSticky && <TooltipHint />}
+        {!isTooltipSticky && !canvasTooltip.isSticky && <TooltipHint />}
       </div>
 
-      {/* Overlay when sticky - blocks mouse events on chart */}
+      {/* Overlay when sticky - blocks mouse events on chart (SVG mode only) */}
       {isTooltipSticky && (
         <div
           className="tooltip-overlay"
@@ -647,11 +689,12 @@ const AreaChart: React.FC<Props> = ({
         ref={ref}
         width={width}
         height={height}
-        style={{ overflow: "visible" }}
-        onMouseMove={handleChartMouseMove}
-        onMouseOut={handleChartMouseOut}
-        onClick={handleChartClick}
+        style={{ overflow: "visible", position: "relative" }}
+        onMouseMove={isCanvas ? undefined : handleChartMouseMove}
+        onMouseOut={isCanvas ? undefined : handleChartMouseOut}
+        onClick={isCanvas ? undefined : handleChartClick}
       >
+        <MichiVzCredit />
         {children}
         <Title x={width / 2} y={MARGIN.top / 2}>
           {title}
@@ -676,6 +719,8 @@ const AreaChart: React.FC<Props> = ({
             />
           </>
         )}
+        {/* SVG marks — skipped entirely in canvas mode (drawn on <canvas>). */}
+        {!isCanvas && (
         <g>
           {areaData.map(areaDataItem => (
             <path
@@ -735,7 +780,20 @@ const AreaChart: React.FC<Props> = ({
             />
           )}
         </g>
+        )}
       </svg>
+
+      {/* Opt-in Canvas layer — stacks above the <svg> (DOM order) so canvas
+          marks paint over the axes/grid; pointerEvents:none lets mouse events
+          fall through to the <svg> below. */}
+      {isCanvas && (
+        <canvas
+          ref={canvasRef}
+          className="area-chart-canvas"
+          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}
+        />
+      )}
+
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
       {displayIsNodata && <>{isNodataComponent}</>}

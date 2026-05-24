@@ -8,6 +8,8 @@ import { useDisplayIsNodata } from "./hooks/useDisplayIsNodata";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import TooltipHint from "src/components/shared/TooltipHint";
 import { DEFAULT_COLORS } from "./shared/colors";
+import MichiVzCredit from "./shared/MichiVzCredit";
+import useRadarChartCanvasRendering from "./hooks/radarChart/useRadarChartCanvasRendering";
 
 function getColor(mappedColor?: string, dataColor?: string): string {
   const FALLBACK_COLOR = "rgba(253, 253, 253, 0.5)";
@@ -117,7 +119,7 @@ export interface RadarChartProps {
    *
    * Default `false` preserves backward-compatible behaviour.
    */
-  skipColorMappingDispatch?: boolean;
+  skipColorMappingDispatch?: boolean;
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
@@ -131,6 +133,15 @@ export interface RadarChartProps {
   showFilled?: boolean;
   // Fill opacity for the polygon areas (default: 0.2)
   fillOpacity?: number;
+  /**
+   * Rendering backend for the series marks (polygons + pole points).
+   *  - "svg" (default): the original SVG/D3 rendering, unchanged.
+   *  - "canvas": draw the series polygons and pole points onto a <canvas>
+   *    instead of retained SVG nodes. The radial grid, pole/ring labels, the
+   *    HTML tooltip and the loading / no-data overlays are unchanged in both
+   *    modes.
+   */
+  renderer?: "svg" | "canvas";
 }
 
 export const RadarChart: React.FC<RadarChartProps> = ({
@@ -158,8 +169,11 @@ export const RadarChart: React.FC<RadarChartProps> = ({
   filter,
   showFilled = false,
   fillOpacity = 0.4,
+  renderer = "svg",
 }) => {
-  const svgRef = useRef(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const tooltipContentRef = useRef<HTMLDivElement | null>(null);
   const [tooltipData, setTooltipData] = useState<{
     date: string;
     value: number;
@@ -437,6 +451,44 @@ export const RadarChart: React.FC<RadarChartProps> = ({
     });
   }, [highlightItems, showFilled, fillOpacity]);
 
+  // Canvas renderer — active only when renderer="canvas". Draws the series
+  // polygons + pole points onto the <canvas>; the radial grid and labels stay
+  // SVG. Reuses the same polar geometry (yScale + pole angles) as the SVG path.
+  useRadarChartCanvasRendering({
+    enabled: renderer === "canvas",
+    canvasRef,
+    svgRef,
+    tooltipRef,
+    tooltipContentRef,
+    series: filteredSeries
+      ? filteredSeries.map(item => ({
+          label: item.label,
+          color: item.color,
+          data: item.data,
+        }))
+      : [],
+    poleLabels: poles?.labels ?? [],
+    width,
+    height,
+    scale: yScale,
+    colorsMapping: generatedColorsMapping,
+    getColor,
+    disabledItems,
+    highlightItems,
+    showFilled,
+    fillOpacity,
+    tooltipFormatter: (date: string, value: number, label: string) => {
+      if (tooltipFormatter) {
+        const node = tooltipFormatter({ date, value, series: [] });
+        // tooltipFormatter may return a React node; for the canvas overlay we
+        // need an HTML string. Fall back to a default when it isn't a string.
+        if (typeof node === "string") return node;
+      }
+      return `<strong>${label}</strong><br/>${date}: ${value}`;
+    },
+    onHighlightItem,
+  });
+
   const displayIsNodata = useDisplayIsNodata({
     dataSet: filteredSeries,
     isLoading: isLoading,
@@ -560,27 +612,33 @@ export const RadarChart: React.FC<RadarChartProps> = ({
       <Tooltip
         ref={tooltipRef}
         style={{
-          opacity: tooltipData ? 1 : 0,
+          opacity: renderer === "canvas" ? 0 : tooltipData ? 1 : 0,
           ...tooltipContainerStyle,
         }}
         className="tooltip"
       >
-        {tooltipData && (
-          <>
-            {tooltipFormatter ? (
-              tooltipFormatter({
-                date: tooltipData.date,
-                value: tooltipData.value,
-                series: tooltipData.series,
-              })
-            ) : (
-              <>
-                <strong>Date:</strong> {tooltipData.date}
-                <br />
-                <strong>Value:</strong> {tooltipData.value}
-              </>
-            )}
-          </>
+        {/* Canvas mode fills this element imperatively (sanitized HTML);
+            SVG mode renders the tooltip content via React below. */}
+        {renderer === "canvas" ? (
+          <div ref={tooltipContentRef} className="tooltip-content" />
+        ) : (
+          tooltipData && (
+            <>
+              {tooltipFormatter ? (
+                tooltipFormatter({
+                  date: tooltipData.date,
+                  value: tooltipData.value,
+                  series: tooltipData.series,
+                })
+              ) : (
+                <>
+                  <strong>Date:</strong> {tooltipData.date}
+                  <br />
+                  <strong>Value:</strong> {tooltipData.value}
+                </>
+              )}
+            </>
+          )
         )}
         {!isTooltipSticky && <TooltipHint />}
       </Tooltip>
@@ -588,9 +646,11 @@ export const RadarChart: React.FC<RadarChartProps> = ({
       <svg
         width={width}
         height={height}
-        style={{ overflow: "visible" }}
+        style={{ overflow: "visible", position: "relative" }}
         ref={svgRef}
         onMouseOut={event => {
+          // In canvas mode the canvas hook owns hover/highlight — leave it be.
+          if (renderer === "canvas") return;
           event.preventDefault();
           event.stopPropagation();
           onHighlightItem([]);
@@ -599,8 +659,10 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           setTooltipData(null);
         }}
       >
+        <MichiVzCredit />
         {children}
-        {processedSeries.map(({ label, pointString, points, color }, i: number) => (
+        {renderer !== "canvas" &&
+          processedSeries.map(({ label, pointString, points, color }, i: number) => (
           <g
             key={`series-${i}`}
             data-label={label}
@@ -704,6 +766,15 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           </g>
         ))}
       </svg>
+
+      {renderer === "canvas" && (
+        <canvas
+          ref={canvasRef}
+          className="radar-chart-canvas"
+          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}
+        />
+      )}
+
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
       {displayIsNodata && <>{isNodataComponent}</>}

@@ -8,6 +8,12 @@ const preview = {
         date: /Date$/,
       },
     },
+    options: {
+      // Landing page first, then the chart catalog, then examples.
+      storySort: {
+        order: ["Introduction", "Charts", "Examples", "*"],
+      },
+    },
   },
 };
 

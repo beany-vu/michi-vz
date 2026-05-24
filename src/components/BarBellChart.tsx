@@ -11,6 +11,9 @@ import LoadingIndicator from "./shared/LoadingIndicator";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import TooltipHint from "src/components/shared/TooltipHint";
 import { DEFAULT_COLORS } from "./shared/colors";
+import MichiVzCredit from "./shared/MichiVzCredit";
+import { computeCircleDodgeOffsets } from "./hooks/barBellChart/computeCircleDodge";
+import useBarBellChartCanvasRendering from "./hooks/barBellChart/useBarBellChartCanvasRendering";
 
 interface DataPoint {
   [key: string]: number | undefined;
@@ -71,10 +74,18 @@ interface BarBellChartProps {
    *
    * Default `false` preserves backward-compatible behaviour.
    */
-  skipColorMappingDispatch?: boolean;
+  skipColorMappingDispatch?: boolean;
   // highlightItems and disabledItems as props for better performance
   highlightItems?: string[];
   disabledItems?: string[];
+  /**
+   * Rendering backend for the bar/circle marks.
+   *  - "svg" (default): the original SVG/D3 rendering, unchanged.
+   *  - "canvas": draw the cumulative key bars and end-cap circles onto a
+   *    <canvas>, for large datasets. Axes, title, the HTML tooltip and the
+   *    loading / no-data overlays are unchanged in both modes.
+   */
+  renderer?: "svg" | "canvas";
 }
 
 const BarBellChart: React.FC<BarBellChartProps> = ({
@@ -104,8 +115,10 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   skipColorMappingDispatch = false,
   highlightItems = [],
   disabledItems = [],
+  renderer = "svg",
 }) => {
   const ref = useRef<SVGSVGElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const refTooltip = useRef<HTMLDivElement>(null);
   const refTooltipContent = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
@@ -248,7 +261,38 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
 
   const isEmpty = useMemo(() => dataSet.length === 0, [dataSet]);
 
+  // Canvas renderer — active only when renderer="canvas". Draws the bars and
+  // end-cap circles onto a <canvas>; the SVG marks below are guarded off.
+  const canvasTooltipFormatter = useCallback(
+    (d: DataPoint, currentKey: string, currentValue: string | number) =>
+      tooltipFormat
+        ? tooltipFormat(d, currentKey, currentValue)
+        : `${d?.date}: ${currentKey} - ${currentValue}`,
+    [tooltipFormat]
+  );
+
+  const canvasTooltip = useBarBellChartCanvasRendering({
+    enabled: renderer === "canvas",
+    canvasRef,
+    svgRef: ref,
+    tooltipRef: refTooltip,
+    tooltipContentRef: refTooltipContent,
+    dataSet,
+    keys,
+    width,
+    height,
+    margin,
+    xScale,
+    yScale,
+    colorsMapping: generatedColorsMapping,
+    disabledItems,
+    highlightItems,
+    tooltipFormatter: canvasTooltipFormatter,
+    onHighlightItem,
+  });
+
   useLayoutEffect(() => {
+    if (renderer === "canvas") return;
     const svg = d3.select(ref.current);
     if (highlightItems.length > 0) {
       svg.selectAll(".bar-data").style("opacity", 0.1);
@@ -263,9 +307,10 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   }, [highlightItems, disabledItems]);
 
   useLayoutEffect(() => {
+    if (renderer === "canvas") return;
     const svg = d3.select(ref.current);
     svg.selectAll(".bar-data-point").raise();
-  }, [dataSet, xValues]);
+  }, [dataSet, xValues, renderer]);
 
   const displayIsNodata = useDisplayIsNodata({
     dataSet: dataSet,
@@ -402,7 +447,8 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
       {isLoading && isLoadingComponent && <>{isLoadingComponent}</>}
       {isLoading && !isLoadingComponent && <LoadingIndicator />}
       {displayIsNodata && <>{isNodataComponent}</>}
-      <svg ref={ref} height={height} width={width}>
+      <svg ref={ref} height={height} width={width} style={{ position: "relative" }}>
+        <MichiVzCredit />
         {children}
         <Title x={width / 2} y={margin.top / 2}>
           {title}
@@ -432,10 +478,25 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
             />
           </>
         )}
-        {dataSet.map((d, i) => {
-          let cumulativeX = margin.left; // Initialize cumulativeX for each row
+        {renderer !== "canvas" &&
+          dataSet.map((d, i) => {
+            let cumulativeX = margin.left; // Initialize cumulativeX for each row
 
-          return (
+            // Pre-pass: vertical-dodge offsets for end-cap circles that would
+            // overlap (near-equal x, e.g. zero-value segments). Keeps every
+            // circle visible in a column centred on the row line.
+            let circleCx = margin.left;
+            const circleDodge = computeCircleDodgeOffsets(
+              keys
+                .filter(key => !disabledItems.includes(key))
+                .map(key => {
+                  circleCx += xScale(d[key]);
+                  return circleCx;
+                }),
+              6
+            );
+
+            return (
             <g key={`group-line-${i}`} className={`group-line group-line-${i}`}>
               {keys
                 .filter(key => !disabledItems.includes(key))
@@ -511,7 +572,12 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                       {value !== undefined && (
                         <foreignObject
                           x={x + width - 6}
-                          y={yScale(`${d?.date}`) + yScale.bandwidth() / 2 - 6}
+                          y={
+                            yScale(`${d?.date}`) +
+                            yScale.bandwidth() / 2 -
+                            6 +
+                            (circleDodge[j] || 0)
+                          }
                           width="12"
                           height="12"
                           className={`bar-data-point ${value === 0 ? "has-value-zero" : ""}`}
@@ -550,6 +616,13 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
           );
         })}
       </svg>
+      {renderer === "canvas" && (
+        <canvas
+          ref={canvasRef}
+          className="bar-bell-canvas"
+          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}
+        />
+      )}
       <div
         className="tooltip"
         ref={refTooltip}

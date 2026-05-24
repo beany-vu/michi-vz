@@ -11,3 +11,5 @@ export { default as RangeChart } from "./RangeChart";
 export { default as ScatterPlotChart } from "./ScatterPlotChart";
 export { default as GapChart } from "./GapChart";
 export { default as LoadingIndicator } from "./shared/LoadingIndicator";
+export { createHatchPattern } from "./hooks/canvas/createHatchPattern";
+export type { HatchPatternOptions } from "./hooks/canvas/createHatchPattern";

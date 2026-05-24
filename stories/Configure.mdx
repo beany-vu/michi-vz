@@ -1,461 +1,218 @@
 import { Meta } from "@storybook/blocks";
 
-import Github from "./assets/github.svg";
-import Discord from "./assets/discord.svg";
-import Youtube from "./assets/youtube.svg";
-import Tutorials from "./assets/tutorials.svg";
-import Styling from "./assets/styling.png";
-import Context from "./assets/context.png";
-import Assets from "./assets/assets.png";
-import Docs from "./assets/docs.png";
-import Share from "./assets/share.png";
-import FigmaPlugin from "./assets/figma-plugin.png";
-import Testing from "./assets/testing.png";
-import Accessibility from "./assets/accessibility.png";
-import Theming from "./assets/theming.png";
-import AddonLibrary from "./assets/addon-library.png";
+<Meta title="Introduction" />
 
-export const RightArrow = () => <svg 
-    viewBox="0 0 14 14" 
-    width="8px" 
-    height="14px" 
-    style={{ 
-      marginLeft: '4px',
-      display: 'inline-block',
-      shapeRendering: 'inherit',
-      verticalAlign: 'middle',
-      fill: 'currentColor',
-      'path fill': 'currentColor'
-    }}
->
-  <path d="m11.1 7.35-5.5 5.5a.5.5 0 0 1-.7-.7L10.04 7 4.9 1.85a.5.5 0 1 1 .7-.7l5.5 5.5c.2.2.2.5 0 .7Z" />
-</svg>
+export const RightArrow = () => (
+  <svg viewBox="0 0 14 14" width="9px" height="14px" style={{ marginLeft: "5px", display: "inline-block", verticalAlign: "middle", fill: "currentColor" }}>
+    <path d="m11.1 7.35-5.5 5.5a.5.5 0 0 1-.7-.7L10.04 7 4.9 1.85a.5.5 0 1 1 .7-.7l5.5 5.5c.2.2.2.5 0 .7Z" />
+  </svg>
+);
 
-<Meta title="Configure your project" />
+export const charts = [
+  { name: "Line Chart", path: "charts-line-chart", use: "Trends over time across one or many series — with an opt-in Canvas renderer for large datasets." },
+  { name: "Area Chart", path: "charts-area-chart", use: "Part-to-whole trends — how each component's share of a total shifts over time." },
+  { name: "Range Chart", path: "charts-range-chart", use: "Uncertainty bands and min/max envelopes — forecasts, confidence intervals, observed ranges." },
+  { name: "Ribbon Chart", path: "charts-ribbon-chart", use: "Stacked composition that re-ranks between periods — ribbons make the flow visible." },
+  { name: "Scatter Plot", path: "charts-scatter-plot", use: "Correlation between two metrics, with an optional third encoded as bubble size." },
+  { name: "Radar Chart", path: "charts-radar-chart", use: "Profile comparison of a few entities across many shared metrics." },
+  { name: "Gap Chart", path: "charts-gap-chart", use: "The gap between two values per category — actual vs target, before vs after." },
+  { name: "Bar Bell Chart", path: "charts-bar-bell-chart", use: "Per-row segments laid end-to-end — funnels and stage-by-stage breakdowns." },
+  { name: "Vertical Stack Bar Chart", path: "charts-vertical-stack-bar-chart", use: "Composition across discrete categories or periods, with optional side-by-side groups." },
+  { name: "Comparable Horizontal Bar Chart", path: "charts-comparable-horizontal-bar-chart", use: "Two values per category on one row — budget vs actual, this year vs last." },
+  { name: "Dual Horizontal Bar Chart", path: "charts-dual-horizontal-bar-chart", use: "Two metrics mirrored from a centre line — population pyramids, two-sided comparisons." },
+];
 
-<div className="sb-container">
-  <div className='sb-section-title'>
-    # Configure Michi-VZ Project
-
-    Welcome to Michi-VZ, a visualization library based on D3 and React. This guide will help you set up and configure your project to work with this library.
-  </div>
-  
-  <div className="sb-section">
-    <div className="sb-section-item">
-      <h4 className="sb-section-item-heading">Installation</h4>
-      <p className="sb-section-item-paragraph">
-        First, install the package and its peer dependencies:
-        
-        ```bash
-        npm install michi-vz
-        # Install peer dependencies if needed
-        npm install react react-dom d3 styled-components
-        ```
-      </p>
-    </div>
-
-    <div className="sb-section-item">
-      <h4 className="sb-section-item-heading">TypeScript Configuration</h4>
-      <p className="sb-section-item-paragraph">
-        If you're using TypeScript, ensure your `tsconfig.json` includes these settings:
-        
-        ```json
-        {
-          "compilerOptions": {
-            "jsx": "react-jsx",
-            "esModuleInterop": true,
-            "skipLibCheck": true,
-            "moduleResolution": "node"
-          }
-        }
-        ```
-      </p>
-    </div>
-
-    <div className="sb-section-item">
-      <h4 className="sb-section-item-heading">Provider Setup</h4>
-      <p className="sb-section-item-paragraph">
-        Wrap your application or component with the `MichiVzProvider` to provide theme context:
-        
-        ```jsx
-        import { MichiVzProvider } from "michi-vz";
-        
-        const App = () => (
-          <MichiVzProvider
-            colorsMapping={{
-              Exports: "green",
-              Imports: "red",
-              Africa: "orange",
-              "Non-LDC": "purple",
-              Sudan: "blue",
-            }}
-            // Optional: disabledItems={["Non-LDC"]}
-          >
-            <YourComponent />
-          </MichiVzProvider>
-        );
-        ```
-      </p>
-    </div>
+<div className="mv-hero">
+  <span className="mv-eyebrow">React + D3 chart library</span>
+  <h1 className="mv-title">michi&#8209;vz</h1>
+  <p className="mv-tagline">
+    Eleven ready-made, interactive chart components for React — line, area, bar,
+    radar, scatter and more — built on D3, typed in TypeScript, with shared
+    theming and a consistent prop API across every chart.
+  </p>
+  <div className="mv-cta">
+    <a className="mv-btn mv-btn-primary" href="?path=/docs/charts-line-chart--docs">Browse the charts<RightArrow /></a>
+    <a className="mv-btn" href="https://github.com/beany-vu/michi-vz" target="_blank" rel="noreferrer">View on GitHub<RightArrow /></a>
   </div>
 </div>
 
-<div className="sb-container">
-  <div className='sb-section-title'>
-    # Using Chart Components
+<h2 className="mv-h2">Chart catalog</h2>
+<p className="mv-lead">Every chart's docs page opens with a short "when to reach for it" note and a lean set of worked examples on realistic data.</p>
+
+<div className="mv-grid">
+  {charts.map(c => (
+    <a className="mv-card" key={c.path} href={`?path=/docs/${c.path}--docs`}>
+      <h3 className="mv-card-title">{c.name}<RightArrow /></h3>
+      <p className="mv-card-text">{c.use}</p>
+    </a>
+  ))}
+</div>
+
+<h2 className="mv-h2">Get started</h2>
+
+<div className="mv-cols">
+  <div className="mv-col">
+    <h3 className="mv-h3">1 — Install</h3>
+    <p>Install the package and its peer dependencies:</p>
+
+    ```bash
+    npm install michi-vz
+    npm install react react-dom d3 styled-components
+    ```
   </div>
+  <div className="mv-col">
+    <h3 className="mv-h3">2 — Render a chart</h3>
+    <p>Every chart takes a typed data array plus layout props:</p>
 
-  <div className="sb-section">
-    <div className="sb-section-item">
-      <h4 className="sb-section-item-heading">Basic Usage</h4>
-      <p className="sb-section-item-paragraph">
-        Import and use any chart component with appropriate props:
-        
-        ```jsx
-        import { VerticalStackBarChart } from "michi-vz";
-        
-        const MyChart = () => (
-          <VerticalStackBarChart
-            dataSet={[
-              {
-                seriesKey: "Africa",
-                seriesKeyAbbreviation: "Africa",
-                series: [
-                  { date: "2001", Africa: "666" },
-                  { date: "2002", Africa: "777" },
-                  { date: "2003", Africa: "989" },
-                ],
-              },
-              // Add more series as needed
-            ]}
-            width={900}
-            height={480}
-            margin={{ top: 50, right: 50, bottom: 50, left: 50 }}
-            title="My Chart Title"
-          />
-        );
-        ```
-      </p>
-    </div>
+    ```jsx
+    import { LineChart } from "michi-vz";
 
-    <div className="sb-section-item">
-      <h4 className="sb-section-item-heading">Filtering and Sorting</h4>
-      <p className="sb-section-item-paragraph">
-        Many charts support filtering and sorting options:
-        
-        ```jsx
-        <VerticalStackBarChart
-          // ...other props
-          filter={{
-            limit: 3,           // Show top 3 items
-            sortingDir: "desc", // Sort descending
-            date: "2002",       // Filter by this date
-          }}
-        />
-        ```
-      </p>
-    </div>
-
-    <div className="sb-section-item">
-      <h4 className="sb-section-item-heading">Advanced Customization</h4>
-      <p className="sb-section-item-paragraph">
-        Customize with callback functions and formatting options:
-        
-        ```jsx
-        <VerticalStackBarChart
-          // ...other props
-          yAxisFormat={d => `$${d}`}
-          onChartDataProcessed={metadata => {
-            console.log(metadata);
-            // Use chart metadata in your app
-          }}
-        />
-        ```
-      </p>
-    </div>
+    <LineChart
+      dataSet={series}
+      width={900}
+      height={400}
+      margin={{ top: 50, right: 50, bottom: 50, left: 50 }}
+      xAxisDataType="date_annual"
+      title="Renewable electricity share"
+    />
+    ```
   </div>
 </div>
 
-<div className="sb-container">
-  <div className='sb-section-title'>
-    # Development and Contributing
-  </div>
+<h2 className="mv-h2">Shared theming — MichiVzProvider</h2>
+<p className="mv-lead">
+  Wrap charts in <code>MichiVzProvider</code> to give a label the same colour
+  everywhere, and to share highlighted / disabled state across a dashboard.
+</p>
 
-  <div className="sb-section">
-    <div className="sb-section-item">
-      <h4 className="sb-section-item-heading">Local Development</h4>
-      <p className="sb-section-item-paragraph">
-        1. Clone the repository
-        2. Install dependencies: `npm install`
-        3. Run Storybook: `npm run storybook`
-        4. Visit http://localhost:6006 to view components
-      </p>
-    </div>
+```jsx
+import { MichiVzProvider, RibbonChart } from "michi-vz";
 
-    <div className="sb-section-item">
-      <h4 className="sb-section-item-heading">Linting and Formatting</h4>
-      <p className="sb-section-item-paragraph">
-        - Run `npm run lint` to check for linting errors
-        - Run `npm run lint:fix` to automatically fix linting issues
-        - We follow the project's ESLint and Prettier configurations
-      </p>
-    </div>
+<MichiVzProvider colorsMapping={{ Coal: "#6b7280", Gas: "#f59e0b", "Wind & Solar": "#22c55e" }}>
+  <RibbonChart series={series} keys={keys} width={900} height={480} margin={margin} />
+</MichiVzProvider>
+```
 
-    <div className="sb-section-item">
-      <h4 className="sb-section-item-heading">Building and Publishing</h4>
-      <p className="sb-section-item-paragraph">
-        1. Update version in package.json
-        2. Run `npm run prepublishOnly` to build the package
-        3. Use `npm publish` to publish to npm
-      </p>
-    </div>
-  </div>
-</div>
-
-<div className="sb-container">
-  <div className='sb-section-title'>
-    # Testing
-  </div>
-
-  <div className="sb-section">
-    <div className="sb-section-item">
-      <h4 className="sb-section-item-heading">Running Tests</h4>
-      <p className="sb-section-item-paragraph">
-        We use Jest and React Testing Library for unit tests. Run tests with:
-        
-        ```bash
-        # Run all tests
-        npm run test
-        
-        # Run tests in watch mode
-        npm run test:watch
-        
-        # Update snapshots
-        npm run test -- -u
-        
-        # Generate coverage report
-        npm run test -- --coverage
-        ```
-      </p>
-    </div>
-
-    <div className="sb-section-item">
-      <h4 className="sb-section-item-heading">Test Structure</h4>
-      <p className="sb-section-item-paragraph">
-        Tests are located in `src/components/__tests__/`. Each component has a corresponding test file:
-        
-        ```
-        src/
-          components/
-            __tests__/
-              MichiVzProvider.test.tsx
-              VerticalStackBarChart.test.tsx
-              LineChart.test.tsx
-              test-utils.tsx  # Common utilities
-        ```
-      </p>
-    </div>
-
-    <div className="sb-section-item">
-      <h4 className="sb-section-item-heading">Writing Tests</h4>
-      <p className="sb-section-item-paragraph">
-        Use the `customRender` function from test-utils to render components with proper context:
-        
-        ```jsx
-        import { customRender } from "./test-utils";
-        
-        test("renders component", () => {
-          const { container } = customRender(
-            <YourComponent {...props} />
-          );
-          
-          // Assert things about your component
-        });
-        ```
-        
-        SVG and D3 functions are automatically mocked for testing.
-      </p>
-    </div>
-  </div>
-</div>
-
-<div className='sb-addon'>
-  <div className='sb-addon-text'>
-    <h4>Addons</h4>
-    <p className="sb-section-item-paragraph">Integrate your tools with Storybook to connect workflows.</p>
-    <a
-        href="https://storybook.js.org/integrations/"
-        target="_blank"
-      >Discover all addons<RightArrow /></a>
-  </div>
-  <div className='sb-addon-img'>
-    <img src={AddonLibrary} alt="Integrate your tools with Storybook to connect workflows." />
-  </div>
-</div>
-
-<div className="sb-section sb-socials">
-    <div className="sb-section-item">
-      <img src={Github} alt="Github logo" className="sb-explore-image"/>
-      Join our contributors building the future of UI development.
-
-      <a
-        href="https://github.com/storybookjs/storybook"
-        target="_blank"
-      >Star on GitHub<RightArrow /></a>
-    </div>
-    <div className="sb-section-item">
-      <img src={Discord} alt="Discord logo" className="sb-explore-image"/>
-      <div>
-        Get support and chat with frontend developers.
-
-        <a
-          href="https://discord.gg/storybook"
-          target="_blank"
-        >Join Discord server<RightArrow /></a>
-      </div>
-    </div>
-    <div className="sb-section-item">
-      <img src={Youtube} alt="Youtube logo" className="sb-explore-image"/>
-      <div>
-        Watch tutorials, feature previews and interviews.
-
-        <a
-          href="https://www.youtube.com/@chromaticui"
-          target="_blank"
-        >Watch on YouTube<RightArrow /></a>
-      </div>
-    </div>
-    <div className="sb-section-item">
-      <img src={Tutorials} alt="A book" className="sb-explore-image"/>
-      <p>Follow guided walkthroughs on for key workflows.</p>
-
-      <a
-          href="https://storybook.js.org/tutorials/"
-          target="_blank"
-        >Discover tutorials<RightArrow /></a>
-    </div>
+<div className="mv-note">
+  <strong>Working with large datasets?</strong> <code>LineChart</code> has an
+  opt-in <code>renderer="canvas"</code> mode that draws onto a single
+  <code>&lt;canvas&gt;</code> instead of thousands of SVG nodes, with LTTB
+  decimation — see the <em>Canvas Renderer</em> stories on the Line Chart page.
 </div>
 
 <style>
   {`
-  .sb-container {
-    margin-bottom: 48px;
-  }
+  :root { --mv-accent: #4f46e5; --mv-accent-dark: #3730a3; }
 
-  .sb-section {
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    gap: 20px;
+  .mv-hero {
+    padding: 44px 40px 40px;
+    margin-bottom: 44px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 55%, #faf5ff 100%);
+    border: 1px solid #e0e0f0;
   }
-
-  img {
-    max-height: 90px;
-    max-width: 200px;
-    margin-bottom: 12px;
-  }
-
-  .sb-section-title {
-    margin-bottom: 32px;
-  }
-
-  .sb-section-item, .sb-grid-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .sb-section-item-heading {
-    padding-top: 20px !important;
-    padding-bottom: 5px !important;
-    margin: 0 !important;
-  }
-  
-  .sb-section-item-paragraph {
-    margin: 0;
-    padding-bottom: 10px;
-  }
-
-  .sb-chevron {
-    margin-left: 5px;
-  }
-
-  .sb-features-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-gap: 32px 20px;
-  }
-
-  .sb-socials {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .sb-socials p {
+  .mv-eyebrow {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mv-accent);
     margin-bottom: 10px;
   }
-
-  .sb-explore-image {
-    max-height: 32px;
-    align-self: flex-start;
+  .mv-title {
+    font-size: 52px;
+    line-height: 1.05;
+    margin: 0 0 14px;
+    color: #1e1b4b;
+    letter-spacing: -0.02em;
   }
-
-  .sb-addon {
-    width: 100%;
-    display: flex;
+  .mv-tagline {
+    max-width: 640px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #4b5563;
+    margin: 0 0 24px;
+  }
+  .mv-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .mv-btn {
+    display: inline-flex;
     align-items: center;
-    position: relative;
-    background-color: #EEF3F8;
-    border-radius: 5px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    padding: 20px;
-    margin-bottom: 40px;
-    gap: 20px;
-  }
-
-  .sb-addon-text {
-    color: #333333;
+    padding: 10px 18px;
+    border-radius: 8px;
     font-size: 14px;
+    font-weight: 600;
+    text-decoration: none !important;
+    border: 1px solid var(--mv-accent);
+    color: var(--mv-accent) !important;
+    background: #ffffff;
+    transition: transform 0.08s ease;
+  }
+  .mv-btn:hover { transform: translateY(-1px); }
+  .mv-btn-primary { background: var(--mv-accent); color: #ffffff !important; }
+  .mv-btn-primary:hover { background: var(--mv-accent-dark); border-color: var(--mv-accent-dark); }
+
+  .mv-h2 {
+    font-size: 24px;
+    margin: 8px 0 6px;
+    color: #1e1b4b;
+    letter-spacing: -0.01em;
+  }
+  .mv-h3 { font-size: 16px; margin: 0 0 8px; color: #1e1b4b; }
+  .mv-lead { color: #4b5563; margin: 0 0 20px; max-width: 680px; }
+
+  .mv-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+  .mv-card {
+    display: block;
+    padding: 18px 18px 16px;
+    border-radius: 10px;
+    border: 1px solid #e6e6ef;
+    background: #ffffff;
+    text-decoration: none !important;
+    transition: border-color 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease;
+  }
+  .mv-card:hover {
+    border-color: var(--mv-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.1);
+  }
+  .mv-card-title {
+    font-size: 15px;
+    margin: 0 0 6px;
+    color: var(--mv-accent) !important;
+  }
+  .mv-card-text { font-size: 13px; line-height: 1.55; color: #5b6270; margin: 0; }
+
+  .mv-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 44px;
+  }
+  .mv-col { display: flex; flex-direction: column; }
+  .mv-col p { color: #4b5563; margin: 0 0 8px; }
+
+  .mv-note {
+    margin: 12px 0 48px;
+    padding: 16px 18px;
+    border-radius: 10px;
+    background: #eef2ff;
+    border: 1px solid #d8dcfb;
+    border-left: 4px solid var(--mv-accent);
+    font-size: 14px;
+    line-height: 1.6;
+    color: #3a3a52;
   }
 
-  .sb-addon-text h4 {
-    padding-top: 0px !important;
-  }
-
-  .sb-addon-img {
-    height: 160px;
-    width: auto;
-    filter: drop-shadow(0px 4px 10px #00000020);
-  }
-  
-  pre {
-    background-color: #f8f8f8;
-    padding: 12px;
-    border-radius: 4px;
-    overflow-x: auto;
-  }
-  
-  code {
-    font-family: monospace;
-  }
-
-  @media screen and (max-width: 800px) {
-    .sb-section {
-      flex-direction: column;
-    }
-
-    .sb-features-grid {
-      grid-template-columns: repeat(1, 1fr);
-    }
-
-    .sb-socials {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .sb-addon {
-      flex-direction: column;
-      align-items: flex-start;
-    }
+  @media screen and (max-width: 860px) {
+    .mv-grid { grid-template-columns: 1fr; }
+    .mv-cols { grid-template-columns: 1fr; }
+    .mv-title { font-size: 40px; }
   }
   `}
 </style>

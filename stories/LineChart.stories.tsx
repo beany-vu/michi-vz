@@ -3,8 +3,9 @@ import LineChartComponent from "../src/components/LineChart";
 import { Meta } from "@storybook/react";
 import { fn } from "@storybook/test";
 
-// Storybook stories for the LineChart component — a focused set, one story per
-// distinct feature. Each story is a self-contained, meaningful example.
+// Storybook stories for the LineChart component — a lean, curated showcase.
+// Each story demonstrates a real analytical use case with realistic data,
+// not exhaustive prop coverage.
 
 // Simple tooltip styling for the demos. The LineChart tooltip container carries
 // the class `.tooltip`; the formatter's HTML lands inside `.tooltip-content`.
@@ -36,6 +37,17 @@ export default {
       </>
     ),
   ],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "**LineChart** plots one or more time series on a shared set of axes — the workhorse for trend analysis, comparisons between groups, and forecasts. " +
+          "It expects a `dataSet`: an array of labelled series, each with a `series` array of `{ date, value, certainty }` points. " +
+          "Points marked `certainty: false` render as a dashed line, so projected or low-confidence data reads differently from observed data. " +
+          "For large datasets, opt into `renderer=\"canvas\"` — the same chart drawn on a `<canvas>` with LTTB decimation, scaling smoothly to tens of thousands of points while axes, title and tooltip stay SVG/HTML.",
+      },
+    },
+  },
   args: {
     showDataPoints: true,
     onHighlightItem: fn(),
@@ -46,103 +58,6 @@ export default {
 } as Meta;
 
 // --- Shared data ------------------------------------------------------------
-
-// One series with a mix of certain / uncertain points — uncertain segments
-// (certainty: false) render as a dashed line.
-const singleSeriesData = [
-  {
-    label: "Country 1",
-    color: "red",
-    series: [
-      { date: "2002", value: 24.14, certainty: false },
-      { date: "2003", value: 20.68, certainty: true },
-      { date: "2004", value: 29.34, certainty: true },
-      { date: "2006", value: 33.6, certainty: false },
-      { date: "2007", value: 33.6, certainty: true },
-    ],
-  },
-];
-
-// Three series — used to show multi-series rendering and filtering.
-const multiSeriesData = [
-  {
-    label: "Item 1",
-    shape: "triangle",
-    curve: "curveLinear",
-    series: [
-      { date: "2016", value: 101, certainty: true },
-      { date: "2017", value: 201, certainty: true },
-      { date: "2018", value: 151, certainty: false },
-    ],
-  },
-  {
-    label: "Item 2",
-    shape: "triangle",
-    curve: "curveLinear",
-    series: [
-      { date: "2016", value: 102, certainty: true },
-      { date: "2017", value: 22, certainty: true },
-      { date: "2018", value: 152, certainty: false },
-    ],
-  },
-  {
-    label: "Item 3",
-    shape: "triangle",
-    curve: "curveBumpX",
-    series: [
-      { date: "2016", value: 103, certainty: true },
-      { date: "2017", value: 3, certainty: true },
-      { date: "2018", value: 153, certainty: false },
-    ],
-  },
-];
-
-// Per-point colours — each data point carries its own `color`, useful for
-// encoding categories or thresholds (temperature, performance, risk bands).
-const colorPerPointDataSet = [
-  {
-    label: "Temperature Variations",
-    shape: "circle",
-    curve: "curveLinear",
-    series: [
-      { date: "2016", value: 35, certainty: true, color: "#2196F3" },
-      { date: "2017", value: 65, certainty: true, color: "#4CAF50" },
-      { date: "2018", value: 85, certainty: true, color: "#FF9800" },
-      { date: "2019", value: 95, certainty: true, color: "#F44336" },
-      { date: "2020", value: 75, certainty: true, color: "#FF9800" },
-      { date: "2021", value: 55, certainty: false, color: "#4CAF50" },
-      { date: "2022", value: 30, certainty: false, color: "#2196F3" },
-    ],
-  },
-  {
-    label: "Performance Metrics",
-    shape: "square",
-    curve: "curveLinear",
-    series: [
-      { date: "2016", value: 42, certainty: true, color: "#F44336" },
-      { date: "2017", value: 58, certainty: true, color: "#FF9800" },
-      { date: "2018", value: 67, certainty: true, color: "#FFEB3B" },
-      { date: "2019", value: 82, certainty: true, color: "#4CAF50" },
-      { date: "2020", value: 94, certainty: true, color: "#2196F3" },
-      { date: "2021", value: 88, certainty: false, color: "#4CAF50" },
-      { date: "2022", value: 75, certainty: false, color: "#FFEB3B" },
-    ],
-  },
-  {
-    label: "Risk Assessment",
-    shape: "triangle",
-    curve: "curveBumpX",
-    series: [
-      { date: "2016", value: 120, certainty: true, color: "#F44336" },
-      { date: "2017", value: 95, certainty: true, color: "#FF9800" },
-      { date: "2018", value: 65, certainty: true, color: "#4CAF50" },
-      { date: "2019", value: 85, certainty: true, color: "#FF9800" },
-      { date: "2020", value: 110, certainty: true, color: "#F44336" },
-      { date: "2021", value: 75, certainty: false, color: "#FF9800" },
-      { date: "2022", value: 55, certainty: false, color: "#4CAF50" },
-    ],
-  },
-];
 
 // Synthetic dataset: `seriesCount` series each with `pointsPerSeries` monthly
 // points — used to exercise the opt-in Canvas renderer at scale.
@@ -161,7 +76,7 @@ const generateLargeDataset = (seriesCount: number, pointsPerSeries: number) => {
         certainty: true,
       };
     });
-    return { label: `Series ${s + 1}`, color: palette[s % palette.length], series };
+    return { label: `Sensor ${s + 1}`, color: palette[s % palette.length], series };
   });
 };
 
@@ -183,38 +98,37 @@ const commonProps = {
 
 // --- Stories ----------------------------------------------------------------
 
-// Baseline: two regions of annual data with negative values and a mix of
-// certain / uncertain points. Hover a line for the formatted tooltip.
+// Baseline: two regions compared over time, with a forecast tail.
 export const Primary = {
   args: {
     ...commonProps,
     dataSet: [
       {
-        label: "Africa",
+        label: "Renewable share — EU",
         shape: "circle",
-        color: "#4287f5",
+        color: "#2e7d32",
         series: [
-          { date: "2015", value: -63.85, certainty: false, code: "1001" },
-          { date: "2016", value: -64.01, certainty: true, code: "1001" },
-          { date: "2017", value: -63.84, certainty: true, code: "1001" },
-          { date: "2018", value: -89.53, certainty: true, code: "1001" },
-          { date: "2019", value: -53.03, certainty: true, code: "1001" },
-          { date: "2020", value: -84.09, certainty: true, code: "1001" },
-          { date: "2021", value: -43.87, certainty: true, code: "1001" },
+          { date: "2017", value: 32.1, certainty: true, code: "EU" },
+          { date: "2018", value: 34.6, certainty: true, code: "EU" },
+          { date: "2019", value: 36.0, certainty: true, code: "EU" },
+          { date: "2020", value: 39.4, certainty: true, code: "EU" },
+          { date: "2021", value: 41.2, certainty: true, code: "EU" },
+          { date: "2022", value: 43.8, certainty: false, code: "EU" },
+          { date: "2023", value: 45.5, certainty: false, code: "EU" },
         ],
       },
       {
-        label: "Rest of the World",
+        label: "Renewable share — United States",
         shape: "square",
-        color: "#42f554",
+        color: "#1565c0",
         series: [
-          { date: "2015", value: -86.95, certainty: false, code: "1002" },
-          { date: "2016", value: -75.09, certainty: true, code: "1002" },
-          { date: "2017", value: -69.48, certainty: true, code: "1002" },
-          { date: "2018", value: -64.23, certainty: true, code: "1002" },
-          { date: "2019", value: -62.17, certainty: true, code: "1002" },
-          { date: "2020", value: -86.63, certainty: true, code: "1002" },
-          { date: "2021", value: -88.95, certainty: true, code: "1002" },
+          { date: "2017", value: 17.3, certainty: true, code: "US" },
+          { date: "2018", value: 17.6, certainty: true, code: "US" },
+          { date: "2019", value: 17.9, certainty: true, code: "US" },
+          { date: "2020", value: 19.8, certainty: true, code: "US" },
+          { date: "2021", value: 20.1, certainty: true, code: "US" },
+          { date: "2022", value: 21.4, certainty: false, code: "US" },
+          { date: "2023", value: 22.6, certainty: false, code: "US" },
         ],
       },
     ],
@@ -224,74 +138,71 @@ export const Primary = {
     docs: {
       description: {
         story:
-          "Baseline two-series example: annual data, negative values, and a mix of certain / uncertain points (the first segment of each series is dashed). Hover a line for the tooltip and series highlight.",
+          "Share of electricity from renewable sources, EU vs United States. The widening gap is the story; the final two years are marked `certainty: false` and render dashed, signalling forecast rather than observed data. Hover a line for the tooltip and series highlight.",
       },
     },
   },
 };
 
-// A single series, no filter — note the dashed segments where `certainty` is false.
-export const NoFilter = {
-  args: {
-    ...commonProps,
-    dataSet: singleSeriesData,
-    title: "Single Series",
-    filter: null,
-  },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "A single series with no filtering. Points with `certainty: false` produce dashed line segments — here the 2002 and 2006 segments.",
-      },
-    },
-  },
-};
-
-// Multiple series with a filter applied.
-export const MultiSeries = {
-  args: {
-    ...commonProps,
-    dataSet: multiSeriesData,
-    title: "Multi-Series with Filter",
-    filter: { limit: 2, date: "2017", criteria: "value", sortingDir: "desc" },
-  },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Three series with a `filter` — only the top 2 by value at 2017 (descending) render. The `filter` prop drives which series are shown.",
-      },
-    },
-  },
-};
-
-// Dots hidden — hover any line for the nearest-point tooltip via bisection.
-export const NoDots = {
-  args: {
-    ...commonProps,
-    dataSet: multiSeriesData,
-    title: "No Dots (hover any line for tooltip)",
-    filter: null,
-    showDataPoints: false,
-  },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "With `showDataPoints={false}`, per-point shapes are hidden. Hovering anywhere along a line resolves the nearest point in that series and renders the tooltip via your `tooltipFormatter`. Highlight + tooltip happen together, mirroring the per-dot UX.",
-      },
-    },
-  },
-};
-
-// Marker shapes and curve types.
-export const DifferentShapesAndCurves = {
+// Multiple series narrowed by the filter prop.
+export const TopPerformersFilter = {
   args: {
     ...commonProps,
     dataSet: [
       {
-        label: "Circle Series",
+        label: "Solar PV",
+        shape: "triangle",
+        curve: "curveLinear",
+        color: "#f9a825",
+        series: [
+          { date: "2019", value: 112, certainty: true },
+          { date: "2020", value: 139, certainty: true },
+          { date: "2021", value: 178, certainty: true },
+        ],
+      },
+      {
+        label: "Onshore Wind",
+        shape: "triangle",
+        curve: "curveLinear",
+        color: "#26a69a",
+        series: [
+          { date: "2019", value: 95, certainty: true },
+          { date: "2020", value: 108, certainty: true },
+          { date: "2021", value: 121, certainty: true },
+        ],
+      },
+      {
+        label: "Hydropower",
+        shape: "triangle",
+        curve: "curveBumpX",
+        color: "#5c6bc0",
+        series: [
+          { date: "2019", value: 84, certainty: true },
+          { date: "2020", value: 86, certainty: true },
+          { date: "2021", value: 88, certainty: true },
+        ],
+      },
+    ],
+    title: "Capacity Added by Technology (GW)",
+    filter: { limit: 2, date: "2021", criteria: "value", sortingDir: "desc" },
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "New generation capacity added by technology. The `filter` prop ranks series by value at a chosen date and keeps only the top N — here the two fastest-growing technologies as of 2021 (Solar PV and Onshore Wind), letting an analyst surface leaders without pre-trimming the data.",
+      },
+    },
+  },
+};
+
+// Marker shapes and curve interpolation.
+export const ShapesAndCurves = {
+  args: {
+    ...commonProps,
+    dataSet: [
+      {
+        label: "North America",
         shape: "circle",
         curve: "curveLinear",
         color: "#4287f5",
@@ -304,7 +215,7 @@ export const DifferentShapesAndCurves = {
         ],
       },
       {
-        label: "Square Series",
+        label: "Europe",
         shape: "square",
         curve: "curveBumpX",
         color: "#f54242",
@@ -317,7 +228,7 @@ export const DifferentShapesAndCurves = {
         ],
       },
       {
-        label: "Triangle Series",
+        label: "Asia-Pacific",
         shape: "triangle",
         curve: "curveLinear",
         color: "#42f554",
@@ -330,70 +241,14 @@ export const DifferentShapesAndCurves = {
         ],
       },
     ],
-    title: "Different Shapes and Curves",
+    title: "Quarterly Revenue Index by Region",
     filter: null,
   },
   parameters: {
     docs: {
       description: {
         story:
-          "Per-series marker `shape` (circle / square / triangle) and `curve` (`curveLinear` straight segments vs `curveBumpX` smooth).",
-      },
-    },
-  },
-};
-
-// Monthly x-axis.
-export const MonthlyData = {
-  args: {
-    ...commonProps,
-    dataSet: [
-      {
-        label: "Monthly Trends",
-        color: "blue",
-        series: [
-          { date: "2022-01", value: 45.2, certainty: true },
-          { date: "2022-02", value: 48.6, certainty: true },
-          { date: "2022-03", value: 52.1, certainty: true },
-          { date: "2022-04", value: 55.8, certainty: true },
-          { date: "2022-05", value: 60.3, certainty: true },
-          { date: "2022-06", value: 63.7, certainty: true },
-          { date: "2022-07", value: 61.2, certainty: false },
-          { date: "2022-08", value: 58.4, certainty: false },
-          { date: "2022-09", value: 53.9, certainty: false },
-          { date: "2022-10", value: 49.7, certainty: false },
-          { date: "2022-11", value: 46.5, certainty: false },
-          { date: "2022-12", value: 43.8, certainty: false },
-        ],
-      },
-    ],
-    title: "Monthly Data",
-    xAxisDataType: "date_monthly",
-    filter: null,
-  },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Monthly time series via `xAxisDataType="date_monthly"`. The second half of the year is uncertain, so those segments render dashed.',
-      },
-    },
-  },
-};
-
-// Individual colour per data point.
-export const ColorPerDataPoint = {
-  args: {
-    ...commonProps,
-    dataSet: colorPerPointDataSet,
-    title: "Color Per Data Point",
-    filter: null,
-  },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Each data point carries its own `color`, useful for encoding categories or thresholds (temperature ranges, performance levels, risk bands).",
+          "Per-series styling for legibility when several lines overlap: each series sets its own marker `shape` (circle / square / triangle) and `curve`. `curveLinear` keeps straight segments that read values honestly; `curveBumpX` smooths the line for a cleaner trend at the cost of literal accuracy between points.",
       },
     },
   },
@@ -414,7 +269,7 @@ export const CanvasRenderer = {
     docs: {
       description: {
         story:
-          'LineChart with renderer="canvas": 12 series x 240 monthly points drawn on a <canvas> with LTTB decimation. Axes, title and tooltip stay SVG/HTML. Hover a line for the tooltip + highlight.',
+          "The headline feature. Twelve sensors logged monthly for 20 years (~2,880 points) — a dataset that would stutter as SVG. Setting `renderer=\"canvas\"` draws the lines on a `<canvas>` with LTTB decimation, while axes, title and tooltip stay SVG/HTML. Hovering still resolves the nearest point and highlights its series.",
       },
     },
   },
@@ -453,7 +308,7 @@ export const RendererComparison = {
     docs: {
       description: {
         story:
-          "The same dataset rendered with renderer=svg and renderer=canvas, stacked for visual parity comparison (curves, certainty dashing, colours, hover/highlight).",
+          "Switching to the Canvas renderer should change performance, not appearance. The same eight-sensor dataset is drawn both ways and stacked — curves, certainty dashing, colours and hover/highlight should match. Use this to satisfy yourself the opt-in is a safe swap.",
       },
     },
   },
@@ -472,7 +327,7 @@ export const CanvasLargeDataset = {
     docs: {
       description: {
         story:
-          'Stress test for the Canvas renderer: 60 series x 360 monthly points (~21,600 points). Switch renderer to "svg" via the controls to compare.',
+          "Where Canvas earns its place: 60 sensors over 30 years of monthly readings (~21,600 points) stay interactive. Flip `renderer` to `\"svg\"` in the controls to feel the difference — the SVG path count makes the same chart sluggish.",
       },
     },
   },

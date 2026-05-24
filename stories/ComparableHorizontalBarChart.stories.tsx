@@ -1,783 +1,292 @@
-import React, { useState, useCallback } from "react";
+import React from "react";
 import ComparableHorizontalBarChart from "../src/components/ComparableHorizontalBarChart";
 import { Meta } from "@storybook/react";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
 import { fn } from "@storybook/test";
+import { createHatchPattern } from "../src/components/hooks/canvas/createHatchPattern";
 
-// Define the default metadata for the component
+// Storybook stories for ComparableHorizontalBarChart — a lean, curated showcase.
+// Each story pairs two values per category row (`valueBased` and `valueCompared`)
+// to answer a real comparison question, not to exhaustively cover props.
+
+// --- Shared data ------------------------------------------------------------
+
+// Budget vs actual spend per department ($M) — the canonical use case: two
+// values on one row so over/under-spend reads off the bar pair directly.
+const budgetVsActual = [
+  { label: "Engineering", valueBased: 12.4, valueCompared: 14.1 },
+  { label: "Sales", valueBased: 9.8, valueCompared: 8.7 },
+  { label: "Marketing", valueBased: 6.5, valueCompared: 7.9 },
+  { label: "Customer Support", valueBased: 4.2, valueCompared: 4.0 },
+  { label: "Research & Development", valueBased: 8.1, valueCompared: 9.6 },
+  { label: "Operations", valueBased: 5.7, valueCompared: 5.3 },
+];
+
+// Revenue this year vs last year by product line ($M).
+const yearOverYearRevenue = [
+  { label: "Cloud Platform", valueBased: 142, valueCompared: 168 },
+  { label: "Professional Services", valueBased: 88, valueCompared: 81 },
+  { label: "Hardware", valueBased: 64, valueCompared: 59 },
+  { label: "Licensing", valueBased: 47, valueCompared: 53 },
+  { label: "Support Contracts", valueBased: 39, valueCompared: 44 },
+];
+
+// Net population change by region (%) — mix of growth and decline so bars
+// diverge left and right of zero.
+const netChangeByRegion = [
+  { label: "Sub-Saharan Africa", valueBased: 22.4, valueCompared: 18.1 },
+  { label: "South Asia", valueBased: 11.3, valueCompared: 7.6 },
+  { label: "Latin America", valueBased: 6.2, valueCompared: 3.9 },
+  { label: "Eastern Europe", valueBased: -4.8, valueCompared: -7.2 },
+  { label: "East Asia", valueBased: 1.5, valueCompared: -2.3 },
+];
+
+// Common props shared across stories — width/height/margin, callbacks and
+// formatters. Spread into each story's `args`.
+const commonProps = {
+  width: 900,
+  height: 400,
+  margin: { top: 50, right: 50, bottom: 50, left: 180 },
+  xAxisDataType: "number" as const,
+  xAxisFormat: (d: number | { valueOf(): number }) => `${d}`,
+  yAxisFormat: (d: number | string) => `${d}`,
+  tooltipFormatter: (d: unknown) => {
+    const item = d as { label: string; valueBased: number; valueCompared: number };
+    return `<strong>${item.label}</strong><br/>Based: ${item.valueBased}<br/>Compared: ${item.valueCompared}`;
+  },
+  filter: { limit: 10, criteria: "valueBased" as const, sortingDir: "desc" as const },
+  onChartDataProcessed: fn(),
+  onLegendDataChange: fn(),
+  onHighlightItem: fn(),
+  onColorMappingGenerated: fn(),
+};
+
 export default {
   title: "Charts/Comparable Horizontal Bar Chart",
   component: ComparableHorizontalBarChart,
   tags: ["autodocs"],
-  decorators: [
-    Story => (
-      <MichiVzProvider visibleItems={["Africa", "Congo", "Egypt", "Madagascar"]}>
-        <Story />
-      </MichiVzProvider>
-    ),
-  ],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "**ComparableHorizontalBarChart** draws two values — `valueBased` and `valueCompared` — for every category, as a pair of horizontal bars sharing one row. " +
+          "It expects a `dataSet` of `{ label, valueBased, valueCompared }` items; values may be positive or negative, in which case bars diverge left and right of a zero line. " +
+          "Reach for it whenever the question is *how do these two numbers compare, per category* — budget vs actual, this year vs last year, target vs result, region A vs region B — where stacking the pair on one row makes the gap immediately readable.",
+      },
+    },
+  },
+  args: {
+    showGrid: true,
+  },
 } as Meta;
 
-// Create a default story using the template
+// --- Stories ----------------------------------------------------------------
+
+// Primary showcase: budget vs actual spend — the textbook two-values-per-row case.
 export const Primary = {
   args: {
+    ...commonProps,
+    dataSet: budgetVsActual,
+    title: "Budget vs Actual Spend by Department ($M)",
+    xAxisPredefinedDomain: [0, 16],
     showGrid: true,
-    onChartDataProcessed: fn(),
-    onLegendDataChange: fn(),
-    onHighlightItem: fn(),
-    onColorMappingGenerated: fn(),
-    isNoDataComponent: <div>No data</div>,
-    dataSet: [
-      {
-        label: "Africa",
-        valueBased: 100,
-        valueCompared: 55,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Planned budget (`valueBased`) against actual spend (`valueCompared`) for each department. Pairing the two bars on one row makes overspend obvious at a glance — Engineering and R&D ran over, Sales and Operations came in under. This is the question the chart exists to answer.",
       },
-      {
-        label: "Egypt",
-        valueBased: -23.06,
-        valueCompared: -49.59,
-      },
-      {
-        label: "Congo",
-        valueBased: 100,
-        valueCompared: 55,
-      },
-    ],
-    width: 900,
-    height: 400,
-    margin: {
-      top: 50,
-      right: 50,
-      bottom: 50,
-      left: 150,
     },
-
-    xAxisPredefinedDomain: [-100, 100],
-    showCombined: false,
-    xAisFormat: d => `${d}`, // Example: format values as percentages
-    yAxisFormat: d => `${d}`, // Example: format values as percentages
-    title: "My Comparable Vertical Bar Chart",
-    tooltipFormatter: (d: unknown) => {
-      return JSON.stringify(d);
-    },
-    children: (
-      <defs>
-        <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="red" />
-          <stop offset="100%" stopColor="blue" />
-        </linearGradient>
-
-        <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="red" />
-          <stop offset="100%" stopColor="pink" />
-        </linearGradient>
-      </defs>
-    ),
-    filter: { limit: 10, criteria: "valueBased", sortingDir: "desc" },
   },
 };
 
-// Interactive story with disable/enable functionality
-export const InteractiveControls = {
-  render: (args: any) => {
-    const [highlightItems, setHighlightItems] = useState<string[]>([]);
-    const [disabledItems, setDisabledItems] = useState<string[]>([]);
-    const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>({});
-
-    const handleHighlightItem = useCallback((labels: string[]) => {
-      setHighlightItems(labels);
-    }, []);
-
-    const handleColorMappingGenerated = useCallback((mapping: { [key: string]: string }) => {
-      setColorsMapping(prev => {
-        if (JSON.stringify(prev) !== JSON.stringify(mapping)) {
-          return mapping;
-        }
-        return prev;
-      });
-    }, []);
-
-    const toggleDisabledItem = useCallback((label: string) => {
-      setDisabledItems(prev => {
-        const newDisabled = prev.includes(label)
-          ? prev.filter(item => item !== label)
-          : [...prev, label];
-        return newDisabled;
-      });
-    }, []);
-
-    // Get all unique labels from the dataset
-    const allLabels = React.useMemo(() => {
-      return args.dataSet?.map((item: any) => item.label) || [];
-    }, [args.dataSet]);
-
-    return (
-      <div style={{ padding: "20px" }}>
-        <div style={{ marginBottom: "20px" }}>
-          <h3>Interactive Controls</h3>
-          <div style={{ marginBottom: "10px" }}>
-            <strong>Current Highlighted Items:</strong>{" "}
-            {highlightItems.length > 0 ? highlightItems.join(", ") : "None"}
-          </div>
-          <div style={{ marginBottom: "10px" }}>
-            <strong>Current Disabled Items:</strong>{" "}
-            {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}
-          </div>
-          <div style={{ marginBottom: "10px" }}>
-            <strong>Generated Colors:</strong>{" "}
-            {Object.keys(colorsMapping).length > 0 ? JSON.stringify(colorsMapping) : "None yet"}
-          </div>
-          <div style={{ marginBottom: "10px" }}>
-            <strong>Instructions:</strong>
-            <ul>
-              <li>Hover over chart bars to highlight items</li>
-              <li>Click on legend items below to disable/enable data items</li>
-            </ul>
-          </div>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            {allLabels.map((label: string) => (
-              <button
-                key={label}
-                onClick={() => toggleDisabledItem(label)}
-                style={{
-                  padding: "8px 16px",
-                  border: "1px solid #ccc",
-                  borderRadius: "4px",
-                  backgroundColor: disabledItems.includes(label)
-                    ? "#f0f0f0"
-                    : colorsMapping[label] || "#fff",
-                  color: disabledItems.includes(label) ? "#999" : "#000",
-                  cursor: "pointer",
-                  textDecoration: disabledItems.includes(label) ? "line-through" : "none",
-                }}
-              >
-                {label} {disabledItems.includes(label) ? "(Disabled)" : ""}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <MichiVzProvider>
-          <ComparableHorizontalBarChart
-            {...args}
-            colorsMapping={colorsMapping}
-            onColorMappingGenerated={handleColorMappingGenerated}
-            onHighlightItem={handleHighlightItem}
-            highlightItems={highlightItems}
-            disabledItems={disabledItems}
-          />
-        </MichiVzProvider>
-      </div>
-    );
-  },
+// Period-over-period comparison — the most common analyst lens.
+export const YearOverYear = {
   args: {
+    ...commonProps,
+    dataSet: yearOverYearRevenue,
+    title: "Revenue by Product Line — Last Year vs This Year ($M)",
+    xAxisPredefinedDomain: [0, 180],
     showGrid: true,
-    onChartDataProcessed: fn(),
-    onLegendDataChange: fn(),
-    onHighlightItem: fn(),
-    onColorMappingGenerated: fn(),
-    isNoDataComponent: <div>No data</div>,
-    dataSet: [
-      {
-        label: "North America",
-        valueBased: 85,
-        valueCompared: 72,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "The same metric across two periods: `valueBased` is last year, `valueCompared` is this year. Sorted by last year's revenue, the chart shows which lines grew (Cloud Platform, Licensing, Support) and which slipped (Professional Services, Hardware) without a separate trend chart.",
       },
-      {
-        label: "Europe",
-        valueBased: 78,
-        valueCompared: 85,
-      },
-      {
-        label: "Asia",
-        valueBased: 92,
-        valueCompared: 88,
-      },
-      {
-        label: "Africa",
-        valueBased: 45,
-        valueCompared: 58,
-      },
-      {
-        label: "South America",
-        valueBased: 68,
-        valueCompared: 75,
-      },
-      {
-        label: "Oceania",
-        valueBased: 52,
-        valueCompared: 48,
-      },
-    ],
-    width: 900,
-    height: 400,
-    margin: {
-      top: 50,
-      right: 50,
-      bottom: 50,
-      left: 150,
     },
-    xAxisPredefinedDomain: [0, 100],
-    showCombined: false,
-    xAisFormat: (d: any) => `${d}%`,
-    yAxisFormat: (d: any) => `${d}`,
-    title: "Interactive Comparable Horizontal Bar Chart",
-    tooltipFormatter: (d: unknown) => {
-      return JSON.stringify(d);
-    },
-    filter: { limit: 10, criteria: "valueBased", sortingDir: "desc" },
   },
 };
 
-// Comprehensive interactive story with disable/enable functionality
-export const DisableEnableColorMapping = {
-  render: (args: any) => {
-    const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
-    const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
-    const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
-
-    const handleColorMappingGenerated = React.useCallback(
-      (newMapping: { [key: string]: string }) => {
-        setColorsMapping(prev => {
-          const updated = { ...prev, ...newMapping };
-          // Only update if the mapping has actually changed
-          if (JSON.stringify(prev) !== JSON.stringify(updated)) {
-            return updated;
-          }
-          return prev;
-        });
+// Negative values — bars diverge either side of a zero line.
+export const DivergingValues = {
+  args: {
+    ...commonProps,
+    dataSet: netChangeByRegion,
+    title: "Net Population Change by Region — 2010s vs 2020s (%)",
+    xAxisPredefinedDomain: [-12, 24],
+    showGrid: true,
+    showZeroLineForXAxis: true,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "When values can be negative, bars diverge left and right of zero. Here decade-on-decade population change shows growth slowing everywhere, with Eastern Europe deepening its decline and East Asia crossing from growth into contraction. `showZeroLineForXAxis` emphasises the zero baseline that anchors the comparison.",
       },
-      []
-    );
+    },
+  },
+};
+
+// Two dates per row — comparing timing rather than magnitude.
+export const DateAxis = {
+  args: {
+    ...commonProps,
+    dataSet: [
+      { label: "Harbour Bridge Retrofit", valueBased: 2014, valueCompared: 2019 },
+      { label: "Metro Line Extension", valueBased: 2016, valueCompared: 2023 },
+      { label: "Airport Terminal C", valueBased: 2018, valueCompared: 2021 },
+      { label: "Riverside Flood Defence", valueBased: 2012, valueCompared: 2017 },
+    ],
+    title: "Infrastructure Projects — Planned Start vs Completion Year",
+    xAxisDataType: "date_annual",
+    xAxisFormat: (d: number | { valueOf(): number }) => `${d}`,
+    filter: undefined,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "With `xAxisDataType=\"date_annual\"` the axis reads as years, so the bar pair spans a duration instead of a magnitude. Planned start vs completion year turns each row into a project timeline — the gap between bars is how long the project ran, making the Metro Line Extension's seven-year span stand out.",
+      },
+    },
+  },
+};
+
+// Highlight / disable interaction, framed as exploring the comparison.
+export const InteractiveExploration = {
+  render: (args: Record<string, unknown>) => {
+    const dataSet = args.dataSet as { label: string }[];
+    const [highlightItems, setHighlightItems] = React.useState<string[]>([]);
+    const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
 
     const toggleDisabled = React.useCallback((label: string) => {
       setDisabledItems(prev =>
-        prev.includes(label) ? prev.filter(item => item !== label) : [...prev, label]
+        prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
       );
     }, []);
 
-    const controlsContainerStyle = {
-      display: "flex",
-      flexDirection: "column" as const,
-      gap: "15px",
-      marginBottom: "20px",
-      padding: "15px",
-      border: "1px solid #e0e0e0",
-      borderRadius: "8px",
-      backgroundColor: "#f9f9f9",
-    };
-
-    const buttonGroupStyle = {
-      display: "flex",
-      gap: "10px",
-      flexWrap: "wrap" as const,
-      alignItems: "center",
-    };
-
-    const sectionLabelStyle = {
-      fontSize: "14px",
-      fontWeight: "bold" as const,
-      color: "#333",
-      marginBottom: "5px",
-    };
-
-    const buttonStyle = (label: string, type: "highlight" | "disable") => {
-      const baseStyle = {
-        padding: "8px 16px",
-        border: "2px solid",
-        borderRadius: "4px",
-        cursor: "pointer",
-        transition: "all 0.3s ease",
-        fontWeight: 500,
-        fontSize: "12px",
-      };
-
-      if (type === "highlight") {
-        const isHighlighted = currentHighlight.includes(label);
-        const color = colorsMapping[label] || "#666";
-        return {
-          ...baseStyle,
-          borderColor: color,
-          background: isHighlighted ? color : "white",
-          color: isHighlighted ? "white" : color,
-        };
-      } else {
-        // disable
-        const isDisabled = disabledItems.includes(label);
-        return {
-          ...baseStyle,
-          borderColor: isDisabled ? "#dc3545" : "#28a745",
-          background: isDisabled ? "#dc3545" : "#28a745",
-          color: "white",
-        };
-      }
-    };
-
-    const infoPanelStyle = {
-      padding: "10px",
-      backgroundColor: "#e9ecef",
-      borderRadius: "4px",
-      fontSize: "12px",
-      fontFamily: "monospace",
-    };
-
-    // Get all unique labels from the dataset
-    const allLabels = React.useMemo(() => {
-      return args.dataSet?.map((item: any) => item.label) || [];
-    }, [args.dataSet]);
+    const labels = dataSet.map(d => d.label);
 
     return (
+      <div style={{ padding: 20 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+          {labels.map(label => (
+            <button
+              key={label}
+              onMouseEnter={() => setHighlightItems([label])}
+              onMouseLeave={() => setHighlightItems([])}
+              onClick={() => toggleDisabled(label)}
+              style={{
+                padding: "8px 16px",
+                border: "1px solid #ccc",
+                borderRadius: 4,
+                cursor: "pointer",
+                background: disabledItems.includes(label) ? "#f0f0f0" : "#fff",
+                textDecoration: disabledItems.includes(label) ? "line-through" : "none",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <ComparableHorizontalBarChart
+          {...args}
+          highlightItems={highlightItems}
+          disabledItems={disabledItems}
+        />
+      </div>
+    );
+  },
+  args: {
+    ...commonProps,
+    dataSet: budgetVsActual,
+    title: "Budget vs Actual — Focus a Department",
+    xAxisPredefinedDomain: [0, 16],
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Exploring the same budget-vs-actual data interactively: hover a department to highlight its bar pair via `highlightItems`, click to mute it via `disabledItems`. Useful for walking an audience through one row at a time, or dropping a department to rescale the rest of the comparison.",
+      },
+    },
+  },
+};
+
+// Renderer parity check — the SVG and Canvas backends drawn from one dataset.
+export const RendererComparison = {
+  render: (args: Record<string, unknown>) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 32, padding: 20 }}>
       <div>
-        <div style={controlsContainerStyle}>
-          <div>
-            <div style={sectionLabelStyle}>Highlight Controls:</div>
-            <div style={buttonGroupStyle}>
-              {allLabels.map((label: string) => (
-                <button
-                  key={`highlight-${label}`}
-                  style={buttonStyle(label, "highlight")}
-                  onMouseEnter={() => setCurrentHighlight([label])}
-                  onMouseLeave={() => setCurrentHighlight([])}
-                >
-                  {label}
-                </button>
-              ))}
-              <button
-                style={{
-                  padding: "8px 16px",
-                  border: "2px solid #666",
-                  borderRadius: "4px",
-                  background: currentHighlight.length === allLabels.length ? "#666" : "white",
-                  color: currentHighlight.length === allLabels.length ? "white" : "#666",
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                  fontWeight: 500,
-                  fontSize: "12px",
-                }}
-                onMouseEnter={() => setCurrentHighlight(allLabels)}
-                onMouseLeave={() => setCurrentHighlight([])}
-              >
-                Show All
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <div style={sectionLabelStyle}>Disable/Enable Controls:</div>
-            <div style={buttonGroupStyle}>
-              {allLabels.map((label: string) => (
-                <button
-                  key={`disable-${label}`}
-                  style={buttonStyle(label, "disable")}
-                  onClick={() => toggleDisabled(label)}
-                >
-                  {disabledItems.includes(label) ? "Enable" : "Disable"} {label}
-                </button>
-              ))}
-              <button
-                style={{
-                  padding: "8px 16px",
-                  border: "2px solid #6c757d",
-                  borderRadius: "4px",
-                  background: "#6c757d",
-                  color: "white",
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                  fontWeight: 500,
-                  fontSize: "12px",
-                }}
-                onClick={() => setDisabledItems([])}
-              >
-                Enable All
-              </button>
-            </div>
-          </div>
-
-          <div style={infoPanelStyle}>
-            <div>
-              <strong>Disabled Items:</strong>{" "}
-              {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}
-            </div>
-            <div>
-              <strong>Colors Mapping:</strong> {JSON.stringify(colorsMapping, null, 2)}
-            </div>
-          </div>
-        </div>
-
-        <MichiVzProvider>
-          <ComparableHorizontalBarChart
-            {...args}
-            onColorMappingGenerated={handleColorMappingGenerated}
-            colorsMapping={colorsMapping}
-            highlightItems={currentHighlight}
-            disabledItems={disabledItems}
-          />
-        </MichiVzProvider>
+        <h4 style={{ margin: "0 0 8px", font: "600 13px sans-serif" }}>renderer="svg"</h4>
+        <ComparableHorizontalBarChart
+          {...(args as React.ComponentProps<typeof ComparableHorizontalBarChart>)}
+          renderer="svg"
+        />
       </div>
-    );
-  },
+      <div>
+        <h4 style={{ margin: "0 0 8px", font: "600 13px sans-serif" }}>renderer="canvas"</h4>
+        <ComparableHorizontalBarChart
+          {...(args as React.ComponentProps<typeof ComparableHorizontalBarChart>)}
+          renderer="canvas"
+        />
+      </div>
+    </div>
+  ),
   args: {
+    ...commonProps,
+    dataSet: budgetVsActual,
+    title: "Budget vs Actual Spend by Department ($M)",
+    xAxisPredefinedDomain: [0, 16],
     showGrid: true,
-    onChartDataProcessed: fn(),
-    onLegendDataChange: fn(),
-    onHighlightItem: fn(),
-    onColorMappingGenerated: fn(),
-    isNoDataComponent: <div>No data</div>,
-    dataSet: [
-      {
-        label: "Manufacturing",
-        valueBased: 75,
-        valueCompared: 82,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Parity check: the identical budget-vs-actual dataset rendered with `renderer=\"svg\"` (the default, retained SVG <rect> pairs) and `renderer=\"canvas\"` (the opt-in Canvas 2D backend) stacked together. Both should be visually identical — same bar geometry, conditional z-order, dual-source colours, rounded corners and highlight dimming — and behave identically on hover, click-to-pin tooltip and `onHighlightItem`. The canvas backend draws the two bars per item onto a single <canvas>, cutting the DOM node count for large datasets while the axes, title and tooltip stay in the SVG/HTML layer above.",
       },
-      {
-        label: "Technology",
-        valueBased: 88,
-        valueCompared: 85,
-      },
-      {
-        label: "Healthcare",
-        valueBased: 92,
-        valueCompared: 88,
-      },
-      {
-        label: "Finance",
-        valueBased: 65,
-        valueCompared: 78,
-      },
-      {
-        label: "Education",
-        valueBased: 58,
-        valueCompared: 72,
-      },
-      {
-        label: "Retail",
-        valueBased: 71,
-        valueCompared: 68,
-      },
-    ],
-    width: 900,
-    height: 400,
-    margin: {
-      top: 50,
-      right: 50,
-      bottom: 50,
-      left: 150,
     },
-    xAxisPredefinedDomain: [0, 100],
-    showCombined: false,
-    xAisFormat: (d: any) => `${d}%`,
-    yAxisFormat: (d: any) => `${d}`,
-    title: "Test Disable/Enable with Color Mapping",
-    tooltipFormatter: (d: unknown) => {
-      return JSON.stringify(d);
-    },
-    filter: { limit: 10, criteria: "valueBased", sortingDir: "desc" },
   },
 };
 
-// Story to test legend metadata exposure
-export const LegendMetadataExposure = {
-  render: (args: any) => {
-    const [legendData, setLegendData] = React.useState<any[]>([]);
-    const [chartMetadata, setChartMetadata] = React.useState<any>(null);
-    const [colorMapping, setColorMapping] = React.useState<{ [key: string]: string }>({});
-
-    const handleLegendDataChange = React.useCallback((newLegendData: any[]) => {
-      setLegendData(prev => {
-        if (JSON.stringify(prev) !== JSON.stringify(newLegendData)) {
-          return newLegendData;
-        }
-        return prev;
-      });
-    }, []);
-
-    const handleChartDataProcessed = React.useCallback((metadata: any) => {
-      setChartMetadata(prev => {
-        if (JSON.stringify(prev) !== JSON.stringify(metadata)) {
-          return metadata;
-        }
-        return prev;
-      });
-    }, []);
-
-    const handleColorMappingGenerated = React.useCallback((mapping: { [key: string]: string }) => {
-      setColorMapping(prev => {
-        if (JSON.stringify(prev) !== JSON.stringify(mapping)) {
-          return mapping;
-        }
-        return prev;
-      });
-    }, []);
-
-    return (
-      <div style={{ padding: "20px" }}>
-        <div
-          style={{
-            marginBottom: "20px",
-            padding: "15px",
-            backgroundColor: "#f5f5f5",
-            borderRadius: "8px",
-          }}
-        >
-          <h3>Legend & Metadata Exposure Test</h3>
-
-          <div style={{ marginBottom: "15px" }}>
-            <h4>Legend Data:</h4>
-            <pre
-              style={{
-                fontSize: "12px",
-                backgroundColor: "#fff",
-                padding: "10px",
-                borderRadius: "4px",
-                overflow: "auto",
-              }}
-            >
-              {JSON.stringify(legendData, null, 2)}
-            </pre>
-          </div>
-
-          <div style={{ marginBottom: "15px" }}>
-            <h4>Chart Metadata:</h4>
-            <pre
-              style={{
-                fontSize: "12px",
-                backgroundColor: "#fff",
-                padding: "10px",
-                borderRadius: "4px",
-                overflow: "auto",
-              }}
-            >
-              {JSON.stringify(chartMetadata, null, 2)}
-            </pre>
-          </div>
-
-          <div style={{ marginBottom: "15px" }}>
-            <h4>Color Mapping:</h4>
-            <pre
-              style={{
-                fontSize: "12px",
-                backgroundColor: "#fff",
-                padding: "10px",
-                borderRadius: "4px",
-                overflow: "auto",
-              }}
-            >
-              {JSON.stringify(colorMapping, null, 2)}
-            </pre>
-          </div>
-
-          <div style={{ fontSize: "14px", color: "#666" }}>
-            <strong>Instructions:</strong> Check the browser console for real-time logging of legend
-            data changes.
-          </div>
-        </div>
-
-        <MichiVzProvider>
-          <ComparableHorizontalBarChart
-            {...args}
-            onLegendDataChange={handleLegendDataChange}
-            onChartDataProcessed={handleChartDataProcessed}
-            onColorMappingGenerated={handleColorMappingGenerated}
-          />
-        </MichiVzProvider>
-      </div>
-    );
-  },
+// Per-label diagonal-hatch pattern fills on the `valueBased` bar (canvas only).
+const hatchColors = ["#2563eb", "#dc2626", "#16a34a", "#d97706", "#7c3aed", "#0891b2"];
+export const CanvasPatternFills = {
   args: {
+    ...commonProps,
+    renderer: "canvas" as const,
+    dataSet: budgetVsActual,
+    title: "Budget vs Actual — Hatched valueBased Bars (canvas)",
+    xAxisPredefinedDomain: [0, 16],
     showGrid: true,
-    onHighlightItem: fn(),
-    isNoDataComponent: <div>No data</div>,
-    dataSet: [
-      {
-        label: "Research & Development",
-        valueBased: 85,
-        valueCompared: 78,
+    patternsMapping: budgetVsActual.reduce(
+      (acc, d, i) => {
+        acc[d.label] = createHatchPattern({ color: hatchColors[i % hatchColors.length] });
+        return acc;
       },
-      {
-        label: "Marketing",
-        valueBased: 72,
-        valueCompared: 85,
-      },
-      {
-        label: "Operations",
-        valueBased: 91,
-        valueCompared: 88,
-      },
-      {
-        label: "Sales",
-        valueBased: 67,
-        valueCompared: 74,
-      },
-      {
-        label: "Customer Support",
-        valueBased: 89,
-        valueCompared: 82,
-      },
-    ],
-    width: 900,
-    height: 400,
-    margin: {
-      top: 50,
-      right: 50,
-      bottom: 50,
-      left: 150,
-    },
-    xAxisPredefinedDomain: [0, 100],
-    showCombined: false,
-    xAisFormat: (d: any) => `${d}%`,
-    yAxisFormat: (d: any) => `${d}`,
-    title: "Legend Metadata Exposure Test",
-    tooltipFormatter: (d: unknown) => {
-      return JSON.stringify(d);
-    },
-    filter: { limit: 10, criteria: "valueBased", sortingDir: "desc" },
+      {} as Record<string, string>
+    ),
   },
-};
-
-// Story to test legend metadata with dynamic data changes
-export const DynamicLegendMetadata = {
-  render: (args: any) => {
-    const [currentDataSet, setCurrentDataSet] = React.useState(args.dataSet);
-    const [legendData, setLegendData] = React.useState<any[]>([]);
-    const [updateCount, setUpdateCount] = React.useState(0);
-
-    const handleLegendDataChange = React.useCallback((newLegendData: any[]) => {
-      setLegendData(prev => {
-        if (JSON.stringify(prev) !== JSON.stringify(newLegendData)) {
-          setUpdateCount(prevCount => {
-            return prevCount + 1;
-          });
-          return newLegendData;
-        }
-        return prev;
-      });
-    }, []);
-
-    const addRandomDataPoint = React.useCallback(() => {
-      const newItem = {
-        label: `Item ${currentDataSet.length + 1}`,
-        valueBased: Math.floor(Math.random() * 100),
-        valueCompared: Math.floor(Math.random() * 100),
-      };
-      setCurrentDataSet(prev => [...prev, newItem]);
-    }, [currentDataSet]);
-
-    const removeLastDataPoint = React.useCallback(() => {
-      if (currentDataSet.length > 1) {
-        setCurrentDataSet(prev => prev.slice(0, -1));
-      }
-    }, [currentDataSet]);
-
-    const shuffleData = React.useCallback(() => {
-      setCurrentDataSet(prev => [...prev].sort(() => Math.random() - 0.5));
-    }, []);
-
-    return (
-      <div style={{ padding: "20px" }}>
-        <div
-          style={{
-            marginBottom: "20px",
-            padding: "15px",
-            backgroundColor: "#f5f5f5",
-            borderRadius: "8px",
-          }}
-        >
-          <h3>Dynamic Legend Metadata Test</h3>
-
-          <div style={{ marginBottom: "15px" }}>
-            <button
-              onClick={addRandomDataPoint}
-              style={{ marginRight: "10px", padding: "8px 16px" }}
-            >
-              Add Random Item
-            </button>
-            <button
-              onClick={removeLastDataPoint}
-              style={{ marginRight: "10px", padding: "8px 16px" }}
-            >
-              Remove Last Item
-            </button>
-            <button onClick={shuffleData} style={{ padding: "8px 16px" }}>
-              Shuffle Data
-            </button>
-          </div>
-
-          <div style={{ marginBottom: "15px" }}>
-            <strong>Legend Updates: {updateCount}</strong>
-          </div>
-
-          <div style={{ marginBottom: "15px" }}>
-            <h4>Current Legend Data:</h4>
-            <pre
-              style={{
-                fontSize: "12px",
-                backgroundColor: "#fff",
-                padding: "10px",
-                borderRadius: "4px",
-                overflow: "auto",
-                maxHeight: "200px",
-              }}
-            >
-              {JSON.stringify(legendData, null, 2)}
-            </pre>
-          </div>
-
-          <div style={{ fontSize: "14px", color: "#666" }}>
-            <strong>Instructions:</strong> Use the buttons above to modify the data and watch how
-            the legend metadata changes.
-          </div>
-        </div>
-
-        <MichiVzProvider>
-          <ComparableHorizontalBarChart
-            {...args}
-            dataSet={currentDataSet}
-            onLegendDataChange={handleLegendDataChange}
-            onChartDataProcessed={fn()}
-            onColorMappingGenerated={fn()}
-            onHighlightItem={fn()}
-          />
-        </MichiVzProvider>
-      </div>
-    );
-  },
-  args: {
-    showGrid: true,
-    isNoDataComponent: <div>No data</div>,
-    dataSet: [
-      {
-        label: "Alpha",
-        valueBased: 75,
-        valueCompared: 68,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`patternsMapping` fills each `valueBased` bar with a tiled diagonal-hatch pattern generated by `createHatchPattern()`, while the `valueCompared` bar stays solid. Pattern fills apply only to `renderer=\"canvas\"` — the SVG renderer ignores the prop. The pattern source is any image URL or data-URI; `createHatchPattern` is just a convenience generator for the common hatch case.",
       },
-      {
-        label: "Beta",
-        valueBased: 82,
-        valueCompared: 91,
-      },
-      {
-        label: "Gamma",
-        valueBased: 59,
-        valueCompared: 73,
-      },
-    ],
-    width: 900,
-    height: 400,
-    margin: {
-      top: 50,
-      right: 50,
-      bottom: 50,
-      left: 150,
     },
-    xAxisPredefinedDomain: [0, 100],
-    showCombined: false,
-    xAisFormat: (d: any) => `${d}%`,
-    yAxisFormat: (d: any) => `${d}`,
-    title: "Dynamic Legend Metadata Test",
-    tooltipFormatter: (d: unknown) => {
-      return JSON.stringify(d);
-    },
-    filter: { limit: 10, criteria: "valueBased", sortingDir: "desc" },
   },
 };

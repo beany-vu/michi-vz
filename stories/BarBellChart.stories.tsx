@@ -1,163 +1,76 @@
 import React, { useState } from "react";
 import { Meta } from "@storybook/react";
-import { fn } from '@storybook/test';
+import { fn } from "@storybook/test";
 import BarBellChart from "../src/components/BarBellChart";
 import { MichiVzProvider } from "../src/components";
 
-const mockData = [
-  {
-    date: "2020-01",
-    step1: 1000,
-    step2: 2000,
-    step3: 100,
-  },
-  {
-    date: "2020-02",
-    step1: 1500,
-    step2: 2000,
-    step3: 1000,
-  },
-  {
-    date: "2020-03",
-    step1: 2000,
-    step2: 1500,
-    step3: 2000,
-  },
-  {
-    date: "2020-04",
-    step1: 2500,
-    step2: 1000,
-    step3: 3000,
-  },
-  {
-    date: "2020-05",
-    step1: 3000,
-    step2: 500,
-    step3: 4000,
-  },
-  {
-    date: "2020-06",
-    step1: 3500,
-    step2: 0,
-    step3: 5000,
-  },
-  {
-    date: "2020-07",
-    step1: 4000,
-    step2: 0,
-    step3: 6000,
-  },
-  {
-    date: "2020-08",
-    step1: 4500,
-    step2: 0,
-    step3: 7000,
-  },
-  {
-    date: "2020-09",
-    step1: 5000,
-    step2: 0,
-    step3: 8000,
-  },
-  {
-    date: "2020-10",
-    step1: 5500,
-    step2: 10,
-    step3: 9000,
-  },
-  {
-    date: "2020-11",
-    step1: 6000,
-    step2: 1,
-    step3: 10000,
-  },
-  {
-    date: "2020-12",
-    step1: 1,
-    step2: 0,
-    step3: 2,
-  },
+// Storybook stories for the BarBellChart component — a lean, curated showcase.
+// Each story demonstrates a real analytical use case with realistic data,
+// not exhaustive prop coverage.
+
+// --- Shared data ------------------------------------------------------------
+
+// Hiring funnel by department: each row is a team, each key a recruiting stage.
+// The segments laid end-to-end show how many candidates clear each stage —
+// the visible "reach" of each colour tells you where the pipeline narrows.
+const hiringFunnelData = [
+  { date: "Engineering", applied: 1240, screened: 380, interviewed: 145, hired: 28 },
+  { date: "Product", applied: 620, screened: 210, interviewed: 88, hired: 17 },
+  { date: "Design", applied: 410, screened: 160, interviewed: 64, hired: 12 },
+  { date: "Data Science", applied: 530, screened: 175, interviewed: 70, hired: 14 },
+  { date: "Sales", applied: 980, screened: 420, interviewed: 190, hired: 41 },
+  { date: "Customer Support", applied: 760, screened: 340, interviewed: 155, hired: 33 },
 ];
 
-const mockData2 = [
-  {
-    date: "2020-01 | Egypt",
-    step1: 1000,
-    step2: 2000,
-    step3: 100,
-  },
-  {
-    date: "2020-01 | Madagascar",
-    step1: 1500,
-    step2: 2000,
-    step3: 1000,
-  },
-  {
-    date: "2020-01 | Morocco",
-    step1: 2000,
-    step2: 1500,
-    step3: 2000,
-  },
-  {
-    date: "2020-02 | Egypt",
-    step1: 2500,
-    step2: 1000,
-    step3: 3000,
-  },
-  {
-    date: "2020-02 | Madagascar",
-    step1: 3000,
-    step2: 500,
-    step3: 4000,
-  },
-  {
-    date: "2020-02 | Morocco",
-    step1: 3500,
-    step2: 0,
-    step3: 5000,
-  },
-  {
-    date: "2020-03 | Egypt",
-    step1: 0,
-    step2: 0,
-    step3: 6000,
-  },
-  {
-    date: "2020-03 | Madagascar",
-    step1: 4500,
-    step2: 0,
-    step3: 7000,
-  },
-  {
-    date: "2020-03 | Morocco",
-    step1: 5000,
-    step2: 0,
-    step3: 8000,
-  },
-  {
-    date: "2020-04 | Egypt",
-    step1: 5500,
-    step2: 10,
-    step3: 9000,
-  },
-  {
-    date: "2020-04 | Madagascar",
-    step1: 6000,
-    step2: 1,
-    step3: 10000,
-  },
-  {
-    date: "2020-04 | Morocco",
-    step1: 1,
-    step2: 0,
-  },
+// Cross-country, cross-quarter rows keyed by "country | quarter". Each row
+// breaks a clean-water infrastructure programme into its three delivery
+// phases, so an analyst can compare phase mix across markets at a glance.
+const programmePhaseData = [
+  { date: "Kenya | Q1", design: 320, construction: 1450, commissioning: 280 },
+  { date: "Kenya | Q2", design: 180, construction: 1980, commissioning: 540 },
+  { date: "Ethiopia | Q1", design: 410, construction: 1120, commissioning: 190 },
+  { date: "Ethiopia | Q2", design: 260, construction: 1670, commissioning: 430 },
+  { date: "Tanzania | Q1", design: 290, construction: 980, commissioning: 150 },
+  { date: "Tanzania | Q2", design: 210, construction: 1540, commissioning: 380 },
+  { date: "Rwanda | Q1", design: 350, construction: 1340, commissioning: 240 },
+  { date: "Rwanda | Q2", design: 190, construction: 2010, commissioning: 610 },
 ];
+
+// Renewable build-out by country: capacity (MW) installed across three
+// technologies. Used to show filter (sort + limit) and legend metadata.
+const energyMixData = [
+  { date: "Germany", solar: 6800, wind: 9400, hydro: 1200 },
+  { date: "Spain", solar: 5200, wind: 7100, hydro: 2800 },
+  { date: "France", solar: 3100, wind: 4200, hydro: 5400 },
+  { date: "Italy", solar: 4700, wind: 2300, hydro: 3900 },
+  { date: "Netherlands", solar: 3900, wind: 6200, hydro: 100 },
+  { date: "Poland", solar: 2400, wind: 3800, hydro: 800 },
+  { date: "Sweden", solar: 900, wind: 5100, hydro: 6700 },
+  { date: "Portugal", solar: 2100, wind: 3300, hydro: 2900 },
+  { date: "Denmark", solar: 1600, wind: 7800, hydro: 50 },
+  { date: "Greece", solar: 3400, wind: 2700, hydro: 1100 },
+];
+
+// --- Common props -----------------------------------------------------------
+
+// Repeated args shared across the args-based stories.
+const commonProps = {
+  keys: ["applied", "screened", "interviewed", "hired"],
+  width: 900,
+  height: 460,
+  margin: { top: 50, right: 50, bottom: 50, left: 200 },
+  xAxisFormat: (d: number | string) => `${d}`,
+  yAxisFormat: (d: number | string) => `${d}`,
+  showGrid: { x: true, y: false },
+  onChartDataProcessed: fn(),
+  onHighlightItem: fn(),
+  onColorMappingGenerated: fn(),
+};
 
 export default {
-  title: "Charts/BarBellChart",
+  title: "Charts/Bar Bell Chart",
   component: BarBellChart,
-  argTypes: {
-  },
+  tags: ["autodocs"],
   decorators: [
     Story => (
       <MichiVzProvider>
@@ -165,605 +78,261 @@ export default {
       </MichiVzProvider>
     ),
   ],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          "**BarBellChart** lays the values of one row end-to-end as a sequence of horizontal bar segments, each capped with a circular bell marker — one row per category. " +
+          "It expects a `dataSet` of objects keyed by a `date` label plus one numeric field per stage, and a `keys` array naming those stages in order. " +
+          "Because the segments are concatenated, the chart reads as both a per-stage breakdown *and* a cumulative total, making it ideal for funnels, multi-phase programmes, or any process where you want to compare the stage mix across many categories at once.",
+      },
+    },
+  },
+  args: {
+    onChartDataProcessed: fn(),
+    onHighlightItem: fn(),
+    onColorMappingGenerated: fn(),
+  },
 } as Meta;
 
+// --- Stories ----------------------------------------------------------------
+
+// Primary showcase: a recruiting funnel — the canonical "reach for this chart"
+// case where each segment is a stage in a sequential process.
 export const Primary = {
   args: {
-    dataSet: mockData2,
-    keys: ["step1", "step2", "step3"],
-    width: 900,
-    height: 500,
-    margin: {
-      top: 50,
-      right: 50,
-      bottom: 50,
-      left: 200,
+    ...commonProps,
+    dataSet: hiringFunnelData,
+    title: "Hiring Funnel by Department (candidates per stage)",
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "A recruiting funnel — the canonical case for this chart. Each row is a department; the four segments (applied → screened → interviewed → hired) are laid end-to-end, so the row's total length is its overall throughput and each colour band shows where that pipeline thins out. Sales runs the widest funnel; Design the narrowest. Hover any segment for its stage count.",
+      },
     },
-    title: "BarBell Chart",
-    xAxisFormat: (value: any) => value,
-    yAxisFormat: (value: any) => {
-      return value;
-    },
-    showGrid: {
-      x: true,
-      y: false,
-    },
-    children: null,
-    onColorMappingGenerated: fn(),
   },
 };
 
-export const SimpleData = {
+// Process breakdown across countries, keyed by "country | quarter".
+export const ProgrammePhasesByCountry = {
   args: {
-    dataSet: mockData,
-    keys: ["step1", "step2", "step3"],
-    width: 900,
-    height: 400,
-    margin: {
-      top: 50,
-      right: 50,
-      bottom: 50,
-      left: 100,
+    ...commonProps,
+    dataSet: programmePhaseData,
+    keys: ["design", "construction", "commissioning"],
+    title: "Clean-Water Programme Delivery by Country & Quarter ($000s)",
+    showGrid: { x: true, y: true },
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Spend on a clean-water infrastructure programme, broken into design, construction and commissioning phases. Rows are keyed `country | quarter`, so an analyst can scan a single chart for two things at once: which markets are scaling up (Q2 rows run longer than Q1) and whether the phase mix is healthy — a row dominated by `design` is still stuck on paper, while a long `commissioning` band means projects are coming online.",
+      },
     },
-    title: "Simple BarBell Chart",
-    xAxisFormat: (value: any) => `${value}`,
-    yAxisFormat: (value: any) => value,
-    showGrid: {
-      x: true,
-      y: true,
-    },
-    onColorMappingGenerated: fn(),
   },
 };
 
-export const TwoStepsOnly = {
+// Two-stage comparison with a value-suffixed axis.
+export const InterviewToOfferConversion = {
   args: {
-    dataSet: mockData.map(({ step3, ...rest }) => rest),
-    keys: ["step1", "step2"],
-    width: 900,
-    height: 400,
-    margin: {
-      top: 50,
-      right: 50,
-      bottom: 50,
-      left: 100,
+    ...commonProps,
+    dataSet: hiringFunnelData.map(({ applied, screened, ...rest }) => rest),
+    keys: ["interviewed", "hired"],
+    title: "Interview-to-Hire Conversion by Department",
+    xAxisFormat: (d: number | string) => `${d} people`,
+    showGrid: { x: true, y: false },
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Narrowing the funnel to its final two stages isolates the question that matters most to a hiring manager: of everyone interviewed, how many converted to an offer? With only `interviewed` and `hired` in `keys`, the short trailing band reads as the conversion gap — wide where interviews rarely close, thin where the team interviews efficiently.",
+      },
     },
-    title: "Two Steps BarBell Chart",
-    xAxisFormat: (value: any) => `${value}K`,
-    yAxisFormat: (value: any) => value,
-    showGrid: {
-      x: false,
-      y: false,
-    },
-    onColorMappingGenerated: fn(),
   },
 };
 
-export const LargeDataset = {
-  args: {
-    dataSet: [
-      ...mockData,
-      ...mockData.map((item, index) => ({
-        ...item,
-        date: `2021-${String(index + 1).padStart(2, '0')}`,
-        step1: item.step1 * 1.2,
-        step2: item.step2 * 0.8,
-        step3: item.step3 * 1.5,
-      })),
-      ...mockData.map((item, index) => ({
-        ...item,
-        date: `2022-${String(index + 1).padStart(2, '0')}`,
-        step1: item.step1 * 0.9,
-        step2: item.step2 * 1.3,
-        step3: item.step3 * 0.7,
-      })),
-    ],
-    keys: ["step1", "step2", "step3"],
-    width: 900,
-    height: 800,
-    margin: {
-      top: 50,
-      right: 50,
-      bottom: 50,
-      left: 100,
-    },
-    title: "Large Dataset BarBell Chart",
-    xAxisFormat: (value: any) => `${(value / 1000).toFixed(1)}K`,
-    yAxisFormat: (value: any) => value,
-    showGrid: {
-      x: true,
-      y: false,
-    },
-    onColorMappingGenerated: fn(),
-  },
-};
-
-export const CustomColors = {
-  args: {
-    dataSet: mockData2,
-    keys: ["step1", "step2", "step3"],
-    width: 900,
-    height: 500,
-    margin: {
-      top: 50,
-      right: 50,
-      bottom: 50,
-      left: 200,
-    },
-    title: "Custom Colors BarBell Chart",
-    colors: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7"],
-    xAxisFormat: (value: any) => `${value}`,
-    yAxisFormat: (value: any) => value,
-    showGrid: {
-      x: true,
-      y: false,
-    },
-    onColorMappingGenerated: fn(),
-  },
-  decorators: [
-    (Story) => (
-      <MichiVzProvider>
-        <Story />
-      </MichiVzProvider>
-    ),
-  ],
-};
-
-const InteractiveTemplate = (args: any) => {
-  const [highlightItems, setHighlightItems] = useState<string[]>([]);
-  
-  return (
-    <div>
-      <div style={{ marginBottom: "20px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-        <h3>Hover Controls:</h3>
-        {args.keys.map((key: string) => (
-          <button
-            key={key}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: highlightItems.includes(key) ? "#007bff" : "#f8f9fa",
-              color: highlightItems.includes(key) ? "white" : "#333",
-              border: "1px solid #dee2e6",
-              borderRadius: "4px",
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-            }}
-            onMouseEnter={() => setHighlightItems([key])}
-            onMouseLeave={() => setHighlightItems([])}
-            onClick={() => {
-              setHighlightItems(prev => 
-                prev.includes(key) ? prev.filter(item => item !== key) : [...prev, key]
-              );
-            }}
-          >
-            {key.charAt(0).toUpperCase() + key.slice(1)}
-          </button>
-        ))}
-        <button
-          style={{
-            padding: "8px 16px",
-            backgroundColor: "#dc3545",
-            color: "white",
-            border: "1px solid #dc3545",
-            borderRadius: "4px",
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          }}
-          onClick={() => setHighlightItems([])}
-        >
-          Clear All
-        </button>
-      </div>
-      
-      <MichiVzProvider highlightItems={highlightItems}>
-        <BarBellChart {...args} onHighlightItem={setHighlightItems} />
-      </MichiVzProvider>
-    </div>
-  );
-};
-
-export const InteractiveHover = {
-  render: InteractiveTemplate,
-  args: {
-    dataSet: mockData2,
-    keys: ["step1", "step2", "step3"],
-    width: 900,
-    height: 500,
-    margin: {
-      top: 50,
-      right: 50,
-      bottom: 50,
-      left: 200,
-    },
-    title: "Interactive Hover BarBell Chart",
-    xAxisFormat: (value: any) => `${value}`,
-    yAxisFormat: (value: any) => value,
-    showGrid: {
-      x: true,
-      y: false,
-    },
-    onColorMappingGenerated: fn(),
-  },
-};
-
-// Comprehensive interactive story with disable/enable functionality
-export const DisableEnableColorMapping = {
-  render: (args: any) => {
-    const [currentHighlight, setCurrentHighlight] = React.useState<string[]>([]);
-    const [disabledItems, setDisabledItems] = React.useState<string[]>([]);
-    const [colorsMapping, setColorsMapping] = React.useState<{ [key: string]: string }>({});
-    
-    const handleColorMappingGenerated = React.useCallback((newMapping: { [key: string]: string }) => {
-      setColorsMapping(prev => ({ ...prev, ...newMapping }));
-    }, []);
-
-    const toggleDisabled = React.useCallback((key: string) => {
-      setDisabledItems(prev => 
-        prev.includes(key) 
-          ? prev.filter(item => item !== key)
-          : [...prev, key]
-      );
-    }, []);
-
-    const controlsContainerStyle = {
-      display: "flex",
-      flexDirection: "column" as const,
-      gap: "15px",
-      marginBottom: "20px",
-      padding: "15px",
-      border: "1px solid #e0e0e0",
-      borderRadius: "8px",
-      backgroundColor: "#f9f9f9",
-    };
-
-    const buttonGroupStyle = {
-      display: "flex",
-      gap: "10px",
-      flexWrap: "wrap" as const,
-      alignItems: "center",
-    };
-
-    const sectionLabelStyle = {
-      fontSize: "14px",
-      fontWeight: "bold" as const,
-      color: "#333",
-      marginBottom: "5px",
-    };
-
-    const buttonStyle = (key: string, type: "highlight" | "disable") => {
-      const baseStyle = {
-        padding: "8px 16px",
-        border: "2px solid",
-        borderRadius: "4px",
-        cursor: "pointer",
-        transition: "all 0.3s ease",
-        fontWeight: 500,
-        fontSize: "12px",
-      };
-
-      if (type === "highlight") {
-        const isHighlighted = currentHighlight.includes(key);
-        const color = colorsMapping[key] || "#666";
-        return {
-          ...baseStyle,
-          borderColor: color,
-          background: isHighlighted ? color : "white",
-          color: isHighlighted ? "white" : color,
-        };
-      } else { // disable
-        const isDisabled = disabledItems.includes(key);
-        return {
-          ...baseStyle,
-          borderColor: isDisabled ? "#dc3545" : "#28a745",
-          background: isDisabled ? "#dc3545" : "#28a745",
-          color: "white",
-        };
-      }
-    };
-
-    const infoPanelStyle = {
-      padding: "10px",
-      backgroundColor: "#e9ecef",
-      borderRadius: "4px",
-      fontSize: "12px",
-      fontFamily: "monospace",
-    };
-
-    return (
-      <div>
-        <div style={controlsContainerStyle}>
-          <div>
-            <div style={sectionLabelStyle}>Highlight Controls:</div>
-            <div style={buttonGroupStyle}>
-              {args.keys.map((key: string) => (
-                <button
-                  key={`highlight-${key}`}
-                  style={buttonStyle(key, "highlight")}
-                  onMouseEnter={() => setCurrentHighlight([key])}
-                  onMouseLeave={() => setCurrentHighlight([])}
-                >
-                  {key}
-                </button>
-              ))}
-              <button
-                style={{
-                  padding: "8px 16px",
-                  border: "2px solid #666",
-                  borderRadius: "4px",
-                  background: currentHighlight.length === args.keys.length ? "#666" : "white",
-                  color: currentHighlight.length === args.keys.length ? "white" : "#666",
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                  fontWeight: 500,
-                  fontSize: "12px",
-                }}
-                onMouseEnter={() => setCurrentHighlight(args.keys)}
-                onMouseLeave={() => setCurrentHighlight([])}
-              >
-                Show All
-              </button>
-            </div>
-          </div>
-          
-          <div>
-            <div style={sectionLabelStyle}>Disable/Enable Controls:</div>
-            <div style={buttonGroupStyle}>
-              {args.keys.map((key: string) => (
-                <button
-                  key={`disable-${key}`}
-                  style={buttonStyle(key, "disable")}
-                  onClick={() => toggleDisabled(key)}
-                >
-                  {disabledItems.includes(key) ? "Enable" : "Disable"} {key}
-                </button>
-              ))}
-              <button
-                style={{
-                  padding: "8px 16px",
-                  border: "2px solid #6c757d",
-                  borderRadius: "4px",
-                  background: "#6c757d",
-                  color: "white",
-                  cursor: "pointer",
-                  transition: "all 0.3s ease",
-                  fontWeight: 500,
-                  fontSize: "12px",
-                }}
-                onClick={() => setDisabledItems([])}
-              >
-                Enable All
-              </button>
-            </div>
-          </div>
-          
-          <div style={infoPanelStyle}>
-            <div><strong>Disabled Items:</strong> {disabledItems.length > 0 ? disabledItems.join(", ") : "None"}</div>
-            <div><strong>Colors Mapping:</strong> {JSON.stringify(colorsMapping, null, 2)}</div>
-          </div>
-        </div>
-        
-        <MichiVzProvider>
-          <BarBellChart 
-            {...args} 
-            onColorMappingGenerated={handleColorMappingGenerated}
-            colorsMapping={colorsMapping}
-            highlightItems={currentHighlight}
-            disabledItems={disabledItems}
-          />
-        </MichiVzProvider>
-      </div>
-    );
-  },
-  args: {
-    dataSet: mockData2,
-    keys: ["step1", "step2", "step3"],
-    width: 900,
-    height: 500,
-    margin: {
-      top: 50,
-      right: 50,
-      bottom: 50,
-      left: 200,
-    },
-    title: "Test Disable/Enable with Color Mapping",
-    xAxisFormat: (value: any) => `${value}`,
-    yAxisFormat: (value: any) => value,
-    showGrid: {
-      x: true,
-      y: false,
-    },
-    onColorMappingGenerated: fn(),
-  },
-};
-
-// Generate comprehensive dataset for legend testing
-const generateLargeBarBellDataset = () => {
-  const sectors = [
-    "Technology", "Healthcare", "Finance", "Manufacturing", "Retail", "Energy", 
-    "Education", "Transportation", "Real Estate", "Agriculture", "Aerospace", "Automotive",
-    "Telecommunications", "Construction", "Entertainment", "Food & Beverage", "Chemicals", 
-    "Pharmaceuticals", "Banking", "Insurance", "Consulting", "Media", "Tourism", "Mining",
-    "Textile", "Electronics", "Software", "Biotechnology", "Renewable Energy", "Logistics"
-  ];
-  
-  return sectors.map((sector, index) => ({
-    date: `Q${Math.floor(index / 8) + 1} | ${sector}`,
-    revenue: Math.random() * 10000 + 1000,
-    profit: Math.random() * 5000 + 500,
-    expenses: Math.random() * 3000 + 200,
-  }));
-};
-
-export const LegendWithFilterControls = {
-  render: (args: any) => {
-    const [filter, setFilter] = useState({ 
-      criteria: "revenue", 
-      sortingDir: "desc", 
-      limit: 15 
-    });
+// Filter (sort + limit) plus colour/legend round-trip on a larger dataset.
+export const RankedByInstalledCapacity = {
+  render: (args: React.ComponentProps<typeof BarBellChart>) => {
+    const [filter, setFilter] = useState({ criteria: "wind", sortingDir: "desc", limit: 6 });
     const [colorsMapping, setColorsMapping] = useState<{ [key: string]: string }>({});
-    const [legendData, setLegendData] = useState<any[]>([]);
-    const [originalLegendOrder, setOriginalLegendOrder] = useState<any[]>([]);
+    const [legendData, setLegendData] = useState<
+      { label: string; color: string; order: number }[]
+    >([]);
     const [disabledItems, setDisabledItems] = useState<string[]>([]);
 
-    const handleChartDataProcessed = React.useCallback((metadata: any) => {
-      if (metadata.legendData) {
-        setLegendData(metadata.legendData);
-        
-        // Store original legend order when first loaded or when no items are disabled
-        if (disabledItems.length === 0) {
-          setOriginalLegendOrder(metadata.legendData);
-        }
-      }
-    }, [disabledItems.length]);
-
-    const handleColorMappingGenerated = React.useCallback((colors: { [key: string]: string }) => {
-      setColorsMapping(colors);
-    }, []);
-
-    const toggleItemDisabled = React.useCallback((label: string) => {
-      setDisabledItems(prev => 
-        prev.includes(label) 
-          ? prev.filter(item => item !== label)
-          : [...prev, label]
+    const toggleDisabled = (label: string) =>
+      setDisabledItems(prev =>
+        prev.includes(label) ? prev.filter(i => i !== label) : [...prev, label]
       );
-    }, []);
 
     return (
       <div>
-        <div style={{ marginBottom: "20px", padding: "10px", border: "1px solid #ddd", borderRadius: "4px" }}>
-          <h3>🎨 Legend-Based Color Assignment Test</h3>
-          <p>This story tests the new legend-based color assignment approach for BarBellChart.</p>
-          
-          <div style={{ display: "flex", gap: "20px", marginBottom: "15px", alignItems: "center", flexWrap: "wrap" }}>
-            <div>
-              <label style={{ marginRight: "5px" }}>Sort By:</label>
-              <select 
-                value={filter.criteria} 
-                onChange={(e) => setFilter(prev => ({ ...prev, criteria: e.target.value }))}
-                style={{ padding: "4px" }}
+        <div style={{ marginBottom: 20, padding: 10, border: "1px solid #ddd", borderRadius: 4 }}>
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
+            <label>
+              Rank by{" "}
+              <select
+                value={filter.criteria}
+                onChange={e => setFilter(p => ({ ...p, criteria: e.target.value }))}
               >
-                <option value="revenue">Revenue</option>
-                <option value="profit">Profit</option>
-                <option value="expenses">Expenses</option>
+                <option value="wind">Wind capacity</option>
+                <option value="solar">Solar capacity</option>
+                <option value="hydro">Hydro capacity</option>
               </select>
-            </div>
-            
-            <div>
-              <label style={{ marginRight: "5px" }}>Direction:</label>
-              <select 
-                value={filter.sortingDir} 
-                onChange={(e) => setFilter(prev => ({ ...prev, sortingDir: e.target.value }))}
-                style={{ padding: "4px" }}
+            </label>
+            <label>
+              Direction{" "}
+              <select
+                value={filter.sortingDir}
+                onChange={e => setFilter(p => ({ ...p, sortingDir: e.target.value }))}
               >
-                <option value="desc">Highest First</option>
-                <option value="asc">Lowest First</option>
+                <option value="desc">Leaders first</option>
+                <option value="asc">Laggards first</option>
               </select>
-            </div>
-
-            <div>
-              <label style={{ marginRight: "5px" }}>Limit:</label>
-              <select 
-                value={filter.limit} 
-                onChange={(e) => setFilter(prev => ({ ...prev, limit: parseInt(e.target.value) }))}
-                style={{ padding: "4px" }}
+            </label>
+            <label>
+              Show{" "}
+              <select
+                value={filter.limit}
+                onChange={e => setFilter(p => ({ ...p, limit: parseInt(e.target.value, 10) }))}
               >
-                <option value={10}>Top 10</option>
-                <option value={15}>Top 15</option>
-                <option value={20}>Top 20</option>
-                <option value={30}>All 30</option>
+                <option value={5}>Top 5</option>
+                <option value={6}>Top 6</option>
+                <option value={10}>All 10</option>
               </select>
-            </div>
+            </label>
           </div>
-
-          <div style={{ display: "flex", gap: "10px", marginBottom: "10px", flexWrap: "wrap" }}>
-            <button onClick={() => setFilter({ criteria: "revenue", sortingDir: "desc", limit: 10 })}>
-              💰 Revenue: High→Low (10)
-            </button>
-            <button onClick={() => setFilter({ criteria: "profit", sortingDir: "asc", limit: 15 })}>
-              📊 Profit: Low→High (15)
-            </button>
-            <button onClick={() => setFilter({ criteria: "expenses", sortingDir: "desc", limit: 20 })}>
-              💸 Expenses: High→Low (20)
-            </button>
-            <button onClick={() => setFilter({ criteria: "revenue", sortingDir: "asc", limit: 30 })}>
-              🔄 All Revenue: Low→High
-            </button>
-          </div>
-
-          <div style={{ marginTop: "15px" }}>
-            <strong>Legend Data (First 10 items):</strong>
-            <div style={{ 
-              display: "grid", 
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", 
-              gap: "5px", 
-              marginTop: "5px",
-              maxHeight: "120px",
-              overflowY: "auto"
-            }}>
-              {(originalLegendOrder.length > 0 ? originalLegendOrder : legendData)
-                .slice(0, 10)
-                .map((originalItem, index) => {
-                  // Find current status from legendData
-                  const currentItem = legendData.find(item => item.label === originalItem.label);
-                  const displayItem = currentItem || originalItem;
-                  
-                  return (
-                <div 
-                  key={displayItem.label}
-                  style={{ 
-                    display: "flex", 
-                    alignItems: "center", 
-                    padding: "2px 5px",
-                    fontSize: "12px",
-                    cursor: "pointer",
-                    backgroundColor: disabledItems.includes(displayItem.label) ? "#f5f5f5" : "transparent",
-                    textDecoration: disabledItems.includes(displayItem.label) ? "line-through" : "none"
-                  }}
-                  onClick={() => toggleItemDisabled(displayItem.label)}
-                >
-                  <div 
-                    style={{ 
-                      width: "12px", 
-                      height: "12px", 
-                      backgroundColor: originalItem.color, 
-                      marginRight: "5px",
-                      border: "1px solid #ccc"
-                    }}
-                  />
-                  <span>#{originalItem.order + 1} {displayItem.label}</span>
-                </div>
-                  );
-                })}
-            </div>
-            {legendData.length > 10 && (
-              <p style={{ fontSize: "12px", color: "#666", marginTop: "5px" }}>
-                ... and {legendData.length - 10} more items
-              </p>
-            )}
+          <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {legendData.map(item => (
+              <span
+                key={item.label}
+                onClick={() => toggleDisabled(item.label)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4,
+                  cursor: "pointer",
+                  fontSize: 12,
+                  textDecoration: disabledItems.includes(item.label) ? "line-through" : "none",
+                }}
+              >
+                <span
+                  style={{ width: 12, height: 12, background: item.color, border: "1px solid #ccc" }}
+                />
+                #{item.order + 1} {item.label}
+              </span>
+            ))}
           </div>
         </div>
-
         <BarBellChart
           {...args}
           filter={filter}
           colorsMapping={colorsMapping}
           disabledItems={disabledItems}
-          onChartDataProcessed={handleChartDataProcessed}
-          onColorMappingGenerated={handleColorMappingGenerated}
+          onChartDataProcessed={metadata => {
+            if (metadata.legendData) setLegendData(metadata.legendData);
+          }}
+          onColorMappingGenerated={setColorsMapping}
         />
       </div>
     );
   },
   args: {
-    dataSet: generateLargeBarBellDataset(),
-    keys: ["revenue", "profit", "expenses"],
-    width: 900,
-    height: 800,
-    margin: { top: 50, right: 50, bottom: 50, left: 200 },
-    title: "BarBell Chart - Legend-Based Color Assignment Test",
-    xAxisFormat: (d: any) => `$${(d / 1000).toFixed(1)}K`,
-    yAxisFormat: (d: any) => d,
-    showGrid: { x: true, y: false },
+    ...commonProps,
+    dataSet: energyMixData,
+    keys: ["solar", "wind", "hydro"],
+    height: 520,
+    margin: { top: 50, right: 50, bottom: 50, left: 150 },
+    title: "Renewable Capacity by Country (MW installed)",
+    xAxisFormat: (d: number | string) => `${(Number(d) / 1000).toFixed(1)} GW`,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Ranking ten countries' renewable build-out by a chosen technology. The `filter` prop sorts rows by one key and keeps the top N, so an analyst can ask \"who leads on wind?\" and immediately see the answer at the top while the segment mix still tells the wider story — Sweden's long `hydro` band versus Denmark's wind-heavy profile. Legend chips, fed by `onChartDataProcessed`, toggle a technology in and out via `disabledItems`.",
+      },
+    },
+  },
+};
+
+// Parity check: the SVG renderer and the opt-in Canvas renderer, same data.
+export const RendererComparison = {
+  render: (args: React.ComponentProps<typeof BarBellChart>) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 40 }}>
+      <div>
+        <h4 style={{ margin: "0 0 8px", font: "600 13px sans-serif" }}>
+          renderer=&quot;svg&quot; (default)
+        </h4>
+        <BarBellChart {...args} renderer="svg" />
+      </div>
+      <div>
+        <h4 style={{ margin: "0 0 8px", font: "600 13px sans-serif" }}>
+          renderer=&quot;canvas&quot; (opt-in)
+        </h4>
+        <BarBellChart {...args} renderer="canvas" />
+      </div>
+    </div>
+  ),
+  args: {
+    ...commonProps,
+    dataSet: hiringFunnelData,
+    title: "Hiring Funnel by Department",
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Parity check for the opt-in Canvas 2D renderer. The same hiring-funnel dataset is rendered twice: once with the default `renderer=\"svg\"` (one retained SVG node per bar segment plus a `<foreignObject>` per end-cap) and once with `renderer=\"canvas\"` (every bar and bell circle painted onto a single `<canvas>`). The two should be visually identical — cumulative bar layout, end-cap circles, colours, highlight dimming and hover tooltips all match. Canvas mode trades retained-node interactivity for a flat DOM, which keeps large datasets smooth.",
+      },
+    },
+  },
+};
+
+// Interactive: external highlight state driven by hover buttons.
+export const FocusASingleStage = {
+  render: (args: React.ComponentProps<typeof BarBellChart>) => {
+    const [highlightItems, setHighlightItems] = useState<string[]>([]);
+    return (
+      <div>
+        <div style={{ marginBottom: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {args.keys.map(key => (
+            <button
+              key={key}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: highlightItems.includes(key) ? "#007bff" : "#f8f9fa",
+                color: highlightItems.includes(key) ? "white" : "#333",
+                border: "1px solid #dee2e6",
+                borderRadius: 4,
+                cursor: "pointer",
+              }}
+              onMouseEnter={() => setHighlightItems([key])}
+              onMouseLeave={() => setHighlightItems([])}
+            >
+              {key}
+            </button>
+          ))}
+        </div>
+        <BarBellChart {...args} highlightItems={highlightItems} onHighlightItem={setHighlightItems} />
+      </div>
+    );
+  },
+  args: {
+    ...commonProps,
+    dataSet: hiringFunnelData,
+    title: "Hiring Funnel — Focus a Single Stage",
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "When several stacked segments compete for attention, highlighting isolates one. Hovering a stage button feeds `highlightItems`, dimming every other band so a single stage — say `interviewed` — can be compared cleanly across all departments. The chart's `onHighlightItem` callback writes the same state back when bars are hovered, keeping an external legend in sync.",
+      },
+    },
   },
 };

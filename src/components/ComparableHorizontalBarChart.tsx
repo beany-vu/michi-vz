@@ -13,6 +13,8 @@ import { LegendItem, XaxisDataType } from "../types/data";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import { DEFAULT_COLORS } from "./shared/colors";
 import TooltipHint from "src/components/shared/TooltipHint";
+import MichiVzCredit from "./shared/MichiVzCredit";
+import useComparableHorizontalBarChartCanvasRendering from "./hooks/comparableHorizontalBarChart/useComparableHorizontalBarChartCanvasRendering";
 
 const ComparableHorizontalBarChartStyled = styled.div`
   position: relative;
@@ -101,6 +103,15 @@ interface LineChartProps {
    * Default `false` preserves backward-compatible behaviour.
    */
   skipColorMappingDispatch?: boolean;
+  /**
+   * Optional per-label pattern fill for the `valueBased` bar. Maps a series
+   * label to an image source (a URL or data-URI) that is tiled as the bar's
+   * fill — `createHatchPattern()` generates a diagonal-hatch source. The key
+   * may be the raw series label or its class-safe (`data-label-safe`) form.
+   * Only the Canvas renderer (`renderer="canvas"`) applies this; the SVG
+   * renderer ignores it. Omit for solid fills (default).
+   */
+  patternsMapping?: { [key: string]: string };
   showGrid?: boolean;
   showZeroLineForXAxis?: boolean;
   tickHtmlWidth?: number;
@@ -108,6 +119,15 @@ interface LineChartProps {
   highlightItems?: string[];
   disabledItems?: string[];
   hideTickLabels?: boolean;
+  /**
+   * Rendering backend for the comparative bars.
+   *  - "svg" (default): the original SVG/D3 rendering, unchanged.
+   *  - "canvas": draw the two bars per item onto a <canvas> instead of two
+   *    retained <rect> nodes per item, for large datasets. Axes (grid,
+   *    zero-line, divider, y-labels), title, the HTML tooltip and the
+   *    loading / no-data overlays are unchanged in both modes.
+   */
+  renderer?: "svg" | "canvas";
 }
 
 interface ChartMetadata {
@@ -145,12 +165,14 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   colorsMapping: propColorsMapping = {},
   onColorMappingGenerated,
   skipColorMappingDispatch = false,
+  patternsMapping = {},
   showGrid = false,
   showZeroLineForXAxis = false,
   tickHtmlWidth,
   highlightItems = [],
   disabledItems = [],
   hideTickLabels = false,
+  renderer = "svg",
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
@@ -166,6 +188,9 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   } = useChartContext();
 
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // HTML tooltip element driven by the canvas renderer (canvas mode only).
+  const canvasTooltipRef = useRef<HTMLDivElement>(null);
   const renderCompleteRef = useRef(false);
   // Add ref for previous data comparison
   const prevChartDataRef = useRef<ChartMetadata | null>(null);
@@ -522,6 +547,40 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     padding.left,
   ]);
 
+  // The items the canvas renderer paints — same visibility cull the SVG
+  // `renderBars` memo applies (disabled items removed; visibleItems honoured
+  // when the legend has narrowed the selection).
+  const canvasDrawData = useMemo(() => {
+    const shouldShowAll = visibleItems.length === 0;
+    return filteredDataSet.filter(d =>
+      shouldShowAll
+        ? !disabledItems.includes(d?.label)
+        : !disabledItems.includes(d?.label) && visibleItems.includes(d?.label)
+    );
+  }, [filteredDataSet, disabledItems, visibleItems]);
+
+  // Canvas renderer — active only when renderer="canvas".
+  const canvasInteraction = useComparableHorizontalBarChartCanvasRendering({
+    enabled: renderer === "canvas",
+    canvasRef,
+    svgRef,
+    tooltipRef: canvasTooltipRef,
+    drawData: canvasDrawData,
+    fullDataSet: dataSet,
+    width,
+    height,
+    margin,
+    padding,
+    xScale: xAxisScale as never,
+    yScale: yAxisScale,
+    finalColorsMapping,
+    colorsBasedMapping,
+    patternsMapping,
+    highlightItems,
+    tooltipFormatter: tooltipFormatter as never,
+    onHighlightItem,
+  });
+
   useLayoutEffect(() => {
     renderCompleteRef.current = true;
   }, []);
@@ -631,13 +690,14 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         width={width}
         height={height}
         ref={svgRef}
-        style={{ overflow: "visible" }}
+        style={{ overflow: "visible", position: "relative" }}
         onMouseOut={event => {
           event.stopPropagation();
           event.preventDefault();
           onHighlightItem([]);
         }}
       >
+        <MichiVzCredit />
         {children}
         <Title x={width / 2} y={margin.top / 2}>
           {title}
@@ -658,9 +718,33 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
             {memoizedYaxisBand}
           </>
         )}
-        {renderBars}
+        {renderer !== "canvas" && renderBars}
       </svg>
-      {tooltip && (
+      {renderer === "canvas" && (
+        <canvas
+          ref={canvasRef}
+          className="comparable-horizontal-bar-canvas"
+          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}
+        />
+      )}
+      {renderer === "canvas" && (
+        <div
+          className="tooltip"
+          ref={canvasTooltipRef}
+          style={{
+            position: "absolute",
+            visibility: "hidden",
+            background: "white",
+            padding: "5px",
+            pointerEvents: "none",
+            zIndex: 1000,
+          }}
+        >
+          <div className="tooltip-content" />
+          {!canvasInteraction.isSticky && <TooltipHint />}
+        </div>
+      )}
+      {renderer !== "canvas" && tooltip && (
         <div
           className="tooltip"
           style={{
