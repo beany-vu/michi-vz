@@ -31,4 +31,39 @@ describe("chooseAxisMode", () => {
     expect(result.mode).toBe("rotated");
     expect(result.tickValues).toEqual(["01-2023", "02-2023", "03-2023"]);
   });
+
+  test("returns fallback with evenly-spaced sample when even rotation overflows", () => {
+    // 8-char labels @ 7px = 56px. Rotated: 56 * 0.707 ≈ 39.6 + 8 = 47.6.
+    // Band width 20 → both horizontal and rotated overflow.
+    // 5 domain items at band width 20 = total range 100px.
+    // estimatedTickWidth fallback uses 80px → max 1 tick fits, clamped to 2 → first + last.
+    const result = chooseAxisMode({
+      domain: ["12-01-23", "12-02-23", "12-03-23", "12-04-23", "12-05-23"],
+      formatter: (d) => String(d),
+      bandWidth: 20,
+      measure,
+      padding: 8,
+      maxTicks: 15,
+    });
+
+    expect(result.mode).toBe("fallback");
+    expect(result.tickValues).toEqual(["12-01-23", "12-05-23"]);
+  });
+
+  test("fallback samples evenly when more than 2 ticks fit", () => {
+    // 7-char labels, rotated overflow at bandWidth 25.
+    // 10 items × 25px band = 250px total. 250 / 80 = 3 ticks fit.
+    const domain = Array.from({ length: 10 }, (_, i) => `2023-${String(i).padStart(2, "0")}`);
+    const result = chooseAxisMode({
+      domain,
+      formatter: (d) => String(d),
+      bandWidth: 25,
+      measure,
+      padding: 8,
+      maxTicks: 15,
+    });
+
+    expect(result.mode).toBe("fallback");
+    expect(result.tickValues).toEqual([domain[0], domain[5], domain[9]]);
+  });
 });
