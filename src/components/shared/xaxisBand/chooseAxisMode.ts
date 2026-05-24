@@ -25,5 +25,11 @@ export function chooseAxisMode(params: ChooseAxisModeParams): ChooseAxisModeResu
     return { mode: "horizontal", tickValues: domain };
   }
 
+  const COS_45 = Math.SQRT1_2; // 0.7071...
+  const rotatedFootprint = maxLabelWidth * COS_45;
+  if (rotatedFootprint + padding <= bandWidth) {
+    return { mode: "rotated", tickValues: domain };
+  }
+
   return { mode: "fallback", tickValues: domain };
 }
