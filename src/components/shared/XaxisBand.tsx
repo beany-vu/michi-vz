@@ -92,6 +92,8 @@ const XaxisBand: FC<Props> = ({
     const g = d3.select(ref.current);
     if (!g || !tickValues.length) return;
 
+    const isModeChange = prevModeRef.current !== null && prevModeRef.current !== mode;
+
     // Clear previous content
     g.selectAll("*").remove();
 
@@ -181,6 +183,22 @@ const XaxisBand: FC<Props> = ({
       .on("mouseout", function () {
         d3.select(this).attr("r", 2).attr("fill", "lightgray");
       });
+
+    // Fade-in on mode change to soften the visual jump between layouts.
+    if (isModeChange) {
+      axisGroup
+        .selectAll(".tick text")
+        .style("opacity", 0)
+        .transition()
+        .duration(300)
+        .style("opacity", 1);
+      axisGroup
+        .selectAll(".tickValueDot, .tickValueDot-interactive")
+        .style("opacity", 0)
+        .transition()
+        .duration(300)
+        .style("opacity", 1);
+    }
 
     // Cleanup: cancel any in-flight d3 transitions on unmount/re-run.
     return () => {
