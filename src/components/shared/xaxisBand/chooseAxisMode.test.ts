@@ -66,4 +66,42 @@ describe("chooseAxisMode", () => {
     expect(result.mode).toBe("fallback");
     expect(result.tickValues).toEqual([domain[0], domain[5], domain[9]]);
   });
+
+  test("empty domain returns horizontal with no ticks", () => {
+    const result = chooseAxisMode({
+      domain: [],
+      formatter: (d) => String(d),
+      bandWidth: 80,
+      measure,
+    });
+
+    expect(result.mode).toBe("horizontal");
+    expect(result.tickValues).toEqual([]);
+  });
+
+  test("single item always fits horizontally regardless of band width", () => {
+    const result = chooseAxisMode({
+      domain: ["only-one-very-long-label"],
+      formatter: (d) => String(d),
+      bandWidth: 5,
+      measure,
+    });
+
+    expect(result.mode).toBe("horizontal");
+    expect(result.tickValues).toEqual(["only-one-very-long-label"]);
+  });
+
+  test("forceMode='horizontal' skips rotation and falls back to current sampling", () => {
+    const result = chooseAxisMode({
+      domain: ["01-2023", "02-2023", "03-2023", "04-2023", "05-2023"],
+      formatter: (d) => String(d),
+      bandWidth: 50, // would normally choose rotated
+      measure,
+      padding: 8,
+      forceMode: "horizontal",
+    });
+
+    expect(result.mode).toBe("fallback");
+    expect(result.tickValues).toEqual(["01-2023", "03-2023", "05-2023"]);
+  });
 });

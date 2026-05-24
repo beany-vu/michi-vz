@@ -49,9 +49,18 @@ function sampleEvenly(domain: string[], bandWidth: number, maxTicks: number): st
 }
 
 export function chooseAxisMode(params: ChooseAxisModeParams): ChooseAxisModeResult {
-  const { domain, formatter, bandWidth, measure, padding = 8, maxTicks = 15 } = params;
+  const {
+    domain,
+    formatter,
+    bandWidth,
+    measure,
+    padding = 8,
+    maxTicks = 15,
+    forceMode = "auto",
+  } = params;
 
   if (domain.length === 0) return { mode: "horizontal", tickValues: [] };
+  if (domain.length === 1) return { mode: "horizontal", tickValues: domain };
 
   const labels = domain.map((d) => formatter(d));
   const maxLabelWidth = labels.reduce((max, label) => Math.max(max, measure(label)), 0);
@@ -60,9 +69,11 @@ export function chooseAxisMode(params: ChooseAxisModeParams): ChooseAxisModeResu
     return { mode: "horizontal", tickValues: domain };
   }
 
-  const COS_45 = Math.SQRT1_2;
-  if (maxLabelWidth * COS_45 + padding <= bandWidth) {
-    return { mode: "rotated", tickValues: domain };
+  if (forceMode === "auto") {
+    const COS_45 = Math.SQRT1_2;
+    if (maxLabelWidth * COS_45 + padding <= bandWidth) {
+      return { mode: "rotated", tickValues: domain };
+    }
   }
 
   return { mode: "fallback", tickValues: sampleEvenly(domain, bandWidth, maxTicks) };
