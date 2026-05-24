@@ -62,9 +62,11 @@ const XaxisBand: FC<Props> = ({
   // Notify parent when mode changes (used by VerticalStackBarChart to reserve
   // extra bottom space for rotated labels).
   useEffect(() => {
-    if (!onAxisModeChange) return;
     if (prevModeRef.current === mode) return;
-    onAxisModeChange(mode);
+    prevModeRef.current = mode;
+    if (onAxisModeChange) {
+      onAxisModeChange(mode);
+    }
   }, [mode, onAxisModeChange]);
 
   useLayoutEffect(() => {
