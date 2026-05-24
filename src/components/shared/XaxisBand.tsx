@@ -112,13 +112,22 @@ const XaxisBand: FC<Props> = ({
     axisGroup.select(".domain").remove();
     axisGroup.selectAll(".tick line").remove();
 
-    // Keep labels horizontal by default
-    axisGroup
-      .selectAll(".tick text")
-      .attr("transform", "rotate(0)")
-      .style("text-anchor", "middle")
-      .attr("dx", "0")
-      .attr("dy", "0.71em");
+    // Apply the mode-appropriate label transform. The dot at each tick stays
+    // unchanged regardless of mode.
+    const labelSel = axisGroup.selectAll(".tick text");
+    if (mode === "rotated") {
+      labelSel
+        .attr("transform", "rotate(-45)")
+        .style("text-anchor", "end")
+        .attr("dx", "-0.5em")
+        .attr("dy", "0.5em");
+    } else {
+      labelSel
+        .attr("transform", "rotate(0)")
+        .style("text-anchor", "middle")
+        .attr("dx", "0")
+        .attr("dy", "0.71em");
+    }
 
     // Add dashed lines with transition
     const tickGroups = axisGroup.selectAll(".tick");
@@ -181,7 +190,7 @@ const XaxisBand: FC<Props> = ({
       sel.interrupt();
       sel.selectAll("*").interrupt();
     };
-  }, [xScale, height, margin, tickValues, formatter]);
+  }, [xScale, height, margin, tickValues, formatter, mode]);
 
   return <g ref={ref} className="x-axis x-axis-band" />;
 };
