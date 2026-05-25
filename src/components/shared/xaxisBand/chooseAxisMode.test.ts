@@ -33,12 +33,12 @@ describe("chooseAxisMode", () => {
   });
 
   test("returns fallback with evenly-spaced sample when even rotation overflows", () => {
-    // 8-char labels @ 7px = 56px. Rotated: 56 * 0.707 ≈ 39.6 + 8 = 47.6.
-    // Band width 20 → both horizontal and rotated overflow.
-    // 5 domain items at band width 20 = total range 100px.
-    // estimatedTickWidth fallback uses 80px → max 1 tick fits, clamped to 2 → first + last.
+    // 14-char labels @ 7px = 98px. Rotated footprint 98 * 0.707 ≈ 69.3.
+    // With ROTATED_MAX_OVERLAP = 3, rotation needs bandWidth ≥ 69.3 / 3 ≈ 23.
+    // At bandWidth 20, even relaxed rotation overflows → fallback.
+    // 5 domain items × 20px = 100px total. 100 / 80 = 1 → clamped to 2 → first + last.
     const result = chooseAxisMode({
-      domain: ["12-01-23", "12-02-23", "12-03-23", "12-04-23", "12-05-23"],
+      domain: ["pos-12-01-2023", "pos-12-02-2023", "pos-12-03-2023", "pos-12-04-2023", "pos-12-05-2023"],
       formatter: d => String(d),
       bandWidth: 20,
       measure,
@@ -47,15 +47,15 @@ describe("chooseAxisMode", () => {
     });
 
     expect(result.mode).toBe("fallback");
-    expect(result.tickValues).toEqual(["12-01-23", "12-05-23"]);
+    expect(result.tickValues).toEqual(["pos-12-01-2023", "pos-12-05-2023"]);
   });
 
   test("fallback samples evenly when more than 2 ticks fit", () => {
-    // 13-char labels @ 7px = 91px. Rotated footprint 91 * 0.707 ≈ 64.3.
-    // With ROTATED_MAX_OVERLAP = 1.5, rotation needs bandWidth ≥ 64.3 / 1.5 ≈ 43.
-    // At bandWidth 25, even relaxed rotation overflows → fallback.
+    // 19-char labels @ 7px = 133px. Rotated footprint 133 * 0.707 ≈ 94.
+    // With ROTATED_MAX_OVERLAP = 3, rotation needs bandWidth ≥ 94 / 3 ≈ 32.
+    // At bandWidth 25, even very-relaxed rotation overflows → fallback.
     // 10 items × 25px band = 250px total. 250 / 80 = 3 ticks fit.
-    const domain = Array.from({ length: 10 }, (_, i) => `2023-month-${String(i).padStart(2, "0")}`);
+    const domain = Array.from({ length: 10 }, (_, i) => `2023-long-month-${String(i).padStart(2, "0")}`);
     const result = chooseAxisMode({
       domain,
       formatter: d => String(d),

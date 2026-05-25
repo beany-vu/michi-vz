@@ -124,15 +124,16 @@ const XaxisBand: FC<Props> = ({
       // after rotation, giving a clean vertical gap regardless of font metrics.
       labelSel
         .attr("y", 0)
-        .attr("transform", "translate(0, 8) rotate(-45)")
+        .attr("transform", "translate(0, 14) rotate(-45)")
         .style("text-anchor", "end")
         .attr("dx", "0")
         .attr("dy", "0.32em");
     } else {
-      // Restore d3's default text y so swapping back from rotated mode doesn't
-      // leave behind a stale y attribute that would offset horizontal labels.
-      labelSel.attr("y", null);
+      // Horizontal mode (including fallback): explicit y=16 (vs d3's default
+      // 9) gives a clear ~10px gap between the dot and the text top edge, so
+      // they don't visually merge.
       labelSel
+        .attr("y", 16)
         .attr("transform", "rotate(0)")
         .style("text-anchor", "middle")
         .attr("dx", "0")
