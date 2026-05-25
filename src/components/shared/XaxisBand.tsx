@@ -118,12 +118,20 @@ const XaxisBand: FC<Props> = ({
     // unchanged regardless of mode.
     const labelSel = axisGroup.selectAll(".tick text");
     if (mode === "rotated") {
+      // Push text well below the dot so the stack reads:
+      // abbreviation → dot → rotated label (clear vertical gap on each side).
+      // translate(0, 14) shifts the whole label straight down in screen coords
+      // after rotation, giving a clean vertical gap regardless of font metrics.
       labelSel
-        .attr("transform", "rotate(-45)")
+        .attr("y", 0)
+        .attr("transform", "translate(0, 14) rotate(-45)")
         .style("text-anchor", "end")
-        .attr("dx", "-0.8em")
-        .attr("dy", "1em");
+        .attr("dx", "0")
+        .attr("dy", "0.32em");
     } else {
+      // Restore d3's default text y so swapping back from rotated mode doesn't
+      // leave behind a stale y attribute that would offset horizontal labels.
+      labelSel.attr("y", null);
       labelSel
         .attr("transform", "rotate(0)")
         .style("text-anchor", "middle")

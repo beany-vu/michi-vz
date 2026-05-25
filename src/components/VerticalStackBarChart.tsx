@@ -229,7 +229,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
   const [axisMode, setAxisMode] = useState<AxisMode>("horizontal");
 
-  const ROTATED_BOTTOM_RESERVE = 35;
+  const ROTATED_BOTTOM_RESERVE = 50;
   const effectiveMargin = useMemo(
     () => ({
       ...margin,
