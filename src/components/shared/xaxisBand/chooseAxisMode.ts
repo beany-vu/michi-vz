@@ -71,7 +71,13 @@ export function chooseAxisMode(params: ChooseAxisModeParams): ChooseAxisModeResu
 
   if (forceMode === "auto") {
     const COS_45 = Math.SQRT1_2;
-    if (maxLabelWidth * COS_45 + padding <= bandWidth) {
+    // Rotated labels trail diagonally, so adjacent labels can graze each
+    // other without their text colliding. ROTATED_MAX_OVERLAP lets the
+    // -45° footprint extend past one band by this multiplier before we give
+    // up and fall back to skip-with-dots. 1.5× keeps rotation working for
+    // ~30 monthly labels at a typical chart width.
+    const ROTATED_MAX_OVERLAP = 1.5;
+    if (maxLabelWidth * COS_45 <= bandWidth * ROTATED_MAX_OVERLAP) {
       return { mode: "rotated", tickValues: domain };
     }
   }

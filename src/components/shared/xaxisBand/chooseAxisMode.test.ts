@@ -51,9 +51,11 @@ describe("chooseAxisMode", () => {
   });
 
   test("fallback samples evenly when more than 2 ticks fit", () => {
-    // 7-char labels, rotated overflow at bandWidth 25.
+    // 13-char labels @ 7px = 91px. Rotated footprint 91 * 0.707 ≈ 64.3.
+    // With ROTATED_MAX_OVERLAP = 1.5, rotation needs bandWidth ≥ 64.3 / 1.5 ≈ 43.
+    // At bandWidth 25, even relaxed rotation overflows → fallback.
     // 10 items × 25px band = 250px total. 250 / 80 = 3 ticks fit.
-    const domain = Array.from({ length: 10 }, (_, i) => `2023-${String(i).padStart(2, "0")}`);
+    const domain = Array.from({ length: 10 }, (_, i) => `2023-month-${String(i).padStart(2, "0")}`);
     const result = chooseAxisMode({
       domain,
       formatter: d => String(d),
