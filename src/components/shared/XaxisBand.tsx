@@ -124,7 +124,7 @@ const XaxisBand: FC<Props> = ({
       // after rotation, giving a clean vertical gap regardless of font metrics.
       labelSel
         .attr("y", 0)
-        .attr("transform", "translate(0, 14) rotate(-45)")
+        .attr("transform", "translate(0, 22) rotate(-45)")
         .style("text-anchor", "end")
         .attr("dx", "0")
         .attr("dy", "0.32em");
