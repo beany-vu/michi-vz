@@ -121,8 +121,8 @@ const XaxisBand: FC<Props> = ({
       labelSel
         .attr("transform", "rotate(-45)")
         .style("text-anchor", "end")
-        .attr("dx", "-0.5em")
-        .attr("dy", "0.5em");
+        .attr("dx", "-0.8em")
+        .attr("dy", "1em");
     } else {
       labelSel
         .attr("transform", "rotate(0)")
