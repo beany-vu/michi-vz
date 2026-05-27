@@ -1,0 +1,141 @@
+<title>michi-vz — React + D3 chart library</title>
+<style>
+  /* ─── Two-column docs layout ────────────────────────────────────────── */
+  .mv-docs-layout {
+    display: flex;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+  .mv-docs-main {
+    flex: 1;
+    min-width: 0;
+  }
+  /* Let DocsContainer's content breathe inside our layout */
+  .mv-docs-layout .sbdocs.sbdocs-wrapper {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .mv-docs-layout .sbdocs-content {
+    max-width: 860px !important;
+    padding: 40px 48px !important;
+  }
+
+  /* ─── Navigation rail ───────────────────────────────────────────────── */
+  .mv-doc-rail {
+    width: 240px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 28px 16px 28px 20px;
+    border-right: 1px solid var(--mv-line, #E5E5E5);
+    background: var(--mv-shell, #FAFAFA);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    box-sizing: border-box;
+  }
+  .mv-doc-rail-header {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mv-ink-3, #9A9A9A);
+    margin-bottom: 16px;
+    padding-left: 24px;
+  }
+  .mv-doc-rail-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .mv-doc-rail-item {
+    margin-bottom: 2px;
+  }
+  .mv-doc-rail-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    font-size: 15px;
+    color: var(--mv-ink-2, #525252);
+    text-decoration: none;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .mv-doc-rail-link:hover {
+    color: var(--mv-ink, #0A0A0A);
+    background: var(--mv-line-soft, #F0F0F0);
+  }
+  .mv-doc-rail-link--active {
+    color: var(--mv-ink, #0A0A0A);
+    font-weight: 600;
+    border-left-color: var(--mv-accent, #C84B3F);
+  }
+
+  /* ─── Star indicator ────────────────────────────────────────────────── */
+  .mv-doc-star {
+    font-size: 12px;
+    color: var(--mv-ink-3, #9A9A9A);
+    opacity: 0;
+    flex-shrink: 0;
+    transition: opacity 0.2s;
+    display: inline-block;
+    transform-origin: center;
+  }
+  .mv-doc-rail-link:hover .mv-doc-star {
+    opacity: 0.5;
+  }
+  .mv-doc-star--breathe {
+    color: var(--mv-accent, #C84B3F);
+    opacity: 0.55;
+    animation: mv-breathe 2.6s ease-in-out infinite;
+  }
+
+  /* ─── Section anchors under active chart ────────────────────────────── */
+  .mv-doc-rail-anchors {
+    list-style: none;
+    margin: 4px 0 8px 0;
+    padding: 0 0 0 24px;
+    border-left: 1px solid var(--mv-line, #E5E5E5);
+  }
+  .mv-doc-rail-anchor {
+    display: block;
+    padding: 4px 8px;
+    font-size: 13px;
+    color: var(--mv-ink-3, #9A9A9A);
+    text-decoration: none;
+    border-radius: 3px;
+    transition: color 0.15s;
+  }
+  .mv-doc-rail-anchor:hover {
+    color: var(--mv-accent, #C84B3F);
+  }
+
+  /* ─── Shared breath animation ────────────────────────────────────────── */
+  @keyframes mv-breathe {
+    0%, 100% { opacity: 0.55; transform: scale(1);    }
+    50%       { opacity: 1;    transform: scale(1.14); }
+  }
+
+  /* ─── Typography lift inside docs content ────────────────────────────── */
+  .sbdocs-content {
+    font-size: 16px !important;
+    line-height: 1.7 !important;
+  }
+
+  /* ─── Mobile: rail collapses, content reflows ────────────────────────── */
+  @media (max-width: 900px) {
+    .mv-docs-layout { display: block; }
+    .mv-doc-rail { display: none; }
+    .mv-docs-layout .sbdocs-content {
+      padding: 24px 20px !important;
+    }
+  }
+
+  /* ─── prefers-reduced-motion: disable rail star animation ───────────── */
+  @media (prefers-reduced-motion: reduce) {
+    .mv-doc-star--breathe { animation: none; opacity: 0.7; }
+  }
+</style>
