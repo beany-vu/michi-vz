@@ -267,6 +267,7 @@ function MichiDocsContainer({ children, context, ...props }) {
 const CenteringDecorator = (Story) => (
   <>
     <style>{globalChartCss}</style>
+    <MichiTopnav />
     <div className="mv-story-card">
       <Story />
     </div>
