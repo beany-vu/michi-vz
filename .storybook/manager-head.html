@@ -1,0 +1,51 @@
+<title>michi-vz — React + D3 chart library</title>
+<meta name="description" content="Eleven ready-made, interactive chart components for React — line, area, bar, radar, scatter and more — built on D3, typed in TypeScript." />
+
+<!-- Open Graph / social link previews -->
+<meta property="og:type"        content="website" />
+<meta property="og:url"         content="https://beany-vu.github.io/michi-vz/" />
+<meta property="og:title"       content="michi-vz — React + D3 chart library" />
+<meta property="og:description" content="Eleven ready-made, interactive chart components for React — line, area, bar, radar, scatter and more — built on D3, typed in TypeScript." />
+<meta property="og:image"       content="https://beany-vu.github.io/michi-vz/michi-logo.png" />
+<meta property="og:image:alt"   content="michi-vz logo" />
+
+<!-- Twitter / X card -->
+<meta name="twitter:card"        content="summary_large_image" />
+<meta name="twitter:title"       content="michi-vz — React + D3 chart library" />
+<meta name="twitter:description" content="Eleven ready-made, interactive chart components for React — line, area, bar, radar, scatter and more — built on D3, typed in TypeScript." />
+<meta name="twitter:image"       content="https://beany-vu.github.io/michi-vz/michi-logo.png" />
+
+<style>
+  /* Hide the native Storybook sidebar and toolbar */
+  #storybook-explorer-menu,
+  .sidebar-container,
+  nav[aria-label="Storybook"],
+  [data-role="sidebar"] {
+    display: none !important;
+  }
+
+  /* Remove the left offset that Storybook adds when the sidebar is open.
+     Storybook 10 sets inline left/margin-left on the main wrapper via JS.
+     We override with max specificity. */
+  #storybook-main,
+  #storybook-preview-wrapper,
+  [id="storybook-main"],
+  [id="storybook-preview-wrapper"] {
+    left: 0 !important;
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Hide the drag-to-resize handle between sidebar and main */
+  [role="separator"],
+  .sidebar-resizer,
+  [class*="resizer"] {
+    display: none !important;
+  }
+
+  /* Hide the toolbar / topbar area */
+  #storybook-toolbar,
+  [class*="Toolbar"] {
+    display: none !important;
+  }
+</style>
