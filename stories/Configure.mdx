@@ -588,7 +588,7 @@ import { MichiVzProvider, RibbonChart } from "michi-vz";
     .mv-grid { grid-template-columns: 1fr; }
     .mv-cols { grid-template-columns: 1fr; }
     .mv-title { font-size: 48px; }
-    .mv-hero { padding: 40px 28px 36px; }
+    .mv-hero-inner { padding: 40px 24px 48px; }
     .mv-hero .mv-hero-meta-right { display: none; }
     .mv-topnav-logo { height: 40px; transform: translateY(1px); }
     .mv-topnav-brand { height: 44px; }
@@ -618,6 +618,12 @@ import { MichiVzProvider, RibbonChart } from "michi-vz";
   @keyframes mv-card-breathe {
     0%, 100% { transform: translateY(-2px) scale(1);     box-shadow: 0 8px 20px rgba(10,10,10,0.08); }
     50%       { transform: translateY(-3px) scale(1.012); box-shadow: 0 12px 28px rgba(200,75,63,0.14); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mv-topnav-star,
+    .mv-hero-bullet--breathe { animation: none; }
+    .mv-card:hover { animation: none; transform: translateY(-2px); }
   }
   `}
 </style>
