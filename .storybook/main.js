@@ -1,4 +1,4 @@
-const path = require('path');
+const path = require("path");
 
 /** @type { import('storybook').StorybookConfig } */
 const config = {
@@ -6,53 +6,60 @@ const config = {
     "../stories/**/*.mdx",
     "../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)",
   ],
+  // Storybook 10: addon-essentials, addon-interactions, addon-mdx-gfm all
+  // collapsed into the core / addon-docs. We register only the addons that
+  // still exist as standalone packages.
   addons: [
     "@storybook/addon-links",
-    "@storybook/addon-essentials",
-    "@storybook/addon-onboarding",
-    "@storybook/addon-interactions",
-    '@storybook/addon-mdx-gfm',
-    '@storybook/addon-webpack5-compiler-babel'
+    "@storybook/addon-webpack5-compiler-babel",
+    "@storybook/addon-docs",
   ],
   framework: {
     name: "@storybook/react-webpack5",
     options: {
       reactOptions: {
-        fastRefresh: true, // Enable React Fast Refresh
+        fastRefresh: true,
       },
     },
   },
   docs: {
     autodocs: "tag",
   },
+  // Serve .storybook/public/ at the site root so the brand logo + any other
+  // static assets are referenceable as `/michi-logo.png`.
+  staticDirs: ["./public"],
+  // Storybook 10 surfaces these as top-level features instead of addon-
+  // essentials options. Disable on the public docs site to hide dev-only
+  // chrome (backgrounds picker, measure overlay, outline overlay, highlight).
+  features: {
+    backgrounds: false,
+    measure: false,
+    outline: false,
+    highlight: false,
+  },
   webpackFinal: async (config) => {
-    // Add TypeScript and Babel support
     config.module.rules.push({
       test: /\.(ts|tsx)$/,
       use: [
         {
-          loader: require.resolve('babel-loader'),
+          loader: require.resolve("babel-loader"),
           options: {
             presets: [
-              '@babel/preset-env',
-              '@babel/preset-react',
-              '@babel/preset-typescript',
+              "@babel/preset-env",
+              "@babel/preset-react",
+              "@babel/preset-typescript",
             ],
           },
         },
       ],
     });
-
-    // Add the 'src' alias
     config.resolve.alias = {
       ...config.resolve.alias,
-      src: path.resolve(__dirname, '../src'),
+      src: path.resolve(__dirname, "../src"),
     };
-
-    // Update extensions
-    config.resolve.extensions.push('.ts', '.tsx');
-
+    config.resolve.extensions.push(".ts", ".tsx");
     return config;
   },
 };
+
 module.exports = config;

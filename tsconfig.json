@@ -1,7 +1,13 @@
 {
   "compilerOptions": {
-    "lib": ["ES2021", "dom"],
-    "types": ["jest", "@testing-library/jest-dom"],
+    "lib": [
+      "ES2021",
+      "dom"
+    ],
+    "types": [
+      "jest",
+      "@testing-library/jest-dom"
+    ],
     "jsx": "react-jsx",
     "outDir": "./dist",
     "rootDir": "./src",
@@ -18,7 +24,9 @@
     "allowJs": true,
     "baseUrl": ".",
     "paths": {
-      "src/*": ["src/*"]
+      "src/*": [
+        "src/*"
+      ]
     },
     // Better error reporting
     "pretty": true,
@@ -28,8 +36,20 @@
     "sourceMap": true,
     "inlineSourceMap": false,
     "inlineSources": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "ignoreDeprecations": "6.0"
   },
-  "include": ["src/**/*", "src/**/*.ts", "src/**/*.tsx", "**/*.test.ts", "**/*.test.tsx"],
-  "exclude": ["node_modules", "build", "dist", "stories"]
+  "include": [
+    "src/**/*",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "stories"
+  ]
 }

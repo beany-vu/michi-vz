@@ -20,8 +20,13 @@ type YScale = ScaleLinear<number, number>;
 const OPACITY_NOT_HIGHLIGHTED = 0.05;
 const AREA_STROKE = "#fff";
 const AREA_STROKE_WIDTH = 1;
-const INDICATOR_STROKE = "#ccc";
-const INDICATOR_STROKE_WIDTH = 1;
+// Per-data-point separator. Used to be a solid #ccc 1px line drawn over
+// every area segment — at high data density it read as a forest of vertical
+// slashes through the colour. Switched to a near-invisible white hairline so
+// the data positions can still be inferred if you look for them, but they
+// don't dominate the chart. Matches the SVG-side change in AreaChart.tsx.
+const INDICATOR_STROKE = "rgba(255, 255, 255, 0.18)";
+const INDICATOR_STROKE_WIDTH = 0.5;
 const HOVER_LINE_STROKE = "#666";
 const HOVER_LINE_WIDTH = 2;
 

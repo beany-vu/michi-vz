@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from "react";
 import RibbonChart from "../src/components/RibbonChart";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
-import { Meta } from "@storybook/react";
-import { fn } from "@storybook/test";
+import { Meta } from "@storybook/react-webpack5";
+import { fn } from "storybook/test";
 
 // Storybook stories for the RibbonChart component.
 //
@@ -69,7 +69,7 @@ const commonProps = {
   series: energySeries,
   width: 900,
   height: 400,
-  margin: { top: 50, right: 50, bottom: 50, left: 50 },
+  margin: { top: 50, right: 60, bottom: 65, left: 70 },
   yAxisFormat: (d: number) => `${d}%`,
   onChartDataProcessed: fn(),
   onHighlightItem: fn(),
@@ -122,12 +122,11 @@ export const Primary = {
     docs: {
       description: {
         story:
-          "The headline use case: how the world's electricity mix has shifted. " +
-          "Each year is a stacked bar; the ribbons trace each fuel's share between " +
-          "years. The story reads instantly — the coal ribbon narrows from 40% to " +
-          "36% while the wind + solar ribbon fans out from under 2% to over 13%, " +
-          "climbing past nuclear. Colours come from the `colorsMapping` on the " +
-          "surrounding MichiVzProvider; hover a segment for the tooltip and highlight.",
+          "How the world's electricity mix has shifted between 2010 and 2023, with each " +
+          "year as a stacked bar and curved ribbons linking each fuel between years. The " +
+          "coal ribbon narrows from 40% to 36% while wind + solar fans out from under 2% to " +
+          "over 13%, visibly climbing past nuclear — a rank change a bar chart would hide. " +
+          "Colours come from `colorsMapping` on the surrounding `MichiVzProvider`.",
       },
     },
   },
@@ -153,11 +152,11 @@ export const CompositionReRanking = {
     docs: {
       description: {
         story:
-          "Where ribbons earn their keep: tracking *rank changes*, not just levels. " +
-          "Watch the UK ribbon collapse from ~12% to ~6% post-Brexit while China's " +
-          "ribbon swells in 2021 and the US stays roughly flat. The crossing and " +
-          "thinning ribbons make the re-ordering of partners obvious in a way a grid " +
-          "of stacked bars would not. `xAxisFormat` shortens the year ticks.",
+          "How the EU's biggest trading partners have re-ordered themselves since 2017. " +
+          "The UK ribbon collapses from ~12% to ~6% post-Brexit while China's swells and " +
+          "the US stays roughly flat — the crossing and thinning ribbons make the reshuffle " +
+          "obvious in a way separate bar charts would not. `xAxisFormat` shortens the year " +
+          "ticks to `'17`, `'19` etc.",
       },
     },
   },
@@ -203,11 +202,11 @@ export const FocusOnCategory = {
     docs: {
       description: {
         story:
-          "Two complementary ways to cut through a busy stack. `highlightItems` " +
-          "spotlights the wind + solar ribbon and dims the rest, so the growth story " +
-          "pops. `disabledItems` drops hydro and nuclear entirely — the y-scale " +
-          "rebases to the remaining categories, which is how you compare a subset " +
-          "of the mix on its own terms.",
+          "Two ways to cut through a busy stack at once. `highlightItems` spotlights the " +
+          "wind + solar ribbon and fades the rest so the growth story pops, while " +
+          "`disabledItems` removes hydro and nuclear entirely and rebases the y-scale to " +
+          "what's left — useful when you want to compare a subset of the mix on its own " +
+          "terms.",
       },
     },
   },
@@ -267,10 +266,10 @@ export const InteractiveExploration = {
     docs: {
       description: {
         story:
-          "An analyst rarely looks at every category at once. Hover a button to " +
-          "spotlight one fuel's ribbon; click to exclude it and rebase the stack on " +
-          "what remains. This is the chart wired for exploration — drilling into one " +
-          "ribbon, then comparing the rest without it.",
+          "The chart wired for exploration: hover a button to spotlight one fuel's ribbon, " +
+          "click to remove it and rebase the stack on what's left. This is how analysts " +
+          "actually use the chart in practice — focus on one fuel, then strip it out to " +
+          "compare the others without its weight skewing the view.",
       },
     },
   },

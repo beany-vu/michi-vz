@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
-import { Meta, StoryObj } from "@storybook/react";
-import { fn } from "@storybook/test";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
+import { fn } from "storybook/test";
 import { RadarChart } from "../src/components/RadarChart";
 
 // Storybook stories for the RadarChart component — a lean, analyst-curated set.
@@ -161,7 +161,10 @@ const commonProps = {
   width: 520,
   height: 520,
   poles: makePoles(phoneAxes),
-  radialLabelFormatter: (item: number) => `${item}`,
+  // Stringify the radial axis ticks with at most one decimal — otherwise non-
+  // round domains (e.g. decathlete 0..10 / 6 ticks) print `7.223188405797102`.
+  radialLabelFormatter: (item: number) =>
+    Number.isInteger(item) ? `${item}` : item.toFixed(1),
   tooltipFormatter: (item: { date: string; value: number }) => (
     <div>
       <strong>{item.date}</strong>
@@ -215,11 +218,11 @@ export const ProductComparison: Story = {
     docs: {
       description: {
         story:
-          "Two smartphones scored 0–10 across six review dimensions. The radar makes the " +
-          "trade-off obvious: the Pixel Pro spikes on Camera but caves in on Battery and " +
-          "Value, while the Galaxy Ultra draws a fuller, more balanced polygon. The filled " +
-          "areas make the 'which phone covers more ground' read immediate — exactly the " +
-          "moment a radar chart earns its place over a bar chart.",
+          "Two smartphones scored 0–10 on the same six review dimensions, with each phone's " +
+          "scores drawn as a filled shape. The bigger and rounder the shape, the better the " +
+          "all-round product: the Galaxy Ultra spreads further on every side, while the Pixel " +
+          "Pro leans hard on Camera and pulls in on Battery and Value. `showFilled` turns the " +
+          "outlines into shaded areas so the 'who covers more ground' read is immediate.",
       },
     },
   },
@@ -237,11 +240,10 @@ export const PerformanceProfile: Story = {
     docs: {
       description: {
         story:
-          "A single decathlete's normalised index (0–10) across all ten events. With one " +
-          "series the polygon becomes a *profile*: the long reach on sprints and jumps and " +
-          "the dents on Shot Put and Discus instantly flag where training should focus. " +
-          "Use a solo radar when the question is 'where is this entity strong vs. weak?' " +
-          "rather than 'who wins?'.",
+          "One decathlete's scores across all ten events, drawn as a single shape. The long " +
+          "reach on sprints and jumps and the obvious dents on Shot Put and Discus point " +
+          "straight at where training should focus. A single-shape radar answers 'where is " +
+          "this person strong vs. weak?' rather than 'who wins?'.",
       },
     },
   },
@@ -259,11 +261,11 @@ export const CityLivability: Story = {
     docs: {
       description: {
         story:
-          "Three cities scored across six livability dimensions, with colours auto-assigned " +
-          "(no per-series `color`). Each city has a distinct silhouette — Singapore leans " +
-          "Safety and Transit but is squeezed on Affordability, while Lisbon trades " +
-          "infrastructure for Climate and value. Three series is near the practical ceiling: " +
-          "the polygons still separate cleanly, but a fourth would start to muddy the read.",
+          "Three cities scored on six livability dimensions, each city drawn as its own shape " +
+          "in an auto-assigned colour. Each city has a recognisable silhouette: Singapore " +
+          "leans hard on Safety and Transit but pinches in on Affordability, while Lisbon " +
+          "trades infrastructure for Climate. Three shapes is around the practical ceiling — " +
+          "a fourth tends to muddy the overlap.",
       },
     },
   },
@@ -281,47 +283,11 @@ export const CandidateScorecard: Story = {
     docs: {
       description: {
         story:
-          "Two interview candidates rated 1–5 against a six-point rubric. The two polygons " +
-          "are near mirror images: Candidate A owns the technical axes, Candidate B owns " +
-          "Communication, Collaboration and Leadership. When two profiles interlock like " +
-          "this, the radar reframes the decision from 'who scored higher' to 'which shape " +
+          "Two interview candidates rated 1–5 against a six-point rubric, drawn as " +
+          "overlapping shapes. The two profiles interlock — Candidate A owns the technical " +
+          "sides, Candidate B owns Communication, Collaboration and Leadership — which " +
+          "reframes the hiring decision from 'who scored higher overall' to 'which shape " +
           "fits the role'.",
-      },
-    },
-  },
-};
-
-// Parity check: the SAME dataset rendered with both backends, stacked, so the
-// opt-in Canvas renderer can be visually diffed against the SVG renderer.
-export const RendererComparison: Story = {
-  args: {
-    series: phoneComparison,
-    poles: makePoles(phoneAxes),
-    showFilled: true,
-    fillOpacity: 0.25,
-  },
-  render: args => (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
-      <div>
-        <h4 style={{ textAlign: "center", margin: "0 0 8px" }}>renderer=&quot;svg&quot;</h4>
-        <RadarChart {...args} renderer="svg" />
-      </div>
-      <div>
-        <h4 style={{ textAlign: "center", margin: "0 0 8px" }}>renderer=&quot;canvas&quot;</h4>
-        <RadarChart {...args} renderer="canvas" />
-      </div>
-    </div>
-  ),
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Feature-parity check for the opt-in Canvas 2D renderer (Phase 4 of the " +
-          "performance overhaul). The same two-phone comparison is drawn twice — once with " +
-          "the default `renderer=\"svg\"` and once with `renderer=\"canvas\"`. The two " +
-          "polygons, fills, pole points, highlight dimming and tooltips should look and " +
-          "behave identically; the canvas path replaces the per-series SVG nodes with a " +
-          "single <canvas> while the radial grid and pole/ring labels stay SVG.",
       },
     },
   },
@@ -417,11 +383,11 @@ export const InteractiveLegend: Story = {
     docs: {
       description: {
         story:
-          "How an analyst actually works a radar: hover a city button to highlight its " +
-          "polygon and fade the rest, or click to hide it and isolate the remaining " +
-          "comparison. Toggling series one at a time is the practical fix for the radar's " +
-          "main weakness — overlap. The emitted legend data (from `onChartDataProcessed`) " +
-          "is shown below for wiring up an external legend.",
+          "How analysts actually work a radar: hover a button to spotlight one city and fade " +
+          "the others, or click to hide it and compare just the rest. Peeling shapes off one " +
+          "at a time is the standard fix for the radar's main weakness — too much overlap. " +
+          "The emitted legend data (via `onChartDataProcessed`) is dumped below for wiring " +
+          "up external legends.",
       },
     },
   },

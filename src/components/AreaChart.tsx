@@ -199,6 +199,11 @@ const AreaChart: React.FC<Props> = ({
     // This useLayoutEffect is no longer needed as color mapping is handled by props
   }, []);
 
+  const activeKeys = useMemo(
+    () => keys.filter(key => !disabledItems.includes(key)),
+    [keys, disabledItems]
+  );
+
   const xScale = useMemo(() => {
     if (xAxisDataType === "number") {
       return d3
@@ -217,9 +222,9 @@ const AreaChart: React.FC<Props> = ({
     return d3
       .scaleTime()
       .domain([minDate || 0, maxDate || 1])
-      .range([MARGIN.left, width - margin.right]);
+      .range([margin.left, width - margin.right]);
     // .nice();
-  }, [series, width, height, disabledItems, xAxisDataType]);
+  }, [series, width, height, margin.left, margin.right, xAxisDataType]);
 
   // yScale
   const yScaleDomain = useMemo(() => {
@@ -240,7 +245,7 @@ const AreaChart: React.FC<Props> = ({
       series,
       d =>
         d3.sum(
-          keys.map(key => {
+          activeKeys.map(key => {
             const val = d[key];
             return val != null && !isNaN(val as number) ? (val as number) : 0;
           })
@@ -249,7 +254,7 @@ const AreaChart: React.FC<Props> = ({
 
     // Minimum domain is [0, 100] for percentage charts, but extend if data exceeds 100
     return [0, Math.max(100, maxStackedSum)];
-  }, [series, keys, yAxisDomain, forcePercentageScale]);
+  }, [series, activeKeys, yAxisDomain, forcePercentageScale]);
 
   const yScale = useMemo(
     () => {
@@ -267,19 +272,19 @@ const AreaChart: React.FC<Props> = ({
   );
 
   const stackedData = useMemo(() => {
-    return d3.stack<DataPoint, string>().keys(keys)(series);
-  }, [series, keys]);
+    return d3.stack<DataPoint, string>().keys(activeKeys)(series);
+  }, [series, activeKeys]);
 
   // Memoized area data to avoid recreating on every render
   const areaData = useMemo(() => {
     return stackedData.map((keyData, index) => ({
-      key: keys[index],
+      key: activeKeys[index],
       values: keyData,
       fill:
-        colorsMapping[keys[index]] ||
+        colorsMapping[activeKeys[index]] ||
         (skipColorMappingDispatch ? "transparent" : colors[index % colors.length]),
     }));
-  }, [stackedData, keys, colorsMapping, colors]);
+  }, [stackedData, activeKeys, colorsMapping, colors, skipColorMappingDispatch]);
 
   // Helper to get date value for bisector comparison
   const getDateValue = useCallback(
@@ -716,6 +721,7 @@ const AreaChart: React.FC<Props> = ({
               margin={margin}
               highlightZeroLine={true}
               yAxisFormat={yAxisFormat}
+              showTickLabels={false}
             />
           </>
         )}
@@ -737,7 +743,12 @@ const AreaChart: React.FC<Props> = ({
               style={{ pointerEvents: "none" }}
             />
           ))}
-          {/* Thin vertical lines per area to indicate which dates have data */}
+          {/* Subtle dotted data-row indicators — barely visible by default,
+              fading entirely on hover via the rule in AreaChartContainer. They
+              used to be solid `#ccc` lines drawn over the area fills, which
+              read as a forest of vertical slashes through the colours. Kept at
+              very low opacity now so the data positions can still be inferred
+              if you look for them, but they don't dominate the chart. */}
           {areaData.map(areaDataItem =>
             areaDataItem.values.map(dataPoint => {
               const xPos = xScale(
@@ -748,7 +759,6 @@ const AreaChart: React.FC<Props> = ({
               const y0 = yScale(dataPoint[0] || 0);
               const y1 = yScale(dataPoint[1] || 0);
               const segmentHeight = y0 - y1;
-              // Only show indicator if segment has height (data exists)
               if (segmentHeight <= 0) return null;
               return (
                 <line
@@ -758,9 +768,9 @@ const AreaChart: React.FC<Props> = ({
                   x2={xPos}
                   y1={y1}
                   y2={y0}
-                  stroke="#ccc"
-                  strokeWidth={1}
-                  opacity={1}
+                  stroke="#ffffff"
+                  strokeWidth={0.5}
+                  opacity={0.12}
                   pointerEvents="none"
                 />
               );
@@ -780,6 +790,18 @@ const AreaChart: React.FC<Props> = ({
             />
           )}
         </g>
+        )}
+        {/* Y-axis rendered AFTER the area paths so the tick labels sit on top
+            of the coloured fills instead of being painted behind them. */}
+        {series.length > 0 && !isLoading && (
+          <YaxisLinear
+            yScale={yScale}
+            width={width}
+            height={height}
+            margin={margin}
+            yAxisFormat={yAxisFormat}
+            showGridLines={false}
+          />
         )}
       </svg>
 

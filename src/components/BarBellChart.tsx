@@ -215,7 +215,23 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     }
   }, []);
 
-  const yValues = useMemo(() => dataSet.map(d => d.date).map(date => date), [dataSet]);
+  const displayDataSet = useMemo(() => {
+    if (!filter) return dataSet;
+    let result = [...dataSet];
+    if (filter.criteria && filter.sortingDir) {
+      result.sort((a, b) => {
+        const aVal = (a[filter.criteria] as number) ?? 0;
+        const bVal = (b[filter.criteria] as number) ?? 0;
+        return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
+      });
+    }
+    if (filter.limit) {
+      result = result.slice(0, filter.limit);
+    }
+    return result;
+  }, [dataSet, filter]);
+
+  const yValues = useMemo(() => displayDataSet.map(d => d.date).map(date => date), [displayDataSet]);
 
   const yScale = useMemo(
     () =>
@@ -232,7 +248,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
   // xValues is the sum of all values which their key is not "date"
   const xValues = useMemo(
     () =>
-      dataSet.map(d => {
+      displayDataSet.map(d => {
         let sum = 0;
         for (const key in d) {
           if (key !== "date" && key !== "code" && disabledItems.includes(key) === false) {
@@ -241,7 +257,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
         }
         return sum;
       }),
-    [dataSet, disabledItems]
+    [displayDataSet, disabledItems]
   );
 
   const maxValueX = useMemo(
@@ -259,7 +275,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     [maxValueX, width, margin.left, margin.right]
   );
 
-  const isEmpty = useMemo(() => dataSet.length === 0, [dataSet]);
+  const isEmpty = useMemo(() => displayDataSet.length === 0, [displayDataSet]);
 
   // Canvas renderer — active only when renderer="canvas". Draws the bars and
   // end-cap circles onto a <canvas>; the SVG marks below are guarded off.
@@ -277,7 +293,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
     svgRef: ref,
     tooltipRef: refTooltip,
     tooltipContentRef: refTooltipContent,
-    dataSet,
+    dataSet: displayDataSet,
     keys,
     width,
     height,
@@ -328,7 +344,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
       if (filter?.criteria && filter?.sortingDir) {
         // Calculate sort values for all keys
         keys.forEach(key => {
-          const total = dataSet.reduce((sum, d) => sum + (d[key] || 0), 0);
+          const total = displayDataSet.reduce((sum, d) => sum + (d[key] || 0), 0);
           sortValues[key] = total;
         });
 
@@ -479,7 +495,7 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
           </>
         )}
         {renderer !== "canvas" &&
-          dataSet.map((d, i) => {
+          displayDataSet.map((d, i) => {
             let cumulativeX = margin.left; // Initialize cumulativeX for each row
 
             // Pre-pass: vertical-dodge offsets for end-cap circles that would

@@ -1,30 +1,64 @@
-import { addons } from "@storybook/manager-api";
-import { create } from "@storybook/theming/create";
+// Storybook 10: manager-api + theming live under the top-level `storybook`
+// package now, not the `@storybook/*` scope.
+import { addons } from "storybook/manager-api";
+import { create } from "storybook/theming/create";
 
-// Custom Storybook theme for the published michi-vz docs site, so the
-// GitHub Pages build reads as the library's own page rather than stock
-// Storybook. Accent colour matches the Introduction landing page.
+// Swiss-style theme — warm red, true Helvetica, near-black ink, tight white
+// surfaces. The accent (#C84B3F) is the modernist-Swiss-poster red used by
+// Calder/Hofmann-era graphic design — warmer than flag red, more design,
+// less alarm. Font stack puts Helvetica Neue first so users with the system
+// face get the real thing; Arimo / Liberation Sans cover Linux machines that
+// ship metric-compatible substitutes; Arial is the last-resort fallback.
+const HELVETICA_STACK =
+  '"Helvetica Neue", Helvetica, "Arimo", "Liberation Sans", Arial, sans-serif';
+
 const michiVzTheme = create({
   base: "light",
 
-  brandTitle: "michi-vz — React + D3 charts",
+  brandTitle: "michi-vz",
+  brandImage: "./michi-logo-small.png",
   brandUrl: "https://github.com/beany-vu/michi-vz",
   brandTarget: "_blank",
 
-  colorPrimary: "#4f46e5",
-  colorSecondary: "#4f46e5",
+  // Accents.
+  colorPrimary: "#C84B3F",
+  colorSecondary: "#C84B3F",
 
-  appBg: "#f7f7fb",
-  appContentBg: "#ffffff",
-  appPreviewBg: "#ffffff",
-  appBorderColor: "#e6e6ef",
-  appBorderRadius: 8,
+  // Surfaces — pure white content over a near-white shell.
+  appBg: "#FAFAFA",
+  appContentBg: "#FFFFFF",
+  appPreviewBg: "#FFFFFF",
+  appBorderColor: "#E5E5E5",
+  appBorderRadius: 0,
 
-  barSelectedColor: "#4f46e5",
-  barHoverColor: "#4f46e5",
-  barBg: "#ffffff",
+  // Text — high-contrast charcoal hierarchy.
+  textColor: "#0A0A0A",
+  textInverseColor: "#FFFFFF",
+  textMutedColor: "#525252",
 
-  inputBorderRadius: 6,
+  // Toolbar and topbar.
+  barTextColor: "#525252",
+  barSelectedColor: "#C84B3F",
+  barHoverColor: "#C84B3F",
+  barBg: "#FFFFFF",
+
+  // Inputs.
+  inputBg: "#FFFFFF",
+  inputBorder: "#E5E5E5",
+  inputTextColor: "#0A0A0A",
+  inputBorderRadius: 2,
+
+  // Typography — real Helvetica.
+  fontBase: HELVETICA_STACK,
+  fontCode:
+    '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
 });
 
-addons.setConfig({ theme: michiVzTheme });
+addons.setConfig({
+  theme: michiVzTheme,
+  // Docs-site posture: collapse the addon panel by default so first-time
+  // visitors aren't greeted by a fire-hose of fn() callback logs. Power users
+  // can still open Controls / Actions via the toolbar / keyboard shortcut.
+  showPanel: false,
+  panelPosition: "bottom",
+});

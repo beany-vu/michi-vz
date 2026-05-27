@@ -41,6 +41,9 @@ export const VALUE_TYPE = {
 
 export type TValueType = (typeof VALUE_TYPE)[keyof typeof VALUE_TYPE];
 
+const VALUE_BASED_OPACITY = 0.45;
+const VALUE_COMPARED_OPACITY = 0.9;
+
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const PADDING = { top: 0, right: 0, bottom: 0, left: 0 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
@@ -441,6 +444,13 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         const width1 = Math.abs(xAxisScale(d.valueBased) - xAxisScale(0));
         const width2 = Math.abs(xAxisScale(d.valueCompared) - xAxisScale(0));
 
+        const comparedColor = finalColorsMapping[d?.label] ?? d.color ?? "transparent";
+        const basedColor =
+          colorsBasedMapping[d?.label] ??
+          finalColorsMapping[d?.label] ??
+          d?.color ??
+          "transparent";
+
         const y = yAxisScale(d?.label) || 0;
         const standardHeight = yAxisScale.bandwidth();
 
@@ -464,8 +474,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   y={y + (standardHeight - 30) / 2}
                   width={Math.max(width2, 3)}
                   height={30}
-                  fill={finalColorsMapping[d?.label] ?? d.color ?? "transparent"}
-                  opacity={0.9}
+                  fill={comparedColor}
+                  opacity={VALUE_COMPARED_OPACITY}
                   rx={5}
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event, "compared")}
@@ -480,13 +490,13 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   y={y + (standardHeight - 30) / 2}
                   width={Math.max(width1, 3)}
                   height={30}
-                  fill={colorsBasedMapping[d?.label] ?? d?.color ?? "transparent"}
+                  fill={basedColor}
                   rx={5}
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event, "based")}
                   onMouseOut={handleMouseOut}
                   onClick={event => handleMouseClick(d, event, "based")}
-                  opacity={0.9}
+                  opacity={VALUE_BASED_OPACITY}
                   stroke="#fff"
                   strokeWidth={1}
                 />
@@ -499,13 +509,13 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   y={y + (standardHeight - 30) / 2}
                   width={Math.max(width1, 3)}
                   height={30}
-                  fill={colorsBasedMapping[d?.label] ?? d?.color ?? "transparent"}
+                  fill={basedColor}
                   rx={5}
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event, "based")}
                   onMouseOut={handleMouseOut}
                   onClick={event => handleMouseClick(d, event, "based")}
-                  opacity={0.9}
+                  opacity={VALUE_BASED_OPACITY}
                   stroke="#fff"
                   strokeWidth={1}
                 />
@@ -515,8 +525,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   y={y + (standardHeight - 30) / 2}
                   width={Math.max(width2, 3)}
                   height={30}
-                  fill={finalColorsMapping[d?.label] ?? d.color ?? "transparent"}
-                  opacity={0.9}
+                  fill={comparedColor}
+                  opacity={VALUE_COMPARED_OPACITY}
                   rx={5}
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event, "compared")}

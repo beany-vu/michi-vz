@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Meta } from "@storybook/react";
-import { fn } from "@storybook/test";
+import { Meta } from "@storybook/react-webpack5";
+import { fn } from "storybook/test";
 import BarBellChart from "../src/components/BarBellChart";
 import { MichiVzProvider } from "../src/components";
 
@@ -59,7 +59,10 @@ const commonProps = {
   width: 900,
   height: 460,
   margin: { top: 50, right: 50, bottom: 50, left: 200 },
-  xAxisFormat: (d: number | string) => `${d}`,
+  // Round non-integer ticks — d3's auto-ticks on a 0..~2700 domain at 6
+  // increments emit `333.3333333333333` etc. Floor to integer for axis labels.
+  xAxisFormat: (d: number | string) =>
+    typeof d === "number" ? `${Math.round(d)}` : `${d}`,
   yAxisFormat: (d: number | string) => `${d}`,
   showGrid: { x: true, y: false },
   onChartDataProcessed: fn(),
@@ -109,7 +112,7 @@ export const Primary = {
     docs: {
       description: {
         story:
-          "A recruiting funnel — the canonical case for this chart. Each row is a department; the four segments (applied → screened → interviewed → hired) are laid end-to-end, so the row's total length is its overall throughput and each colour band shows where that pipeline thins out. Sales runs the widest funnel; Design the narrowest. Hover any segment for its stage count.",
+          "A recruiting funnel by department — applications, screens, interviews and hires laid end-to-end as one bar per team. The total bar length is each department's overall throughput, and the coloured segments show where the pipeline narrows: Sales runs the largest funnel, Design the smallest. Hover any segment for the stage count.",
       },
     },
   },
@@ -128,7 +131,7 @@ export const ProgrammePhasesByCountry = {
     docs: {
       description: {
         story:
-          "Spend on a clean-water infrastructure programme, broken into design, construction and commissioning phases. Rows are keyed `country | quarter`, so an analyst can scan a single chart for two things at once: which markets are scaling up (Q2 rows run longer than Q1) and whether the phase mix is healthy — a row dominated by `design` is still stuck on paper, while a long `commissioning` band means projects are coming online.",
+          "Spend on a clean-water programme across four countries and two quarters, broken into design, construction and commissioning phases. The chart answers two questions at once: which markets are scaling up (longer Q2 bars), and which are actually delivering (a healthy commissioning band means projects are coming online — a row still dominated by design is stuck on paper).",
       },
     },
   },
@@ -141,14 +144,15 @@ export const InterviewToOfferConversion = {
     dataSet: hiringFunnelData.map(({ applied, screened, ...rest }) => rest),
     keys: ["interviewed", "hired"],
     title: "Interview-to-Hire Conversion by Department",
-    xAxisFormat: (d: number | string) => `${d} people`,
+    xAxisFormat: (d: number | string) =>
+      typeof d === "number" ? `${Math.round(d)} people` : `${d}`,
     showGrid: { x: true, y: false },
   },
   parameters: {
     docs: {
       description: {
         story:
-          "Narrowing the funnel to its final two stages isolates the question that matters most to a hiring manager: of everyone interviewed, how many converted to an offer? With only `interviewed` and `hired` in `keys`, the short trailing band reads as the conversion gap — wide where interviews rarely close, thin where the team interviews efficiently.",
+          "Zooming the same funnel down to just its final two stages — interviews and hires — to focus on the question that matters most to a hiring manager: how often does an interview turn into an offer? The short trailing band visualises the conversion gap directly: wide bands mean interviews rarely close; thin bands mean the team converts efficiently.",
       },
     },
   },
@@ -254,40 +258,7 @@ export const RankedByInstalledCapacity = {
     docs: {
       description: {
         story:
-          "Ranking ten countries' renewable build-out by a chosen technology. The `filter` prop sorts rows by one key and keeps the top N, so an analyst can ask \"who leads on wind?\" and immediately see the answer at the top while the segment mix still tells the wider story — Sweden's long `hydro` band versus Denmark's wind-heavy profile. Legend chips, fed by `onChartDataProcessed`, toggle a technology in and out via `disabledItems`.",
-      },
-    },
-  },
-};
-
-// Parity check: the SVG renderer and the opt-in Canvas renderer, same data.
-export const RendererComparison = {
-  render: (args: React.ComponentProps<typeof BarBellChart>) => (
-    <div style={{ display: "flex", flexDirection: "column", gap: 40 }}>
-      <div>
-        <h4 style={{ margin: "0 0 8px", font: "600 13px sans-serif" }}>
-          renderer=&quot;svg&quot; (default)
-        </h4>
-        <BarBellChart {...args} renderer="svg" />
-      </div>
-      <div>
-        <h4 style={{ margin: "0 0 8px", font: "600 13px sans-serif" }}>
-          renderer=&quot;canvas&quot; (opt-in)
-        </h4>
-        <BarBellChart {...args} renderer="canvas" />
-      </div>
-    </div>
-  ),
-  args: {
-    ...commonProps,
-    dataSet: hiringFunnelData,
-    title: "Hiring Funnel by Department",
-  },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Parity check for the opt-in Canvas 2D renderer. The same hiring-funnel dataset is rendered twice: once with the default `renderer=\"svg\"` (one retained SVG node per bar segment plus a `<foreignObject>` per end-cap) and once with `renderer=\"canvas\"` (every bar and bell circle painted onto a single `<canvas>`). The two should be visually identical — cumulative bar layout, end-cap circles, colours, highlight dimming and hover tooltips all match. Canvas mode trades retained-node interactivity for a flat DOM, which keeps large datasets smooth.",
+          "Ten European countries' renewable build-out, rankable on the fly: pick a technology and the leaders rise to the top, while the segment mix still tells the wider story — Sweden's long hydro band, Denmark's wind-heavy profile. The dropdowns drive the `filter` prop; the legend chips toggle technologies via `disabledItems`.",
       },
     },
   },
@@ -331,7 +302,7 @@ export const FocusASingleStage = {
     docs: {
       description: {
         story:
-          "When several stacked segments compete for attention, highlighting isolates one. Hovering a stage button feeds `highlightItems`, dimming every other band so a single stage — say `interviewed` — can be compared cleanly across all departments. The chart's `onHighlightItem` callback writes the same state back when bars are hovered, keeping an external legend in sync.",
+          "When every row has several coloured segments, it's hard to compare just one stage across departments — highlighting solves that. Hover a stage button and every other band dims, so the `interviewed` band (for example) can be compared cleanly across all teams. Uses `highlightItems` for input and `onHighlightItem` to keep an external legend in sync.",
       },
     },
   },

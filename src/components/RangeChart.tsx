@@ -329,6 +329,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
         .attr("height", d => Math.abs(yScale(d.valueMax) - yScale(d.valueMin)))
         .attr("fill", "white")
         .attr("opacity", 0)
+        .style("pointer-events", "all")
         .on("mouseenter", (event, d) => {
           event.preventDefault();
           event.stopPropagation();
@@ -473,11 +474,6 @@ const RangeChart: React.FC<RangeChartProps> = ({
           style={{ overflow: "visible" }}
         >
           <MichiVzCredit />
-          {title && (
-            <text x={width / 2} y={margin.top / 2} textAnchor="middle" className="chart-title">
-              {title}
-            </text>
-          )}
           {children}
           <Title x={width / 2} y={margin.top / 2}>
             {title}
@@ -509,6 +505,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
         className="chart-tooltip tooltip"
         style={{
           position: "absolute",
+          opacity: 0,
           background: "white",
           padding: "5px",
           border: "1px solid #333",

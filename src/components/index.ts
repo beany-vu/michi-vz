@@ -4,6 +4,7 @@ export { default as VerticalStackBarChart } from "./VerticalStackBarChart";
 export { default as RibbonChart } from "./RibbonChart";
 export { default as AreaChart } from "./AreaChart";
 export { default as RadarChart } from "./RadarChart";
+export { default as RadarChartSet } from "./RadarChartSet";
 export { default as BarBellChart } from "./BarBellChart";
 export { default as ComparableHorizontalBarChart } from "./ComparableHorizontalBarChart";
 export { default as DualHorizontalBarChart } from "./DualHorizontalBarChart";

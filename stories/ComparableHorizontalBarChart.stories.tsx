@@ -1,8 +1,8 @@
 import React from "react";
 import ComparableHorizontalBarChart from "../src/components/ComparableHorizontalBarChart";
-import { Meta } from "@storybook/react";
+import { Meta } from "@storybook/react-webpack5";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
-import { fn } from "@storybook/test";
+import { fn } from "storybook/test";
 import { createHatchPattern } from "../src/components/hooks/canvas/createHatchPattern";
 
 // Storybook stories for ComparableHorizontalBarChart — a lean, curated showcase.
@@ -41,6 +41,22 @@ const netChangeByRegion = [
   { label: "East Asia", valueBased: 1.5, valueCompared: -2.3 },
 ];
 
+const regionComparedColors: Record<string, string> = {
+  "Sub-Saharan Africa": "#1f77b4",
+  "South Asia": "#2ca02c",
+  "Latin America": "#ff7f0e",
+  "Eastern Europe": "#d62728",
+  "East Asia": "#9467bd",
+};
+
+const regionBasedColors: Record<string, string> = {
+  "Sub-Saharan Africa": "rgba(31, 119, 180, 0.35)",
+  "South Asia": "rgba(44, 160, 44, 0.35)",
+  "Latin America": "rgba(255, 127, 14, 0.35)",
+  "Eastern Europe": "rgba(214, 39, 40, 0.35)",
+  "East Asia": "rgba(148, 103, 189, 0.35)",
+};
+
 // Common props shared across stories — width/height/margin, callbacks and
 // formatters. Spread into each story's `args`.
 const commonProps = {
@@ -51,8 +67,25 @@ const commonProps = {
   xAxisFormat: (d: number | { valueOf(): number }) => `${d}`,
   yAxisFormat: (d: number | string) => `${d}`,
   tooltipFormatter: (d: unknown) => {
-    const item = d as { label: string; valueBased: number; valueCompared: number };
-    return `<strong>${item.label}</strong><br/>Based: ${item.valueBased}<br/>Compared: ${item.valueCompared}`;
+    const item = d as { label: string; valueBased: number; valueCompared: number } | undefined;
+    if (!item) return null;
+
+    return (
+      <div
+        style={{
+          background: "#fff",
+          border: "1px solid #ddd",
+          borderRadius: 4,
+          padding: "8px 10px",
+          font: '12px/1.4 "Helvetica Neue", Helvetica, Arial, sans-serif',
+          color: "#0A0A0A",
+        }}
+      >
+        <div style={{ fontWeight: 700, marginBottom: 2 }}>{item.label}</div>
+        <div style={{ color: "#525252" }}>Based: {item.valueBased}</div>
+        <div style={{ color: "#525252" }}>Compared: {item.valueCompared}</div>
+      </div>
+    );
   },
   filter: { limit: 10, criteria: "valueBased" as const, sortingDir: "desc" as const },
   onChartDataProcessed: fn(),
@@ -95,7 +128,7 @@ export const Primary = {
     docs: {
       description: {
         story:
-          "Planned budget (`valueBased`) against actual spend (`valueCompared`) for each department. Pairing the two bars on one row makes overspend obvious at a glance — Engineering and R&D ran over, Sales and Operations came in under. This is the question the chart exists to answer.",
+          "Each department gets a pair of bars: what was planned vs what was actually spent. Reading them side-by-side makes overspend jump out immediately — Engineering and R&D ran over, Sales and Operations came in under — without scanning a table of variances.",
       },
     },
   },
@@ -114,7 +147,7 @@ export const YearOverYear = {
     docs: {
       description: {
         story:
-          "The same metric across two periods: `valueBased` is last year, `valueCompared` is this year. Sorted by last year's revenue, the chart shows which lines grew (Cloud Platform, Licensing, Support) and which slipped (Professional Services, Hardware) without a separate trend chart.",
+          "Each product line shows last year's revenue beside this year's. The gap and direction between the two bars tells you instantly which lines grew (Cloud Platform, Licensing, Support) and which slipped (Professional Services, Hardware), no second trend chart needed.",
       },
     },
   },
@@ -122,6 +155,14 @@ export const YearOverYear = {
 
 // Negative values — bars diverge either side of a zero line.
 export const DivergingValues = {
+  render: (args: React.ComponentProps<typeof ComparableHorizontalBarChart>) => (
+    <MichiVzProvider
+      colorsMapping={regionComparedColors}
+      colorsBasedMapping={regionBasedColors}
+    >
+      <ComparableHorizontalBarChart {...args} />
+    </MichiVzProvider>
+  ),
   args: {
     ...commonProps,
     dataSet: netChangeByRegion,
@@ -134,7 +175,7 @@ export const DivergingValues = {
     docs: {
       description: {
         story:
-          "When values can be negative, bars diverge left and right of zero. Here decade-on-decade population change shows growth slowing everywhere, with Eastern Europe deepening its decline and East Asia crossing from growth into contraction. `showZeroLineForXAxis` emphasises the zero baseline that anchors the comparison.",
+          "Decade-on-decade population change for each region, with growth pointing right and decline pointing left of zero. Growth is slowing everywhere — Eastern Europe's decline deepens and East Asia tips from growth into contraction — and `showZeroLineForXAxis` draws the baseline that anchors the read.",
       },
     },
   },
@@ -151,15 +192,16 @@ export const DateAxis = {
       { label: "Riverside Flood Defence", valueBased: 2012, valueCompared: 2017 },
     ],
     title: "Infrastructure Projects — Planned Start vs Completion Year",
-    xAxisDataType: "date_annual",
-    xAxisFormat: (d: number | { valueOf(): number }) => `${d}`,
+    xAxisDataType: "number",
+    xAxisPredefinedDomain: [2010, 2024],
+    xAxisFormat: (d: number | { valueOf(): number }) => `${Math.round(Number(d))}`,
     filter: undefined,
   },
   parameters: {
     docs: {
       description: {
         story:
-          "With `xAxisDataType=\"date_annual\"` the axis reads as years, so the bar pair spans a duration instead of a magnitude. Planned start vs completion year turns each row into a project timeline — the gap between bars is how long the project ran, making the Metro Line Extension's seven-year span stand out.",
+          "Each row becomes a project timeline: the left bar marks the planned start year, the right bar the actual completion. The gap between them is how long the project ran, making the Metro Line Extension's seven-year stretch stand out. Uses a numeric year axis for reliable rendering and clean year ticks.",
       },
     },
   },
@@ -220,44 +262,7 @@ export const InteractiveExploration = {
     docs: {
       description: {
         story:
-          "Exploring the same budget-vs-actual data interactively: hover a department to highlight its bar pair via `highlightItems`, click to mute it via `disabledItems`. Useful for walking an audience through one row at a time, or dropping a department to rescale the rest of the comparison.",
-      },
-    },
-  },
-};
-
-// Renderer parity check — the SVG and Canvas backends drawn from one dataset.
-export const RendererComparison = {
-  render: (args: Record<string, unknown>) => (
-    <div style={{ display: "flex", flexDirection: "column", gap: 32, padding: 20 }}>
-      <div>
-        <h4 style={{ margin: "0 0 8px", font: "600 13px sans-serif" }}>renderer="svg"</h4>
-        <ComparableHorizontalBarChart
-          {...(args as React.ComponentProps<typeof ComparableHorizontalBarChart>)}
-          renderer="svg"
-        />
-      </div>
-      <div>
-        <h4 style={{ margin: "0 0 8px", font: "600 13px sans-serif" }}>renderer="canvas"</h4>
-        <ComparableHorizontalBarChart
-          {...(args as React.ComponentProps<typeof ComparableHorizontalBarChart>)}
-          renderer="canvas"
-        />
-      </div>
-    </div>
-  ),
-  args: {
-    ...commonProps,
-    dataSet: budgetVsActual,
-    title: "Budget vs Actual Spend by Department ($M)",
-    xAxisPredefinedDomain: [0, 16],
-    showGrid: true,
-  },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Parity check: the identical budget-vs-actual dataset rendered with `renderer=\"svg\"` (the default, retained SVG <rect> pairs) and `renderer=\"canvas\"` (the opt-in Canvas 2D backend) stacked together. Both should be visually identical — same bar geometry, conditional z-order, dual-source colours, rounded corners and highlight dimming — and behave identically on hover, click-to-pin tooltip and `onHighlightItem`. The canvas backend draws the two bars per item onto a single <canvas>, cutting the DOM node count for large datasets while the axes, title and tooltip stay in the SVG/HTML layer above.",
+          "Hover a department button to spotlight its bar pair, click to mute it out of the view entirely. Useful when walking an audience through one row at a time, or when dropping a dominant department lets the rest of the comparison rescale and breathe. Wires up `highlightItems` and `disabledItems`.",
       },
     },
   },
@@ -285,7 +290,7 @@ export const CanvasPatternFills = {
     docs: {
       description: {
         story:
-          "`patternsMapping` fills each `valueBased` bar with a tiled diagonal-hatch pattern generated by `createHatchPattern()`, while the `valueCompared` bar stays solid. Pattern fills apply only to `renderer=\"canvas\"` — the SVG renderer ignores the prop. The pattern source is any image URL or data-URI; `createHatchPattern` is just a convenience generator for the common hatch case.",
+          "The \"planned\" bar in each pair is filled with a diagonal hatch while \"actual\" stays solid, giving the eye an extra cue for which bar is which before reading the legend. Hatching is canvas-only via `patternsMapping`; `createHatchPattern()` is a helper but any image URL works.",
       },
     },
   },

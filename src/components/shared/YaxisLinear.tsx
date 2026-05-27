@@ -10,6 +10,8 @@ interface Props {
   margin: { top: number; right: number; bottom: number; left: number };
   yAxisFormat?: (d: number) => string;
   yTicksQty?: number;
+  showGridLines?: boolean;
+  showTickLabels?: boolean;
 }
 
 const YaxisLinear: FC<Props> = ({
@@ -20,6 +22,8 @@ const YaxisLinear: FC<Props> = ({
   margin,
   yTicksQty,
   yAxisFormat,
+  showGridLines = true,
+  showTickLabels = true,
 }) => {
   const ref = useRef<SVGGElement>(null);
 
@@ -55,6 +59,14 @@ const YaxisLinear: FC<Props> = ({
     g.select(".domain").remove();
     g.selectAll(".tick line").remove();
 
+    if (!showTickLabels) {
+      g.selectAll(".tick text").remove();
+    }
+
+    if (!showGridLines) {
+      return;
+    }
+
     const fullGridWidth = width - margin.right - margin.left;
     g.selectAll<SVGGElement, number>(".tick")
       .append("line")
@@ -74,7 +86,16 @@ const YaxisLinear: FC<Props> = ({
             .attr("stroke-width", "1");
         }
       });
-  }, [yScale, width, height, margin, highlightZeroLine, yAxisConfig]);
+  }, [
+    yScale,
+    width,
+    height,
+    margin,
+    highlightZeroLine,
+    yAxisConfig,
+    showGridLines,
+    showTickLabels,
+  ]);
 
   return <g ref={ref}></g>;
 };

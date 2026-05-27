@@ -1,9 +1,9 @@
 // RangeChart.stories.tsx
 import React from "react";
 import RangeChartComponent from "../src/components/RangeChart";
-import { Meta } from "@storybook/react";
+import { Meta } from "@storybook/react-webpack5";
 import { MichiVzProvider } from "../src/components/MichiVzProvider";
-import { fn } from "@storybook/test";
+import { fn } from "storybook/test";
 
 // Storybook stories for the RangeChart component — a lean, analyst-curated set.
 // RangeChart draws a value band (valueMin..valueMax, with an optional
@@ -74,23 +74,27 @@ const emissionScenarioData = [
 // Daily temperature envelope: each point is the record low / record high for
 // that month, with the long-run average as the central value. A band per point
 // is the natural encoding — a single line would throw away the spread.
+// Berlin month-by-month temperature band — record low to record high, with
+// the long-run average down the middle. `date` is the month index (1..12)
+// because the chart reads `date` as the x-position; the story's
+// `xAxisFormat` maps the index to "Jan", "Feb" etc for display.
 const temperatureBandData = [
   {
     label: "Berlin",
     color: "#0891b2",
     series: [
-      { year: 1, date: "Jan", valueMin: -4, valueMax: 5, valueMedium: 0.5 },
-      { year: 2, date: "Feb", valueMin: -3, valueMax: 7, valueMedium: 2 },
-      { year: 3, date: "Mar", valueMin: 0, valueMax: 12, valueMedium: 5.5 },
-      { year: 4, date: "Apr", valueMin: 4, valueMax: 18, valueMedium: 10.5 },
-      { year: 5, date: "May", valueMin: 9, valueMax: 23, valueMedium: 15.5 },
-      { year: 6, date: "Jun", valueMin: 12, valueMax: 26, valueMedium: 18.5 },
-      { year: 7, date: "Jul", valueMin: 14, valueMax: 29, valueMedium: 21 },
-      { year: 8, date: "Aug", valueMin: 13, valueMax: 28, valueMedium: 20.5 },
-      { year: 9, date: "Sep", valueMin: 10, valueMax: 22, valueMedium: 16 },
-      { year: 10, date: "Oct", valueMin: 6, valueMax: 15, valueMedium: 10.5 },
-      { year: 11, date: "Nov", valueMin: 1, valueMax: 9, valueMedium: 5 },
-      { year: 12, date: "Dec", valueMin: -3, valueMax: 6, valueMedium: 1.5 },
+      { date: 1, valueMin: -4, valueMax: 5, valueMedium: 0.5 },
+      { date: 2, valueMin: -3, valueMax: 7, valueMedium: 2 },
+      { date: 3, valueMin: 0, valueMax: 12, valueMedium: 5.5 },
+      { date: 4, valueMin: 4, valueMax: 18, valueMedium: 10.5 },
+      { date: 5, valueMin: 9, valueMax: 23, valueMedium: 15.5 },
+      { date: 6, valueMin: 12, valueMax: 26, valueMedium: 18.5 },
+      { date: 7, valueMin: 14, valueMax: 29, valueMedium: 21 },
+      { date: 8, valueMin: 13, valueMax: 28, valueMedium: 20.5 },
+      { date: 9, valueMin: 10, valueMax: 22, valueMedium: 16 },
+      { date: 10, valueMin: 6, valueMax: 15, valueMedium: 10.5 },
+      { date: 11, valueMin: 1, valueMax: 9, valueMedium: 5 },
+      { date: 12, valueMin: -3, valueMax: 6, valueMedium: 1.5 },
     ],
   },
 ];
@@ -101,7 +105,7 @@ const temperatureBandData = [
 const commonProps = {
   width: 900,
   height: 400,
-  margin: { top: 50, right: 50, bottom: 50, left: 50 },
+  margin: { top: 50, right: 60, bottom: 65, left: 70 },
   xAxisDataType: "date_annual",
   showCombined: false,
   tooltipFormatter: (d: any) =>
@@ -156,7 +160,7 @@ export const ForecastUncertainty = {
     docs: {
       description: {
         story:
-          "The signature use of a range chart: a forecast cone. The central projection holds near 2.3% while the min/max band fans out year over year — visually answering 'how confident are we?' before the reader reads a single number. The widening band is the insight.",
+          "A GDP forecast drawn as a fanning band, with the central projection running through the middle and the best/worst estimates as the upper and lower edges. The band stays tight near 2024 then widens further out — that widening is the chart saying \"we're less sure the further ahead we look\".",
       },
     },
   },
@@ -173,7 +177,7 @@ export const ScenarioEnvelopes = {
     docs: {
       description: {
         story:
-          "Three projected emission pathways as overlapping bands. Near 2025 the scenarios overlap heavily — the near-term future is largely locked in — then they diverge sharply, so the gap between the green and red bands is the cost of policy choice. Hover a band to fade the others and isolate one pathway.",
+          "Three possible emission futures drawn as overlapping coloured bands — low, current-policy, high. They nearly touch in 2025 (the next few years are locked in) then peel apart sharply, and the growing gap between green and red is the cost of policy choice in a single picture.",
       },
     },
   },
@@ -194,7 +198,7 @@ export const ObservedMinMaxRange = {
     docs: {
       description: {
         story:
-          "Not every range is a forecast — here each band is the observed record-low to record-high spread for a month, with the long-run average as the centre line. A plain line chart of the average would hide that January swings 9° while July swings 15°. The band width itself carries the seasonal-volatility story.",
+          "Each month in Berlin shown as a temperature band: record low on the bottom edge, record high on the top, long-run average down the middle. A plain average line would hide that July's spread is much wider than January's — here the band's thickness *is* the seasonal-volatility story.",
       },
     },
   },
@@ -212,7 +216,7 @@ export const FixedScaleForComparison = {
     docs: {
       description: {
         story:
-          "The same scenario data pinned to a fixed `yAxisDomain` of [0, 80]. Auto-scaling makes every chart fill its frame, which exaggerates differences and breaks comparison across panels. A fixed domain keeps multiple range charts honest and directly comparable — essential when a dashboard shows the same metric for many regions.",
+          "Same scenarios as before, but the y-axis is pinned from 0 to 80 instead of auto-scaling. Locking the scale stops each chart from zooming into its own data and exaggerating differences — essential when several panels in a dashboard need to be read against each other. Set via `yAxisDomain`.",
       },
     },
   },
@@ -235,7 +239,7 @@ export const RichTooltipReadout = {
     docs: {
       description: {
         story:
-          "A band hides three numbers behind one shape. `tooltipFormatter` receives the hovered point plus its series, so the tooltip can spell out low / central / high and even compute the band width on the fly — turning a hover into a precise quantitative read of how uncertain that point is.",
+          "A band hides three numbers behind one shape; the tooltip pulls them back out — low, central, high, plus the band width — when you hover. Turns a vague visual sense of \"wide\" into a precise readout of just how uncertain a point is. Wired through `tooltipFormatter`.",
       },
     },
   },

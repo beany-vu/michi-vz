@@ -1,7 +1,7 @@
 import React from "react";
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/react-webpack5";
 import { GapChart, MichiVzProvider } from "../src/components";
-import { fn } from "@storybook/test";
+import { fn } from "storybook/test";
 
 // Storybook stories for the GapChart component — a lean, curated showcase.
 // Each story demonstrates a real analytical use case (the gap between two
@@ -160,8 +160,8 @@ export const TourismRecoveryGap: Story = {
     docs: {
       description: {
         story:
-          "The signature use case. Each destination shows its 2019 pre-pandemic peak and its 2023 figure, with the connecting bar measuring how far recovery still has to go. " +
-          "Asia-Pacific markets (China, Japan, Thailand) carry the widest gaps, while France, Spain and Greece have already pulled level or ahead. Hover any marker or bar for the breakdown and y-axis highlight.",
+          "Each destination shows its 2019 pre-pandemic peak and its 2023 figure, with a bar between them measuring how far recovery still has to go. " +
+          "Asia-Pacific markets (China, Japan, Thailand) carry the widest gaps while France, Spain and Greece have already pulled level or ahead — the bar lengths rank the recovery story without anyone needing to do mental subtraction.",
       },
     },
   },
@@ -184,8 +184,7 @@ export const WidestRecoveryGaps: Story = {
     docs: {
       description: {
         story:
-          "When the question is *who is furthest behind?*, the `filter` prop ranks categories by `difference` and keeps only the top N — here the eight destinations with the largest unrecovered arrivals. " +
-          "Flip `sortingDir` to `asc` to surface the markets that have fully bounced back, or switch `criteria` to `value1` / `value2` to rank by raw size instead of gap.",
+          "The same data, narrowed to the eight destinations furthest from recovery. The `filter` prop ranks by the gap itself and keeps the top N, so the chart answers 'who is furthest behind?' directly — flip `sortingDir` to `asc` to flip the question to 'who has bounced back hardest?', or set `criteria` to `value1` / `value2` to rank by raw size instead.",
       },
     },
   },
@@ -210,8 +209,8 @@ export const GenderPayGap: Story = {
     docs: {
       description: {
         story:
-          "A classic two-group comparison: median male vs female hourly pay across sectors. The bar isolates the raw gap, making it obvious that Financial Services and Information & Communication carry the widest disparities " +
-          "while Accommodation & Food sits closest to parity. Distinct marker shapes (circle vs triangle) keep the two groups readable even where their values nearly coincide.",
+          "Median hourly pay for men vs women across ten sectors, with the bar between the two markers measuring the raw pay gap. Financial Services and Information & Communication carry the widest disparities while Accommodation & Food sits closest to parity — the eye reads the bar length directly without comparing two columns of numbers. " +
+          "Different marker shapes (`shapeValue1` circle, `shapeValue2` triangle) keep the two groups distinguishable even where the values almost overlap.",
       },
     },
   },
@@ -238,8 +237,7 @@ export const BudgetVsActual: Story = {
     docs: {
       description: {
         story:
-          "Approved budget vs actual spend per department. The connecting bar reads as variance: where the actual marker sits past the budget marker the team overspent (R&D, Customer Support, Facilities); " +
-          "where it falls short they underspent. One scan tells a finance analyst which departments need a conversation — far quicker than a column of variance numbers.",
+          "Approved budget vs actual spend per department, with the connecting bar reading directly as the variance. Where the actual sits past the budget the team overspent (R&D, Customer Support, Facilities); where it falls short they underspent — one scan tells a finance lead which departments need a follow-up conversation.",
       },
     },
   },
@@ -263,34 +261,10 @@ export const ShapeStyling: Story = {
     docs: {
       description: {
         story:
-          "`shapeValue1` and `shapeValue2` set the marker for each value independently (circle / square / triangle). Pairing two *different* shapes — here square for the baseline, triangle for the current year — " +
-          "keeps the two series distinguishable when their values land close together or overlap, which matters more than colour alone for an accessible read.",
+          "The same tourism dataset, with different marker shapes for each value. Pairing distinct shapes (square for the 2019 baseline, triangle for 2023) keeps the two series legible when their markers land close together or overlap — a more accessible cue than colour alone. " +
+          "Set independently via `shapeValue1` and `shapeValue2` (`circle` / `square` / `triangle`).",
       },
     },
   },
 };
 
-// Renderer parity — the SVG renderer and the opt-in Canvas renderer, same data.
-export const RendererComparison: Story = {
-  args: {
-    ...commonProps,
-    dataSet: tourismRecoveryData,
-    title: "Tourism Recovery Gap",
-  },
-  render: args => (
-    <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
-      <GapChart {...args} title="SVG renderer" renderer="svg" />
-      <GapChart {...args} title="Canvas renderer" renderer="canvas" />
-    </div>
-  ),
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Parity check for the opt-in Canvas 2D renderer (`renderer=\"canvas\"`). The two charts above are fed the **same dataset** — the top one uses the classic retained-SVG renderer, the bottom one draws the gap bars, " +
-          "connector lines and value markers onto a single `<canvas>`. They should be visually indistinguishable: the canvas path exists purely to keep large datasets smooth by collapsing thousands of SVG nodes into one. " +
-          "Axes, the Y-axis category labels, the legend and the tooltip stay in the SVG/HTML layer in both modes.",
-      },
-    },
-  },
-};

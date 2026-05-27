@@ -75,7 +75,8 @@ const BAR_HEIGHT = 30;
 const MIN_BAR_WIDTH = 3;
 const BAR_RX = 5;
 // Opacity values mirror the SVG renderer's inline opacity logic.
-const OPACITY_FULL = 0.9;
+const OPACITY_BASED = 0.45;
+const OPACITY_COMPARED = 0.9;
 const OPACITY_DIMMED = 0.3;
 const BAR_STROKE = "#fff";
 
@@ -160,7 +161,11 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): BarHit[] =>
 
     // Resolved (CSS-honouring) colours; the resolver already falls back to the
     // data colour, but keep `item.color` as a final guard for unmapped labels.
-    const basedColor = p.resolvedBasedColors.get(item.label) ?? item.color ?? "transparent";
+    const basedColor =
+      p.resolvedBasedColors.get(item.label) ??
+      p.resolvedComparedColors.get(item.label) ??
+      item.color ??
+      "transparent";
     const comparedColor =
       p.resolvedComparedColors.get(item.label) ?? item.color ?? "transparent";
 
@@ -177,7 +182,7 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): BarHit[] =>
       type: BarType
     ): void => {
       const w = Math.max(bw, MIN_BAR_WIDTH);
-      ctx.globalAlpha = itemAlpha * OPACITY_FULL;
+      ctx.globalAlpha = itemAlpha * (type === "based" ? OPACITY_BASED : OPACITY_COMPARED);
       roundRectPath(ctx, bx, y, w, BAR_HEIGHT, BAR_RX);
       // The `valueBased` bar uses a tiled pattern fill when one is supplied for
       // this label (via `patternsMapping`) and its image has finished loading;

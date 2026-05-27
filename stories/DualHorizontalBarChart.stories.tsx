@@ -1,7 +1,7 @@
 import React from "react";
 import DualHorizontalBarChart from "../src/components/DualHorizontalBarChart";
-import { Meta } from "@storybook/react";
-import { fn } from "@storybook/test";
+import { Meta } from "@storybook/react-webpack5";
+import { fn } from "storybook/test";
 
 // Storybook stories for the DualHorizontalBarChart component — a lean, curated
 // showcase. Each story demonstrates a real two-sided comparison with realistic
@@ -31,20 +31,36 @@ const tradeBySector = [
 // --- Common props -----------------------------------------------------------
 
 // Repeated args spread into each story.
+//
+// Left margin is wide (170px) because category labels like "Machinery &
+// Electronics" or "Agricultural Products" need room to render in full — with
+// the previous 50px margin they clipped to "ery & nics" / "ural Products".
 const commonProps = {
   width: 900,
-  height: 400,
-  margin: { top: 50, right: 50, bottom: 50, left: 50 },
+  height: 420,
+  margin: { top: 50, right: 50, bottom: 50, left: 170 },
   xAxisDataType: "number" as const,
   xAxisFormat: (d: number | { valueOf(): number }) => `${d}`,
   yAxisFormat: (d: number | string) => `${d}`,
-  tooltipFormatter: (d: { label: string; value1: number; value2: number } | undefined) => `
-    <div style="background: white; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-      <strong>${d?.label}</strong><br/>
-      Left: ${d?.value2 || "N/A"}<br/>
-      Right: ${d?.value1 || "N/A"}
+  // Chart renders the formatter's return value directly via React. Returning
+  // an HTML string would be escaped as text; return a React element instead.
+  tooltipFormatter: (d: { label: string; value1: number; value2: number } | undefined) => (
+    <div
+      style={{
+        background: "#ffffff",
+        padding: "8px 12px",
+        border: "1px solid #e5e5e5",
+        borderLeft: "3px solid #C84B3F",
+        borderRadius: 2,
+        font: '12px/1.4 "Helvetica Neue", Helvetica, Arial, sans-serif',
+        color: "#0A0A0A",
+      }}
+    >
+      <div style={{ fontWeight: 700, marginBottom: 4 }}>{d?.label}</div>
+      <div style={{ color: "#525252" }}>Left: {d?.value2 ?? "N/A"}</div>
+      <div style={{ color: "#525252" }}>Right: {d?.value1 ?? "N/A"}</div>
     </div>
-  `,
+  ),
   onHighlightItem: fn(),
   onChartDataProcessed: fn(),
   onColorMappingGenerated: fn(),
@@ -86,7 +102,7 @@ export const Primary = {
     docs: {
       description: {
         story:
-          "A population pyramid: males (`value1`) extend right, females (`value2`) extend left, mirrored from the centre. The near symmetry in younger bands and the female-heavy 65+ band — women outliving men — is exactly the kind of asymmetry this chart makes obvious at a glance. Hover a bar for the tooltip; click to pin it.",
+          "A classic population pyramid — male counts grow rightward from the centre, female counts grow leftward, with age bands stacked vertically. The near-mirror at younger ages and the lopsided 65+ row (women outliving men) is exactly the kind of asymmetry this layout makes obvious at a glance.",
       },
     },
   },
@@ -103,7 +119,7 @@ export const TradeBalance = {
     docs: {
       description: {
         story:
-          "Imports (`value1`, right) against exports (`value2`, left) by sector. Each row reads as a trade balance: Mineral Fuels leans heavily to imports, while Vehicles and Agricultural Products run a surplus. The mirrored layout turns 'which way does this sector tilt?' into a one-glance answer.",
+          "Imports stretch right, exports stretch left, one sector per row — so each row is a trade balance you can read without doing math. Mineral Fuels leans heavily on imports while Vehicles and Agricultural Products run a surplus, and the tilt direction tells you which way each sector trades.",
       },
     },
   },
@@ -121,7 +137,7 @@ export const TopSectorsByImports = {
     docs: {
       description: {
         story:
-          "The `filter` prop ranks rows by `value1` (`criteria: \"valueBased\"`, descending) and keeps only the top `limit` — here the three largest import sectors. Use it to surface the leaders of a long table without pre-trimming the data; switch to `criteria: \"valueCompared\"` to rank by `value2` instead.",
+          "Same trade dataset, narrowed to just the three biggest import sectors so the leaders stand alone. The `filter` prop does the ranking and trimming for you — flip its `criteria` to `valueCompared` to rank by exports instead.",
       },
     },
   },
@@ -145,7 +161,7 @@ export const YearOverYearComparison = {
     docs: {
       description: {
         story:
-          "Generation mix in 2019 (`value1`, right) versus 2024 (`value2`, left). Reading the bars as a pair shows the energy transition in motion — coal shrinking, wind and solar climbing. `highlightItems` focuses one row (Solar) by dimming the rest, the way an analyst would spotlight the fastest-moving line in a briefing.",
+          "Each fuel's share of electricity in 2019 sits on the right, 2024 on the left, so the energy transition reads as a single shape — coal shrinking, wind and solar climbing. `highlightItems` dims everything except Solar, the way you'd spotlight the fastest mover in a briefing.",
       },
     },
   },
@@ -167,7 +183,7 @@ export const SharedColorMapping = {
     docs: {
       description: {
         story:
-          "`colorsMapping` pins explicit colors for specific sectors while the rest draw from the `colors` palette. Pass the same mapping to every chart in a dashboard so a given category keeps one color everywhere — letting a reader track it across views without re-learning the legend.",
+          "Two sectors get hand-picked colours; the rest fall back to the default palette. Reuse the same `colorsMapping` across every chart in a dashboard and a given category keeps its colour everywhere — so a reader can follow it across views without re-learning the legend.",
       },
     },
   },

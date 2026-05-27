@@ -1,7 +1,7 @@
 import React from "react";
 import ScatterPlot from "../src/components/ScatterPlotChart";
-import { Meta } from "@storybook/react";
-import { fn } from "@storybook/test";
+import { Meta } from "@storybook/react-webpack5";
+import { fn } from "storybook/test";
 
 // Storybook stories for the ScatterPlotChart component — a lean, analyst-curated
 // set. Each story demonstrates a real analytical use: spotting a correlation,
@@ -113,7 +113,7 @@ export const WealthVsHealth = {
     docs: {
       description: {
         story:
-          "The canonical bubble-plot question: richer countries live longer. Wealth (x) and life expectancy (y) rise together along a clear curve, while bubble size (`d`) shows population — note how India and China are huge bubbles sitting low on the income axis, and Japan is the longevity outlier above the trend.",
+          "Each country is a bubble: position shows income (rightward) and life expectancy (upward), bubble size shows population. Wealth and longevity rise together along a clear curve — but the huge India and China bubbles sit low on the income axis, and Japan floats above the trend as the longevity outlier.",
       },
     },
   },
@@ -140,7 +140,7 @@ export const PriceVsSatisfaction = {
     docs: {
       description: {
         story:
-          "Spot the price-quality trade-off: satisfaction climbs with price toward the premium German models in the top-right. But bubble size (`d`, units sold) tells the commercial story — the best-sellers cluster in the affordable, high-satisfaction sweet spot, while pricier badges trade volume for ratings.",
+          "Each SUV is plotted by price (right) and owner satisfaction (up), with bubble size showing how many sold. Satisfaction rises with price toward the premium German badges, but the biggest bubbles cluster in the affordable / high-satisfaction sweet spot — the pricey models trade volume for ratings.",
       },
     },
   },
@@ -166,7 +166,7 @@ export const ClustersAndOutlier = {
     docs: {
       description: {
         story:
-          "Two sales strategies separate into clear clusters: high-volume / low-value 'transactional' reps (circles, bottom-right) and low-volume / high-value 'enterprise' reps (squares, top-left). The triangle is the outlier — a balanced rep whose large bubble (`d`, total revenue) shows the hybrid approach can out-earn either cluster.",
+          "Sales reps split into two clear groups: transactional reps (circles, bottom-right) close many small deals, enterprise reps (squares, top-left) close few big ones. The lone triangle is the outlier doing both — and its large bubble (total revenue) shows that hybrid style out-earns either cluster. Per-point `shape` drives the marker.",
       },
     },
   },
@@ -194,48 +194,7 @@ export const CustomSizeLegend = {
     docs: {
       description: {
         story:
-          "Same wealth-vs-health data, but the bubble-size key is drawn by your own code: `dScaleLegendFormatter` receives the `d` domain and returns custom SVG, so the legend can match a house style or explain the encoding in plain words.",
-      },
-    },
-  },
-};
-
-// Parity check: SVG vs Canvas renderer on the same dataset.
-export const RendererComparison = {
-  render: (args: Record<string, unknown>) => (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div>
-        <h4 style={{ font: "600 13px/1 sans-serif", margin: "0 0 8px" }}>renderer=&quot;svg&quot;</h4>
-        <ScatterPlot {...(args as any)} renderer="svg" />
-      </div>
-      <div>
-        <h4 style={{ font: "600 13px/1 sans-serif", margin: "0 0 8px" }}>
-          renderer=&quot;canvas&quot;
-        </h4>
-        <ScatterPlot {...(args as any)} renderer="canvas" />
-      </div>
-    </div>
-  ),
-  args: {
-    ...commonProps,
-    dataSet: countryDevelopment,
-    title: "GDP per Capita vs Life Expectancy (2021)",
-    xAxisFormat: (d: number | string) => `$${d}k`,
-    yAxisFormat: (d: number | string) => `${d} yrs`,
-    yAxisDomain: [60, 88] as [number, number],
-    showGrid: { x: true, y: true },
-    dScaleLegend: {
-      title: "Population",
-      valueFormatter: (d: number) => `${Math.round(d)}M`,
-    },
-    tooltipFormatter: (d: { label: string; x: number; y: number; d: number }) =>
-      `<strong>${d.label}</strong><br/>GDP/capita: $${d.x}k · Life exp: ${d.y} yrs<br/>Population: ${d.d}M`,
-  },
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Parity check for the opt-in Canvas 2D renderer. The exact same dataset is rendered twice — once with `renderer=\"svg\"` (one DOM node per point) and once with `renderer=\"canvas\"` (every point painted onto a single `<canvas>`). The two should be visually identical: same point positions, shapes, sizes, colours, bubble-size legend, axes and hover/click tooltip behaviour. Canvas mode is the recommended choice for large point clouds where the per-point DOM node count makes the SVG renderer janky.",
+          "Same wealth-vs-health bubbles, but the \"what does bubble size mean\" label is rendered by your own code — a plain-English note instead of the default key. Useful when a house style or non-technical audience needs the encoding spelled out. Driven by `dScaleLegendFormatter`.",
       },
     },
   },
@@ -263,7 +222,7 @@ export const TopByPopulation = {
     docs: {
       description: {
         story:
-          "The `filter` prop trims the field to what matters: here, the five most populous countries by `d` (population) for 2021. Use it to keep a busy plot legible — the spread between low-income, high-population India and the wealthier, longer-lived US/Japan stands out once the smaller economies drop away.",
+          "The same country dataset narrowed to the five most populous, so the giants tell their own story without the smaller economies crowding the view. The contrast between low-income India and the wealthier, longer-lived US and Japan becomes the headline. Trimming handled by the `filter` prop.",
       },
     },
   },

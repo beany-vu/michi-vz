@@ -1,7 +1,7 @@
 import React from "react";
 import LineChartComponent from "../src/components/LineChart";
-import { Meta } from "@storybook/react";
-import { fn } from "@storybook/test";
+import { Meta } from "@storybook/react-webpack5";
+import { fn } from "storybook/test";
 
 // Storybook stories for the LineChart component — a lean, curated showcase.
 // Each story demonstrates a real analytical use case with realistic data,
@@ -84,7 +84,7 @@ const generateLargeDataset = (seriesCount: number, pointsPerSeries: number) => {
 const commonProps = {
   width: 900,
   height: 400,
-  margin: { top: 50, right: 50, bottom: 50, left: 50 },
+  margin: { top: 50, right: 60, bottom: 70, left: 70 },
   onChartDataProcessed: fn(),
   onHighlightItem: fn(),
   onColorMappingGenerated: fn(),
@@ -138,7 +138,7 @@ export const Primary = {
     docs: {
       description: {
         story:
-          "Share of electricity from renewable sources, EU vs United States. The widening gap is the story; the final two years are marked `certainty: false` and render dashed, signalling forecast rather than observed data. Hover a line for the tooltip and series highlight.",
+          "How the share of electricity from renewables has grown in the EU versus the United States since 2017. The widening gap tells the story at a glance — and the dashed tail on the last two years flags forecast figures, so readers can see at a glance where observed data ends and projections begin. Points marked `certainty: false` render as a dashed segment.",
       },
     },
   },
@@ -190,7 +190,7 @@ export const TopPerformersFilter = {
     docs: {
       description: {
         story:
-          "New generation capacity added by technology. The `filter` prop ranks series by value at a chosen date and keeps only the top N — here the two fastest-growing technologies as of 2021 (Solar PV and Onshore Wind), letting an analyst surface leaders without pre-trimming the data.",
+          "New power-generation capacity added each year, broken out by technology. The chart automatically keeps only the two leaders as of 2021 — Solar PV and Onshore Wind — so a busy dataset becomes a clear leaderboard without manually trimming the input. Controlled by the `filter` prop (rank by value at a chosen date, keep top N).",
       },
     },
   },
@@ -248,7 +248,7 @@ export const ShapesAndCurves = {
     docs: {
       description: {
         story:
-          "Per-series styling for legibility when several lines overlap: each series sets its own marker `shape` (circle / square / triangle) and `curve`. `curveLinear` keeps straight segments that read values honestly; `curveBumpX` smooths the line for a cleaner trend at the cost of literal accuracy between points.",
+          "Three regional revenue trends drawn together, each with a distinct point shape and line style so they stay readable where they cross. Use different `shape` and `curve` settings per series when lines overlap — smoothed curves (`curveBumpX`) read as a trend, straight segments (`curveLinear`) read as exact values.",
       },
     },
   },
@@ -269,7 +269,7 @@ export const CanvasRenderer = {
     docs: {
       description: {
         story:
-          "The headline feature. Twelve sensors logged monthly for 20 years (~2,880 points) — a dataset that would stutter as SVG. Setting `renderer=\"canvas\"` draws the lines on a `<canvas>` with LTTB decimation, while axes, title and tooltip stay SVG/HTML. Hovering still resolves the nearest point and highlights its series.",
+          "Twelve sensors logged every month for twenty years — almost 3,000 points — rendered smoothly without lag. Setting `renderer=\"canvas\"` keeps the chart responsive on datasets that would slow the default mode to a crawl, while hover and tooltip behaviour stay identical.",
       },
     },
   },
@@ -308,7 +308,7 @@ export const RendererComparison = {
     docs: {
       description: {
         story:
-          "Switching to the Canvas renderer should change performance, not appearance. The same eight-sensor dataset is drawn both ways and stacked — curves, certainty dashing, colours and hover/highlight should match. Use this to satisfy yourself the opt-in is a safe swap.",
+          "The same eight-sensor dataset drawn two ways, stacked top-to-bottom, to confirm switching renderers changes performance but not appearance. Curves, colours, dashed forecast tails and hover behaviour should match exactly between the two — a sanity check before adopting `renderer=\"canvas\"` in production.",
       },
     },
   },
@@ -327,7 +327,7 @@ export const CanvasLargeDataset = {
     docs: {
       description: {
         story:
-          "Where Canvas earns its place: 60 sensors over 30 years of monthly readings (~21,600 points) stay interactive. Flip `renderer` to `\"svg\"` in the controls to feel the difference — the SVG path count makes the same chart sluggish.",
+          "Sixty sensors over thirty years of monthly readings — more than 21,000 data points — and the chart still pans and hovers smoothly. This is where the canvas renderer earns its place; flip `renderer` to `\"svg\"` in the controls to feel the same chart bog down.",
       },
     },
   },
