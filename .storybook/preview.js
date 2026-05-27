@@ -208,31 +208,58 @@ function ChartRail({ currentPath }) {
   );
 }
 
+function MichiTopnav() {
+  return (
+    <nav className="mv-topnav" aria-label="Site navigation">
+      <div className="mv-topnav-inner">
+        <a className="mv-topnav-brand" href="./?path=/docs/introduction--docs">
+          <img src="./michi-logo-small.png" alt="michi-vz" className="mv-topnav-logo" />
+          <span className="mv-topnav-star" aria-hidden="true">✦</span>
+        </a>
+        <div className="mv-topnav-links">
+          <a href="./?path=/docs/charts-line-chart--docs">Charts</a>
+          <a href="./?path=/story/examples-cross-chart-highlighting--two-charts-one-state">Examples</a>
+          <a href="https://github.com/beany-vu/michi-vz" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="https://www.npmjs.com/package/michi-vz" target="_blank" rel="noreferrer">npm</a>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
 function MichiDocsContainer({ children, context, ...props }) {
   const storyId =
     typeof window !== "undefined"
       ? new URLSearchParams(window.location.search).get("id") || ""
       : "";
   const isChartPage = storyId.startsWith("charts-");
+  const isIntroPage = storyId.startsWith("introduction");
+  const pageType = isChartPage ? "chart" : isIntroPage ? "intro" : "other";
   // "charts-line-chart--docs" → "charts-line-chart"
   const currentPath = storyId.replace(/--.*$/, "");
 
-  if (!isChartPage) {
+  if (isChartPage) {
     return (
-      <DocsContainer context={context} {...props}>
-        {children}
-      </DocsContainer>
+      <div data-page-type="chart">
+        <MichiTopnav />
+        <div className="mv-docs-layout">
+          <ChartRail currentPath={currentPath} />
+          <div className="mv-docs-main">
+            <DocsContainer context={context} {...props}>
+              {children}
+            </DocsContainer>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="mv-docs-layout">
-      <ChartRail currentPath={currentPath} />
-      <div className="mv-docs-main">
-        <DocsContainer context={context} {...props}>
-          {children}
-        </DocsContainer>
-      </div>
+    <div data-page-type={pageType}>
+      <MichiTopnav />
+      <DocsContainer context={context} {...props}>
+        {children}
+      </DocsContainer>
     </div>
   );
 }

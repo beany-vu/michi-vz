@@ -19,7 +19,20 @@
   .mv-docs-layout .sbdocs-content {
     max-width: 860px !important;
     padding: 40px 48px !important;
+    margin-left: 0 !important;  /* left-align; don't center in the remaining space */
   }
+
+  /* Intro page: strip DocsContainer padding so hero + topnav can go full-bleed */
+  [data-page-type="intro"] .sbdocs.sbdocs-wrapper {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  [data-page-type="intro"] .sbdocs-content {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  [data-page-type="intro"] .sbdocs > * { padding: 0; }
 
   /* ─── Navigation rail ───────────────────────────────────────────────── */
   .mv-doc-rail {
@@ -60,7 +73,6 @@
     font-size: 15px;
     color: var(--mv-ink-2, #525252);
     text-decoration: none;
-    border-radius: 4px;
     transition: color 0.15s, background 0.15s;
     border-left: 2px solid transparent;
   }
@@ -106,7 +118,6 @@
     font-size: 13px;
     color: var(--mv-ink-3, #9A9A9A);
     text-decoration: none;
-    border-radius: 3px;
     transition: color 0.15s;
   }
   .mv-doc-rail-anchor:hover {
@@ -125,6 +136,105 @@
     line-height: 1.7 !important;
   }
 
+  /* ─── Swiss-cross h2 section dividers ───────────────────────────────── */
+  /* Each h2 in chart docs gets a hairline separator above and a red Swiss  */
+  /* cross prefix — a nod to the Swiss modernist aesthetic of the site.     */
+  .sbdocs-content h2 {
+    display: flex !important;
+    align-items: center !important;
+    gap: 11px !important;
+    margin-top: 56px !important;
+    padding-top: 28px !important;
+    border-top: 1px solid #E5E5E5 !important;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+    color: #0A0A0A !important;
+    line-height: 1.2 !important;
+  }
+  /* Swiss cross via clip-path — 12-point polygon that cuts a plus shape    */
+  /* out of a red square. No extra markup, no assets needed.                */
+  .sbdocs-content h2::before {
+    content: "" !important;
+    display: inline-block !important;
+    width: 14px !important;
+    height: 14px !important;
+    flex-shrink: 0 !important;
+    background-color: #C84B3F !important;
+    clip-path: polygon(
+      38% 0%, 62% 0%, 62% 38%, 100% 38%, 100% 62%,
+      62% 62%, 62% 100%, 38% 100%, 38% 62%, 0% 62%, 0% 38%, 38% 38%
+    ) !important;
+  }
+  /* First h2 on a page has no top border — it comes right after the        */
+  /* story-level description, so the separator would look orphaned.         */
+  .sbdocs-content h2:first-of-type {
+    margin-top: 32px !important;
+    padding-top: 0 !important;
+    border-top: none !important;
+  }
+
+  /* ─── Persistent topnav — rendered by MichiDocsContainer on every page ─── */
+  .mv-topnav {
+    width: 100%;
+    background: var(--mv-surface, #FFFFFF);
+    border-bottom: 1px solid var(--mv-line, #E5E5E5);
+    padding: 14px 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  .mv-topnav-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    gap: 36px;
+  }
+  .mv-topnav-brand {
+    display: inline-flex;
+    height: 56px;
+    line-height: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--mv-ink, #0A0A0A) !important;
+    text-decoration: none !important;
+    letter-spacing: -0.01em;
+  }
+  .mv-topnav-logo {
+    height: 120px;
+    width: auto;
+    display: block;
+  }
+  .mv-topnav-links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-left: auto;
+  }
+  .mv-topnav-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 56px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--mv-ink-2, #525252) !important;
+    text-decoration: none !important;
+    transition: color 0.14s ease;
+  }
+  .mv-topnav-links a:hover { color: var(--mv-accent, #C84B3F) !important; }
+  .mv-topnav-star {
+    font-size: 18px;
+    color: var(--mv-accent, #C84B3F);
+    display: inline-block;
+    margin-left: 8px;
+    animation: mv-breathe 3.2s ease-in-out infinite;
+    transform-origin: center;
+  }
+
   /* ─── Mobile: rail collapses, content reflows ────────────────────────── */
   @media (max-width: 900px) {
     .mv-docs-layout { display: block; }
@@ -132,6 +242,9 @@
     .mv-docs-layout .sbdocs-content {
       padding: 24px 20px !important;
     }
+    .mv-topnav-logo { height: 40px; transform: translateY(1px); }
+    .mv-topnav-brand { height: 44px; }
+    .mv-topnav-links a { min-height: 44px; }
   }
 
   /* ─── prefers-reduced-motion: disable rail star animation ───────────── */

@@ -27,24 +27,6 @@ export const RightArrow = () => (
 );
 
 
-<nav className="mv-topnav">
-  <div className="mv-topnav-inner">
-    <a className="mv-topnav-brand" href="./?path=/docs/introduction--docs">
-      <img src="./michi-logo-small.png" alt="michi-vz" className="mv-topnav-logo" />
-      <span className="mv-topnav-star" aria-hidden="true">✦</span>
-    </a>
-    <div className="mv-topnav-links">
-      <a href="./?path=/docs/charts-line-chart--docs">Charts</a>
-      <a href="./?path=/story/examples-cross-chart-highlighting--two-charts-one-state">Examples</a>
-      <a href="https://github.com/beany-vu/michi-vz" target="_blank" rel="noreferrer">
-        GitHub
-      </a>
-      <a href="https://www.npmjs.com/package/michi-vz" target="_blank" rel="noreferrer">
-        npm
-      </a>
-    </div>
-  </div>
-</nav>
 
 <div className="mv-hero mv-bleed">
   <div className="mv-hero-inner">
@@ -222,9 +204,7 @@ import { MichiVzProvider, RibbonChart } from "michi-vz";
      .sbdocs-content has an inherent max-width and centred padding that makes
      the page feel narrow and Storybook-y. Strip those on the Introduction
      page so the hero and nav can occupy the full viewport. */
-  .sbdocs-wrapper:has(.mv-topnav) { padding: 0 !important; max-width: none !important; }
-  .sbdocs-content:has(.mv-topnav) { max-width: none !important; padding: 0 !important; }
-  .sbdocs:has(.mv-topnav) > * { padding: 0; }
+  /* These rules are now handled globally in preview-head.html via [data-page-type="intro"] */
 
   /* Full-bleed wrapper used by the hero + top nav. Negative-margin trick to
      escape any constrained parent: pull each edge out as far as it needs to,
@@ -234,62 +214,6 @@ import { MichiVzProvider, RibbonChart } from "michi-vz";
     margin-left: calc(50% - 50vw);
     margin-right: calc(50% - 50vw);
   }
-
-  /* Top navigation bar — appears at the top of the Introduction page, hides
-     on the Storybook-rendered chart docs pages (those don't have .mv-topnav). */
-  .mv-topnav {
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
-    background: var(--mv-surface);
-    border-bottom: 1px solid var(--mv-line);
-    padding: 14px 0;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  .mv-topnav-inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 32px;
-    display: flex;
-    align-items: center;
-    gap: 36px;
-  }
-  .mv-topnav-brand {
-    display: inline-flex;
-    height: 56px;
-    line-height: 0;
-    font-family: var(--mv-font);
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--mv-ink) !important;
-    text-decoration: none !important;
-    letter-spacing: -0.01em;
-  }
-  .mv-topnav-logo {
-    height: 120px;
-    width: auto;
-    display: block;
-  }
-  .mv-topnav-links {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    margin-left: auto;
-  }
-  .mv-topnav-links a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 56px;
-    font-family: var(--mv-font);
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--mv-ink-2) !important;
-    text-decoration: none !important;
-    transition: color 0.14s ease;
-  }
-  .mv-topnav-links a:hover { color: var(--mv-accent) !important; }
 
   /* Hero — full-bleed red block, reverse-out display type, asterisk mark.
      The Swiss-poster move: a single saturated red rectangle does the
@@ -390,7 +314,6 @@ import { MichiVzProvider, RibbonChart } from "michi-vz";
     display: inline-flex;
     align-items: center;
     padding: 12px 22px;
-    border-radius: 2px;
     font-family: var(--mv-font);
     font-size: 13px;
     font-weight: 500;
@@ -428,14 +351,14 @@ import { MichiVzProvider, RibbonChart } from "michi-vz";
 
   /* Constrain non-hero content to a centred 1200px column so the page reads
      as a proper layout instead of stretching across a huge monitor. */
-  .sbdocs:has(.mv-topnav) .mv-section-head,
-  .sbdocs:has(.mv-topnav) .mv-lead,
-  .sbdocs:has(.mv-topnav) .mv-grid,
-  .sbdocs:has(.mv-topnav) .mv-cols,
-  .sbdocs:has(.mv-topnav) .mv-note,
-  .sbdocs:has(.mv-topnav) > p,
-  .sbdocs:has(.mv-topnav) > pre,
-  .sbdocs:has(.mv-topnav) > .css-iaorlw {
+  [data-page-type="intro"] .sbdocs .mv-section-head,
+  [data-page-type="intro"] .sbdocs .mv-lead,
+  [data-page-type="intro"] .sbdocs .mv-grid,
+  [data-page-type="intro"] .sbdocs .mv-cols,
+  [data-page-type="intro"] .sbdocs .mv-note,
+  [data-page-type="intro"] .sbdocs > p,
+  [data-page-type="intro"] .sbdocs > pre,
+  [data-page-type="intro"] .sbdocs > .css-iaorlw {
     max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
@@ -564,7 +487,6 @@ import { MichiVzProvider, RibbonChart } from "michi-vz";
   .mv-note {
     margin: 12px 0 64px;
     padding: 22px 24px;
-    border-radius: 2px;
     background: var(--mv-accent-soft);
     border-left: 3px solid var(--mv-accent);
     font-family: var(--mv-font);
@@ -576,7 +498,6 @@ import { MichiVzProvider, RibbonChart } from "michi-vz";
     background: var(--mv-surface);
     border: 1px solid var(--mv-line);
     padding: 1px 6px;
-    border-radius: 2px;
     font-size: 12.5px;
   }
 
@@ -590,20 +511,8 @@ import { MichiVzProvider, RibbonChart } from "michi-vz";
     .mv-title { font-size: 48px; }
     .mv-hero-inner { padding: 40px 24px 48px; }
     .mv-hero .mv-hero-meta-right { display: none; }
-    .mv-topnav-logo { height: 40px; transform: translateY(1px); }
-    .mv-topnav-brand { height: 44px; }
-    .mv-topnav-links a { min-height: 44px; }
   }
 
-  /* Topnav breathing star */
-  .mv-topnav-star {
-    font-size: 18px;
-    color: var(--mv-accent);
-    display: inline-block;
-    margin-left: 8px;
-    animation: mv-breathe-intro 3.2s ease-in-out infinite;
-    transform-origin: center;
-  }
   /* Hero bullet breathing star */
   .mv-hero-bullet--breathe {
     display: inline-block;
@@ -621,7 +530,6 @@ import { MichiVzProvider, RibbonChart } from "michi-vz";
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .mv-topnav-star,
     .mv-hero-bullet--breathe { animation: none; }
     .mv-card:hover { animation: none; transform: translateY(-2px); }
   }
