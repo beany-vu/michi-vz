@@ -146,11 +146,19 @@ function ChartRail({ currentPath }) {
   const [anchors, setAnchors] = React.useState([]);
 
   React.useEffect(() => {
+    setAnchors([]);
+
     function harvest() {
       const content = document.querySelector(".sbdocs-content");
       if (!content) return;
       const h2s = Array.from(content.querySelectorAll("h2[id]"));
-      setAnchors(h2s.map((el) => ({ id: el.id, text: el.textContent.trim() })));
+      const next = h2s.map((el) => ({ id: el.id, text: el.textContent.trim() }));
+      setAnchors((prev) => {
+        const same =
+          prev.length === next.length &&
+          prev.every((a, i) => a.id === next[i].id && a.text === next[i].text);
+        return same ? prev : next;
+      });
     }
 
     harvest();
