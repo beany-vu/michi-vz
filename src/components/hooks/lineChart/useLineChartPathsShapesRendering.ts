@@ -155,14 +155,13 @@ const useLineChartPathsShapesRendering = (
   );
 
   useLayoutEffect(() => {
-    // Only apply highlighting when there are items to highlight
+    // Apply incoming highlightItems prop as visual dimming — D3 opacity only.
+    // Do NOT call onHighlightItem here: that is an output callback for
+    // user-initiated events; calling it on every prop change creates a
+    // highlight-prop → setState → re-render → highlight-prop infinite loop.
     if (highlightItems.length > 0) {
       handleMouseEnter(null, svgRef, "g.data-group", 0.05, 1, highlightItems);
-      if (onHighlightItem) {
-        onHighlightItem(highlightItems);
-      }
     } else {
-      // Reset all items to fully visible when nothing is highlighted
       const svg = select(svgRef.current);
       if (svg.node()) {
         svg.selectAll("g.data-group").style("opacity", 1);
