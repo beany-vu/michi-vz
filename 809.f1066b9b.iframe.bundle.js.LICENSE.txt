@@ -1,6 +1,6 @@
 /**
  * @license React
- * react-dom.production.js
+ * react-dom-server-legacy.browser.production.js
  *
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -10,7 +10,7 @@
 
 /**
  * @license React
- * use-sync-external-store-shim.production.js
+ * react-dom-server.browser.production.js
  *
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
