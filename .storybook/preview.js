@@ -120,6 +120,7 @@ const globalChartCss = `
     margin: 8px 0 12px;
     box-shadow: 0 1px 2px rgba(10, 10, 10, 0.03);
     position: relative;
+    overflow-x: auto;
   }
   .mv-story-card::before {
     content: "";
@@ -264,10 +265,11 @@ function MichiDocsContainer({ children, context, ...props }) {
   );
 }
 
-const CenteringDecorator = (Story) => (
+const CenteringDecorator = (Story, context) => (
   <>
     <style>{globalChartCss}</style>
-    <MichiTopnav />
+    {/* Topnav only in standalone story view — docs pages get it from MichiDocsContainer */}
+    {context?.viewMode === "story" && <MichiTopnav />}
     <div className="mv-story-card">
       <Story />
     </div>

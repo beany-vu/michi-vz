@@ -916,7 +916,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                           setIsTooltipSticky(true);
                         }}
                       />
-                      {d.seriesKeyAbbreviation && (
+                      {d.seriesKeyAbbreviation && d.width >= 20 && (
                         <text
                           x={d.x + d.width / 2}
                           y={height - effectiveMargin.bottom + 15}
