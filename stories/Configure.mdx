@@ -1,54 +1,131 @@
-import { Meta } from "@storybook/blocks";
+import { Meta } from "@storybook/addon-docs/blocks";
+import { charts } from "../.storybook/charts-catalog.js";
 
 <Meta title="Introduction" />
 
 export const RightArrow = () => (
-  <svg viewBox="0 0 14 14" width="9px" height="14px" style={{ marginLeft: "5px", display: "inline-block", verticalAlign: "middle", fill: "currentColor" }}>
-    <path d="m11.1 7.35-5.5 5.5a.5.5 0 0 1-.7-.7L10.04 7 4.9 1.85a.5.5 0 1 1 .7-.7l5.5 5.5c.2.2.2.5 0 .7Z" />
+  <svg
+    viewBox="0 0 14 14"
+    width="11px"
+    height="11px"
+    style={{
+      marginLeft: "8px",
+      display: "inline-block",
+      verticalAlign: "middle",
+      fill: "currentColor",
+    }}
+  >
+    <path
+      d="M2 7h9M7 3l4 4-4 4"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      fill="none"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+    />
   </svg>
 );
 
-export const charts = [
-  { name: "Line Chart", path: "charts-line-chart", use: "Trends over time across one or many series — with an opt-in Canvas renderer for large datasets." },
-  { name: "Area Chart", path: "charts-area-chart", use: "Part-to-whole trends — how each component's share of a total shifts over time." },
-  { name: "Range Chart", path: "charts-range-chart", use: "Uncertainty bands and min/max envelopes — forecasts, confidence intervals, observed ranges." },
-  { name: "Ribbon Chart", path: "charts-ribbon-chart", use: "Stacked composition that re-ranks between periods — ribbons make the flow visible." },
-  { name: "Scatter Plot", path: "charts-scatter-plot", use: "Correlation between two metrics, with an optional third encoded as bubble size." },
-  { name: "Radar Chart", path: "charts-radar-chart", use: "Profile comparison of a few entities across many shared metrics." },
-  { name: "Gap Chart", path: "charts-gap-chart", use: "The gap between two values per category — actual vs target, before vs after." },
-  { name: "Bar Bell Chart", path: "charts-bar-bell-chart", use: "Per-row segments laid end-to-end — funnels and stage-by-stage breakdowns." },
-  { name: "Vertical Stack Bar Chart", path: "charts-vertical-stack-bar-chart", use: "Composition across discrete categories or periods, with optional side-by-side groups." },
-  { name: "Comparable Horizontal Bar Chart", path: "charts-comparable-horizontal-bar-chart", use: "Two values per category on one row — budget vs actual, this year vs last." },
-  { name: "Dual Horizontal Bar Chart", path: "charts-dual-horizontal-bar-chart", use: "Two metrics mirrored from a centre line — population pyramids, two-sided comparisons." },
-];
 
-<div className="mv-hero">
-  <span className="mv-eyebrow">React + D3 chart library</span>
-  <h1 className="mv-title">michi&#8209;vz</h1>
-  <p className="mv-tagline">
-    Eleven ready-made, interactive chart components for React — line, area, bar,
-    radar, scatter and more — built on D3, typed in TypeScript, with shared
-    theming and a consistent prop API across every chart.
-  </p>
-  <div className="mv-cta">
-    <a className="mv-btn mv-btn-primary" href="?path=/docs/charts-line-chart--docs">Browse the charts<RightArrow /></a>
-    <a className="mv-btn" href="https://github.com/beany-vu/michi-vz" target="_blank" rel="noreferrer">View on GitHub<RightArrow /></a>
+<nav className="mv-topnav">
+  <div className="mv-topnav-inner">
+    <a className="mv-topnav-brand" href="./?path=/docs/introduction--docs">
+      <img src="./michi-logo-small.png" alt="michi-vz" className="mv-topnav-logo" />
+      <span className="mv-topnav-star" aria-hidden="true">✦</span>
+    </a>
+    <div className="mv-topnav-links">
+      <a href="./?path=/docs/charts-line-chart--docs">Charts</a>
+      <a href="./?path=/story/examples-cross-chart-highlighting--two-charts-one-state">Examples</a>
+      <a href="https://github.com/beany-vu/michi-vz" target="_blank" rel="noreferrer">
+        GitHub
+      </a>
+      <a href="https://www.npmjs.com/package/michi-vz" target="_blank" rel="noreferrer">
+        npm
+      </a>
+    </div>
+  </div>
+</nav>
+
+<div className="mv-hero mv-bleed">
+  <div className="mv-hero-inner">
+    <img src="./michi-logo.png" alt="" aria-hidden="true" className="mv-hero-logo" />
+    <div className="mv-hero-meta">
+      <span className="mv-hero-bullet mv-hero-bullet--breathe">✦</span>&nbsp;michi-vz
+      <span className="mv-hero-meta-right">(v0.6.4)</span>
+    </div>
+    <h1 className="mv-title">michi&#8209;vz</h1>
+    <p className="mv-tagline">
+      Eleven ready-made, interactive chart components for React — line, area, bar, radar, scatter
+      and more — built on D3, typed in TypeScript, with shared theming and a consistent prop API
+      across every chart.
+    </p>
+    <div className="mv-cta">
+      <a className="mv-btn mv-btn-primary" href="./?path=/docs/charts-line-chart--docs">
+        Browse the charts
+        <RightArrow />
+      </a>
+      <a
+        className="mv-btn mv-btn-ghost"
+        href="https://github.com/beany-vu/michi-vz"
+        target="_blank"
+        rel="noreferrer"
+      >
+        View on GitHub
+        <RightArrow />
+      </a>
+    </div>
   </div>
 </div>
 
-<h2 className="mv-h2">Chart catalog</h2>
-<p className="mv-lead">Every chart's docs page opens with a short "when to reach for it" note and a lean set of worked examples on realistic data.</p>
+<div className="mv-section-head">
+  <svg
+    viewBox="0 0 100 100"
+    width="14"
+    height="14"
+    aria-hidden="true"
+    style={{ fill: "#C84B3F", marginRight: 10, display: "inline-block", verticalAlign: "middle" }}
+  >
+    <rect x="46" y="6" width="8" height="88" />
+    <rect x="6" y="46" width="88" height="8" />
+    <rect x="46" y="6" width="8" height="88" transform="rotate(45 50 50)" />
+    <rect x="6" y="46" width="88" height="8" transform="rotate(45 50 50)" />
+  </svg>
+  <h2 className="mv-h2">Chart catalog</h2>
+</div>
+<p className="mv-lead">
+  Every chart's docs page opens with a short "when to reach for it" note and a lean set of worked
+  examples on realistic data.
+</p>
 
 <div className="mv-grid">
-  {charts.map(c => (
-    <a className="mv-card" key={c.path} href={`?path=/docs/${c.path}--docs`}>
-      <h3 className="mv-card-title">{c.name}<RightArrow /></h3>
+  {charts.map((c, i) => (
+    <a className="mv-card" key={c.path} href={`./?path=/docs/${c.path}--docs`}>
+      <span className="mv-card-index">{String(i + 1).padStart(2, "0")}</span>
+      <h3 className="mv-card-title">{c.name}</h3>
+      <p className="mv-card-meta">Chart module</p>
       <p className="mv-card-text">{c.use}</p>
+      <span className="mv-card-arrow">
+        <RightArrow />
+      </span>
     </a>
   ))}
 </div>
 
-<h2 className="mv-h2">Get started</h2>
+<div className="mv-section-head">
+  <svg
+    viewBox="0 0 100 100"
+    width="14"
+    height="14"
+    aria-hidden="true"
+    style={{ fill: "#C84B3F", marginRight: 10, display: "inline-block", verticalAlign: "middle" }}
+  >
+    <rect x="46" y="6" width="8" height="88" />
+    <rect x="6" y="46" width="88" height="8" />
+    <rect x="46" y="6" width="8" height="88" transform="rotate(45 50 50)" />
+    <rect x="6" y="46" width="88" height="8" transform="rotate(45 50 50)" />
+  </svg>
+  <h2 className="mv-h2">Get started</h2>
+</div>
 
 <div className="mv-cols">
   <div className="mv-col">
@@ -59,6 +136,7 @@ export const charts = [
     npm install michi-vz
     npm install react react-dom d3 styled-components
     ```
+
   </div>
   <div className="mv-col">
     <h3 className="mv-h3">2 — Render a chart</h3>
@@ -76,13 +154,28 @@ export const charts = [
       title="Renewable electricity share"
     />
     ```
+
   </div>
 </div>
 
-<h2 className="mv-h2">Shared theming — MichiVzProvider</h2>
+<div className="mv-section-head">
+  <svg
+    viewBox="0 0 100 100"
+    width="14"
+    height="14"
+    aria-hidden="true"
+    style={{ fill: "#C84B3F", marginRight: 10, display: "inline-block", verticalAlign: "middle" }}
+  >
+    <rect x="46" y="6" width="8" height="88" />
+    <rect x="6" y="46" width="88" height="8" />
+    <rect x="46" y="6" width="8" height="88" transform="rotate(45 50 50)" />
+    <rect x="6" y="46" width="88" height="8" transform="rotate(45 50 50)" />
+  </svg>
+  <h2 className="mv-h2">Shared theming &mdash; MichiVzProvider</h2>
+</div>
 <p className="mv-lead">
-  Wrap charts in <code>MichiVzProvider</code> to give a label the same colour
-  everywhere, and to share highlighted / disabled state across a dashboard.
+  Wrap charts in <code>MichiVzProvider</code> to give a label the same colour everywhere, and to
+  share highlighted / disabled state across a dashboard.
 </p>
 
 ```jsx
@@ -90,129 +183,441 @@ import { MichiVzProvider, RibbonChart } from "michi-vz";
 
 <MichiVzProvider colorsMapping={{ Coal: "#6b7280", Gas: "#f59e0b", "Wind & Solar": "#22c55e" }}>
   <RibbonChart series={series} keys={keys} width={900} height={480} margin={margin} />
-</MichiVzProvider>
+</MichiVzProvider>;
 ```
 
 <div className="mv-note">
-  <strong>Working with large datasets?</strong> <code>LineChart</code> has an
-  opt-in <code>renderer="canvas"</code> mode that draws onto a single
-  <code>&lt;canvas&gt;</code> instead of thousands of SVG nodes, with LTTB
-  decimation — see the <em>Canvas Renderer</em> stories on the Line Chart page.
+  <strong>Working with large datasets?</strong> <code>LineChart</code> has an opt-in{" "}
+  <code>renderer="canvas"</code> mode that draws onto a single
+  <code>&lt;canvas&gt;</code> instead of thousands of SVG nodes, with LTTB decimation — see the{" "}
+  <em>Canvas Renderer</em> stories on the Line Chart page.
 </div>
 
 <style>
   {`
-  :root { --mv-accent: #4f46e5; --mv-accent-dark: #3730a3; }
-
-  .mv-hero {
-    padding: 44px 40px 40px;
-    margin-bottom: 44px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 55%, #faf5ff 100%);
-    border: 1px solid #e0e0f0;
+  :root {
+    --mv-accent: #C84B3F;
+    --mv-accent-dark: #A33A30;
+    --mv-accent-ink: #6E2A22;
+    --mv-accent-soft: #FBEDEB;
+    --mv-ink: #0A0A0A;
+    --mv-ink-2: #525252;
+    --mv-ink-3: #9A9A9A;
+    --mv-line: #E5E5E5;
+    --mv-line-soft: #F0F0F0;
+    --mv-surface: #FFFFFF;
+    --mv-shell: #FAFAFA;
+    --mv-font: "Helvetica Neue", Helvetica, "Arimo", "Liberation Sans",
+               Arial, sans-serif;
   }
-  .mv-eyebrow {
-    display: inline-block;
-    font-size: 12px;
+
+  .sb-show-main, .docs-story, .sbdocs.sbdocs-wrapper,
+  .sbdocs.sbdocs-content {
+    font-family: var(--mv-font);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Marketing-site layout: break out of the Storybook docs container.
+     .sbdocs-content has an inherent max-width and centred padding that makes
+     the page feel narrow and Storybook-y. Strip those on the Introduction
+     page so the hero and nav can occupy the full viewport. */
+  .sbdocs-wrapper:has(.mv-topnav) { padding: 0 !important; max-width: none !important; }
+  .sbdocs-content:has(.mv-topnav) { max-width: none !important; padding: 0 !important; }
+  .sbdocs:has(.mv-topnav) > * { padding: 0; }
+
+  /* Full-bleed wrapper used by the hero + top nav. Negative-margin trick to
+     escape any constrained parent: pull each edge out as far as it needs to,
+     occupy 100vw, and reset that on inner content with auto margins below. */
+  .mv-bleed {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+  }
+
+  /* Top navigation bar — appears at the top of the Introduction page, hides
+     on the Storybook-rendered chart docs pages (those don't have .mv-topnav). */
+  .mv-topnav {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    background: var(--mv-surface);
+    border-bottom: 1px solid var(--mv-line);
+    padding: 14px 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .mv-topnav-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    gap: 36px;
+  }
+  .mv-topnav-brand {
+    display: inline-flex;
+    height: 56px;
+    line-height: 0;
+    font-family: var(--mv-font);
+    font-size: 16px;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    color: var(--mv-ink) !important;
+    text-decoration: none !important;
+    letter-spacing: -0.01em;
+  }
+  .mv-topnav-logo {
+    height: 120px;
+    width: auto;
+    display: block;
+  }
+  .mv-topnav-links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-left: auto;
+  }
+  .mv-topnav-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 56px;
+    font-family: var(--mv-font);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--mv-ink-2) !important;
+    text-decoration: none !important;
+    transition: color 0.14s ease;
+  }
+  .mv-topnav-links a:hover { color: var(--mv-accent) !important; }
+
+  /* Hero — full-bleed red block, reverse-out display type, asterisk mark.
+     The Swiss-poster move: a single saturated red rectangle does the
+     visual lifting, type lands big and white over it. */
+  .mv-hero {
+    position: relative;
+    background: var(--mv-accent);
+    color: #ffffff;
+    overflow: hidden;
+    isolation: isolate;
+    margin-bottom: 64px;
+  }
+  .mv-hero-inner {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 96px 32px 96px;
+  }
+  .mv-hero-asterisk {
+    position: absolute;
+    top: 32px;
+    right: 32px;
+    fill: #ffffff;
+    display: block;
+    opacity: 0.85;
+  }
+  /* Hero logo — sits in the top-right of the hero block (replacing the old
+     asterisk slot). Sized generously so the brand is the first thing readers
+     pick up before the headline. */
+  .mv-hero-logo {
+    position: absolute;
+    top: 40px;
+    right: 40px;
+    height: 500px;
+    width: auto;
+    display: block;
+    /* The logo PNG is on its native colour over transparency. If consumers
+       want it forced to white on the red hero, uncomment the next line —
+       it tints any opaque pixels to white via a CSS filter. */
+    /* filter: brightness(0) invert(1); */
+  }
+  @media screen and (max-width: 860px) {
+    .mv-hero-logo { height: 72px; top: 24px; right: 24px; }
+  }
+  /* All hero text uses !important to defeat Storybook's .sbdocs p / .sbdocs
+     span rules (which set their own colour with higher specificity). */
+  .mv-hero, .mv-hero * { color: #ffffff !important; }
+  .mv-hero-meta {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    font-family: var(--mv-font);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--mv-accent);
-    margin-bottom: 10px;
+    margin-bottom: 36px;
+  }
+  .mv-hero-bullet {
+    margin-right: 12px;
+    font-size: 12px;
+  }
+  .mv-hero-meta-right {
+    margin-left: auto;
+    opacity: 0.9;
+    font-weight: 500;
   }
   .mv-title {
-    font-size: 52px;
-    line-height: 1.05;
-    margin: 0 0 14px;
-    color: #1e1b4b;
-    letter-spacing: -0.02em;
+    position: relative;
+    z-index: 2;
+    font-family: var(--mv-font);
+    font-size: clamp(56px, 9vw, 96px);
+    line-height: 0.95;
+    margin: 0 0 24px;
+    color: #ffffff !important;
+    letter-spacing: -0.04em;
+    font-weight: 700;
   }
   .mv-tagline {
-    max-width: 640px;
-    font-size: 16px;
-    line-height: 1.6;
-    color: #4b5563;
-    margin: 0 0 24px;
+    position: relative;
+    z-index: 2;
+    max-width: 680px;
+    font-family: var(--mv-font);
+    font-size: 20px;
+    line-height: 1.5;
+    font-weight: 500;
+    margin: 0 0 40px;
   }
-  .mv-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .mv-cta {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
   .mv-btn {
     display: inline-flex;
     align-items: center;
-    padding: 10px 18px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
+    padding: 12px 22px;
+    border-radius: 2px;
+    font-family: var(--mv-font);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.005em;
     text-decoration: none !important;
-    border: 1px solid var(--mv-accent);
-    color: var(--mv-accent) !important;
-    background: #ffffff;
-    transition: transform 0.08s ease;
+    transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
   }
-  .mv-btn:hover { transform: translateY(-1px); }
-  .mv-btn-primary { background: var(--mv-accent); color: #ffffff !important; }
-  .mv-btn-primary:hover { background: var(--mv-accent-dark); border-color: var(--mv-accent-dark); }
+  .mv-btn-primary {
+    background: #ffffff;
+    color: var(--mv-accent) !important;
+    border: 1px solid #ffffff;
+  }
+  .mv-hero .mv-btn-primary,
+  .mv-hero .mv-btn-primary * {
+    color: var(--mv-accent) !important;
+  }
+  .mv-btn-primary:hover {
+    background: var(--mv-ink);
+    color: #ffffff !important;
+    border-color: var(--mv-ink);
+  }
+  .mv-hero .mv-btn-primary:hover,
+  .mv-hero .mv-btn-primary:hover * {
+    color: #ffffff !important;
+  }
+  .mv-btn-ghost {
+    background: transparent;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+  .mv-btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: #ffffff;
+  }
+
+  /* Constrain non-hero content to a centred 1200px column so the page reads
+     as a proper layout instead of stretching across a huge monitor. */
+  .sbdocs:has(.mv-topnav) .mv-section-head,
+  .sbdocs:has(.mv-topnav) .mv-lead,
+  .sbdocs:has(.mv-topnav) .mv-grid,
+  .sbdocs:has(.mv-topnav) .mv-cols,
+  .sbdocs:has(.mv-topnav) .mv-note,
+  .sbdocs:has(.mv-topnav) > p,
+  .sbdocs:has(.mv-topnav) > pre,
+  .sbdocs:has(.mv-topnav) > .css-iaorlw {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 32px;
+    padding-right: 32px;
+    box-sizing: border-box;
+  }
+
+  .mv-section-head {
+    display: flex;
+    align-items: center;
+    margin-top: 36px;
+    margin-bottom: 14px;
+  }
+  .mv-section-head .mv-h2 { margin: 0; }
 
   .mv-h2 {
-    font-size: 24px;
-    margin: 8px 0 6px;
-    color: #1e1b4b;
-    letter-spacing: -0.01em;
+    font-family: var(--mv-font);
+    font-size: 28px;
+    color: var(--mv-ink);
+    letter-spacing: -0.025em;
+    font-weight: 700;
+    line-height: 1.1;
   }
-  .mv-h3 { font-size: 16px; margin: 0 0 8px; color: #1e1b4b; }
-  .mv-lead { color: #4b5563; margin: 0 0 20px; max-width: 680px; }
+  .mv-h3 {
+    font-family: var(--mv-font);
+    font-size: 14px;
+    margin: 0 0 10px;
+    color: var(--mv-ink);
+    font-weight: 600;
+    letter-spacing: -0.005em;
+  }
+  .mv-lead {
+    font-family: var(--mv-font);
+    color: var(--mv-ink-2);
+    margin: 0 0 28px;
+    max-width: 680px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
 
   .mv-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-bottom: 48px;
+    gap: 12px;
+    margin-bottom: 64px;
   }
   .mv-card {
+    position: relative;
     display: block;
-    padding: 18px 18px 16px;
-    border-radius: 10px;
-    border: 1px solid #e6e6ef;
-    background: #ffffff;
+    padding: 18px 20px 46px;
+    border-radius: 0;
+    border: 1px solid var(--mv-line);
+    background: var(--mv-surface);
+    border-top: 3px solid var(--mv-accent);
     text-decoration: none !important;
-    transition: border-color 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease;
+    transition: border-color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
+    min-height: 138px;
+  }
+  .mv-card-index {
+    display: block;
+    color: var(--mv-accent-ink);
+    font-family: var(--mv-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+  .mv-card-meta {
+    margin: 0 0 8px;
+    font-family: var(--mv-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mv-ink-3);
+    line-height: 1.25;
   }
   .mv-card:hover {
-    border-color: var(--mv-accent);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.1);
+    border-color: var(--mv-ink);
+    animation: mv-card-breathe 1.2s ease-in-out infinite;
   }
   .mv-card-title {
-    font-size: 15px;
+    font-family: var(--mv-font);
+    font-size: 17px;
+    font-weight: 700;
     margin: 0 0 6px;
-    color: var(--mv-accent) !important;
+    color: var(--mv-ink) !important;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
   }
-  .mv-card-text { font-size: 13px; line-height: 1.55; color: #5b6270; margin: 0; }
+  .mv-card-text {
+    font-family: var(--mv-font);
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--mv-ink-2);
+    margin: 0;
+  }
+  .mv-card-arrow {
+    position: absolute;
+    bottom: 18px;
+    right: 18px;
+    color: var(--mv-accent);
+    opacity: 0.75;
+    transform: translateX(-4px);
+    transition: opacity 0.14s ease, transform 0.14s ease;
+  }
+  .mv-card:hover .mv-card-arrow {
+    opacity: 1;
+    transform: translateX(0);
+  }
 
   .mv-cols {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    margin-bottom: 44px;
+    gap: 32px;
+    margin-bottom: 56px;
   }
   .mv-col { display: flex; flex-direction: column; }
-  .mv-col p { color: #4b5563; margin: 0 0 8px; }
+  .mv-col p {
+    font-family: var(--mv-font);
+    color: var(--mv-ink-2);
+    margin: 0 0 12px;
+    font-size: 14px;
+    line-height: 1.55;
+  }
 
   .mv-note {
-    margin: 12px 0 48px;
-    padding: 16px 18px;
-    border-radius: 10px;
-    background: #eef2ff;
-    border: 1px solid #d8dcfb;
-    border-left: 4px solid var(--mv-accent);
+    margin: 12px 0 64px;
+    padding: 22px 24px;
+    border-radius: 2px;
+    background: var(--mv-accent-soft);
+    border-left: 3px solid var(--mv-accent);
+    font-family: var(--mv-font);
     font-size: 14px;
     line-height: 1.6;
-    color: #3a3a52;
+    color: var(--mv-ink);
   }
+  .mv-note code {
+    background: var(--mv-surface);
+    border: 1px solid var(--mv-line);
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 12.5px;
+  }
+
+  /* MDX bare-code & inline-code on this page, so they match the page font. */
+  .sbdocs .mv-hero ~ * code,
+  .sbdocs .mv-cols code { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
 
   @media screen and (max-width: 860px) {
     .mv-grid { grid-template-columns: 1fr; }
     .mv-cols { grid-template-columns: 1fr; }
-    .mv-title { font-size: 40px; }
+    .mv-title { font-size: 48px; }
+    .mv-hero { padding: 40px 28px 36px; }
+    .mv-hero .mv-hero-meta-right { display: none; }
+    .mv-topnav-logo { height: 40px; transform: translateY(1px); }
+    .mv-topnav-brand { height: 44px; }
+    .mv-topnav-links a { min-height: 44px; }
+  }
+
+  /* Topnav breathing star */
+  .mv-topnav-star {
+    font-size: 18px;
+    color: var(--mv-accent);
+    display: inline-block;
+    margin-left: 8px;
+    animation: mv-breathe-intro 3.2s ease-in-out infinite;
+    transform-origin: center;
+  }
+  /* Hero bullet breathing star */
+  .mv-hero-bullet--breathe {
+    display: inline-block;
+    animation: mv-breathe-intro 3.2s ease-in-out infinite;
+    transform-origin: center;
+  }
+  @keyframes mv-breathe-intro {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50%       { opacity: 1;    transform: scale(1.14); }
+  }
+  /* Card hover breath — AI thinking effect */
+  @keyframes mv-card-breathe {
+    0%, 100% { transform: translateY(-2px) scale(1);     box-shadow: 0 8px 20px rgba(10,10,10,0.08); }
+    50%       { transform: translateY(-3px) scale(1.012); box-shadow: 0 12px 28px rgba(200,75,63,0.14); }
   }
   `}
 </style>
