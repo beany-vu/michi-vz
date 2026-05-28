@@ -1,6 +1,6 @@
 import React from "react";
 import { DocsContainer } from "@storybook/addon-docs/blocks";
-import { charts } from "./charts-catalog.js";
+import { michiVzTheme } from "./theme.js";
 
 // Global chart typography + layout polish — applied to every story without
 // touching individual chart code. Keeps SVG text legible at small sizes, lifts
@@ -94,17 +94,17 @@ const globalChartCss = `
     color: var(--mv-ink);
   }
 
-  /* ComparableHorizontalBarChart: the two bars per row use the same fill from
-     the consumer's colour mapping. Without an opacity differential the
-     baseline (.value-based) and the new value (.value-compared) are nearly
-     indistinguishable. Dim the baseline so the new bar reads as the focus
-     and the gap between the two is obvious. */
+  /* ComparableHorizontalBarChart: when both bars use the same country color,
+     opacity alone can't distinguish the overlap region (same_color * x +
+     same_color * (1-x) = same_color). multiply blend darkens the overlap so
+     it's always visually distinct from either bar alone. */
   #storybook-root svg .value-based,
   .docs-story svg .value-based {
-    opacity: 0.32;
+    opacity: 1;
   }
   #storybook-root svg .value-compared,
   .docs-story svg .value-compared {
+    mix-blend-mode: multiply;
     opacity: 1;
   }
 
@@ -119,17 +119,7 @@ const globalChartCss = `
     padding: 28px 28px 22px;
     margin: 8px 0 12px;
     box-shadow: 0 1px 2px rgba(10, 10, 10, 0.03);
-    position: relative;
     overflow-x: auto;
-  }
-  .mv-story-card::before {
-    content: "";
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 3px;
-    border-radius: 6px 0 0 6px;
-    background: var(--mv-accent);
-    opacity: 0.85;
   }
   /* In docs view (autodocs), Storybook already wraps each story in its own
      surface (.docs-story). Skip the extra card there so we don't double-frame. */
@@ -140,74 +130,7 @@ const globalChartCss = `
     padding: 0;
     margin: 0;
   }
-  .sbdocs .mv-story-card::before { display: none; }
 `;
-
-function ChartRail({ currentPath }) {
-  const [anchors, setAnchors] = React.useState([]);
-
-  React.useEffect(() => {
-    setAnchors([]);
-
-    function harvest() {
-      const content = document.querySelector(".sbdocs-content");
-      if (!content) return;
-      const h2s = Array.from(content.querySelectorAll("h2[id]"));
-      const next = h2s.map((el) => ({ id: el.id, text: el.textContent.trim() }));
-      setAnchors((prev) => {
-        const same =
-          prev.length === next.length &&
-          prev.every((a, i) => a.id === next[i].id && a.text === next[i].text);
-        return same ? prev : next;
-      });
-    }
-
-    harvest();
-    const root = document.querySelector("#storybook-docs") || document.body;
-    const observer = new MutationObserver(harvest);
-    observer.observe(root, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, [currentPath]);
-
-  return (
-    <nav className="mv-doc-rail" aria-label="Chart navigation">
-      <div className="mv-doc-rail-header">Charts</div>
-      <ul className="mv-doc-rail-list">
-        {charts.map((c) => {
-          const isActive = currentPath === c.path;
-          return (
-            <li key={c.path} className="mv-doc-rail-item">
-              <a
-                href={`./?path=/docs/${c.path}--docs`}
-                aria-current={isActive ? "page" : undefined}
-                className={`mv-doc-rail-link${isActive ? " mv-doc-rail-link--active" : ""}`}
-              >
-                <span
-                  className={`mv-doc-star${isActive ? " mv-doc-star--breathe" : ""}`}
-                  aria-hidden="true"
-                >
-                  ✦
-                </span>
-                {c.name}
-              </a>
-              {isActive && anchors.length > 0 && (
-                <ul className="mv-doc-rail-anchors">
-                  {anchors.map((a) => (
-                    <li key={a.id}>
-                      <a href={`#${a.id}`} className="mv-doc-rail-anchor">
-                        {a.text}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
-  );
-}
 
 function MichiTopnav() {
   return (
@@ -233,27 +156,8 @@ function MichiDocsContainer({ children, context, ...props }) {
     typeof window !== "undefined"
       ? new URLSearchParams(window.location.search).get("id") || ""
       : "";
-  const isChartPage = storyId.startsWith("charts-");
   const isIntroPage = storyId.startsWith("introduction");
-  const pageType = isChartPage ? "chart" : isIntroPage ? "intro" : "other";
-  // "charts-line-chart--docs" → "charts-line-chart"
-  const currentPath = storyId.replace(/--.*$/, "");
-
-  if (isChartPage) {
-    return (
-      <div data-page-type="chart">
-        <MichiTopnav />
-        <div className="mv-docs-layout">
-          <ChartRail currentPath={currentPath} />
-          <div className="mv-docs-main">
-            <DocsContainer context={context} {...props}>
-              {children}
-            </DocsContainer>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const pageType = isIntroPage ? "intro" : "other";
 
   return (
     <div data-page-type={pageType}>
@@ -290,6 +194,7 @@ const preview = {
     layout: "centered",
     docs: {
       container: MichiDocsContainer,
+      theme: michiVzTheme,
     },
     options: {
       // Landing page first, then the chart catalog, then examples.

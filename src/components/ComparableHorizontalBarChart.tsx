@@ -109,7 +109,7 @@ interface LineChartProps {
   /**
    * Optional per-label pattern fill for the `valueBased` bar. Maps a series
    * label to an image source (a URL or data-URI) that is tiled as the bar's
-   * fill — `createHatchPattern()` generates a diagonal-hatch source. The key
+   * fill. `createHatchPattern()` generates a diagonal-hatch source. The key
    * may be the raw series label or its class-safe (`data-label-safe`) form.
    * Only the Canvas renderer (`renderer="canvas"`) applies this; the SVG
    * renderer ignores it. Omit for solid fills (default).

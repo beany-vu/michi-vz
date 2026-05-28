@@ -65,7 +65,7 @@ interface DataPoint {
    * When true, fade this series visually (canvas renderer only). Use for
    * "highlight a subset, dim the rest" UX where the dimmed set is data-
    * driven (e.g. all polygons except the current year). Independent of and
-   * composable with `highlightItems` — the two effects multiply.
+   * composable with `highlightItems`; the two effects multiply.
    *
    * SVG-renderer consumers can achieve the same effect via CSS targeting the
    * `<g class="series" data-label="...">` nodes.

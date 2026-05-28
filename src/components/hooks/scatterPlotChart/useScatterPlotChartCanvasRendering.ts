@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type React from "react";
 import { pointer } from "d3";
 import type { ScaleLinear, ScaleTime, ScaleBand } from "d3";
 import DOMPurify from "dompurify";
@@ -73,6 +74,11 @@ interface DrawParams {
   // Per-label fill colour resolved from the DOM (honours consumer CSS).
   resolvedColors: Map<string, string>;
   hoveredLabel: string | null;
+  stickyLabel: string | null;
+  showCrosshair: boolean;
+  crosshairLabels: boolean;
+  pinIcon: string | undefined;
+  margin: { top: number; right: number; bottom: number; left: number };
 }
 
 // Build a probe that mirrors ScatterPlotChart's real SVG mark so consumer CSS
@@ -131,6 +137,28 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
     const color =
       p.resolvedColors.get(d.label) ?? p.getColor(p.colorsMapping[d.label], d.color);
     const dimmed = anyHighlight && !highlightSet.has(d.label);
+
+    // Ring behind the main shape for the pinned point — matches the bubble's shape.
+    if (d.label === p.stickyLabel) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.45;
+      ctx.beginPath();
+      if (d.shape === "square") {
+        ctx.rect(cx - r - 5, cy - r - 5, (r + 5) * 2, (r + 5) * 2);
+      } else if (d.shape === "triangle") {
+        ctx.moveTo(cx, cy - r - 5);
+        ctx.lineTo(cx + r + 5, cy + r + 5);
+        ctx.lineTo(cx - r - 5, cy + r + 5);
+        ctx.closePath();
+      } else {
+        ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
     ctx.globalAlpha = dimmed ? OPACITY_NOT_HIGHLIGHTED : POINT_OPACITY;
 
     ctx.beginPath();
@@ -150,8 +178,82 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
     ctx.lineWidth = POINT_STROKE_WIDTH;
     ctx.strokeStyle = POINT_STROKE;
     ctx.stroke();
+
+    // Pin icon text above the pinned bubble (strings only; React nodes can't be drawn to canvas).
+    if (p.pinIcon && d.label === p.stickyLabel) {
+      ctx.save();
+      ctx.font = "12px sans-serif";
+      ctx.globalAlpha = 1;
+      ctx.fillText(p.pinIcon, cx + r + 2, cy - r - 2);
+      ctx.restore();
+    }
   }
   ctx.globalAlpha = 1;
+
+  // Crosshair lines drawn after all points so they render on top.
+  // Pinned (sticky) crosshair always shown; hover crosshair only when showCrosshair=true.
+  const crosshairLabel = p.stickyLabel ?? (p.showCrosshair ? p.hoveredLabel : null);
+  if (crosshairLabel) {
+    const cp = p.renderData.find(d => d.label === crosshairLabel);
+    if (cp) {
+      const cx = projectX(cp, p.xScale, p.xAxisDataType);
+      const cy = p.yScale(cp.y);
+      const color = p.resolvedColors.get(cp.label) ?? p.getColor(p.colorsMapping[cp.label], cp.color);
+      const isSticky = p.stickyLabel !== null;
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = isSticky ? 0.75 : 0.6;
+      ctx.lineWidth = 1.5;
+      if (!isSticky) ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx, p.height - p.margin.bottom);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(p.margin.left, cy);
+      ctx.lineTo(cx, cy);
+      ctx.stroke();
+      ctx.restore();
+
+      if (p.crosshairLabels) {
+        const xText = String(cp.x);
+        const yText = String(cp.y);
+        const h = 18;
+        const pad = 8;
+        ctx.save();
+        ctx.font = "10px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        // Y-axis badge
+        const yW = Math.max(28, ctx.measureText(yText).width + pad * 2);
+        ctx.globalAlpha = 0.92;
+        ctx.fillStyle = "#fff";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(p.margin.left - yW / 2, cy - h / 2, yW, h, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = color;
+        ctx.fillText(yText, p.margin.left, cy);
+        // X-axis badge
+        const xW = Math.max(28, ctx.measureText(xText).width + pad * 2);
+        ctx.globalAlpha = 0.92;
+        ctx.fillStyle = "#fff";
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(cx - xW / 2, p.height - p.margin.bottom - h / 2, xW, h, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = color;
+        ctx.fillText(xText, cx, p.height - p.margin.bottom);
+        ctx.restore();
+      }
+    }
+  }
 };
 
 export interface ScatterCanvasRenderingOptions {
@@ -178,6 +280,9 @@ export interface ScatterCanvasRenderingOptions {
   xAxisFormat?: (d: number | string) => string;
   yAxisFormat?: (d: number | string) => string;
   onHighlightItem?: (labels: string[]) => void;
+  showCrosshair?: boolean;
+  crosshairLabels?: boolean;
+  pinIcon?: string | React.ReactNode;
 }
 
 const useScatterPlotChartCanvasRendering = (
@@ -249,6 +354,11 @@ const useScatterPlotChartCanvasRendering = (
       colorsMapping,
       resolvedColors,
       hoveredLabel: hoveredRef.current,
+      stickyLabel: isStickyRef.current ? hoveredRef.current : null,
+      showCrosshair: opts.showCrosshair ?? false,
+      crosshairLabels: opts.crosshairLabels ?? false,
+      pinIcon: typeof opts.pinIcon === "string" ? opts.pinIcon : undefined,
+      margin: opts.margin,
     });
   });
 
@@ -276,6 +386,11 @@ const useScatterPlotChartCanvasRendering = (
         colorsMapping: o.colorsMapping,
         resolvedColors: resolvedColorsRef.current,
         hoveredLabel: hoveredRef.current,
+        stickyLabel: isStickyRef.current ? hoveredRef.current : null,
+        showCrosshair: o.showCrosshair ?? false,
+        crosshairLabels: o.crosshairLabels ?? false,
+        pinIcon: typeof o.pinIcon === "string" ? o.pinIcon : undefined,
+        margin: o.margin,
       });
     };
 

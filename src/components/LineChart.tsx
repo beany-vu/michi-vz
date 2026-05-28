@@ -176,7 +176,7 @@ interface LineChartProps {
   enableMouseLine?: boolean;
   /**
    * Render per-point shapes (circle/square/triangle) on each data point.
-   * Defaults to false — hover tooltips work via per-line bisection on the line-overlay.
+   * Defaults to false, hover tooltips work via per-line bisection on the line-overlay.
    * Set to true to restore the classic per-dot rendering and per-dot hover tooltips.
    * Note: single-point series will be invisible when false.
    */

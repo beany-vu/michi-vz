@@ -75,7 +75,7 @@ export default {
     docs: {
       description: {
         component:
-          "**DualHorizontalBarChart** plots two values per category — `value1` and `value2` — as bars mirrored left and right from a shared centre line. " +
+          "**DualHorizontalBarChart** plots two values per category, `value1` and `value2`, as bars mirrored left and right from a shared centre line. " +
           "It expects a `dataSet`: an array of `{ label, value1, value2 }` rows, with `value1` extending right and `value2` extending left. " +
           "Reach for it whenever a category has two directly comparable quantities and the gap or symmetry between them is the story: population pyramids (male vs female by age band), imports vs exports, before vs after, or any two-sided breakdown where a single bar would hide half the picture.",
       },
@@ -96,13 +96,13 @@ export const Primary = {
   args: {
     ...commonProps,
     dataSet: populationPyramid,
-    title: "Population by Age Band — Males vs Females (millions)",
+    title: "Population by Age Band: Males vs Females (millions)",
   },
   parameters: {
     docs: {
       description: {
         story:
-          "A classic population pyramid — male counts grow rightward from the centre, female counts grow leftward, with age bands stacked vertically. The near-mirror at younger ages and the lopsided 65+ row (women outliving men) is exactly the kind of asymmetry this layout makes obvious at a glance.",
+          "A classic population pyramid: male counts grow rightward from the centre, female counts grow leftward, with age bands stacked vertically. The near-mirror at younger ages and the lopsided 65+ row (women outliving men) is exactly the kind of asymmetry this layout makes obvious at a glance.",
       },
     },
   },
@@ -113,13 +113,13 @@ export const TradeBalance = {
   args: {
     ...commonProps,
     dataSet: tradeBySector,
-    title: "Merchandise Trade by Sector — Imports vs Exports (USD bn)",
+    title: "Merchandise Trade by Sector: Imports vs Exports (USD bn)",
   },
   parameters: {
     docs: {
       description: {
         story:
-          "Imports stretch right, exports stretch left, one sector per row — so each row is a trade balance you can read without doing math. Mineral Fuels leans heavily on imports while Vehicles and Agricultural Products run a surplus, and the tilt direction tells you which way each sector trades.",
+          "Imports stretch right, exports stretch left, one sector per row, so each row is a trade balance you can read without doing math. Mineral Fuels leans heavily on imports while Vehicles and Agricultural Products run a surplus, and the tilt direction tells you which way each sector trades.",
       },
     },
   },
@@ -137,7 +137,7 @@ export const TopSectorsByImports = {
     docs: {
       description: {
         story:
-          "Same trade dataset, narrowed to just the three biggest import sectors so the leaders stand alone. The `filter` prop does the ranking and trimming for you — flip its `criteria` to `valueCompared` to rank by exports instead.",
+          "Same trade dataset, narrowed to just the three biggest import sectors so the leaders stand alone. The `filter` prop does the ranking and trimming for you; flip its `criteria` to `valueCompared` to rank by exports instead.",
       },
     },
   },
@@ -154,14 +154,14 @@ export const YearOverYearComparison = {
       { label: "Wind", value1: 6.8, value2: 10.3 },
       { label: "Solar", value1: 2.3, value2: 5.9 },
     ],
-    title: "Electricity Generation Mix — 2019 vs 2024 (% share)",
+    title: "Electricity Generation Mix: 2019 vs 2024 (% share)",
     highlightItems: ["Solar"],
   },
   parameters: {
     docs: {
       description: {
         story:
-          "Each fuel's share of electricity in 2019 sits on the right, 2024 on the left, so the energy transition reads as a single shape — coal shrinking, wind and solar climbing. `highlightItems` dims everything except Solar, the way you'd spotlight the fastest mover in a briefing.",
+          "Each fuel's share of electricity in 2019 sits on the right, 2024 on the left, so the energy transition reads as a single shape: coal shrinking, wind and solar climbing. `highlightItems` dims everything except Solar, the way you'd spotlight the fastest mover in a briefing.",
       },
     },
   },
@@ -172,7 +172,7 @@ export const SharedColorMapping = {
   args: {
     ...commonProps,
     dataSet: tradeBySector,
-    title: "Trade by Sector — Pinned Sector Colors",
+    title: "Trade by Sector: Pinned Sector Colors",
     colors: ["#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6"],
     colorsMapping: {
       "Machinery & Electronics": "#1f77b4",
@@ -183,7 +183,7 @@ export const SharedColorMapping = {
     docs: {
       description: {
         story:
-          "Two sectors get hand-picked colours; the rest fall back to the default palette. Reuse the same `colorsMapping` across every chart in a dashboard and a given category keeps its colour everywhere — so a reader can follow it across views without re-learning the legend.",
+          "Two sectors get hand-picked colours; the rest fall back to the default palette. Reuse the same `colorsMapping` across every chart in a dashboard and a given category keeps its colour everywhere, so a reader can follow it across views without re-learning the legend.",
       },
     },
   },

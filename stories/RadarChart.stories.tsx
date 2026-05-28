@@ -91,7 +91,7 @@ const decathlonAxes = [
 
 const decathlonProfile = [
   seriesFrom(
-    "Athlete — Season Best",
+    "Athlete: Season Best",
     {
       "100m": 8.9,
       "Long Jump": 8.4,
@@ -189,12 +189,12 @@ export default {
           "**RadarChart** plots each series as a closed polygon over a shared set of " +
           "radial axes (the *poles*). Every series supplies one value per axis; the " +
           "distance of each vertex from the centre encodes that value, so the polygon's " +
-          "*shape* reveals an entity's overall profile — balanced, lopsided, strong or weak. " +
+          "*shape* reveals an entity's overall profile: balanced, lopsided, strong or weak. " +
           "It expects a `series` array (each with a `label` and a `data` array of " +
           "`{ date, value }` points, one per pole) plus a `poles` config defining the axes. " +
           "Reach for it to compare a handful of entities across several comparable metrics " +
           "and read strengths, gaps and trade-offs at a glance. It works best with **few " +
-          "series (2–4) and few axes (5–10)** — beyond that the overlapping polygons become " +
+          "series (2–4) and few axes (5–10)**. Beyond that the overlapping polygons become " +
           "hard to read.",
       },
     },
@@ -264,7 +264,7 @@ export const CityLivability: Story = {
           "Three cities scored on six livability dimensions, each city drawn as its own shape " +
           "in an auto-assigned colour. Each city has a recognisable silhouette: Singapore " +
           "leans hard on Safety and Transit but pinches in on Affordability, while Lisbon " +
-          "trades infrastructure for Climate. Three shapes is around the practical ceiling — " +
+          "trades infrastructure for Climate. Three shapes is around the practical ceiling; " +
           "a fourth tends to muddy the overlap.",
       },
     },
@@ -284,8 +284,8 @@ export const CandidateScorecard: Story = {
       description: {
         story:
           "Two interview candidates rated 1–5 against a six-point rubric, drawn as " +
-          "overlapping shapes. The two profiles interlock — Candidate A owns the technical " +
-          "sides, Candidate B owns Communication, Collaboration and Leadership — which " +
+          "overlapping shapes. The two profiles interlock: Candidate A owns the technical " +
+          "sides, Candidate B owns Communication, Collaboration and Leadership, which " +
           "reframes the hiring decision from 'who scored higher overall' to 'which shape " +
           "fits the role'.",
       },
@@ -385,7 +385,7 @@ export const InteractiveLegend: Story = {
         story:
           "How analysts actually work a radar: hover a button to spotlight one city and fade " +
           "the others, or click to hide it and compare just the rest. Peeling shapes off one " +
-          "at a time is the standard fix for the radar's main weakness — too much overlap. " +
+          "at a time is the standard fix for the radar's main weakness: too much overlap. " +
           "The emitted legend data (via `onChartDataProcessed`) is dumped below for wiring " +
           "up external legends.",
       },

@@ -94,8 +94,8 @@ export default {
           "**RibbonChart** draws one stacked bar per period and joins each category " +
           "across periods with a curved ribbon, so you can see at a glance how a " +
           "category's *share of the whole* rises, falls, and re-ranks over time. " +
-          "It expects `series` — one object per period with a numeric `date` and one " +
-          "numeric field per category — plus a `keys` list naming the categories to " +
+          "It expects `series`, one object per period with a numeric `date` and one " +
+          "numeric field per category, plus a `keys` list naming the categories to " +
           "stack. Reach for it when the story is about **ranked composition flowing " +
           "between a few time points** (energy mix by year, market share by quarter, " +
           "budget allocation by cycle) rather than absolute trends, which a line chart " +
@@ -125,7 +125,7 @@ export const Primary = {
           "How the world's electricity mix has shifted between 2010 and 2023, with each " +
           "year as a stacked bar and curved ribbons linking each fuel between years. The " +
           "coal ribbon narrows from 40% to 36% while wind + solar fans out from under 2% to " +
-          "over 13%, visibly climbing past nuclear — a rank change a bar chart would hide. " +
+          "over 13%, visibly climbing past nuclear, a rank change a bar chart would hide. " +
           "Colours come from `colorsMapping` on the surrounding `MichiVzProvider`.",
       },
     },
@@ -154,7 +154,7 @@ export const CompositionReRanking = {
         story:
           "How the EU's biggest trading partners have re-ordered themselves since 2017. " +
           "The UK ribbon collapses from ~12% to ~6% post-Brexit while China's swells and " +
-          "the US stays roughly flat — the crossing and thinning ribbons make the reshuffle " +
+          "the US stays roughly flat. The crossing and thinning ribbons make the reshuffle " +
           "obvious in a way separate bar charts would not. `xAxisFormat` shortens the year " +
           "ticks to `'17`, `'19` etc.",
       },
@@ -166,7 +166,7 @@ export const CompositionReRanking = {
 export const ReadableTooltip = {
   args: {
     ...commonProps,
-    title: "World Electricity Mix — Detailed Tooltip",
+    title: "World Electricity Mix: Detailed Tooltip",
     tooltipContent: (data: { date: number; [key: string]: number | undefined }) => `
       <div style="background:#fff;padding:8px 10px;min-width:180px;font:12px/1.5 sans-serif">
         <strong>${data.date}</strong>
@@ -205,7 +205,7 @@ export const FocusOnCategory = {
           "Two ways to cut through a busy stack at once. `highlightItems` spotlights the " +
           "wind + solar ribbon and fades the rest so the growth story pops, while " +
           "`disabledItems` removes hydro and nuclear entirely and rebases the y-scale to " +
-          "what's left — useful when you want to compare a subset of the mix on its own " +
+          "what's left, useful when you want to compare a subset of the mix on its own " +
           "terms.",
       },
     },
@@ -268,7 +268,7 @@ export const InteractiveExploration = {
         story:
           "The chart wired for exploration: hover a button to spotlight one fuel's ribbon, " +
           "click to remove it and rebase the stack on what's left. This is how analysts " +
-          "actually use the chart in practice — focus on one fuel, then strip it out to " +
+          "actually use the chart in practice: focus on one fuel, then strip it out to " +
           "compare the others without its weight skewing the view.",
       },
     },

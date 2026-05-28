@@ -41,10 +41,10 @@ export default {
     docs: {
       description: {
         component:
-          "**LineChart** plots one or more time series on a shared set of axes — the workhorse for trend analysis, comparisons between groups, and forecasts. " +
+          "**LineChart** plots one or more time series on a shared set of axes, the workhorse for trend analysis, comparisons between groups, and forecasts. " +
           "It expects a `dataSet`: an array of labelled series, each with a `series` array of `{ date, value, certainty }` points. " +
           "Points marked `certainty: false` render as a dashed line, so projected or low-confidence data reads differently from observed data. " +
-          "For large datasets, opt into `renderer=\"canvas\"` — the same chart drawn on a `<canvas>` with LTTB decimation, scaling smoothly to tens of thousands of points while axes, title and tooltip stay SVG/HTML.",
+          "For large datasets, opt into `renderer=\"canvas\"`, the same chart drawn on a `<canvas>` with LTTB decimation, scaling smoothly to tens of thousands of points while axes, title and tooltip stay SVG/HTML.",
       },
     },
   },
@@ -104,7 +104,7 @@ export const Primary = {
     ...commonProps,
     dataSet: [
       {
-        label: "Renewable share — EU",
+        label: "Renewable share: EU",
         shape: "circle",
         color: "#2e7d32",
         series: [
@@ -118,7 +118,7 @@ export const Primary = {
         ],
       },
       {
-        label: "Renewable share — United States",
+        label: "Renewable share: United States",
         shape: "square",
         color: "#1565c0",
         series: [
@@ -138,7 +138,7 @@ export const Primary = {
     docs: {
       description: {
         story:
-          "How the share of electricity from renewables has grown in the EU versus the United States since 2017. The widening gap tells the story at a glance — and the dashed tail on the last two years flags forecast figures, so readers can see at a glance where observed data ends and projections begin. Points marked `certainty: false` render as a dashed segment.",
+          "How the share of electricity from renewables has grown in the EU versus the United States since 2017. The widening gap tells the story at a glance, and the dashed tail on the last two years flags forecast figures, so readers can see at a glance where observed data ends and projections begin. Points marked `certainty: false` render as a dashed segment.",
       },
     },
   },
@@ -190,7 +190,7 @@ export const TopPerformersFilter = {
     docs: {
       description: {
         story:
-          "New power-generation capacity added each year, broken out by technology. The chart automatically keeps only the two leaders as of 2021 — Solar PV and Onshore Wind — so a busy dataset becomes a clear leaderboard without manually trimming the input. Controlled by the `filter` prop (rank by value at a chosen date, keep top N).",
+          "New power-generation capacity added each year, broken out by technology. The chart automatically keeps only the two leaders as of 2021, Solar PV and Onshore Wind, so a busy dataset becomes a clear leaderboard without manually trimming the input. Controlled by the `filter` prop (rank by value at a chosen date, keep top N).",
       },
     },
   },
@@ -248,7 +248,7 @@ export const ShapesAndCurves = {
     docs: {
       description: {
         story:
-          "Three regional revenue trends drawn together, each with a distinct point shape and line style so they stay readable where they cross. Use different `shape` and `curve` settings per series when lines overlap — smoothed curves (`curveBumpX`) read as a trend, straight segments (`curveLinear`) read as exact values.",
+          "Three regional revenue trends drawn together, each with a distinct point shape and line style so they stay readable where they cross. Use different `shape` and `curve` settings per series when lines overlap: smoothed curves (`curveBumpX`) read as a trend, straight segments (`curveLinear`) read as exact values.",
       },
     },
   },
@@ -269,7 +269,7 @@ export const CanvasRenderer = {
     docs: {
       description: {
         story:
-          "Twelve sensors logged every month for twenty years — almost 3,000 points — rendered smoothly without lag. Setting `renderer=\"canvas\"` keeps the chart responsive on datasets that would slow the default mode to a crawl, while hover and tooltip behaviour stay identical.",
+          "Twelve sensors logged every month for twenty years, almost 3,000 points, rendered smoothly without lag. Setting `renderer=\"canvas\"` keeps the chart responsive on datasets that would slow the default mode to a crawl, while hover and tooltip behaviour stay identical.",
       },
     },
   },
@@ -308,7 +308,7 @@ export const RendererComparison = {
     docs: {
       description: {
         story:
-          "The same eight-sensor dataset drawn two ways, stacked top-to-bottom, to confirm switching renderers changes performance but not appearance. Curves, colours, dashed forecast tails and hover behaviour should match exactly between the two — a sanity check before adopting `renderer=\"canvas\"` in production.",
+          "The same eight-sensor dataset drawn two ways, stacked top-to-bottom, to confirm switching renderers changes performance but not appearance. Curves, colours, dashed forecast tails and hover behaviour should match exactly between the two, a sanity check before adopting `renderer=\"canvas\"` in production.",
       },
     },
   },
@@ -327,7 +327,7 @@ export const CanvasLargeDataset = {
     docs: {
       description: {
         story:
-          "Sixty sensors over thirty years of monthly readings — more than 21,000 data points — and the chart still pans and hovers smoothly. This is where the canvas renderer earns its place; flip `renderer` to `\"svg\"` in the controls to feel the same chart bog down.",
+          "Sixty sensors over thirty years of monthly readings, more than 21,000 data points, and the chart still pans and hovers smoothly. This is where the canvas renderer earns its place; flip `renderer` to `\"svg\"` in the controls to feel the same chart bog down.",
       },
     },
   },

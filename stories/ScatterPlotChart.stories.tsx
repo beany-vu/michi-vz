@@ -43,15 +43,15 @@ const suvModels = [
 // ($k), d = total revenue ($k). Two natural clusters: high-volume/low-value
 // "transactional" reps vs low-volume/high-value "enterprise" reps.
 const salesReps = [
-  { x: 62, y: 4.1, d: 254, label: "Transactional — Rivera", shape: "circle" as const },
-  { x: 58, y: 3.8, d: 220, label: "Transactional — Okafor", shape: "circle" as const },
-  { x: 71, y: 4.5, d: 320, label: "Transactional — Lindqvist", shape: "circle" as const },
-  { x: 66, y: 3.5, d: 231, label: "Transactional — Tanaka", shape: "circle" as const },
-  { x: 9, y: 47.0, d: 423, label: "Enterprise — Adeyemi", shape: "square" as const },
-  { x: 12, y: 39.5, d: 474, label: "Enterprise — Novak", shape: "square" as const },
-  { x: 7, y: 52.0, d: 364, label: "Enterprise — Costa", shape: "square" as const },
-  { x: 11, y: 44.0, d: 484, label: "Enterprise — Haddad", shape: "square" as const },
-  { x: 38, y: 12.0, d: 456, label: "Outlier — Bergström", shape: "triangle" as const },
+  { x: 62, y: 4.1, d: 254, label: "Transactional: Rivera", shape: "circle" as const },
+  { x: 58, y: 3.8, d: 220, label: "Transactional: Okafor", shape: "circle" as const },
+  { x: 71, y: 4.5, d: 320, label: "Transactional: Lindqvist", shape: "circle" as const },
+  { x: 66, y: 3.5, d: 231, label: "Transactional: Tanaka", shape: "circle" as const },
+  { x: 9, y: 47.0, d: 423, label: "Enterprise: Adeyemi", shape: "square" as const },
+  { x: 12, y: 39.5, d: 474, label: "Enterprise: Novak", shape: "square" as const },
+  { x: 7, y: 52.0, d: 364, label: "Enterprise: Costa", shape: "square" as const },
+  { x: 11, y: 44.0, d: 484, label: "Enterprise: Haddad", shape: "square" as const },
+  { x: 38, y: 12.0, d: 456, label: "Outlier: Bergström", shape: "triangle" as const },
 ];
 
 // --- Common props -----------------------------------------------------------
@@ -75,7 +75,7 @@ export default {
     docs: {
       description: {
         component:
-          "**ScatterPlotChart** plots one record per point in x/y space, making it the go-to chart for revealing the *relationship between two metrics* — correlation, clustering, and outliers. " +
+          "**ScatterPlotChart** plots one record per point in x/y space, making it the go-to chart for revealing the *relationship between two metrics*: correlation, clustering, and outliers. " +
           "Each datum needs `x` and `y`; an optional `d` value drives **bubble size** so you can layer in a third dimension, and an optional per-point `shape` (circle / square / triangle) encodes a category. " +
           "Points may carry their own `color`, or colours are auto-generated per `label`. An optional `date` field enables the `filter` prop (e.g. keep the top N by a criterion). " +
           "Reach for it when you want to ask *\"does X move with Y, and where do the exceptions sit?\"* rather than tracking a value over time.",
@@ -113,7 +113,7 @@ export const WealthVsHealth = {
     docs: {
       description: {
         story:
-          "Each country is a bubble: position shows income (rightward) and life expectancy (upward), bubble size shows population. Wealth and longevity rise together along a clear curve — but the huge India and China bubbles sit low on the income axis, and Japan floats above the trend as the longevity outlier.",
+          "Each country is a bubble: position shows income (rightward) and life expectancy (upward), bubble size shows population. Wealth and longevity rise together along a clear curve, but the huge India and China bubbles sit low on the income axis, and Japan floats above the trend as the longevity outlier.",
       },
     },
   },
@@ -140,7 +140,7 @@ export const PriceVsSatisfaction = {
     docs: {
       description: {
         story:
-          "Each SUV is plotted by price (right) and owner satisfaction (up), with bubble size showing how many sold. Satisfaction rises with price toward the premium German badges, but the biggest bubbles cluster in the affordable / high-satisfaction sweet spot — the pricey models trade volume for ratings.",
+          "Each SUV is plotted by price (right) and owner satisfaction (up), with bubble size showing how many sold. Satisfaction rises with price toward the premium German badges, but the biggest bubbles cluster in the affordable / high-satisfaction sweet spot. The pricey models trade volume for ratings.",
       },
     },
   },
@@ -151,7 +151,7 @@ export const ClustersAndOutlier = {
   args: {
     ...commonProps,
     dataSet: salesReps,
-    title: "Sales Reps — Deal Volume vs Deal Size",
+    title: "Sales Reps: Deal Volume vs Deal Size",
     xAxisFormat: (d: number | string) => `${d}`,
     yAxisFormat: (d: number | string) => `$${d}k`,
     showGrid: { x: true, y: true },
@@ -166,7 +166,7 @@ export const ClustersAndOutlier = {
     docs: {
       description: {
         story:
-          "Sales reps split into two clear groups: transactional reps (circles, bottom-right) close many small deals, enterprise reps (squares, top-left) close few big ones. The lone triangle is the outlier doing both — and its large bubble (total revenue) shows that hybrid style out-earns either cluster. Per-point `shape` drives the marker.",
+          "Sales reps split into two clear groups: transactional reps (circles, bottom-right) close many small deals, enterprise reps (squares, top-left) close few big ones. The lone triangle is the outlier doing both, and its large bubble (total revenue) shows that hybrid style out-earns either cluster. Per-point `shape` drives the marker.",
       },
     },
   },
@@ -177,7 +177,7 @@ export const CustomSizeLegend = {
   args: {
     ...commonProps,
     dataSet: countryDevelopment,
-    title: "GDP per Capita vs Life Expectancy — Custom Size Legend",
+    title: "GDP per Capita vs Life Expectancy: Custom Size Legend",
     xAxisFormat: (d: number | string) => `$${d}k`,
     yAxisFormat: (d: number | string) => `${d} yrs`,
     yAxisDomain: [60, 88] as [number, number],
@@ -194,7 +194,37 @@ export const CustomSizeLegend = {
     docs: {
       description: {
         story:
-          "Same wealth-vs-health bubbles, but the \"what does bubble size mean\" label is rendered by your own code — a plain-English note instead of the default key. Useful when a house style or non-technical audience needs the encoding spelled out. Driven by `dScaleLegendFormatter`.",
+          "Same wealth-vs-health bubbles, but the \"what does bubble size mean\" label is rendered by your own code, a plain-English note instead of the default key. Useful when a house style or non-technical audience needs the encoding spelled out. Driven by `dScaleLegendFormatter`.",
+      },
+    },
+  },
+};
+
+// Crosshair lines + pin indicator — hover to see axis guides, click to lock.
+export const WithCrosshairAndPin = {
+  args: {
+    ...commonProps,
+    dataSet: countryDevelopment,
+    title: "GDP per Capita vs Life Expectancy: Crosshair & Pin",
+    xAxisFormat: (d: number | string) => `$${d}k`,
+    yAxisFormat: (d: number | string) => `${d} yrs`,
+    yAxisDomain: [60, 88] as [number, number],
+    showGrid: { x: true, y: true },
+    showCrosshair: true,
+    crosshairLabels: true,
+    pinIcon: "📌",
+    dScaleLegend: {
+      title: "Population",
+      valueFormatter: (d: number) => `${Math.round(d)}M`,
+    },
+    tooltipFormatter: (d: { label: string; x: number; y: number; d: number }) =>
+      `<strong>${d.label}</strong><br/>GDP/capita: $${d.x}k · Life exp: ${d.y} yrs<br/>Population: ${d.d}M`,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Hover any bubble to see dashed crosshair lines with axis value badges. Click to pin: lines turn solid, a ring appears, and a 📌 marks the bubble. Click more bubbles to pin multiple for comparison. Click a pinned bubble to unpin it; click empty space to clear all. Driven by `showCrosshair`, `crosshairLabels`, and `pinIcon`.",
       },
     },
   },
@@ -205,7 +235,7 @@ export const TopByPopulation = {
   args: {
     ...commonProps,
     dataSet: countryDevelopment,
-    title: "Five Most Populous Countries — Wealth vs Health",
+    title: "Five Most Populous Countries: Wealth vs Health",
     xAxisFormat: (d: number | string) => `$${d}k`,
     yAxisFormat: (d: number | string) => `${d} yrs`,
     yAxisDomain: [60, 88] as [number, number],

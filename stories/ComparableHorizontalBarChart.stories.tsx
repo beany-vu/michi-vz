@@ -102,9 +102,9 @@ export default {
     docs: {
       description: {
         component:
-          "**ComparableHorizontalBarChart** draws two values — `valueBased` and `valueCompared` — for every category, as a pair of horizontal bars sharing one row. " +
+          "**ComparableHorizontalBarChart** draws two values, `valueBased` and `valueCompared`, for every category, as a pair of horizontal bars sharing one row. " +
           "It expects a `dataSet` of `{ label, valueBased, valueCompared }` items; values may be positive or negative, in which case bars diverge left and right of a zero line. " +
-          "Reach for it whenever the question is *how do these two numbers compare, per category* — budget vs actual, this year vs last year, target vs result, region A vs region B — where stacking the pair on one row makes the gap immediately readable.",
+          "Reach for it whenever the question is *how do these two numbers compare, per category*: budget vs actual, this year vs last year, target vs result, region A vs region B, where stacking the pair on one row makes the gap immediately readable.",
       },
     },
   },
@@ -128,7 +128,7 @@ export const Primary = {
     docs: {
       description: {
         story:
-          "Each department gets a pair of bars: what was planned vs what was actually spent. Reading them side-by-side makes overspend jump out immediately — Engineering and R&D ran over, Sales and Operations came in under — without scanning a table of variances.",
+          "Each department gets a pair of bars: what was planned vs what was actually spent. Reading them side-by-side makes overspend jump out immediately. Engineering and R&D ran over, Sales and Operations came in under, without any need to scan a table of variances.",
       },
     },
   },
@@ -139,7 +139,7 @@ export const YearOverYear = {
   args: {
     ...commonProps,
     dataSet: yearOverYearRevenue,
-    title: "Revenue by Product Line — Last Year vs This Year ($M)",
+    title: "Revenue by Product Line: Last Year vs This Year ($M)",
     xAxisPredefinedDomain: [0, 180],
     showGrid: true,
   },
@@ -166,7 +166,7 @@ export const DivergingValues = {
   args: {
     ...commonProps,
     dataSet: netChangeByRegion,
-    title: "Net Population Change by Region — 2010s vs 2020s (%)",
+    title: "Net Population Change by Region: 2010s vs 2020s (%)",
     xAxisPredefinedDomain: [-12, 24],
     showGrid: true,
     showZeroLineForXAxis: true,
@@ -175,7 +175,7 @@ export const DivergingValues = {
     docs: {
       description: {
         story:
-          "Decade-on-decade population change for each region, with growth pointing right and decline pointing left of zero. Growth is slowing everywhere — Eastern Europe's decline deepens and East Asia tips from growth into contraction — and `showZeroLineForXAxis` draws the baseline that anchors the read.",
+          "Decade-on-decade population change for each region, with growth pointing right and decline pointing left of zero. Growth is slowing everywhere: Eastern Europe's decline deepens and East Asia tips from growth into contraction. `showZeroLineForXAxis` draws the baseline that anchors the read.",
       },
     },
   },
@@ -191,7 +191,7 @@ export const DateAxis = {
       { label: "Airport Terminal C", valueBased: 2018, valueCompared: 2021 },
       { label: "Riverside Flood Defence", valueBased: 2012, valueCompared: 2017 },
     ],
-    title: "Infrastructure Projects — Planned Start vs Completion Year",
+    title: "Infrastructure Projects: Planned Start vs Completion Year",
     xAxisDataType: "number",
     xAxisPredefinedDomain: [2010, 2024],
     xAxisFormat: (d: number | { valueOf(): number }) => `${Math.round(Number(d))}`,
@@ -255,7 +255,7 @@ export const InteractiveExploration = {
   args: {
     ...commonProps,
     dataSet: budgetVsActual,
-    title: "Budget vs Actual — Focus a Department",
+    title: "Budget vs Actual: Focus a Department",
     xAxisPredefinedDomain: [0, 16],
   },
   parameters: {
@@ -275,7 +275,7 @@ export const CanvasPatternFills = {
     ...commonProps,
     renderer: "canvas" as const,
     dataSet: budgetVsActual,
-    title: "Budget vs Actual — Hatched valueBased Bars (canvas)",
+    title: "Budget vs Actual: Hatched valueBased Bars (canvas)",
     xAxisPredefinedDomain: [0, 16],
     showGrid: true,
     patternsMapping: budgetVsActual.reduce(

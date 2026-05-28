@@ -85,7 +85,7 @@ export default {
     docs: {
       description: {
         component:
-          "**BarBellChart** lays the values of one row end-to-end as a sequence of horizontal bar segments, each capped with a circular bell marker — one row per category. " +
+          "**BarBellChart** lays the values of one row end-to-end as a sequence of horizontal bar segments, each capped with a circular bell marker, one row per category. " +
           "It expects a `dataSet` of objects keyed by a `date` label plus one numeric field per stage, and a `keys` array naming those stages in order. " +
           "Because the segments are concatenated, the chart reads as both a per-stage breakdown *and* a cumulative total, making it ideal for funnels, multi-phase programmes, or any process where you want to compare the stage mix across many categories at once.",
       },
@@ -112,7 +112,7 @@ export const Primary = {
     docs: {
       description: {
         story:
-          "A recruiting funnel by department — applications, screens, interviews and hires laid end-to-end as one bar per team. The total bar length is each department's overall throughput, and the coloured segments show where the pipeline narrows: Sales runs the largest funnel, Design the smallest. Hover any segment for the stage count.",
+          "A recruiting funnel by department: applications, screens, interviews and hires laid end-to-end as one bar per team. The total bar length is each department's overall throughput, and the coloured segments show where the pipeline narrows: Sales runs the largest funnel, Design the smallest. Hover any segment for the stage count.",
       },
     },
   },
@@ -131,7 +131,7 @@ export const ProgrammePhasesByCountry = {
     docs: {
       description: {
         story:
-          "Spend on a clean-water programme across four countries and two quarters, broken into design, construction and commissioning phases. The chart answers two questions at once: which markets are scaling up (longer Q2 bars), and which are actually delivering (a healthy commissioning band means projects are coming online — a row still dominated by design is stuck on paper).",
+          "Spend on a clean-water programme across four countries and two quarters, broken into design, construction and commissioning phases. The chart answers two questions at once: which markets are scaling up (longer Q2 bars), and which are actually delivering. A healthy commissioning band means projects are coming online; a row still dominated by design is stuck on paper.",
       },
     },
   },
@@ -152,7 +152,7 @@ export const InterviewToOfferConversion = {
     docs: {
       description: {
         story:
-          "Zooming the same funnel down to just its final two stages — interviews and hires — to focus on the question that matters most to a hiring manager: how often does an interview turn into an offer? The short trailing band visualises the conversion gap directly: wide bands mean interviews rarely close; thin bands mean the team converts efficiently.",
+          "Zooming the same funnel down to just its final two stages, interviews and hires, to focus on the question that matters most to a hiring manager: how often does an interview turn into an offer? The short trailing band visualises the conversion gap directly: wide bands mean interviews rarely close; thin bands mean the team converts efficiently.",
       },
     },
   },
@@ -258,7 +258,7 @@ export const RankedByInstalledCapacity = {
     docs: {
       description: {
         story:
-          "Ten European countries' renewable build-out, rankable on the fly: pick a technology and the leaders rise to the top, while the segment mix still tells the wider story — Sweden's long hydro band, Denmark's wind-heavy profile. The dropdowns drive the `filter` prop; the legend chips toggle technologies via `disabledItems`.",
+          "Ten European countries' renewable build-out, rankable on the fly: pick a technology and the leaders rise to the top, while the segment mix still tells the wider story. Sweden's long hydro band and Denmark's wind-heavy profile stay visible throughout. The dropdowns drive the `filter` prop; the legend chips toggle technologies via `disabledItems`.",
       },
     },
   },
@@ -296,13 +296,13 @@ export const FocusASingleStage = {
   args: {
     ...commonProps,
     dataSet: hiringFunnelData,
-    title: "Hiring Funnel — Focus a Single Stage",
+    title: "Hiring Funnel: Focus a Single Stage",
   },
   parameters: {
     docs: {
       description: {
         story:
-          "When every row has several coloured segments, it's hard to compare just one stage across departments — highlighting solves that. Hover a stage button and every other band dims, so the `interviewed` band (for example) can be compared cleanly across all teams. Uses `highlightItems` for input and `onHighlightItem` to keep an external legend in sync.",
+          "When every row has several coloured segments, it's hard to compare just one stage across departments. Highlighting solves that. Hover a stage button and every other band dims, so the `interviewed` band (for example) can be compared cleanly across all teams. Uses `highlightItems` for input and `onHighlightItem` to keep an external legend in sync.",
       },
     },
   },

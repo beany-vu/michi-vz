@@ -174,10 +174,10 @@ export default {
     docs: {
       description: {
         component:
-          "**VerticalStackBarChart** turns a discrete category or time period into a single bar whose segments stack to the total — the chart to reach for when the question is *part-to-whole*: how is a whole composed, and how does that composition shift across periods? " +
-          "It expects a `dataSet`: an array of series, each with a `seriesKey` and a `series` array of records keyed `{ date, [key]: value }` — every non-`date` key becomes a stacked segment, and a series can carry several keys to compare side-by-side groups per category. " +
+          "**VerticalStackBarChart** turns a discrete category or time period into a single bar whose segments stack to the total, the chart to reach for when the question is *part-to-whole*: how is a whole composed, and how does that composition shift across periods? " +
+          "It expects a `dataSet`: an array of series, each with a `seriesKey` and a `series` array of records keyed `{ date, [key]: value }`. Every non-`date` key becomes a stacked segment, and a series can carry several keys to compare side-by-side groups per category. " +
           "Colors are auto-generated and reported via `onColorMappingGenerated`, while `filter` ranks and trims series by total value at a chosen date. " +
-          "Reach for it over a line chart when the magnitude *and* the mix both matter — energy generation by source, revenue by product line, headcount by department.",
+          "Reach for it over a line chart when the magnitude *and* the mix both matter: energy generation by source, revenue by product line, headcount by department.",
       },
     },
   },
@@ -203,7 +203,7 @@ export const Primary = {
     docs: {
       description: {
         story:
-          "Each year is one bar, each energy source a coloured segment within it, and the whole bar is total electricity generated. Coal shrinks year over year while wind and solar climb to fill the gap — a decarbonising grid where the total stays roughly flat. The chart shows magnitude *and* mix in one read; hover any segment for the underlying value.",
+          "Each year is one bar, each energy source a coloured segment within it, and the whole bar is total electricity generated. Coal shrinks year over year while wind and solar climb to fill the gap. It is a decarbonising grid where the total stays roughly flat. The chart shows magnitude *and* mix in one read; hover any segment for the underlying value.",
       },
     },
   },
@@ -214,14 +214,14 @@ export const ComparingComposition = {
   args: {
     ...commonProps,
     dataSet: revenueByRegionDataSet,
-    title: "Revenue by Product Line — EMEA vs Americas (USD M)",
+    title: "Revenue by Product Line: EMEA vs Americas (USD M)",
     yAxisFormat: (d: number) => `$${d}M`,
   },
   parameters: {
     docs: {
       description: {
         story:
-          "Revenue for two regions across three years, with each bar split into five product lines. One view answers two questions at once: which region is bigger overall, and how the mix differs between them — Cloud is the growth engine in both regions but takes a markedly larger share of the Americas total. A flat total would hide that distinction entirely.",
+          "Revenue for two regions across three years, with each bar split into five product lines. One view answers two questions at once: which region is bigger overall, and how the mix differs between them. Cloud is the growth engine in both regions but takes a markedly larger share of the Americas total. A flat total would hide that distinction entirely.",
       },
     },
   },
@@ -232,11 +232,11 @@ export const FullStackTooltip = {
   args: {
     ...commonProps,
     dataSet: revenueByRegionDataSet,
-    title: "Revenue by Product Line — Full-Stack Tooltip",
+    title: "Revenue by Product Line: Full-Stack Tooltip",
     yAxisFormat: (d: number) => `$${d}M`,
     showCombined: true,
     tooltipFormatter: (d: { item: { date?: string | null }; seriesKey: string }) =>
-      `<div style="padding:6px"><strong>${d.seriesKey}</strong> — FY${d.item?.date ?? ""}</div>`,
+      `<div style="padding:6px"><strong>${d.seriesKey}</strong>: FY${d.item?.date ?? ""}</div>`,
   },
   parameters: {
     docs: {
@@ -264,7 +264,7 @@ export const RankingTopContributors = {
     docs: {
       description: {
         story:
-          "Eighteen companies' worth of data, trimmed to the six largest employers by 2023 headcount. The `filter` prop ranks series by total at a chosen date and keeps the top N, so the analyst surfaces the leaders without having to pre-trim the dataset upstream — and the same ranking drives legend order.",
+          "Eighteen companies' worth of data, trimmed to the six largest employers by 2023 headcount. The `filter` prop ranks series by total at a chosen date and keeps the top N, so the analyst surfaces the leaders without having to pre-trim the dataset upstream. The same ranking drives legend order.",
       },
     },
   },
@@ -285,7 +285,7 @@ export const HeadcountByDepartment = {
     docs: {
       description: {
         story:
-          "The full eighteen-company portfolio with eight departments stacked per bar across four years — the dense, unfiltered view. Bar height shows organisational scale while segment thickness reveals which firms are engineering-heavy versus sales-heavy at a glance. Colours and legend order are generated by the chart and emitted via `onColorMappingGenerated`.",
+          "The full eighteen-company portfolio with eight departments stacked per bar across four years, the dense unfiltered view. Bar height shows organisational scale while segment thickness reveals which firms are engineering-heavy versus sales-heavy at a glance. Colours and legend order are generated by the chart and emitted via `onColorMappingGenerated`.",
       },
     },
   },
@@ -300,14 +300,14 @@ export const AutoRotatingXAxisLabels = {
     width: 1100,
     height: 480,
     margin: { top: 50, right: 50, bottom: 50, left: 60 },
-    title: "Transportation Cost Share — 26 Months",
+    title: "Transportation Cost Share: 26 Months",
     yAxisFormat: (d: number) => `${d}%`,
   },
   parameters: {
     docs: {
       description: {
         story:
-          "26 monthly bars side-by-side — too many for the dates to sit horizontally without colliding. Instead of dropping every other label, the chart measures the width available and tilts them to -45° so every month stays visible and the time sequence is never broken. The bottom margin auto-expands to fit; pass `xAxisLabelMode=\"horizontal\"` to opt out and revert to the legacy skip-with-dots behaviour.",
+          "26 monthly bars side-by-side, too many for the dates to sit horizontally without colliding. Instead of dropping every other label, the chart measures the width available and tilts them to -45° so every month stays visible and the time sequence is never broken. The bottom margin auto-expands to fit; pass `xAxisLabelMode=\"horizontal\"` to opt out and revert to the legacy skip-with-dots behaviour.",
       },
     },
   },

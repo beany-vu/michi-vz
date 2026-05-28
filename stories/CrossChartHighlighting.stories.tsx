@@ -7,14 +7,6 @@ import {
   MichiVzProvider,
 } from "../src/components";
 
-// Cross-chart highlighting: two charts share a single `highlightItems` slice of
-// state. Hovering a series in either chart writes to that state via the
-// chart's `onHighlightItem` callback, which the other chart consumes through
-// its `highlightItems` prop and uses to dim everything else.
-//
-// The pairing is LineChart (trend over time) + ComparableHorizontalBarChart
-// (start vs end snapshot). Same six G7 labels on both axes — the highlight
-// handoff works because the label space is identical.
 
 export default {
   title: "Examples/Cross-Chart Highlighting",
@@ -22,22 +14,12 @@ export default {
     docs: {
       description: {
         component:
-          "How to wire two (or more) charts together so that hovering one **highlights the matching series in the others**. " +
-          "Hoist `highlightItems` to a parent component, pass it down to each chart, and route the chart's `onHighlightItem` callback back into the same state. " +
-          "Every chart accepts the same shape (`string[]` of label names) so the wiring is identical regardless of which charts you're pairing.",
+          "Same countries in two views: trend (top) and 2017 vs 2023 bars (bottom). Hover one country to highlight it in both charts.",
       },
     },
   },
 } as Meta;
 
-// --- Shared dataset ---------------------------------------------------------
-//
-// G7 renewable-electricity story, told two ways with one shared label space:
-//   • LineChart: yearly share, 2017–2023 (one series per country)
-//   • ComparableHorizontalBarChart: 2017 baseline vs 2023 latest (one row
-//     per country, two bars per row)
-// Because the two charts label by the same six country names, hovering a
-// country on either side propagates the highlight to the other.
 
 const countryColors = {
   Germany: "#1f77b4",
@@ -135,21 +117,12 @@ const renewableShareSeries = [
   },
 ];
 
-// 2017 baseline vs 2023 latest — derived from the same series above so the
-// numbers can't drift apart. ComparableHorizontalBarChart reads `valueBased`
-// as the "anchor" bar and `valueCompared` as the second; we read them as
-// "2017" and "2023" via the tooltip and the panel sub-title.
 const startVsEndShare = renewableShareSeries.map(s => ({
   label: s.label,
   valueBased: s.series[0].value,
   valueCompared: s.series[s.series.length - 1].value,
 }));
 
-// --- Styles -----------------------------------------------------------------
-//
-// Swiss-poster chrome: pure-white panels with a 2px red bar on the left,
-// 2px corner radius, Helvetica, near-black ink. Per-country line colours stay
-// varied so the data stays readable; restraint is on the chrome only.
 const layoutStyles = `
   .ccl-dashboard {
     display: grid;
@@ -159,18 +132,10 @@ const layoutStyles = `
     font-family: "Helvetica Neue", Helvetica, "Arimo", "Liberation Sans", Arial, sans-serif;
   }
   .ccl-panel {
-    position: relative;
     border: 1px solid #E5E5E5;
     border-radius: 2px;
     padding: 22px 28px 18px;
-    background: #FFFFFF;
-  }
-  .ccl-panel::before {
-    content: "";
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 2px;
-    background: #C84B3F;
+    background: #F7F7F7;
   }
   .ccl-panel-title {
     font: 700 15px "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -183,25 +148,6 @@ const layoutStyles = `
     color: #525252;
     margin: 0 0 14px;
   }
-  .ccl-hint {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    margin-bottom: 22px;
-    border-radius: 2px;
-    background: #FBEDEB;
-    border: 1px solid #E5E5E5;
-    border-left: 3px solid #C84B3F;
-    font: 13px/1 "Helvetica Neue", Helvetica, Arial, sans-serif;
-    color: #0A0A0A;
-  }
-  .ccl-hint-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #C84B3F;
-  }
   .ccl-pill {
     display: inline-block;
     padding: 3px 10px;
@@ -211,10 +157,6 @@ const layoutStyles = `
     color: #FFFFFF;
     font: 600 12px "Helvetica Neue", Helvetica, Arial, sans-serif;
     letter-spacing: 0.01em;
-  }
-  .ccl-pill[data-empty="true"] {
-    background: #F0F0F0;
-    color: #525252;
   }
 `;
 
@@ -242,10 +184,6 @@ const tooltipFormatter = (d: unknown) => {
   );
 };
 
-// --- Stories ----------------------------------------------------------------
-
-// Two charts, one piece of state — hovering either chart highlights the
-// matching country in the other.
 export const TwoChartsOneState = {
   render: () => {
     const [highlightItems, setHighlightItems] = useState<string[]>([]);
@@ -253,21 +191,14 @@ export const TwoChartsOneState = {
     return (
       <MichiVzProvider colorsMapping={countryColors}>
         <style>{layoutStyles}</style>
-        <div className="ccl-hint">
-          <span className="ccl-hint-dot" />
-          Hover either chart &mdash; the matching country highlights in both
-          <span
-            className="ccl-pill"
-            data-empty={highlightItems.length === 0 ? "true" : "false"}
-          >
-            {highlightItems.length === 0 ? "no highlight" : highlightItems.join(", ")}
-          </span>
-        </div>
         <div className="ccl-dashboard">
           <div className="ccl-panel">
-            <h4 className="ccl-panel-title">Renewable share of electricity — trend</h4>
+            <h4 className="ccl-panel-title">Renewable share of electricity, trend</h4>
             <p className="ccl-panel-sub">
-              G7 economies, 2017&ndash;2023. One line per country.
+              G7 economies, 2017 to 2023. One line per country.
+              {highlightItems.length > 0 && (
+                <span className="ccl-pill">{highlightItems.join(", ")}</span>
+              )}
             </p>
             <LineChart
               dataSet={renewableShareSeries}
@@ -293,10 +224,10 @@ export const TwoChartsOneState = {
             />
           </div>
           <div className="ccl-panel">
-            <h4 className="ccl-panel-title">2017 vs 2023 &mdash; start and end</h4>
+            <h4 className="ccl-panel-title">2017 vs 2023</h4>
             <p className="ccl-panel-sub">
               Same six countries. The gap between the two bars on each row is
-              the change in share over the seven years.
+              the change over the seven years.
             </p>
             <ComparableHorizontalBarChart
               dataSet={startVsEndShare}
@@ -323,9 +254,7 @@ export const TwoChartsOneState = {
     docs: {
       description: {
         story:
-          "**The pattern in three lines:** `const [highlightItems, setHighlightItems] = useState<string[]>([])`, then on each chart pass `highlightItems={highlightItems}` and `onHighlightItem={setHighlightItems}`. Both charts read from and write to the same slice of state.\n\n" +
-          "Here a `LineChart` shows the 2017–2023 trajectory of every G7 economy's renewable-electricity share; underneath, a `ComparableHorizontalBarChart` snapshots just the start (2017) and end (2023) values per country, so the size of the gap on each row is the seven-year change. Hover Germany on either chart and Germany lights up on the other — the rest fade.\n\n" +
-          "The same wiring works for any chart in the library: every chart accepts `highlightItems: string[]` and emits `onHighlightItem(labels: string[])`. Scale this up to a four-chart dashboard by hoisting the state one more level and giving each chart the same pair of props.",
+          "Two charts, same six countries. Hover a country in either chart to see it highlighted in both.",
       },
     },
   },

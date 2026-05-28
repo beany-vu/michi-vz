@@ -24,6 +24,7 @@ import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import TooltipHint from "src/components/shared/TooltipHint";
 import MichiVzCredit from "./shared/MichiVzCredit";
 import useScatterPlotChartCanvasRendering from "./hooks/scatterPlotChart/useScatterPlotChartCanvasRendering";
+import DOMPurify from "dompurify";
 
 function getColor(mappedColor?: string, dataColor?: string): string {
   const FALLBACK_COLOR = "rgba(253, 253, 253, 0.5)";
@@ -151,13 +152,31 @@ interface ScatterPlotChartProps<T extends number | string> {
   disabledItems?: string[];
   /**
    * Rendering backend for the point cloud.
-   *  - "svg" (default): the original SVG/D3 rendering, unchanged — one DOM
+   *  - "svg" (default): the original SVG/D3 rendering, unchanged, one DOM
    *    node per point.
    *  - "canvas": draw every point onto a single <canvas>, for large datasets
    *    (thousands+ of points). Axes, title, d-scale legend and the tooltip are
    *    unchanged in both modes.
    */
   renderer?: "svg" | "canvas";
+  /**
+   * When true, shows a dashed crosshair on hover for unpinned bubbles.
+   * Pinned bubbles always show a solid crosshair regardless of this prop.
+   */
+  showCrosshair?: boolean;
+  /**
+   * When true (and showCrosshair is also true), renders a circle badge on each axis at the
+   * crosshair intersection showing the formatted axis value. Default false.
+   */
+  crosshairLabels?: boolean;
+  /**
+   * Icon shown in the top-right corner of each pinned tooltip.
+   * - string (e.g. `"📌"`, `"★"`) — rendered as text
+   * - React.ReactNode — rendered as JSX
+   * - `false` / `null` / `""` — disables the icon entirely
+   * Default: `"📌"`
+   */
+  pinIcon?: string | React.ReactNode;
 }
 
 const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
@@ -191,6 +210,9 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   highlightItems = [],
   disabledItems = [],
   renderer = "svg",
+  showCrosshair = false,
+  crosshairLabels = false,
+  pinIcon = "📌",
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -198,8 +220,11 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   const svgContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [activePoint, setActivePoint] = useState<DataPoint | null>(null);
+  // Multi-pin: label → DataPoint for every currently pinned bubble.
+  const [pinnedPoints, setPinnedPoints] = useState<Map<string, DataPoint>>(new Map());
+  const pinnedPointsRef = useRef<Map<string, DataPoint>>(new Map());
+  pinnedPointsRef.current = pinnedPoints;
   const lastColorMappingSentRef = useRef<{ [key: string]: string }>({});
-  const [isTooltipSticky, setIsTooltipSticky] = useState(false);
 
   // Use ref to capture latest tooltipFormatter to avoid stale closure issues
   const tooltipFormatterRef = useRef(tooltipFormatter);
@@ -376,14 +401,13 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
       setActivePoint(d);
       onHighlightItem([d.label]);
 
-      if (!tooltipRef.current || isTooltipSticky) return;
+      // Pinned bubbles already have a persistent tooltip — skip the hover one.
+      if (!tooltipRef.current || !tooltipContentRef.current || pinnedPointsRef.current.has(d.label)) return;
 
       const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
-      // Get mouse position relative to document
       const x = mousePoint[0];
       const y = mousePoint[1];
 
-      // Create tooltip content
       let content = "";
       if (tooltipFormatterRef.current) {
         content = tooltipFormatterRef.current(d);
@@ -397,42 +421,41 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
         `;
       }
 
-      // Apply content and position at once
       tooltipContentRef.current.innerHTML = content;
       tooltipRef.current.style.left = `${x + 10}px`;
       tooltipRef.current.style.top = `${y - 10}px`;
       tooltipRef.current.style.display = "block";
     },
-    [isTooltipSticky, onHighlightItem, xAxisFormat, yAxisFormat]
+    [onHighlightItem, xAxisFormat, yAxisFormat]
   );
 
   const handleSvgMouseMove = useCallback(
     event => {
-      if (activePoint && tooltipRef.current && !isTooltipSticky) {
+      if (activePoint && tooltipRef.current) {
         const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
-        // Get mouse position relative to svg
-        const x = mousePoint[0];
-        const y = mousePoint[1];
-
-        // Update tooltip position directly with client coordinates
-        tooltipRef.current.style.left = `${x + 10}px`;
-        tooltipRef.current.style.top = `${y - 10}px`;
+        tooltipRef.current.style.left = `${mousePoint[0] + 10}px`;
+        tooltipRef.current.style.top = `${mousePoint[1] - 10}px`;
       }
     },
-    [activePoint, isTooltipSticky]
+    [activePoint]
   );
 
   const handleMouseLeave = useCallback(() => {
     setActivePoint(null);
     onHighlightItem([]);
+    if (tooltipRef.current) tooltipRef.current.style.display = "none";
+  }, [onHighlightItem]);
 
-    if (tooltipRef.current && !isTooltipSticky) {
-      tooltipRef.current.style.display = "none";
-    }
-  }, [isTooltipSticky, onHighlightItem]);
-
-  const handleMouseClick = useCallback(() => {
-    setIsTooltipSticky(true);
+  const handleMouseClick = useCallback((d: DataPoint) => {
+    setPinnedPoints(prev => {
+      const next = new Map(prev);
+      if (next.has(d.label)) {
+        next.delete(d.label);
+      } else {
+        next.set(d.label, d);
+      }
+      return next;
+    });
   }, []);
 
   const displayIsNodata = useDisplayIsNodata({
@@ -466,31 +489,26 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     xAxisFormat,
     yAxisFormat,
     onHighlightItem,
+    showCrosshair,
+    crosshairLabels,
+    pinIcon,
   });
 
+  // Click entirely outside the chart container clears all pins.
+  // We use container.contains() rather than .closest(".data-point") to avoid
+  // SVG element traversal issues in some browsers/environments.
+  // In-chart background clicks are handled by the SVG background <rect> below.
   useEffect(() => {
+    if (pinnedPoints.size === 0) return undefined;
     const handleClickOutside = (event: MouseEvent) => {
-      if (isTooltipSticky) {
-        const tooltipElement = (event.target as HTMLElement).closest(".tooltip");
-        const anchorEl = (event.target as HTMLElement).closest(".data-point");
-
-        if (!tooltipElement && !anchorEl) {
-          if (tooltipRef.current) {
-            tooltipRef.current.style.display = "none";
-          }
-
-          setIsTooltipSticky(false);
-        }
+      const container = svgContainerRef.current;
+      if (container && !container.contains(event.target as Node)) {
+        setPinnedPoints(new Map());
       }
     };
-
-    if (isTooltipSticky) {
-      document.addEventListener("click", handleClickOutside);
-      return () => {
-        document.removeEventListener("click", handleClickOutside);
-      };
-    }
-  }, [isTooltipSticky]);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [pinnedPoints.size]);
 
   // Move useDeepCompareEffect here, before any conditional returns
   useDeepCompareEffect(() => {
@@ -629,8 +647,31 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                 ref={tooltipRef}
               >
                 <div className="tooltip-content" ref={tooltipContentRef} />
-                {!isTooltipSticky && !canvasTooltip.isSticky && <TooltipHint />}
+                {pinnedPoints.size === 0 && !canvasTooltip.isSticky && <TooltipHint />}
               </div>
+
+              {/* Pinned tooltips — one per pinned bubble, positioned near the bubble from live scales. */}
+              {renderer !== "canvas" && Array.from(pinnedPoints.values()).map(point => {
+                const tipX = Math.min((getXValue(point) ?? 0) + 10, width - 160);
+                const tipY = Math.max(margin.top, yScale(point.y) - 10);
+                const raw = tooltipFormatterRef.current
+                  ? tooltipFormatterRef.current(point)
+                  : `<div><div>${point.label}</div><div>${xAxisFormat ? xAxisFormat(point.x) : point.x}</div><div>${yAxisFormat ? yAxisFormat(point.y) : point.y}</div></div>`;
+                return (
+                  <div key={point.label} className="tooltip pinned-tooltip"
+                    style={{ position: "absolute", backgroundColor: "#fff", display: "block",
+                             padding: "10px", borderRadius: "5px", zIndex: 999,
+                             left: `${tipX}px`, top: `${tipY}px`, pointerEvents: "none" }}>
+                    {pinIcon && (
+                      <div style={{ display: "flex", justifyContent: "flex-end",
+                                    marginBottom: "4px", fontSize: "12px", lineHeight: 1 }}>
+                        {pinIcon}
+                      </div>
+                    )}
+                    <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(raw) }} />
+                  </div>
+                );
+              })}
 
               <svg
                 width={width}
@@ -639,11 +680,96 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                 onMouseMove={handleSvgMouseMove}
                 style={{ position: "relative" }}
               >
+                {/* Transparent background rect: clicking empty chart area clears all pins.
+                    Must be the first child so data-points and crosshairs render on top. */}
+                {renderer !== "canvas" && pinnedPoints.size > 0 && (
+                  <rect x={0} y={0} width={width} height={height} fill="transparent"
+                    onClick={() => setPinnedPoints(new Map())} style={{ cursor: "default" }} />
+                )}
+
                 <MichiVzCredit />
                 <Title x={width / 2} y={margin.top / 2}>
                   {title}
                 </Title>
                 {children}
+
+                {/* Pinned crosshairs — always shown for every pinned bubble (solid, 1.5px). */}
+                {renderer !== "canvas" && Array.from(pinnedPoints.values()).map(point => {
+                  const cx = getXValue(point) ?? 0;
+                  const cy = yScale(point.y);
+                  const color = getColor(generatedColorsMapping[point.label], point.color);
+                  return (
+                    <React.Fragment key={`xhair-${point.label}`}>
+                      <line x1={cx} x2={cx} y1={cy} y2={height - margin.bottom}
+                        stroke={color} strokeOpacity={0.75} strokeWidth={1.5} pointerEvents="none" />
+                      <line x1={margin.left} x2={cx} y1={cy} y2={cy}
+                        stroke={color} strokeOpacity={0.75} strokeWidth={1.5} pointerEvents="none" />
+                      {crosshairLabels && (() => {
+                        const yLbl = yAxisFormat ? yAxisFormat(point.y) : String(point.y);
+                        const xLbl = xAxisFormat ? xAxisFormat(point.x) : String(point.x);
+                        const yW = Math.max(28, yLbl.length * 6 + 16);
+                        const xW = Math.max(28, xLbl.length * 6 + 16);
+                        return (
+                          <>
+                            <g transform={`translate(${margin.left}, ${cy})`} pointerEvents="none">
+                              <rect x={-yW / 2} y={-9} width={yW} height={18} rx={4}
+                                fill="#fff" fillOpacity={0.92} stroke={color} strokeWidth={1} />
+                              <text textAnchor="middle" dominantBaseline="middle" fontSize="10" fill={color}>
+                                {yLbl}
+                              </text>
+                            </g>
+                            <g transform={`translate(${cx}, ${height - margin.bottom})`} pointerEvents="none">
+                              <rect x={-xW / 2} y={-9} width={xW} height={18} rx={4}
+                                fill="#fff" fillOpacity={0.92} stroke={color} strokeWidth={1} />
+                              <text textAnchor="middle" dominantBaseline="middle" fontSize="10" fill={color}>
+                                {xLbl}
+                              </text>
+                            </g>
+                          </>
+                        );
+                      })()}
+                    </React.Fragment>
+                  );
+                })}
+
+                {/* Hover crosshair — dashed, only when showCrosshair=true and hovering an unpinned bubble. */}
+                {renderer !== "canvas" && showCrosshair && activePoint && !pinnedPoints.has(activePoint.label) && (() => {
+                  const cx = getXValue(activePoint) ?? 0;
+                  const cy = yScale(activePoint.y);
+                  const color = getColor(generatedColorsMapping[activePoint.label], activePoint.color);
+                  return (
+                    <>
+                      <line x1={cx} x2={cx} y1={cy} y2={height - margin.bottom}
+                        stroke={color} strokeDasharray="4 4" strokeOpacity={0.6} strokeWidth={1.5} pointerEvents="none" />
+                      <line x1={margin.left} x2={cx} y1={cy} y2={cy}
+                        stroke={color} strokeDasharray="4 4" strokeOpacity={0.6} strokeWidth={1.5} pointerEvents="none" />
+                      {crosshairLabels && (() => {
+                        const yLbl = yAxisFormat ? yAxisFormat(activePoint.y) : String(activePoint.y);
+                        const xLbl = xAxisFormat ? xAxisFormat(activePoint.x) : String(activePoint.x);
+                        const yW = Math.max(28, yLbl.length * 6 + 16);
+                        const xW = Math.max(28, xLbl.length * 6 + 16);
+                        return (
+                          <>
+                            <g transform={`translate(${margin.left}, ${cy})`} pointerEvents="none">
+                              <rect x={-yW / 2} y={-9} width={yW} height={18} rx={4}
+                                fill="#fff" fillOpacity={0.92} stroke={color} strokeWidth={1} />
+                              <text textAnchor="middle" dominantBaseline="middle" fontSize="10" fill={color}>
+                                {yLbl}
+                              </text>
+                            </g>
+                            <g transform={`translate(${cx}, ${height - margin.bottom})`} pointerEvents="none">
+                              <rect x={-xW / 2} y={-9} width={xW} height={18} rx={4}
+                                fill="#fff" fillOpacity={0.92} stroke={color} strokeWidth={1} />
+                              <text textAnchor="middle" dominantBaseline="middle" fontSize="10" fill={color}>
+                                {xLbl}
+                              </text>
+                            </g>
+                          </>
+                        );
+                      })()}
+                    </>
+                  );
+                })()}
 
                 {/* Use renderOrderedDataSet instead of filteredDataSet for proper rendering order */}
                 {/* In canvas mode the point marks are painted on the <canvas>; skip the SVG marks. */}
@@ -656,8 +782,8 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                     const size = xAxisDataType === "band" ? d.d / 2 : dScale(d.d);
                     const radius = size / 2;
                     const fill = getColor(generatedColorsMapping[d.label], d.color);
+                    const isPinned = pinnedPoints.has(d.label);
 
-                    // Function to create the right shape based on the shape prop
                     return (
                       <g
                         className="data-point"
@@ -668,8 +794,26 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                         data-label-safe={sanitizeForClassName(d.label)}
                         onMouseEnter={event => handleMouseEnter(event, d)}
                         onMouseLeave={handleMouseLeave}
-                        onClick={handleMouseClick}
+                        onClick={() => handleMouseClick(d)}
                       >
+                        {/* Ring sits behind the main shape — matches the bubble's shape */}
+                        {isPinned && (
+                          d.shape === "square" ? (
+                            <rect x={-radius - 5} y={-radius - 5}
+                              width={size + 10} height={size + 10}
+                              fill="none" stroke={fill} strokeWidth={2} opacity={0.45}
+                              pointerEvents="none" />
+                          ) : d.shape === "triangle" ? (
+                            <path
+                              d={`M0,${-radius - 5} L${radius + 5},${radius + 5} L${-radius - 5},${radius + 5} Z`}
+                              fill="none" stroke={fill} strokeWidth={2} opacity={0.45}
+                              pointerEvents="none" />
+                          ) : (
+                            <circle r={radius + 5} fill="none"
+                              stroke={fill} strokeWidth={2} opacity={0.45}
+                              pointerEvents="none" />
+                          )
+                        )}
                         {d.shape === "square" ? (
                           <rect
                             x={-radius}
@@ -688,7 +832,6 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                             strokeWidth={2}
                           />
                         ) : (
-                          // Default is circle
                           <circle r={radius} fill={fill} stroke="#fff" strokeWidth={2} />
                         )}
                       </g>

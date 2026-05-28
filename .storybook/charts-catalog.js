@@ -2,22 +2,22 @@ export const charts = [
   {
     name: "Line Chart",
     path: "charts-line-chart",
-    use: "Trends over time across one or many series — with an opt-in Canvas renderer for large datasets.",
+    use: "Trends over time across one or many series, with an opt-in Canvas renderer for large datasets.",
   },
   {
     name: "Area Chart",
     path: "charts-area-chart",
-    use: "Part-to-whole trends — how each component's share of a total shifts over time.",
+    use: "Part-to-whole trends: how each component's share of a total shifts over time.",
   },
   {
     name: "Range Chart",
     path: "charts-range-chart",
-    use: "Uncertainty bands and min/max envelopes — forecasts, confidence intervals, observed ranges.",
+    use: "Uncertainty bands and min/max envelopes: forecasts, confidence intervals, observed ranges.",
   },
   {
     name: "Ribbon Chart",
     path: "charts-ribbon-chart",
-    use: "Stacked composition that re-ranks between periods — ribbons make the flow visible.",
+    use: "Stacked composition that re-ranks between periods, with ribbons that make the flow visible.",
   },
   {
     name: "Scatter Plot",
@@ -32,12 +32,12 @@ export const charts = [
   {
     name: "Gap Chart",
     path: "charts-gap-chart",
-    use: "The gap between two values per category — actual vs target, before vs after.",
+    use: "The gap between two values per category: actual vs target, before vs after.",
   },
   {
     name: "Bar Bell Chart",
     path: "charts-bar-bell-chart",
-    use: "Per-row segments laid end-to-end — funnels and stage-by-stage breakdowns.",
+    use: "Per-row segments laid end-to-end: funnels and stage-by-stage breakdowns.",
   },
   {
     name: "Vertical Stack Bar Chart",
@@ -47,11 +47,11 @@ export const charts = [
   {
     name: "Comparable Horizontal Bar Chart",
     path: "charts-comparable-horizontal-bar-chart",
-    use: "Two values per category on one row — budget vs actual, this year vs last.",
+    use: "Two values per category on one row: budget vs actual, this year vs last.",
   },
   {
     name: "Dual Horizontal Bar Chart",
     path: "charts-dual-horizontal-bar-chart",
-    use: "Two metrics mirrored from a centre line — population pyramids, two-sided comparisons.",
+    use: "Two metrics mirrored from a centre line: population pyramids and two-sided comparisons.",
   },
 ];

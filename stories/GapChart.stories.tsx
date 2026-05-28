@@ -108,11 +108,11 @@ const meta = {
     docs: {
       description: {
         component:
-          "**GapChart** plots two values for each category and the bar that connects them — the go-to view for *gap analysis*: " +
+          "**GapChart** plots two values for each category and the bar that connects them, the go-to view for *gap analysis*: " +
           "actual vs target, before vs after, this year vs last, or one group against another. Each category gets a marker per value " +
           "(circle / square / triangle) and a connecting bar whose length *is* the gap, so the eye reads the difference directly. " +
           "It expects a `dataSet` of `{ label, value1, value2, difference, date }` rows, where `difference` is `value1 - value2`. " +
-          "Reach for it when the story is the distance between two numbers — not the numbers themselves — and a `filter` can rank " +
+          "Reach for it when the story is the distance between two numbers, not the numbers themselves, and a `filter` can rank " +
           "categories by the widest (or narrowest) gap.",
       },
     },
@@ -161,7 +161,7 @@ export const TourismRecoveryGap: Story = {
       description: {
         story:
           "Each destination shows its 2019 pre-pandemic peak and its 2023 figure, with a bar between them measuring how far recovery still has to go. " +
-          "Asia-Pacific markets (China, Japan, Thailand) carry the widest gaps while France, Spain and Greece have already pulled level or ahead — the bar lengths rank the recovery story without anyone needing to do mental subtraction.",
+          "Asia-Pacific markets (China, Japan, Thailand) carry the widest gaps while France, Spain and Greece have already pulled level or ahead. The bar lengths rank the recovery story without anyone needing to do mental subtraction.",
       },
     },
   },
@@ -184,7 +184,7 @@ export const WidestRecoveryGaps: Story = {
     docs: {
       description: {
         story:
-          "The same data, narrowed to the eight destinations furthest from recovery. The `filter` prop ranks by the gap itself and keeps the top N, so the chart answers 'who is furthest behind?' directly — flip `sortingDir` to `asc` to flip the question to 'who has bounced back hardest?', or set `criteria` to `value1` / `value2` to rank by raw size instead.",
+          "The same data, narrowed to the eight destinations furthest from recovery. The `filter` prop ranks by the gap itself and keeps the top N, so the chart answers 'who is furthest behind?' directly. Flip `sortingDir` to `asc` to flip the question to 'who has bounced back hardest?', or set `criteria` to `value1` / `value2` to rank by raw size instead.",
       },
     },
   },
@@ -195,7 +195,7 @@ export const GenderPayGap: Story = {
   args: {
     ...commonProps,
     dataSet: payGapData,
-    title: "Gender Pay Gap by Sector — Median Hourly Earnings",
+    title: "Gender Pay Gap by Sector: Median Hourly Earnings",
     xAxisFormat: (d: number) => `€${d}`,
     shapeValue1: "circle",
     shapeValue2: "triangle",
@@ -209,7 +209,7 @@ export const GenderPayGap: Story = {
     docs: {
       description: {
         story:
-          "Median hourly pay for men vs women across ten sectors, with the bar between the two markers measuring the raw pay gap. Financial Services and Information & Communication carry the widest disparities while Accommodation & Food sits closest to parity — the eye reads the bar length directly without comparing two columns of numbers. " +
+          "Median hourly pay for men vs women across ten sectors, with the bar between the two markers measuring the raw pay gap. Financial Services and Information & Communication carry the widest disparities while Accommodation & Food sits closest to parity. The eye reads the bar length directly without comparing two columns of numbers. " +
           "Different marker shapes (`shapeValue1` circle, `shapeValue2` triangle) keep the two groups distinguishable even where the values almost overlap.",
       },
     },
@@ -237,7 +237,7 @@ export const BudgetVsActual: Story = {
     docs: {
       description: {
         story:
-          "Approved budget vs actual spend per department, with the connecting bar reading directly as the variance. Where the actual sits past the budget the team overspent (R&D, Customer Support, Facilities); where it falls short they underspent — one scan tells a finance lead which departments need a follow-up conversation.",
+          "Approved budget vs actual spend per department, with the connecting bar reading directly as the variance. Where the actual sits past the budget the team overspent (R&D, Customer Support, Facilities); where it falls short they underspent. One scan tells a finance lead which departments need a follow-up conversation.",
       },
     },
   },
@@ -261,7 +261,7 @@ export const ShapeStyling: Story = {
     docs: {
       description: {
         story:
-          "The same tourism dataset, with different marker shapes for each value. Pairing distinct shapes (square for the 2019 baseline, triangle for 2023) keeps the two series legible when their markers land close together or overlap — a more accessible cue than colour alone. " +
+          "The same tourism dataset, with different marker shapes for each value. Pairing distinct shapes (square for the 2019 baseline, triangle for 2023) keeps the two series legible when their markers land close together or overlap, a more accessible cue than colour alone. " +
           "Set independently via `shapeValue1` and `shapeValue2` (`circle` / `square` / `triangle`).",
       },
     },

@@ -161,7 +161,7 @@ interface GapChartProps {
   onLegendDataChange?: (legendData: LegendItem[]) => void;
   /**
    * Rendering backend for the gap bars, connector lines and value markers.
-   *  - "svg" (default): the classic retained-SVG renderer — one <g> + <rect> +
+   *  - "svg" (default): the classic retained-SVG renderer, one <g> + <rect> +
    *    <line> + two markers per item. Unchanged, byte-identical default.
    *  - "canvas": draws the bars / connectors / markers onto a single <canvas>
    *    layered behind the <svg>, for large datasets where the SVG node count

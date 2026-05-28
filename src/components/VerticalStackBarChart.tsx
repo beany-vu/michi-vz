@@ -82,7 +82,7 @@ interface Props {
    * Minimum drawn width (px) for each bar. When the dataset is dense the band
    * scale shrinks each bar; without a floor they become sub-pixel and vanish
    * (worst on the Canvas renderer). The bar width is clamped to at least this
-   * value — when that exceeds the available band, bars overlap rather than
+   * value. When that exceeds the available band, bars overlap rather than
    * disappear. Default `1` keeps every bar visible with negligible effect on
    * non-dense charts.
    */

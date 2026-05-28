@@ -123,7 +123,7 @@ export default {
     docs: {
       description: {
         component:
-          "**RangeChart** plots a value *band* — a `valueMin`..`valueMax` pair with an optional central `valueMedium` — for every point along the x-axis, instead of a single line. Each series is an array of `{ date, valueMin, valueMax, valueMedium }` points; series colours come from `colorsMapping` on the surrounding `MichiVzProvider`. Reach for it whenever the uncertainty *is* the story: forecast cones, confidence intervals, projected scenario envelopes, or observed min/max ranges like temperature highs and lows.",
+          "**RangeChart** plots a value *band*, a `valueMin`..`valueMax` pair with an optional central `valueMedium`, for every point along the x-axis, instead of a single line. Each series is an array of `{ date, valueMin, valueMax, valueMedium }` points; series colours come from `colorsMapping` on the surrounding `MichiVzProvider`. Reach for it whenever the uncertainty *is* the story: forecast cones, confidence intervals, projected scenario envelopes, or observed min/max ranges like temperature highs and lows.",
       },
     },
   },
@@ -160,7 +160,7 @@ export const ForecastUncertainty = {
     docs: {
       description: {
         story:
-          "A GDP forecast drawn as a fanning band, with the central projection running through the middle and the best/worst estimates as the upper and lower edges. The band stays tight near 2024 then widens further out — that widening is the chart saying \"we're less sure the further ahead we look\".",
+          "A GDP forecast drawn as a fanning band, with the central projection running through the middle and the best/worst estimates as the upper and lower edges. The band stays tight near 2024 then widens further out. That widening is the chart saying \"we're less sure the further ahead we look\".",
       },
     },
   },
@@ -177,7 +177,7 @@ export const ScenarioEnvelopes = {
     docs: {
       description: {
         story:
-          "Three possible emission futures drawn as overlapping coloured bands — low, current-policy, high. They nearly touch in 2025 (the next few years are locked in) then peel apart sharply, and the growing gap between green and red is the cost of policy choice in a single picture.",
+          "Three possible emission futures drawn as overlapping coloured bands: low, current-policy, high. They nearly touch in 2025 (the next few years are locked in) then peel apart sharply, and the growing gap between green and red is the cost of policy choice in a single picture.",
       },
     },
   },
@@ -198,7 +198,7 @@ export const ObservedMinMaxRange = {
     docs: {
       description: {
         story:
-          "Each month in Berlin shown as a temperature band: record low on the bottom edge, record high on the top, long-run average down the middle. A plain average line would hide that July's spread is much wider than January's — here the band's thickness *is* the seasonal-volatility story.",
+          "Each month in Berlin shown as a temperature band: record low on the bottom edge, record high on the top, long-run average down the middle. A plain average line would hide that July's spread is much wider than January's. Here the band's thickness *is* the seasonal-volatility story.",
       },
     },
   },
@@ -216,7 +216,7 @@ export const FixedScaleForComparison = {
     docs: {
       description: {
         story:
-          "Same scenarios as before, but the y-axis is pinned from 0 to 80 instead of auto-scaling. Locking the scale stops each chart from zooming into its own data and exaggerating differences — essential when several panels in a dashboard need to be read against each other. Set via `yAxisDomain`.",
+          "Same scenarios as before, but the y-axis is pinned from 0 to 80 instead of auto-scaling. Locking the scale stops each chart from zooming into its own data and exaggerating differences, essential when several panels in a dashboard need to be read against each other. Set via `yAxisDomain`.",
       },
     },
   },
@@ -229,7 +229,7 @@ export const RichTooltipReadout = {
     title: "CO₂ scenarios with a detailed band readout",
     yAxisFormat: (d: number) => `${d} Gt`,
     tooltipFormatter: (d: any, series: any) =>
-      `<strong>${series?.label ?? ""} — ${d.date}</strong>` +
+      `<strong>${series?.label ?? ""}: ${d.date}</strong>` +
       `<br/>Low estimate: ${d.valueMin} Gt` +
       `<br/>Central: ${d.valueMedium} Gt` +
       `<br/>High estimate: ${d.valueMax} Gt` +
@@ -239,7 +239,7 @@ export const RichTooltipReadout = {
     docs: {
       description: {
         story:
-          "A band hides three numbers behind one shape; the tooltip pulls them back out — low, central, high, plus the band width — when you hover. Turns a vague visual sense of \"wide\" into a precise readout of just how uncertain a point is. Wired through `tooltipFormatter`.",
+          "A band hides three numbers behind one shape; the tooltip pulls them back out when you hover: low, central, high, plus the band width. Turns a vague visual sense of \"wide\" into a precise readout of just how uncertain a point is. Wired through `tooltipFormatter`.",
       },
     },
   },

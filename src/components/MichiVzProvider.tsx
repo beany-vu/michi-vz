@@ -13,7 +13,7 @@ interface ChartContextProps {
   /**
    * Font family used by canvas-rendered text in charts (e.g. the series-key
    * abbreviation labels under VerticalStackBarChart's bars). Must be a literal
-   * font stack — CSS variables like `var(--foo)` don't resolve in canvas
+   * font stack. CSS variables like `var(--foo)` don't resolve in canvas
    * `ctx.font`. SVG-rendered text inherits font from page CSS as usual and
    * does NOT consult this value. Default: `"sans-serif"`.
    */

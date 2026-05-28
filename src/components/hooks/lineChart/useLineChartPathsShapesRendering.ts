@@ -113,6 +113,10 @@ const useLineChartPathsShapesRendering = (
         svg
           .selectAll(`${groupSelector}[data-label="${CSS.escape(dataLabel)}"]`)
           .style("opacity", opacityHighlighted);
+
+        // Emit highlight changes only for explicit hovered labels. This avoids
+        // feeding `[null]` back into parent state during prop-driven dimming.
+        handleItemHighlight([dataLabel]);
         return;
       }
 
@@ -129,8 +133,6 @@ const useLineChartPathsShapesRendering = (
       } else {
         svg.selectAll(`${groupSelector}`).style("opacity", `${opacityHighlighted}`);
       }
-
-      handleItemHighlight([dataLabel]);
     },
     [handleItemHighlight, svgRef]
   );
