@@ -53,58 +53,56 @@
     <link href="./sb-addons/docs-2/manager-bundle.js" rel="modulepreload" />
     
     <link href="./sb-addons/storybook-3/manager-bundle.js" rel="modulepreload" />
-      <title>michi-vz — React + D3 chart library</title>
-<meta name="description" content="Eleven ready-made, interactive chart components for React — line, area, bar, radar, scatter and more — built on D3, typed in TypeScript." />
+      <title>michi-vz: React + D3 chart library</title>
+<meta name="description" content="Eleven ready-made, interactive chart components for React: line, area, bar, radar, scatter and more, built on D3, typed in TypeScript." />
 
 <!-- Open Graph / social link previews -->
 <meta property="og:type"        content="website" />
 <meta property="og:url"         content="https://beany-vu.github.io/michi-vz/" />
-<meta property="og:title"       content="michi-vz — React + D3 chart library" />
-<meta property="og:description" content="Eleven ready-made, interactive chart components for React — line, area, bar, radar, scatter and more — built on D3, typed in TypeScript." />
-<meta property="og:image"       content="https://beany-vu.github.io/michi-vz/michi-logo.png" />
-<meta property="og:image:alt"   content="michi-vz logo" />
+<meta property="og:title"       content="michi-vz: React + D3 chart library" />
+<meta property="og:description" content="Eleven ready-made, interactive chart components for React: line, area, bar, radar, scatter and more, built on D3, typed in TypeScript." />
+<meta property="og:image"       content="https://beany-vu.github.io/michi-vz/og-image.png" />
+<meta property="og:image:alt"   content="michi-vz: React + D3 chart library" />
+<meta property="og:image:width"  content="1200" />
+<meta property="og:image:height" content="630" />
 
 <!-- Twitter / X card -->
 <meta name="twitter:card"        content="summary_large_image" />
-<meta name="twitter:title"       content="michi-vz — React + D3 chart library" />
-<meta name="twitter:description" content="Eleven ready-made, interactive chart components for React — line, area, bar, radar, scatter and more — built on D3, typed in TypeScript." />
-<meta name="twitter:image"       content="https://beany-vu.github.io/michi-vz/michi-logo.png" />
+<meta name="twitter:title"       content="michi-vz: React + D3 chart library" />
+<meta name="twitter:description" content="Eleven ready-made, interactive chart components for React: line, area, bar, radar, scatter and more, built on D3, typed in TypeScript." />
+<meta name="twitter:image"       content="https://beany-vu.github.io/michi-vz/og-image.png" />
 
 <style>
-  /* Hide the native Storybook sidebar and toolbar */
-  #storybook-explorer-menu,
-  .sidebar-container,
-  nav[aria-label="Storybook"],
-  [data-role="sidebar"] {
+  /* ─── Swiss ChartRail-style polish for the native Storybook sidebar ─── */
+  /* michiVzTheme in manager.js already wires: bg (#FAFAFA), accent       */
+  /* (#C84B3F), Helvetica Neue, and near-black text. These rules add the  */
+  /* red left-border active indicator — the signature visual anchor of    */
+  /* the ChartRail design — and flatten border-radius to match the Swiss  */
+  /* modernist aesthetic.                                                  */
+
+  /* Remove border-radius from the sidebar shell */
+  [data-role="sidebar"],
+  .sidebar-container {
+    border-radius: 0 !important;
+  }
+
+  /* Active / selected item: red left-border accent */
+  [data-selected="true"],
+  [aria-current="page"] {
+    border-left: 2px solid #C84B3F !important;
+    box-sizing: border-box;
+  }
+
+  /* Hide the Storybook toolbar — MichiTopnav in the preview provides site nav */
+  #storybook-toolbar,
+  [class*="Toolbar"] {
     display: none !important;
   }
 
-  /* Remove the left offset that Storybook adds when the sidebar is open.
-     showNav: false in manager.js is the primary fix; these rules are a
-     belt-and-suspenders fallback for any residual inline style. */
-  #storybook-main,
-  #storybook-preview-wrapper,
-  [id="storybook-main"],
-  [id="storybook-preview-wrapper"],
-  .css-1ic6wha,
-  [class*="Layout"],
-  [class*="layout-wrapper"] {
-    left: 0 !important;
-    margin-left: 0 !important;
-    width: 100% !important;
-    transform: none !important;
-  }
-
-  /* Hide the drag-to-resize handle between sidebar and main */
+  /* Hide the drag-to-resize handle */
   [role="separator"],
   .sidebar-resizer,
   [class*="resizer"] {
-    display: none !important;
-  }
-
-  /* Hide the toolbar / topbar area */
-  #storybook-toolbar,
-  [class*="Toolbar"] {
     display: none !important;
   }
 </style>
