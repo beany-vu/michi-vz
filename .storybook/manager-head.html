@@ -25,15 +25,19 @@
   }
 
   /* Remove the left offset that Storybook adds when the sidebar is open.
-     Storybook 10 sets inline left/margin-left on the main wrapper via JS.
-     We override with max specificity. */
+     showNav: false in manager.js is the primary fix; these rules are a
+     belt-and-suspenders fallback for any residual inline style. */
   #storybook-main,
   #storybook-preview-wrapper,
   [id="storybook-main"],
-  [id="storybook-preview-wrapper"] {
+  [id="storybook-preview-wrapper"],
+  .css-1ic6wha,
+  [class*="Layout"],
+  [class*="layout-wrapper"] {
     left: 0 !important;
     margin-left: 0 !important;
     width: 100% !important;
+    transform: none !important;
   }
 
   /* Hide the drag-to-resize handle between sidebar and main */

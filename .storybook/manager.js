@@ -56,9 +56,14 @@ const michiVzTheme = create({
 
 addons.setConfig({
   theme: michiVzTheme,
-  // Docs-site posture: collapse the addon panel by default so first-time
-  // visitors aren't greeted by a fire-hose of fn() callback logs. Power users
-  // can still open Controls / Actions via the toolbar / keyboard shortcut.
+  // Hide the native sidebar entirely — we provide our own nav via MichiTopnav
+  // and the ChartRail sidebar. Without showNav: false, Storybook's JS still
+  // allocates ~265px of left offset even when the sidebar is CSS-hidden.
+  showNav: false,
+  // Collapse the addon panel so first-time visitors aren't greeted by
+  // fn() callback logs.
   showPanel: false,
   panelPosition: "bottom",
+  // Full-width layout so the preview pane uses all available horizontal space.
+  isFullscreen: false,
 });
