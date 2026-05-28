@@ -13,6 +13,7 @@
     "rootDir": "./src",
     //    "strict": true,
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -36,8 +37,7 @@
     "sourceMap": true,
     "inlineSourceMap": false,
     "inlineSources": true,
-    "declarationMap": true,
-    "ignoreDeprecations": "6.0"
+    "declarationMap": true
   },
   "include": [
     "src/**/*",

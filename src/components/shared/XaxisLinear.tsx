@@ -34,13 +34,8 @@ const checkIsTimeScale = (
 
   if ("ticks" in scale && "domain" in scale && "range" in scale) {
     const timeScale = scale as ScaleTime<number, number>;
-    return (
-      timeScale.ticks !== undefined &&
-      timeScale.domain instanceof Array &&
-      timeScale.range instanceof Array &&
-      ((typeof timeScale.domain[0] === "number" && typeof timeScale.range[0] === "number") ||
-        (timeScale.domain[0] instanceof Date && timeScale.range[0] instanceof Date))
-    );
+    const dom = timeScale.domain();
+    return timeScale.ticks !== undefined && dom[0] instanceof Date;
   }
   return false;
 };
@@ -239,7 +234,7 @@ const XaxisLinear: FC<Props> = ({
         // Ensure 0 is included if it's within the domain (including at boundaries)
       ) {
         result.push(0);
-        result.sort((a, b) => a - b); // Sort ascending for proper order
+        result.sort((a, b) => +a - +b); // Sort ascending for proper order
       }
     }
 
@@ -247,8 +242,8 @@ const XaxisLinear: FC<Props> = ({
   }, [xScale, ticks, isTimeScale, isLoading, isEmpty, tickValuesProp, xAxisDataType, showZeroLine]);
 
   useLayoutEffect(() => {
+    if (!ref.current) return;
     const g = d3.select(ref.current);
-    if (!g) return;
 
     // Clear any existing axis elements to prevent duplicates
     g.selectAll("*").remove();
@@ -257,7 +252,8 @@ const XaxisLinear: FC<Props> = ({
     let axisBottom = d3.axisBottom(xScale);
 
     if (enableExplicitTickValues) {
-      axisBottom = axisBottom.tickValues(tickValues);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      axisBottom = axisBottom.tickValues(tickValues as any);
     }
 
     axisBottom = axisBottom
@@ -265,7 +261,7 @@ const XaxisLinear: FC<Props> = ({
         xAxisFormat
           ? xAxisFormat(
               domainValue instanceof Date ? domainValue : domainValue.valueOf(),
-              tickValues
+              tickValues.map(v => (v instanceof Date ? v.valueOf() : v)) as Array<string | number>
             )
           : defaultFormatter(domainValue)
       )
@@ -296,8 +292,8 @@ const XaxisLinear: FC<Props> = ({
       )
       // Add class for tick at 0
       .call(g => {
-        g.selectAll(".tick").each(function (d, index, groups) {
-          const tickValue = d instanceof Date ? d.valueOf() : +d;
+        g.selectAll(".tick").each(function (d: unknown, index, groups) {
+          const tickValue = d instanceof Date ? d.valueOf() : +(d as number);
           if (tickValue === 0) {
             d3.select(this).classed("tick-zero", true);
           }

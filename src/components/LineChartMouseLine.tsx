@@ -25,7 +25,7 @@ interface LineChartMouseLineProps {
   margin: Margin;
   children?: React.ReactNode;
   className?: string;
-  anchorEl: React.RefObject<SVGGElement>;
+  anchorEl: React.RefObject<SVGGElement | SVGSVGElement | null>;
   xAxisDataType: "number" | "date_annual" | "date_monthly";
   ticks: number;
   tickValues: (string | number | Date)[];

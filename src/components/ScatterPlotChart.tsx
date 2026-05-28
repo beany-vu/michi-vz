@@ -97,9 +97,9 @@ interface ScatterPlotChartProps<T extends number | string> {
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
-  isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
-  xAxisFormat?: (d: number | string) => string;
-  yAxisFormat?: (d: number | string) => string;
+  isNodata?: boolean | ((dataSet: DataPoint[] | null | undefined) => boolean);
+  xAxisFormat?: (d: number | string | { valueOf(): number }, tickValues?: Array<string | number>) => string;
+  yAxisFormat?: (d: number | string | { valueOf(): number }) => string;
   yTicksQty?: number;
   xAxisDataType?: "number" | "date_annual" | "date_monthly" | "band";
   tooltipFormatter?: (d: DataPoint) => string;
@@ -342,6 +342,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
         .range([margin.left, width - margin.right])
         .padding(0.1); // Adjust padding as needed
     }
+    return d3.scaleLinear().domain(xDomain).range([margin.left, width - margin.right]);
   }, [xDomain, width, margin]);
 
   const yScale = useMemo(
@@ -378,7 +379,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   const getXValue = useCallback(
     (d: DataPoint) => {
       const offSet = "bandwidth" in xScale ? xScale?.bandwidth() / 2 : 0;
-      return xAxisDataType === "band" ? xScale(d.label as never) + offSet : xScale(d.x as never);
+      return xAxisDataType === "band" ? (xScale(d.label as never) ?? 0) + offSet : xScale(d.x as never);
     },
     [xScale, xAxisDataType]
   );
@@ -397,9 +398,9 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   }, [highlightItems]);
 
   const handleMouseEnter = useCallback(
-    (event, d) => {
+    (event: React.MouseEvent, d: DataPoint) => {
       setActivePoint(d);
-      onHighlightItem([d.label]);
+      onHighlightItem?.([d.label]);
 
       // Pinned bubbles already have a persistent tooltip — skip the hover one.
       if (!tooltipRef.current || !tooltipContentRef.current || pinnedPointsRef.current.has(d.label)) return;
@@ -430,7 +431,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   );
 
   const handleSvgMouseMove = useCallback(
-    event => {
+    (event: React.MouseEvent) => {
       if (activePoint && tooltipRef.current) {
         const mousePoint = d3.pointer(event.nativeEvent, svgRef.current);
         tooltipRef.current.style.left = `${mousePoint[0] + 10}px`;
@@ -442,7 +443,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
 
   const handleMouseLeave = useCallback(() => {
     setActivePoint(null);
-    onHighlightItem([]);
+    onHighlightItem?.([]);
     if (tooltipRef.current) tooltipRef.current.style.display = "none";
   }, [onHighlightItem]);
 

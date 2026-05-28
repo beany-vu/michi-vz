@@ -66,8 +66,8 @@ interface Props {
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
   title?: string;
-  xAxisFormat?: (d: number) => string;
-  yAxisFormat?: (d: number) => string;
+  xAxisFormat?: (d: number | string) => string;
+  yAxisFormat?: (d: number | { valueOf(): number }) => string;
   xAxisDomain?: [string, string];
   yAxisDomain?: [number, number];
   tooltipFormatter?: (tooltipData: TooltipData) => string;
@@ -76,7 +76,7 @@ interface Props {
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
-  isNodata?: boolean | ((dataSet: DataSet[]) => boolean);
+  isNodata?: boolean | ((dataSet: DataSet[] | null | undefined) => boolean);
   colorCallbackFn?: (key: string, d: RectData) => string;
   /**
    * Minimum drawn width (px) for each bar. When the dataset is dense the band
@@ -333,9 +333,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
   }, [filteredDataSet, disabledItems]);
 
   // xScale
-  const extractDates = (data: DataPoint): string => String(data.date);
   const dates = useMemo(
-    () => flattenedDataSet.map(extractDates),
+    () => flattenedDataSet.map(data => String(data.date)),
     [flattenedDataSet, disabledItems]
   );
 
@@ -415,7 +414,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
               .forEach(key => {
                 const value = yearData[key];
                 const numericValue =
-                  typeof value === "string" ? parseFloat(value) : (value as number);
+                  typeof value === "string" ? parseFloat(value) : (value as unknown as number);
                 const isMissingValue =
                   value === undefined || value === null || isNaN(numericValue);
 
@@ -441,7 +440,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                       width: Math.max(groupWidth - 4, minBarWidth),
                       y: yScale(0) - markerHeight,
                       x:
-                        xScale(String(yearData.date)) +
+                        (xScale(String(yearData.date)) ?? 0) +
                         groupWidth * groupIndex +
                         groupWidth / 2 -
                         groupWidth / 2 +
@@ -473,7 +472,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                   width: Math.max(groupWidth - 4, minBarWidth),
                   y: yScale(y1),
                   x:
-                    xScale(String(yearData.date)) +
+                    (xScale(String(yearData.date)) ?? 0) +
                     groupWidth * groupIndex +
                     groupWidth / 2 -
                     groupWidth / 2 +
@@ -595,7 +594,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
   // Memoize the mouse event handlers
   const handleMouseOver = useCallback(
     (key: string, d: RectData) => {
-      onHighlightItem([key]);
+      onHighlightItem?.([key]);
       if (tooltipRef.current && !isTooltipSticky) {
         handleDataSelection(key, d);
       }

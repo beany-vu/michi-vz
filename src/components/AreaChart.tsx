@@ -64,8 +64,8 @@ interface Props {
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
   title?: string;
-  xAxisFormat?: (d: number) => string;
-  yAxisFormat?: (d: number) => string;
+  xAxisFormat?: (d: number | string | { valueOf(): number }, tickValues?: Array<string | number>) => string;
+  yAxisFormat?: (d: number | string | { valueOf(): number }) => string;
   yAxisDomain?: [number, number] | null;
   tooltipFormatter?: (d: DataPoint, series: DataPoint[], key: string) => string | null;
   children?: React.ReactNode;
@@ -73,7 +73,7 @@ interface Props {
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
-  isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
+  isNodata?: boolean | ((dataSet: DataPoint[] | null | undefined) => boolean);
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
   filter?: { date: number; sortingDir: "asc" | "desc" };
@@ -208,7 +208,7 @@ const AreaChart: React.FC<Props> = ({
     if (xAxisDataType === "number") {
       return d3
         .scaleLinear()
-        .domain([d3.min(series, d => d.date || 0), d3.max(series, d => d.date || 1)])
+        .domain([d3.min(series, d => d.date || 0) ?? 0, d3.max(series, d => d.date || 1) ?? 1])
         .range([margin.left, width - margin.right])
         .clamp(true)
         .nice();
@@ -532,7 +532,7 @@ const AreaChart: React.FC<Props> = ({
       if (!tooltipRef.current || !tooltipContentRef.current) return;
 
       // Update content first
-      tooltipContentRef.current.innerHTML = handleAreaSegmentHover(dataPoint, areaKey);
+      tooltipContentRef.current.innerHTML = handleAreaSegmentHover(dataPoint, areaKey) ?? "";
 
       // Get position
       const [x, y] = d3.pointer(event);
@@ -731,7 +731,7 @@ const AreaChart: React.FC<Props> = ({
           {areaData.map(areaDataItem => (
             <path
               key={areaDataItem.key}
-              d={areaGenerator(areaDataItem.values)}
+              d={areaGenerator(areaDataItem.values) ?? undefined}
               fill={areaDataItem.fill ? areaDataItem.fill : "#fdfdfd"}
               stroke={"#fff"}
               strokeWidth={1}

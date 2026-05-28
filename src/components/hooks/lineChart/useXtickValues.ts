@@ -47,7 +47,7 @@ const useLineChartXtickValues = (
       }
       // Estimate how many ticks can fit based on chart width and label size
       const estimatedLabelWidth = 50; // px per year label
-      const maxTicks = Math.floor((width - margin.left - margin.right) / estimatedLabelWidth);
+      const maxTicks = Math.floor((width - (margin.left ?? 0) - (margin.right ?? 0)) / estimatedLabelWidth);
       if (allYears.length <= maxTicks) return allYears;
       // Otherwise, pick 5 ticks: first, last, and 3 evenly spaced
       const tickCount = 5;
@@ -92,7 +92,7 @@ const useLineChartXtickValues = (
       }
       // Estimate how many ticks can fit based on chart width and label size
       const estimatedLabelWidth = 50; // px per month label
-      const maxTicks = Math.floor((width - margin.left - margin.right) / estimatedLabelWidth);
+      const maxTicks = Math.floor((width - (margin.left ?? 0) - (margin.right ?? 0)) / estimatedLabelWidth);
       if (allMonths.length <= maxTicks) return allMonths;
       // Otherwise, pick 5 ticks: first, last, and 3 evenly spaced
       const tickCount = 5;

@@ -78,7 +78,7 @@ const XaxisBand: FC<Props> = ({
       .tickSizeOuter(0)
       .tickValues(tickValues);
 
-    d3.select(ref.current)
+    d3.select<SVGGElement, unknown>(ref.current)
       .call(xAxis)
       .selectAll("text")
       .attr("y", margin.bottom / 2)
@@ -89,8 +89,8 @@ const XaxisBand: FC<Props> = ({
   }, [xScale, margin.bottom, formatter, tickValues]);
 
   useLayoutEffect(() => {
-    const g = d3.select(ref.current);
-    if (!g || !tickValues.length) return;
+    if (!ref.current || !tickValues.length) return;
+    const g = d3.select<SVGGElement, unknown>(ref.current);
 
     const isModeChange = prevModeRef.current !== null && prevModeRef.current !== mode;
 
@@ -167,7 +167,7 @@ const XaxisBand: FC<Props> = ({
       .enter()
       .append("circle")
       .attr("class", "tickValueDot")
-      .merge(dots as d3.Selection<SVGCircleElement, number, SVGGElement, unknown>)
+      .merge(dots as unknown as d3.Selection<SVGCircleElement, number, SVGGElement, unknown>)
       .attr("cx", 0)
       .attr("cy", 0)
       .attr("r", 2)

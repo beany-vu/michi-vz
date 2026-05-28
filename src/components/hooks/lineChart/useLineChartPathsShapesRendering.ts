@@ -50,14 +50,14 @@ const useLineChartPathsShapesRendering = (
   getRuns: (series: DataPoint[]) => SeriesRun[],
   colors: string[],
   colorsMapping: { [key: string]: string },
-  line: (options: { d: DataPoint[]; curve: string }) => string,
+  line: (options: { d: Iterable<DataPoint>; curve: string }) => string | null,
   xScale: ScaleLinear<number, number> | ScaleTime<number, number>,
   yScale: ScaleLinear<number, number>,
   handleItemHighlight: (labels: string[]) => void,
   tooltipFormatter: (point: DataPoint, series: DataPoint[], dataset: LineChartDataItem[]) => string,
-  tooltipRef: React.RefObject<HTMLDivElement>,
-  svgRef: React.RefObject<SVGSVGElement>,
-  getColor: (color: string | undefined, fallback: string | null) => string,
+  tooltipRef: React.RefObject<HTMLDivElement | null>,
+  svgRef: React.RefObject<SVGSVGElement | null>,
+  getColor: (color?: string, fallback?: string) => string,
   sanitizeForClassName: (str: string) => string,
   highlightItems: string[],
   onHighlightItem?: (labels: string[]) => void,
@@ -96,7 +96,7 @@ const useLineChartPathsShapesRendering = (
   const handleMouseEnter = useCallback(
     (
       event: React.MouseEvent | null,
-      svgRef: React.RefObject<SVGSVGElement>,
+      svgRef: React.RefObject<SVGSVGElement | null>,
       groupSelector: string,
       opacityUnhighlighted: number,
       opacityHighlighted: number,
@@ -138,7 +138,7 @@ const useLineChartPathsShapesRendering = (
   );
 
   const handleMouseOut = useCallback(
-    (svgRef: React.RefObject<SVGSVGElement>) => {
+    (svgRef: React.RefObject<SVGSVGElement | null>) => {
       const svg = select(svgRef.current);
       if (!svg.node()) return;
 
@@ -206,7 +206,9 @@ const useLineChartPathsShapesRendering = (
         );
 
         const tooltipContentElement = tooltip.querySelector(".tooltip-content");
-        tooltipContentElement.innerHTML = DOMPurify.sanitize(tooltipContent);
+        if (tooltipContentElement) {
+          tooltipContentElement.innerHTML = DOMPurify.sanitize(tooltipContent);
+        }
       }
     },
     [tooltipState, tooltipRef, svgRef, margin, filteredDataSet]
@@ -417,7 +419,7 @@ const useLineChartPathsShapesRendering = (
             .attr("stroke-width", 2)
             .attr("cursor", "crosshair");
           enter
-            .merge(points as typeof enter)
+            .merge(points as unknown as typeof enter)
             .attr("cx", d => xScale(new Date(d.date)))
             .attr("cy", d => yScale(d.value))
             .attr("fill", color);
@@ -435,7 +437,7 @@ const useLineChartPathsShapesRendering = (
             .attr("stroke-width", 2)
             .attr("cursor", "crosshair");
           enter
-            .merge(points as typeof enter)
+            .merge(points as unknown as typeof enter)
             .attr("x", d => xScale(new Date(d.date)) - squareSize)
             .attr("y", d => yScale(d.value) - squareSize)
             .attr("fill", color);
@@ -451,7 +453,7 @@ const useLineChartPathsShapesRendering = (
             .attr("stroke-width", 2)
             .attr("cursor", "crosshair");
           enter
-            .merge(points as typeof enter)
+            .merge(points as unknown as typeof enter)
             .attr("d", d => generateTrianglePath(xScale(new Date(d.date)), yScale(d.value)))
             .attr("fill", color);
         }

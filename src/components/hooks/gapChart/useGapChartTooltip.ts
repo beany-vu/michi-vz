@@ -18,8 +18,8 @@ interface TooltipState {
 }
 
 export const useGapChartTooltip = (
-  svgRef: RefObject<SVGSVGElement>,
-  containerRef: RefObject<HTMLDivElement>,
+  svgRef: RefObject<SVGSVGElement | null>,
+  containerRef: RefObject<HTMLDivElement | null>,
   onHighlightItem?: (item: DataItem) => void,
   onTooltipStickyChange?: (isSticky: boolean) => void
 ) => {

@@ -56,7 +56,7 @@ interface LineChartProps {
   margin: { top: number; right: number; bottom: number; left: number };
   padding?: { top: number; right: number; bottom: number; left: number };
   horizontalTickPosition?: { x: number; y: number };
-  xAxisFormat?: (d: number | { valueOf(): number }) => string;
+  xAxisFormat?: (d: number | { valueOf(): number } | string, tickValues?: Array<string | number>) => string;
   yAxisFormat?: (d: number | string) => string;
   xAxisPredefinedDomain?: number[];
   xAxisDataType: XaxisDataType;
@@ -70,7 +70,7 @@ interface LineChartProps {
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
-  isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
+  isNodata?: boolean | ((dataSet: DataPoint[] | null | undefined) => boolean);
   // New: filter prop for sorting
   filter?: {
     limit: number;
@@ -318,13 +318,13 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
       xAxisDataType === "number"
         ? d3
             .scaleLinear()
-            .domain(xAxisDomain)
+            .domain(xAxisDomain ?? [0, 1])
             .range([width - margin.left - padding.left, margin.right])
             .clamp(true)
             .nice()
         : d3
             .scaleTime()
-            .domain(xAxisDomain)
+            .domain(xAxisDomain ?? [0, 1])
             .range([width - margin.left - padding.left, margin.right]),
     [xAxisDataType, xAxisDomain, width, margin.left, margin.right, padding.left]
   );
@@ -383,13 +383,13 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
 
   const handleHighlight = useCallback(
     (label: string) => {
-      onHighlightItem([label]);
+      onHighlightItem?.([label]);
     },
     [onHighlightItem]
   );
 
   const handleUnhighlight = useCallback(() => {
-    onHighlightItem([]);
+    onHighlightItem?.([]);
   }, [onHighlightItem]);
 
   // Update bar opacity based on highlightItems
@@ -704,7 +704,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
         onMouseOut={event => {
           event.stopPropagation();
           event.preventDefault();
-          onHighlightItem([]);
+          onHighlightItem?.([]);
         }}
       >
         <MichiVzCredit />

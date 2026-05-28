@@ -30,7 +30,7 @@ interface LineChartProps {
   width: number;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
-  xAxisFormat?: (d: number | { valueOf(): number }) => string;
+  xAxisFormat?: (d: number | { valueOf(): number } | string, tickValues?: Array<string | number>) => string;
   xAxisDataType: XaxisDataType;
   yAxisFormat?: (d: number | string) => string;
   title?: string;
@@ -46,7 +46,7 @@ interface LineChartProps {
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
-  isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
+  isNodata?: boolean | ((dataSet: DataPoint[] | null | undefined) => boolean);
   filter?: {
     limit: number; // new; replaces top
     criteria: "valueBased" | "valueCompared"; // sorting criteria
@@ -185,8 +185,8 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
       result = result
         .slice() // copy array to avoid mutating original during sort
         .sort((a, b) => {
-          const aVal = a[filter.criteria] ?? 0;
-          const bVal = b[filter.criteria] ?? 0;
+          const aVal = (a as unknown as Record<string, number>)[filter.criteria] ?? 0;
+          const bVal = (b as unknown as Record<string, number>)[filter.criteria] ?? 0;
           return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
         })
         .slice(0, filter.limit);
@@ -393,7 +393,7 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
         onMouseOut={event => {
           event.stopPropagation();
           event.preventDefault();
-          onHighlightItem([]);
+          onHighlightItem?.([]);
         }}
       >
         <MichiVzCredit />
@@ -441,8 +441,8 @@ const DualHorizontalBarChart: React.FC<LineChartProps> = ({
                   opacity:
                     highlightItems.includes(d.label) || highlightItems.length === 0 ? 1 : 0.3,
                 }}
-                onMouseOver={() => onHighlightItem([d.label])}
-                onMouseOut={() => onHighlightItem([])}
+                onMouseOver={() => onHighlightItem?.([d.label])}
+                onMouseOut={() => onHighlightItem?.([])}
               >
                 <rect
                   x={width / 2}

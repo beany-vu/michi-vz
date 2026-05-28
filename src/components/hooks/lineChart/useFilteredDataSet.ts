@@ -3,7 +3,7 @@ import { LineChartDataItem, Filter } from "../../../types/data";
 
 const useFilteredDataSet = (
   dataSet: LineChartDataItem[],
-  filter: Filter,
+  filter: Filter | undefined,
   disabledItems: string[]
 ) => {
   return useMemo(() => {
@@ -25,8 +25,8 @@ const useFilteredDataSet = (
       .sort((a, b) => {
         const aPoint = a.series.find(d => d.date.toString() === filter.date.toString());
         const bPoint = b.series.find(d => d.date.toString() === filter.date.toString());
-        const aVal = aPoint ? Number(aPoint[filter.criteria]) : 0;
-        const bVal = bPoint ? Number(bPoint[filter.criteria]) : 0;
+        const aVal = aPoint ? Number((aPoint as Record<string, unknown>)[filter.criteria]) : 0;
+        const bVal = bPoint ? Number((bPoint as Record<string, unknown>)[filter.criteria]) : 0;
         return filter.sortingDir === "desc" ? bVal - aVal : aVal - bVal;
       })
       .slice(0, filter.limit);

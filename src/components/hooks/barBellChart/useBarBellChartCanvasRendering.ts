@@ -165,10 +165,10 @@ const drawChart = (
 
 export interface BarBellCanvasRenderingOptions {
   enabled: boolean;
-  canvasRef: React.RefObject<HTMLCanvasElement>;
-  svgRef: React.RefObject<SVGSVGElement>;
-  tooltipRef: React.RefObject<HTMLDivElement>;
-  tooltipContentRef: React.RefObject<HTMLDivElement>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  svgRef: React.RefObject<SVGSVGElement | null>;
+  tooltipRef: React.RefObject<HTMLDivElement | null>;
+  tooltipContentRef: React.RefObject<HTMLDivElement | null>;
   dataSet: DataRow[];
   keys: string[];
   width: number;

@@ -8,7 +8,7 @@ interface Props {
   height: number;
   highlightZeroLine?: boolean;
   margin: { top: number; right: number; bottom: number; left: number };
-  yAxisFormat?: (d: number) => string;
+  yAxisFormat?: (d: number | { valueOf(): number }) => string;
   yTicksQty?: number;
   showGridLines?: boolean;
   showTickLabels?: boolean;
@@ -42,8 +42,8 @@ const YaxisLinear: FC<Props> = ({
   }, [yScale, yTicksQty, yAxisFormat]);
 
   useLayoutEffect(() => {
-    const g = d3.select(ref.current);
     if (!ref.current) return;
+    const g = d3.select<SVGGElement, unknown>(ref.current);
 
     // Render the axis synchronously — no transitions. This mirrors the
     // XaxisLinear approach (clear, rebuild, done) and eliminates an entire

@@ -9,8 +9,8 @@ const transformedData = sampleChartData.map(item => ({
   label: item.seriesKey,
   color: item.seriesKey === "Africa" ? "orange" : item.seriesKey === "Non-LDC" ? "purple" : "blue",
   series: item.series.map(s => ({
-    date: s.date,
-    value: parseInt(s[item.seriesKey] || "0"),
+    date: parseInt(s.date, 10),
+    value: parseInt((s as Record<string, string>)[item.seriesKey] || "0"),
     certainty: true,
   })),
 }));

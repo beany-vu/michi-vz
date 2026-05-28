@@ -1,12 +1,17 @@
 import { easeQuadOut, select } from "d3";
-import { useLayoutEffect, useRef } from "react";
+import React, { useLayoutEffect, useRef } from "react";
 
 // Above this many colour changes in a single pass, skip the per-node tween:
 // N simultaneous 100ms transitions is itself a jank source, so set the
 // colours directly instead.
 const COLOR_TWEEN_MAX_KEYS = 200;
 
-const useLineChartColorMapping = (colorsMapping, getColor, svgRef, TRANSITION_DURATION) => {
+const useLineChartColorMapping = (
+  colorsMapping: Record<string, string>,
+  getColor: (color?: string, fallback?: string) => string,
+  svgRef: React.RefObject<SVGSVGElement | null>,
+  TRANSITION_DURATION: number
+) => {
   // Colours this hook last applied. Lets an unchanged colorsMapping (new object
   // identity but identical values — common with Redux / inline-object props)
   // skip re-running 100ms transitions on every series.
@@ -26,7 +31,7 @@ const useLineChartColorMapping = (colorsMapping, getColor, svgRef, TRANSITION_DU
     // Only the keys whose resolved colour actually changed since the last apply.
     const changed: Array<[string, string]> = [];
     for (const key of Object.keys(colorsMapping)) {
-      const color = getColor(colorsMapping[key], null);
+      const color = getColor(colorsMapping[key], undefined);
       if (color !== appliedRef.current[key]) changed.push([key, color]);
     }
 

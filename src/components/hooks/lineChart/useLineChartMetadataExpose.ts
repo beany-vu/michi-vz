@@ -95,7 +95,7 @@ const useLineChartMetadataExpose = (
       // When filter is null, include all items in legend, otherwise use visibleSeries
       const labelsForLegend = filter ? visibleSeries : dataSet.map(d => d.label);
       const uniqueLabels = [...new Set(labelsForLegend)].filter(
-        label => dataSet.find(d => d.label === label)?.series.length > 0
+        label => (dataSet.find(d => d.label === label)?.series.length ?? 0) > 0
       );
 
       // Create legend data for unique labels only
@@ -143,7 +143,7 @@ const useLineChartMetadataExpose = (
         visibleItems: uniqueLabels.filter(
           label =>
             !disabledItems.includes(label) &&
-            dataSet.find(d => d.label === label)?.series.length > 0
+            (dataSet.find(d => d.label === label)?.series.length ?? 0) > 0
         ),
         renderedData: lineData.reduce(
           (acc, item) => {

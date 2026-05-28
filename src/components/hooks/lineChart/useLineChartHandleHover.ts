@@ -1,25 +1,28 @@
+import React from "react";
 import { useCallback } from "react";
-import { pointer, select } from "d3";
+import { pointer, select, ScaleLinear, ScaleTime } from "d3";
 import { DEFAULT_HEIGHT, DEFAULT_MARGIN } from "../../LineChart";
+import { LineChartDataItem } from "../../../types/data";
 
 const useLineChartTooltipToggle = (
-  xScale,
-  filteredDataSet,
-  getYValueAtX,
-  margin,
-  svgRef,
-  tooltipRef
+  xScale: ScaleLinear<number, number> | ScaleTime<number, number>,
+  filteredDataSet: LineChartDataItem[],
+  getYValueAtX: (series: { date: number; value: number; certainty: boolean }[], x: number | Date) => number | undefined,
+  margin: { top: number; right: number; bottom: number; left: number },
+  svgRef: React.RefObject<SVGSVGElement | null>,
+  tooltipRef: React.RefObject<HTMLDivElement | null>
 ) => {
   return useCallback(
     (event: MouseEvent) => {
       if (!svgRef.current || !tooltipRef.current) return;
 
       const [x, y] = pointer(event, event.currentTarget as SVGElement);
-      const xValue = xScale.invert(x);
+      const xInverted = xScale.invert(x);
+      const xValue = xInverted instanceof Date ? xInverted.getTime() : +xInverted;
 
       const tooltipTitle = `<div class="tooltip-title">${xValue}</div>`;
       const tooltipContent = filteredDataSet
-        .map(data => {
+        .map((data: LineChartDataItem) => {
           const yValue = getYValueAtX(data.series, xValue);
           return `<div>${data.label}: ${yValue ?? "N/A"}</div>`;
         })

@@ -68,61 +68,24 @@ const mockSVGFunctions = () => {
     globalThis.SVGElement.prototype.getPointAtLength || (() => ({ x: 0, y: 0 }));
 
   // Add required properties without redefining them if they already exist
-  const svgProps = {
-    className: {
-      configurable: true,
-      get: function () {
-        if (!this._className) {
-          this._className = new SVGAnimatedString("");
-        }
-        return this._className;
-      },
+  const makeGetter = (factory: () => unknown) => ({
+    configurable: true,
+    get(this: Record<string, unknown>): unknown {
+      const key = `_${factory.name || Math.random()}`;
+      if (!this[key]) {
+        this[key] = factory();
+      }
+      return this[key];
     },
-    transform: {
-      configurable: true,
-      get: function () {
-        if (!this._transform) {
-          this._transform = { baseVal: { consolidate: () => null } };
-        }
-        return this._transform;
-      },
-    },
-    x: {
-      configurable: true,
-      get: function () {
-        if (!this._x) {
-          this._x = new SVGAnimatedLength();
-        }
-        return this._x;
-      },
-    },
-    y: {
-      configurable: true,
-      get: function () {
-        if (!this._y) {
-          this._y = new SVGAnimatedLength();
-        }
-        return this._y;
-      },
-    },
-    width: {
-      configurable: true,
-      get: function () {
-        if (!this._width) {
-          this._width = new SVGAnimatedLength();
-        }
-        return this._width;
-      },
-    },
-    height: {
-      configurable: true,
-      get: function () {
-        if (!this._height) {
-          this._height = new SVGAnimatedLength();
-        }
-        return this._height;
-      },
-    },
+  });
+
+  const svgProps: Record<string, PropertyDescriptor> = {
+    className: { configurable: true, get() { return new SVGAnimatedString(""); } },
+    transform: { configurable: true, get() { return { baseVal: { consolidate: () => null } }; } },
+    x: makeGetter(() => new SVGAnimatedLength()),
+    y: makeGetter(() => new SVGAnimatedLength()),
+    width: makeGetter(() => new SVGAnimatedLength()),
+    height: makeGetter(() => new SVGAnimatedLength()),
   };
 
   // Only define properties that don't already exist
@@ -138,10 +101,11 @@ const mockSVGFunctions = () => {
 
 // Clear the mocks
 const clearMocks = () => {
-  delete globalThis.SVGElement.prototype.getBBox;
-  delete globalThis.SVGElement.prototype.getComputedTextLength;
-  delete globalThis.SVGElement.prototype.getPointAtLength;
-  delete global.ResizeObserver;
+  // Reset prototype methods to their original (undefined/noop) state
+  (globalThis.SVGElement.prototype as unknown as Record<string, unknown>).getBBox = undefined;
+  (globalThis.SVGElement.prototype as unknown as Record<string, unknown>).getComputedTextLength = undefined;
+  (globalThis.SVGElement.prototype as unknown as Record<string, unknown>).getPointAtLength = undefined;
+  (global as unknown as Record<string, unknown>).ResizeObserver = undefined;
 };
 
 // Custom render function that includes the MichiVzProvider

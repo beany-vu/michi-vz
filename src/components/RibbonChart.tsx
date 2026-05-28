@@ -33,13 +33,13 @@ interface Props {
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
   title?: string;
-  yAxisFormat?: (d: number) => string;
+  yAxisFormat?: (d: number | { valueOf(): number }) => string;
   xAxisFormat?: (d: string | number) => string;
   children?: React.ReactNode;
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
-  isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
+  isNodata?: boolean | ((dataSet: DataPoint[] | null | undefined) => boolean);
   tooltipContent?: (data: DataPoint) => string;
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
@@ -132,7 +132,7 @@ const RibbonChart: React.FC<Props> = ({
         ) || 0
     );
 
-    return [0, max];
+    return [0, max ?? 1];
   }, [filteredDataSet, keys]);
 
   const yScale = useMemo(
@@ -147,7 +147,7 @@ const RibbonChart: React.FC<Props> = ({
   );
 
   const prepareStackedData = (seriesData: DataPoint[]) => {
-    let stackedData = keys.reduce((acc, key) => {
+    let stackedData: Record<string, RectData[] | null> = keys.reduce((acc: Record<string, RectData[] | null>, key) => {
       acc[key] = null;
       return acc;
     }, {});
@@ -164,7 +164,7 @@ const RibbonChart: React.FC<Props> = ({
             height,
             width: 30,
             y: yScale(y1),
-            x: xScale(String(yearData.date)) + xScale.bandwidth() / 2 - 30 / 2,
+            x: (xScale(String(yearData.date)) ?? 0) + xScale.bandwidth() / 2 - 30 / 2,
             fill: colorsMapping[key],
             data: yearData,
             certainty: yearData.certainty,
@@ -323,7 +323,7 @@ const RibbonChart: React.FC<Props> = ({
         onMouseOut={event => {
           event.preventDefault();
           event.stopPropagation();
-          onHighlightItem([]);
+          onHighlightItem?.([]);
 
           if (isTooltipSticky) return;
           d3.select(".tooltip").style("visibility", "hidden");
@@ -356,17 +356,18 @@ const RibbonChart: React.FC<Props> = ({
                   key={`stack-${key}.replaceAll(" ", "-").replaceAll(",", "")`}
                   className={`stack-${key}.replaceAll(" ", "-").replaceAll(",", "")`}
                 >
-                  {stackedRectData[key] &&
-                    stackedRectData[key].map((d: RectData, i: number) => {
+                  {(() => {
+                    const keyData = stackedRectData[key];
+                    return keyData && keyData.map((d: RectData, i: number) => {
                       const pointTopLeft = {
                         x: d.x + d.width,
                         y: d.y,
                         height: d.height,
                       };
                       const pointTopRight = {
-                        x: stackedRectData[key][i + 1]?.x,
-                        y: stackedRectData[key][i + 1]?.y,
-                        height: stackedRectData[key][i + 1]?.height,
+                        x: keyData[i + 1]?.x,
+                        y: keyData[i + 1]?.y,
+                        height: keyData[i + 1]?.height,
                       };
                       const topCurveControl = `Q${d.x + d.width} ${d.y}`;
                       const segmentTopCurve = `M${pointTopLeft.x} ${
@@ -382,7 +383,7 @@ const RibbonChart: React.FC<Props> = ({
 
                       return (
                         <React.Fragment key={`item-${i}`}>
-                          {i < stackedRectData[key].length - 1 && (
+                          {i < keyData.length - 1 && (
                             <path
                               d={pathD}
                               fill={d.fill}
@@ -394,8 +395,8 @@ const RibbonChart: React.FC<Props> = ({
                               stroke={"#fff"}
                               strokeOpacity={0.4}
                               style={{ transition: "opacity 0.1s ease-out" }}
-                              onMouseOver={() => onHighlightItem([d.key])}
-                              onMouseOut={() => onHighlightItem([])}
+                              onMouseOver={() => onHighlightItem?.([d.key])}
+                              onMouseOut={() => onHighlightItem?.([])}
                             />
                           )}
                           <rect
@@ -418,7 +419,7 @@ const RibbonChart: React.FC<Props> = ({
                               if (node) {
                                 d3.select(node)
                                   .on("mouseover", function () {
-                                    onHighlightItem([d.key]);
+                                    onHighlightItem?.([d.key]);
 
                                     if (isTooltipSticky) return;
                                     d3.select(".tooltip").style("visibility", "visible");
@@ -440,7 +441,7 @@ const RibbonChart: React.FC<Props> = ({
                                       .style("top", y - tooltipHeight - 10 + "px");
                                   })
                                   .on("mouseout", function () {
-                                    onHighlightItem([]);
+                                    onHighlightItem?.([]);
 
                                     if (isTooltipSticky) return;
                                     d3.select(".tooltip").style("visibility", "hidden");
@@ -462,7 +463,8 @@ const RibbonChart: React.FC<Props> = ({
                           />
                         </React.Fragment>
                       );
-                    })}
+                    });
+                  })()}
                 </g>
               );
             })}

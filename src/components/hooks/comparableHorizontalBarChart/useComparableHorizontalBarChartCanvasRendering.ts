@@ -218,9 +218,9 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): BarHit[] =>
 
 export interface CHBCCanvasRenderingOptions {
   enabled: boolean;
-  canvasRef: React.RefObject<HTMLCanvasElement>;
-  svgRef: React.RefObject<SVGSVGElement>;
-  tooltipRef: React.RefObject<HTMLDivElement>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  svgRef: React.RefObject<SVGSVGElement | null>;
+  tooltipRef: React.RefObject<HTMLDivElement | null>;
   drawData: CHBCDataPoint[];
   // The complete (unfiltered-by-visibility) dataset — used to build the
   // tooltip's `dataSet` argument so it matches the SVG renderer.

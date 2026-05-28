@@ -40,7 +40,7 @@ const resolveSeriesColors = (
   svgEl: SVGSVGElement | null,
   drawData: LineChartDataItem[],
   colorsMapping: { [key: string]: string },
-  getColor: (color: string | undefined, fallback: string | null) => string
+  getColor: (color?: string, fallback?: string) => string
 ): Map<string, string> => {
   const resolved = new Map<string, string>();
   if (!svgEl) {
@@ -168,9 +168,9 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
 
 export interface CanvasRenderingOptions {
   enabled: boolean;
-  canvasRef: React.RefObject<HTMLCanvasElement>;
-  svgRef: React.RefObject<SVGSVGElement>;
-  tooltipRef: React.RefObject<HTMLDivElement>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  svgRef: React.RefObject<SVGSVGElement | null>;
+  tooltipRef: React.RefObject<HTMLDivElement | null>;
   // drawData is decimated (for painting); fullData is the complete data set
   // (for hit-testing, so the tooltip always lands on a real point).
   drawData: LineChartDataItem[];
@@ -182,7 +182,7 @@ export interface CanvasRenderingOptions {
   yScale: YScale;
   xAxisDataType: "number" | "date_annual" | "date_monthly";
   colorsMapping: { [key: string]: string };
-  getColor: (color: string | undefined, fallback: string | null) => string;
+  getColor: (color?: string, fallback?: string) => string;
   getRuns: (series: DataPoint[]) => SeriesRun[];
   highlightItems: string[];
   showDataPoints: boolean;

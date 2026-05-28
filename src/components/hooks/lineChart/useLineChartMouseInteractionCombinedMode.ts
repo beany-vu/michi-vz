@@ -1,13 +1,14 @@
+import React from "react";
 import { select } from "d3";
 import { useLayoutEffect } from "react";
 
 const useLineChartMouseInteractionCombinedMode = (
-  showCombined,
-  width,
-  height,
-  handleHover,
-  handleCombinedMouseOut,
-  svgRef
+  showCombined: boolean,
+  width: number,
+  height: number,
+  handleHover: (event: MouseEvent) => void,
+  handleCombinedMouseOut: () => void,
+  svgRef: React.RefObject<SVGSVGElement | null>
 ) => {
   useLayoutEffect(() => {
     if (!showCombined || !svgRef.current) return;

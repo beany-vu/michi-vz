@@ -127,8 +127,8 @@ interface LineChartProps {
   margin: { top: number; right: number; bottom: number; left: number };
   title?: string;
   yAxisDomain?: [number, number];
-  yAxisFormat?: (d: number) => string;
-  xAxisFormat?: (d: number) => string;
+  yAxisFormat?: (d: number | { valueOf(): number }) => string;
+  xAxisFormat?: (d: number | string | { valueOf(): number }, tickValues?: Array<string | number>) => string;
   xAxisDataType: "number" | "date_annual" | "date_monthly";
   tooltipFormatter?: (
     d: DataPoint,
@@ -152,7 +152,7 @@ interface LineChartProps {
           label: string;
           color: string;
           series: DataPoint[];
-        }[]
+        }[] | null | undefined
       ) => boolean);
   filter?: {
     limit: number;

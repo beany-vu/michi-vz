@@ -264,10 +264,10 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): SeriesHit[]
 
 export interface RadarCanvasRenderingOptions {
   enabled: boolean;
-  canvasRef: React.RefObject<HTMLCanvasElement>;
-  svgRef: React.RefObject<SVGSVGElement>;
-  tooltipRef: React.RefObject<HTMLDivElement>;
-  tooltipContentRef: React.RefObject<HTMLDivElement>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  svgRef: React.RefObject<SVGSVGElement | null>;
+  tooltipRef: React.RefObject<HTMLDivElement | null>;
+  tooltipContentRef: React.RefObject<HTMLDivElement | null>;
   series: RadarSeries[];
   poleLabels: string[];
   width: number;

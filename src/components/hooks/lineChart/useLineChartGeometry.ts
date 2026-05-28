@@ -46,7 +46,7 @@ export function useLineChartGeometry({
           }
         })
         .y(d => yScale(d.value))
-        .curve(d3?.[curve] ?? d3.curveBumpX)(d);
+        .curve((d3 as Record<string, unknown>)?.[curve] as d3.CurveFactory ?? d3.curveBumpX)(d);
     },
     [xScale, yScale, xAxisDataType]
   );

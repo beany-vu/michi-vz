@@ -151,10 +151,10 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
 
 export interface AreaCanvasRenderingOptions {
   enabled: boolean;
-  canvasRef: React.RefObject<HTMLCanvasElement>;
-  svgRef: React.RefObject<SVGSVGElement>;
-  tooltipRef: React.RefObject<HTMLDivElement>;
-  tooltipContentRef: React.RefObject<HTMLDivElement>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  svgRef: React.RefObject<SVGSVGElement | null>;
+  tooltipRef: React.RefObject<HTMLDivElement | null>;
+  tooltipContentRef: React.RefObject<HTMLDivElement | null>;
   // Full row data, used for bisection nearest-date hit-testing.
   series: DataPoint[];
   // Stacked areas (key + d3.stack values + resolved fill).
@@ -167,7 +167,7 @@ export interface AreaCanvasRenderingOptions {
   xAxisDataType: "number" | "date_annual" | "date_monthly";
   highlightItems: string[];
   // Builds the tooltip HTML for a hovered row + key (already null-safe).
-  tooltipFormatter: (dataPoint: DataPoint, key: string) => string;
+  tooltipFormatter: (dataPoint: DataPoint, key: string) => string | null;
   onHighlightItem?: (labels: string[]) => void;
 }
 
@@ -369,7 +369,7 @@ const useAreaChartCanvasRendering = (
       if (!tip) return;
       if (content) {
         // Sanitize the consumer's tooltipFormatter HTML before injecting it.
-        const safeHtml = DOMPurify.sanitize(o.tooltipFormatter(dataPoint, key));
+        const safeHtml = DOMPurify.sanitize(o.tooltipFormatter(dataPoint, key) ?? "");
         content.innerHTML = safeHtml;
       }
       tip.style.visibility = "visible";

@@ -28,16 +28,16 @@
     "test:watch": "jest --watch",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "build": "tsc --pretty && tsc-alias",
+    "build": "node node_modules/typescript/bin/tsc --pretty && node node_modules/tsc-alias/dist/bin/index.js",
     "build:to-thd": "npm run build && rm -rf /mnt/c/Coding/thd/frontend/node_modules/michi-vz/dist && cp -r ./dist /mnt/c/Coding/thd/frontend/node_modules/michi-vz/dist && echo '✓ michi-vz dist copied to thd/frontend/node_modules. Restart the dev server to pick it up.'",
-    "build:files": "tsc --pretty --listFiles && tsc-alias",
-    "build:debug": "tsc --pretty --extendedDiagnostics && tsc-alias",
-    "build:trace": "tsc --pretty --traceResolution && tsc-alias",
-    "type-check": "tsc --noEmit --pretty",
+    "build:files": "node node_modules/typescript/bin/tsc --pretty --listFiles && node node_modules/tsc-alias/dist/bin/index.js",
+    "build:debug": "node node_modules/typescript/bin/tsc --pretty --extendedDiagnostics && node node_modules/tsc-alias/dist/bin/index.js",
+    "build:trace": "node node_modules/typescript/bin/tsc --pretty --traceResolution && node node_modules/tsc-alias/dist/bin/index.js",
+    "type-check": "node node_modules/typescript/bin/tsc --noEmit --pretty",
     "lint": "eslint './src/**/*.{ts,tsx}'",
     "lint:fix": "eslint './src/**/*.{ts,tsx}' --fix",
     "prepublishOnly": "npm run build",
-    "deploy": "gh-pages -d storybook-static"
+    "deploy": "node node_modules/gh-pages/bin/gh-pages.js -d storybook-static"
   },
   "author": "Hoang VQ",
   "license": "ISC",
@@ -67,6 +67,7 @@
     "@testing-library/react": "^16.3.0",
     "@types/d3": "^7.4.3",
     "@types/jest": "^29.5.12",
+    "@types/lodash": "^4.17.24",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.2",
     "@typescript-eslint/eslint-plugin": "^6.1.0",
@@ -87,7 +88,8 @@
     "prettier": "^3.2.5",
     "storybook": "^10.4.1",
     "ts-jest": "^29.1.2",
-    "tsc-alias": "^1.8.16"
+    "tsc-alias": "^1.8.16",
+    "typescript": "^6.0.3"
   },
   "moduleNameMapper": {
     "^src/(.*)$": "<rootDir>/src/$1"

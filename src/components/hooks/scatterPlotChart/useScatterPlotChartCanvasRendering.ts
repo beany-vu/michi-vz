@@ -258,10 +258,10 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
 
 export interface ScatterCanvasRenderingOptions {
   enabled: boolean;
-  canvasRef: React.RefObject<HTMLCanvasElement>;
-  svgRef: React.RefObject<SVGSVGElement>;
-  tooltipRef: React.RefObject<HTMLDivElement>;
-  tooltipContentRef: React.RefObject<HTMLDivElement>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  svgRef: React.RefObject<SVGSVGElement | null>;
+  tooltipRef: React.RefObject<HTMLDivElement | null>;
+  tooltipContentRef: React.RefObject<HTMLDivElement | null>;
   // Points sorted by descending d (paint order). Hit-testing walks this in
   // reverse so the topmost (smallest) point under the cursor wins.
   renderData: ScatterDataPoint[];

@@ -109,8 +109,8 @@ interface GapChartProps {
   };
   legendFormatter?: (items: GapChartLegendItem[]) => GapChartLegendItem[];
   xAxisDataType: XaxisDataType;
-  yAxisFormat?: (d: number) => string;
-  xAxisFormat?: (d: number, tickValues?: Array<string | number>) => string;
+  yAxisFormat?: (d: number | string) => string;
+  xAxisFormat?: (d: number | string | { valueOf(): number }, tickValues?: Array<string | number>) => string;
   ticks?: number;
   tickValues?: Array<number | Date>;
   enableExplicitTickValues?: boolean; // false to use d3 internal tick calculator
@@ -122,7 +122,7 @@ interface GapChartProps {
   onDisabledItem?: (item: DataItem) => void;
   onColorChange?: (item: DataItem, color: string) => void;
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
-  isNodata?: boolean | ((dataSet: DataItem[]) => boolean);
+  isNodata?: boolean | ((dataSet: DataItem[] | null | undefined) => boolean);
   isNodataComponent?: React.ReactNode;
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
@@ -342,7 +342,7 @@ const GapChart: FC<GapChartProps> = ({
   // Check if no data
   const displayIsNodata = useDisplayIsNodata({
     dataSet,
-    isLoading,
+    isLoading: isLoading ?? false,
     isNodataComponent,
     isNodata,
   });
@@ -584,7 +584,7 @@ const GapChart: FC<GapChartProps> = ({
           >
             {/* Create a flex-like layout for legend items */}
             {(() => {
-              const items = [];
+              const items: React.ReactNode[] = [];
               const itemWidth = 180;
               const itemSpacing = 40;
               const shapeOffset = 15;

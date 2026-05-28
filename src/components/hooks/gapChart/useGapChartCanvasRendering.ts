@@ -282,11 +282,11 @@ const resolveColors = (
 
 export interface GapChartCanvasRenderingOptions {
   enabled: boolean;
-  canvasRef: React.RefObject<HTMLCanvasElement>;
-  svgRef: React.RefObject<SVGSVGElement>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  svgRef: React.RefObject<SVGSVGElement | null>;
   // The HTML tooltip div rendered by GapChart in canvas mode; its
   // `.tooltip-content` child receives the sanitized tooltip HTML.
-  tooltipRef: React.RefObject<HTMLDivElement>;
+  tooltipRef: React.RefObject<HTMLDivElement | null>;
   width: number;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };

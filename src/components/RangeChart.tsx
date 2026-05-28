@@ -28,8 +28,8 @@ interface RangeChartProps {
   margin: { top: number; right: number; bottom: number; left: number };
   title?: string;
   yAxisDomain?: [number, number];
-  yAxisFormat?: (d: number) => string;
-  xAxisFormat?: (d: number) => string;
+  yAxisFormat?: (d: number | { valueOf(): number }) => string;
+  xAxisFormat?: (d: number | string | { valueOf(): number }, tickValues?: Array<string | number>) => string;
   xAxisDataType: XaxisDataType;
   tooltipFormatter?: (
     d: DataPointRangeChart,
@@ -52,7 +52,7 @@ interface RangeChartProps {
           label: string;
           color: string;
           series: DataPointRangeChart[];
-        }[]
+        }[] | null | undefined
       ) => boolean);
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
@@ -333,7 +333,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
         .on("mouseenter", (event, d) => {
           event.preventDefault();
           event.stopPropagation();
-          onHighlightItem([data.label]);
+          onHighlightItem?.([data.label]);
           showTooltip(event, tooltipFormatterRef.current(d, data.series, filteredDataSet));
         })
         .on("click", (event, d) => {
@@ -344,7 +344,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
         .on("mouseleave", event => {
           event.preventDefault();
           event.stopPropagation();
-          onHighlightItem([]);
+          onHighlightItem?.([]);
           hideTooltip();
         });
     });

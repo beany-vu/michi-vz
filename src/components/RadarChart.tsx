@@ -99,7 +99,7 @@ export interface RadarChartProps {
   isLoading?: boolean;
   isLoadingComponent?: React.ReactNode;
   isNodataComponent?: React.ReactNode;
-  isNodata?: boolean | ((dataSet: DataPoint[]) => boolean);
+  isNodata?: boolean | ((dataSet: DataPoint[] | null | undefined) => boolean);
   onChartDataProcessed?: (metadata: ChartMetadata) => void;
   onHighlightItem?: (labels: string[]) => void;
   tooltipContainerStyle?: React.CSSProperties;
@@ -285,7 +285,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
       }
 
       // Adjusting starting angle by subtracting Math.PI / 2
-      const angle = anglesDateMapping[cur.date];
+      const angle = anglesDateMapping?.[cur.date];
       if (angle === undefined) {
         return res; // Skip if angle is not defined
       }
@@ -664,7 +664,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
           if (renderer === "canvas") return;
           event.preventDefault();
           event.stopPropagation();
-          onHighlightItem([]);
+          onHighlightItem?.([]);
 
           if (isTooltipSticky) return;
           setTooltipData(null);
@@ -694,13 +694,13 @@ export const RadarChart: React.FC<RadarChartProps> = ({
               strokeWidth={2}
               onMouseEnter={event => {
                 event.preventDefault();
-                onHighlightItem([label]);
+                onHighlightItem?.([label]);
               }}
               onMouseOut={event => {
                 event.preventDefault();
 
                 if (isTooltipSticky) return;
-                onHighlightItem([]);
+                onHighlightItem?.([]);
               }}
             />
             <DataPoints className={`data-points data-points-${i}`}>
@@ -727,7 +727,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                         strokeWidth={2}
                         fill={getColor(generatedColorsMapping[label.replace(/-\d{4}$/, "")], color)}
                         onMouseEnter={e => {
-                          onHighlightItem([label]);
+                          onHighlightItem?.([label]);
 
                           if (isTooltipSticky) return;
                           setTooltipData({
@@ -737,7 +737,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                           });
                           if (tooltipRef.current) {
                             const tooltip = tooltipRef.current;
-                            const svgRect = svgRef.current.getBoundingClientRect();
+                            const svgRect = svgRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
                             const x = e.clientX - svgRect.left;
                             const y = e.clientY - svgRect.top;
 
@@ -754,7 +754,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                           });
                           if (tooltipRef.current) {
                             const tooltip = tooltipRef.current;
-                            const svgRect = svgRef.current.getBoundingClientRect();
+                            const svgRect = svgRef.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
                             const x = e.clientX - svgRect.left;
                             const y = e.clientY - svgRect.top;
 
@@ -763,7 +763,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({
                           }
                         }}
                         onMouseOut={() => {
-                          onHighlightItem([]);
+                          onHighlightItem?.([]);
 
                           if (isTooltipSticky) return;
                           setTooltipData(null);

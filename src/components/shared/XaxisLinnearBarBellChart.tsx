@@ -26,13 +26,8 @@ const checkIsTimeScale = (
 
   if ("ticks" in scale && "domain" in scale && "range" in scale) {
     const timeScale = scale as ScaleTime<number, number>;
-    return (
-      timeScale.ticks !== undefined &&
-      timeScale.domain instanceof Array &&
-      timeScale.range instanceof Array &&
-      ((typeof timeScale.domain[0] === "number" && typeof timeScale.range[0] === "number") ||
-        (timeScale.domain[0] instanceof Date && timeScale.range[0] instanceof Date))
-    );
+    const dom = timeScale.domain();
+    return timeScale.ticks !== undefined && dom[0] instanceof Date;
   }
   return false;
 };
@@ -131,8 +126,8 @@ const XaxisLinear: FC<Props> = ({
   }, [xScale, ticks, isTimeScale, isLoading, isEmpty, tickValuesProp]);
 
   useLayoutEffect(() => {
-    const g = d3.select(ref.current);
-    if (!g) return;
+    if (!ref.current) return;
+    const g = d3.select<SVGGElement, unknown>(ref.current);
 
     // If dataset is empty or loading, clear any existing axis elements and return
     if (isEmpty || isLoading) {
@@ -143,7 +138,8 @@ const XaxisLinear: FC<Props> = ({
     // Create the axis and use our calculated tickValues
     const axisBottom = d3
       .axisBottom(xScale)
-      .tickValues(tickValues)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .tickValues(tickValues as any)
       .tickFormat((domainValue: number | Date | { valueOf(): number }) =>
         xAxisFormat
           ? xAxisFormat(domainValue instanceof Date ? domainValue : domainValue.valueOf())
@@ -162,14 +158,15 @@ const XaxisLinear: FC<Props> = ({
     g.transition()
       .delay(150)
       .duration(400)
-      .call(axisBottom)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .call(axisBottom as any)
       .call(g => g.select(".domain").attr("stroke-opacity", 0)) // Make domain line visible
       .call(g => g.selectAll("line").attr("stroke-opacity", 0)) // Make tick lines visible
       .call(g => g.selectAll("text").attr("fill", "currentColor")) // Ensure text is visible
       // Add class for tick at 0
       .call(g => {
-        g.selectAll(".tick").each(function (d) {
-          const tickValue = d instanceof Date ? d.valueOf() : +d;
+        g.selectAll(".tick").each(function (d: unknown) {
+          const tickValue = d instanceof Date ? d.valueOf() : +(d as number);
           if (tickValue === 0) {
             d3.select(this).classed("tick-zero", true);
           }
@@ -212,7 +209,7 @@ const XaxisLinear: FC<Props> = ({
       .enter()
       .append("circle")
       .attr("class", "tickValueDot")
-      .merge(dots as d3.Selection<SVGCircleElement, number, SVGGElement, unknown>)
+      .merge(dots as unknown as d3.Selection<SVGCircleElement, number, SVGGElement, unknown>)
       .attr("cx", 0)
       .attr("cy", 0)
       .attr("r", 2)
