@@ -50,4 +50,16 @@ describe("ScatterPlotChart crosshair badge flip", () => {
     );
     expect(transformOf(pinAndGetBadge(container, "x"))).toMatch(/,\s*50\)/);
   });
+
+  test("crosshair badge renders after the data points so it paints on top", () => {
+    const { container } = customRender(
+      <ScatterPlotChart {...baseProps} dataSet={[{ label: "A", x: 50, y: 50, d: 10 }]} />
+    );
+    const badge = pinAndGetBadge(container, "y") as SVGGElement;
+    const dataPoint = container.querySelector(".data-point") as SVGGElement;
+    // In SVG, later elements paint on top — the badge must follow the data point.
+    expect(
+      dataPoint.compareDocumentPosition(badge) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
 });

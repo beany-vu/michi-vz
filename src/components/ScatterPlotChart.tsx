@@ -79,6 +79,79 @@ const CrosshairAxisBadge: React.FC<{
   );
 };
 
+// Full crosshair for one point: lines spanning the whole plot area (so a badge
+// that flipped to the far axis still has a line reaching it) plus the two axis
+// value badges. Rendered after the point cloud so it always sits on top of the
+// bubbles. Used for both pinned (solid) and hover (dashed) crosshairs.
+const CrosshairOverlay: React.FC<{
+  cx: number;
+  cy: number;
+  r: number;
+  color: string;
+  dashed?: boolean;
+  opacity: number;
+  showLabels: boolean;
+  xLabel: string;
+  yLabel: string;
+  margin: { top: number; right: number; bottom: number; left: number };
+  width: number;
+  height: number;
+}> = ({ cx, cy, r, color, dashed = false, opacity, showLabels, xLabel, yLabel, margin, width, height }) => {
+  const dash = dashed ? "4 4" : undefined;
+  return (
+    <>
+      <line
+        x1={cx}
+        x2={cx}
+        y1={margin.top}
+        y2={height - margin.bottom}
+        stroke={color}
+        strokeDasharray={dash}
+        strokeOpacity={opacity}
+        strokeWidth={1.5}
+        pointerEvents="none"
+      />
+      <line
+        x1={margin.left}
+        x2={width - margin.right}
+        y1={cy}
+        y2={cy}
+        stroke={color}
+        strokeDasharray={dash}
+        strokeOpacity={opacity}
+        strokeWidth={1.5}
+        pointerEvents="none"
+      />
+      {showLabels && (
+        <>
+          <CrosshairAxisBadge
+            axis="y"
+            cx={cx}
+            cy={cy}
+            r={r}
+            label={yLabel}
+            color={color}
+            margin={margin}
+            width={width}
+            height={height}
+          />
+          <CrosshairAxisBadge
+            axis="x"
+            cx={cx}
+            cy={cy}
+            r={r}
+            label={xLabel}
+            color={color}
+            margin={margin}
+            width={width}
+            height={height}
+          />
+        </>
+      )}
+    </>
+  );
+};
+
 const Styled = styled.div`
   .shape {
     width: 100%;
@@ -745,88 +818,6 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                 </Title>
                 {children}
 
-                {/* Pinned crosshairs — always shown for every pinned bubble (solid, 1.5px). */}
-                {renderer !== "canvas" && Array.from(pinnedPoints.values()).map(point => {
-                  const cx = getXValue(point) ?? 0;
-                  const cy = yScale(point.y);
-                  const color = getColor(generatedColorsMapping[point.label], point.color);
-                  return (
-                    <React.Fragment key={`xhair-${point.label}`}>
-                      <line x1={cx} x2={cx} y1={cy} y2={height - margin.bottom}
-                        stroke={color} strokeOpacity={0.75} strokeWidth={1.5} pointerEvents="none" />
-                      <line x1={margin.left} x2={cx} y1={cy} y2={cy}
-                        stroke={color} strokeOpacity={0.75} strokeWidth={1.5} pointerEvents="none" />
-                      {crosshairLabels && (
-                        <>
-                          <CrosshairAxisBadge
-                            axis="y"
-                            cx={cx}
-                            cy={cy}
-                            r={getRadius(point)}
-                            label={yAxisFormat ? yAxisFormat(point.y) : String(point.y)}
-                            color={color}
-                            margin={margin}
-                            width={width}
-                            height={height}
-                          />
-                          <CrosshairAxisBadge
-                            axis="x"
-                            cx={cx}
-                            cy={cy}
-                            r={getRadius(point)}
-                            label={xAxisFormat ? xAxisFormat(point.x) : String(point.x)}
-                            color={color}
-                            margin={margin}
-                            width={width}
-                            height={height}
-                          />
-                        </>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-
-                {/* Hover crosshair — dashed, only when showCrosshair=true and hovering an unpinned bubble. */}
-                {renderer !== "canvas" && showCrosshair && activePoint && !pinnedPoints.has(activePoint.label) && (() => {
-                  const cx = getXValue(activePoint) ?? 0;
-                  const cy = yScale(activePoint.y);
-                  const color = getColor(generatedColorsMapping[activePoint.label], activePoint.color);
-                  return (
-                    <>
-                      <line x1={cx} x2={cx} y1={cy} y2={height - margin.bottom}
-                        stroke={color} strokeDasharray="4 4" strokeOpacity={0.6} strokeWidth={1.5} pointerEvents="none" />
-                      <line x1={margin.left} x2={cx} y1={cy} y2={cy}
-                        stroke={color} strokeDasharray="4 4" strokeOpacity={0.6} strokeWidth={1.5} pointerEvents="none" />
-                      {crosshairLabels && (
-                        <>
-                          <CrosshairAxisBadge
-                            axis="y"
-                            cx={cx}
-                            cy={cy}
-                            r={getRadius(activePoint)}
-                            label={yAxisFormat ? yAxisFormat(activePoint.y) : String(activePoint.y)}
-                            color={color}
-                            margin={margin}
-                            width={width}
-                            height={height}
-                          />
-                          <CrosshairAxisBadge
-                            axis="x"
-                            cx={cx}
-                            cy={cy}
-                            r={getRadius(activePoint)}
-                            label={xAxisFormat ? xAxisFormat(activePoint.x) : String(activePoint.x)}
-                            color={color}
-                            margin={margin}
-                            width={width}
-                            height={height}
-                          />
-                        </>
-                      )}
-                    </>
-                  );
-                })()}
-
                 {/* Use renderOrderedDataSet instead of filteredDataSet for proper rendering order */}
                 {/* In canvas mode the point marks are painted on the <canvas>; skip the SVG marks. */}
                 {renderer !== "canvas" &&
@@ -967,6 +958,62 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                     />
                   </>
                 )}
+
+                {/* Crosshairs render last so their lines and value badges sit on
+                    top of every bubble (and the axes), never hidden behind a mark. */}
+                {/* Pinned crosshairs — always shown for every pinned bubble (solid, full-span). */}
+                {renderer !== "canvas" &&
+                  Array.from(pinnedPoints.values()).map(point => {
+                    const cx = getXValue(point) ?? 0;
+                    const cy = yScale(point.y);
+                    const color = getColor(generatedColorsMapping[point.label], point.color);
+                    return (
+                      <CrosshairOverlay
+                        key={`xhair-${point.label}`}
+                        cx={cx}
+                        cy={cy}
+                        r={getRadius(point)}
+                        color={color}
+                        opacity={0.75}
+                        showLabels={crosshairLabels}
+                        yLabel={yAxisFormat ? yAxisFormat(point.y) : String(point.y)}
+                        xLabel={xAxisFormat ? xAxisFormat(point.x) : String(point.x)}
+                        margin={margin}
+                        width={width}
+                        height={height}
+                      />
+                    );
+                  })}
+
+                {/* Hover crosshair — dashed, only when showCrosshair=true and hovering an unpinned bubble. */}
+                {renderer !== "canvas" &&
+                  showCrosshair &&
+                  activePoint &&
+                  !pinnedPoints.has(activePoint.label) &&
+                  (() => {
+                    const cx = getXValue(activePoint) ?? 0;
+                    const cy = yScale(activePoint.y);
+                    const color = getColor(
+                      generatedColorsMapping[activePoint.label],
+                      activePoint.color
+                    );
+                    return (
+                      <CrosshairOverlay
+                        cx={cx}
+                        cy={cy}
+                        r={getRadius(activePoint)}
+                        color={color}
+                        dashed
+                        opacity={0.6}
+                        showLabels={crosshairLabels}
+                        yLabel={yAxisFormat ? yAxisFormat(activePoint.y) : String(activePoint.y)}
+                        xLabel={xAxisFormat ? xAxisFormat(activePoint.x) : String(activePoint.x)}
+                        margin={margin}
+                        width={width}
+                        height={height}
+                      />
+                    );
+                  })()}
               </svg>
               {renderer === "canvas" && (
                 <canvas

@@ -208,13 +208,15 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
       ctx.globalAlpha = isSticky ? 0.75 : 0.6;
       ctx.lineWidth = 1.5;
       if (!isSticky) ctx.setLineDash([4, 4]);
+      // Full-span lines (axis to axis) so a badge flipped to the far axis still
+      // has a line reaching it — mirrors the SVG CrosshairOverlay.
       ctx.beginPath();
-      ctx.moveTo(cx, cy);
+      ctx.moveTo(cx, p.margin.top);
       ctx.lineTo(cx, p.height - p.margin.bottom);
       ctx.stroke();
       ctx.beginPath();
       ctx.moveTo(p.margin.left, cy);
-      ctx.lineTo(cx, cy);
+      ctx.lineTo(p.width - p.margin.right, cy);
       ctx.stroke();
       ctx.restore();
 
