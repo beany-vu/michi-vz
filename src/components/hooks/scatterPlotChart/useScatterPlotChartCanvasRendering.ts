@@ -5,6 +5,7 @@ import type { ScaleLinear, ScaleTime, ScaleBand } from "d3";
 import DOMPurify from "dompurify";
 import { setupCanvas } from "../canvas/setupCanvas";
 import { resolveMarkColors, ColorProbe } from "../canvas/resolveMarkColors";
+import { resolveCrosshairBadgePlacement } from "./crosshairBadgePlacement";
 
 // Opt-in Canvas 2D renderer for ScatterPlotChart. ScatterPlotChart is the
 // biggest canvas win in the performance overhaul — the SVG renderer emits one
@@ -216,6 +217,7 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
       ctx.restore();
 
       if (p.crosshairLabels) {
+        const cr = projectRadius(cp, p.dScale, p.xAxisDataType);
         const xText = String(cp.x);
         const yText = String(cp.y);
         const h = 18;
@@ -224,32 +226,40 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
         ctx.font = "10px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        // Y-axis badge
+        // Y-axis badge (collision-aware placement)
         const yW = Math.max(28, ctx.measureText(yText).width + pad * 2);
+        const yPos = resolveCrosshairBadgePlacement({
+          axis: "y", cx, cy, r: cr, badgeW: yW,
+          margin: p.margin, width: p.width, height: p.height,
+        });
         ctx.globalAlpha = 0.92;
         ctx.fillStyle = "#fff";
         ctx.strokeStyle = color;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.roundRect(p.margin.left - yW / 2, cy - h / 2, yW, h, 4);
+        ctx.roundRect(yPos.x - yW / 2, yPos.y - h / 2, yW, h, 4);
         ctx.fill();
         ctx.stroke();
         ctx.globalAlpha = 1;
         ctx.fillStyle = color;
-        ctx.fillText(yText, p.margin.left, cy);
-        // X-axis badge
+        ctx.fillText(yText, yPos.x, yPos.y);
+        // X-axis badge (collision-aware placement)
         const xW = Math.max(28, ctx.measureText(xText).width + pad * 2);
+        const xPos = resolveCrosshairBadgePlacement({
+          axis: "x", cx, cy, r: cr, badgeW: xW,
+          margin: p.margin, width: p.width, height: p.height,
+        });
         ctx.globalAlpha = 0.92;
         ctx.fillStyle = "#fff";
         ctx.strokeStyle = color;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.roundRect(cx - xW / 2, p.height - p.margin.bottom - h / 2, xW, h, 4);
+        ctx.roundRect(xPos.x - xW / 2, xPos.y - h / 2, xW, h, 4);
         ctx.fill();
         ctx.stroke();
         ctx.globalAlpha = 1;
         ctx.fillStyle = color;
-        ctx.fillText(xText, cx, p.height - p.margin.bottom);
+        ctx.fillText(xText, xPos.x, xPos.y);
         ctx.restore();
       }
     }
