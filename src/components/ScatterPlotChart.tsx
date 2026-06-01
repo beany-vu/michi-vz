@@ -24,6 +24,10 @@ import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import TooltipHint from "src/components/shared/TooltipHint";
 import MichiVzCredit from "./shared/MichiVzCredit";
 import useScatterPlotChartCanvasRendering from "./hooks/scatterPlotChart/useScatterPlotChartCanvasRendering";
+import {
+  resolveCrosshairBadgePlacement,
+  CROSSHAIR_BADGE_HEIGHT,
+} from "./hooks/scatterPlotChart/crosshairBadgePlacement";
 import DOMPurify from "dompurify";
 
 function getColor(mappedColor?: string, dataColor?: string): string {
@@ -32,6 +36,48 @@ function getColor(mappedColor?: string, dataColor?: string): string {
   if (dataColor) return dataColor;
   return FALLBACK_COLOR;
 }
+
+const CrosshairAxisBadge: React.FC<{
+  axis: "x" | "y";
+  cx: number;
+  cy: number;
+  r: number;
+  label: string;
+  color: string;
+  margin: { top: number; right: number; bottom: number; left: number };
+  width: number;
+  height: number;
+}> = ({ axis, cx, cy, r, label, color, margin, width, height }) => {
+  const badgeW = Math.max(28, label.length * 6 + 16);
+  const { x, y } = resolveCrosshairBadgePlacement({
+    axis,
+    cx,
+    cy,
+    r,
+    badgeW,
+    margin,
+    width,
+    height,
+  });
+  return (
+    <g data-crosshair-badge={axis} transform={`translate(${x}, ${y})`} pointerEvents="none">
+      <rect
+        x={-badgeW / 2}
+        y={-CROSSHAIR_BADGE_HEIGHT / 2}
+        width={badgeW}
+        height={CROSSHAIR_BADGE_HEIGHT}
+        rx={4}
+        fill="#fff"
+        fillOpacity={0.92}
+        stroke={color}
+        strokeWidth={1}
+      />
+      <text textAnchor="middle" dominantBaseline="middle" fontSize="10" fill={color}>
+        {label}
+      </text>
+    </g>
+  );
+};
 
 const Styled = styled.div`
   .shape {
@@ -384,6 +430,11 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     [xScale, xAxisDataType]
   );
 
+  const getRadius = useCallback(
+    (d: DataPoint) => (xAxisDataType === "band" ? d.d / 2 : dScale(d.d)) / 2,
+    [xAxisDataType, dScale]
+  );
+
   useEffect(() => {
     const svg = d3.select(svgRef.current);
 
@@ -705,30 +756,32 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                         stroke={color} strokeOpacity={0.75} strokeWidth={1.5} pointerEvents="none" />
                       <line x1={margin.left} x2={cx} y1={cy} y2={cy}
                         stroke={color} strokeOpacity={0.75} strokeWidth={1.5} pointerEvents="none" />
-                      {crosshairLabels && (() => {
-                        const yLbl = yAxisFormat ? yAxisFormat(point.y) : String(point.y);
-                        const xLbl = xAxisFormat ? xAxisFormat(point.x) : String(point.x);
-                        const yW = Math.max(28, yLbl.length * 6 + 16);
-                        const xW = Math.max(28, xLbl.length * 6 + 16);
-                        return (
-                          <>
-                            <g transform={`translate(${margin.left}, ${cy})`} pointerEvents="none">
-                              <rect x={-yW / 2} y={-9} width={yW} height={18} rx={4}
-                                fill="#fff" fillOpacity={0.92} stroke={color} strokeWidth={1} />
-                              <text textAnchor="middle" dominantBaseline="middle" fontSize="10" fill={color}>
-                                {yLbl}
-                              </text>
-                            </g>
-                            <g transform={`translate(${cx}, ${height - margin.bottom})`} pointerEvents="none">
-                              <rect x={-xW / 2} y={-9} width={xW} height={18} rx={4}
-                                fill="#fff" fillOpacity={0.92} stroke={color} strokeWidth={1} />
-                              <text textAnchor="middle" dominantBaseline="middle" fontSize="10" fill={color}>
-                                {xLbl}
-                              </text>
-                            </g>
-                          </>
-                        );
-                      })()}
+                      {crosshairLabels && (
+                        <>
+                          <CrosshairAxisBadge
+                            axis="y"
+                            cx={cx}
+                            cy={cy}
+                            r={getRadius(point)}
+                            label={yAxisFormat ? yAxisFormat(point.y) : String(point.y)}
+                            color={color}
+                            margin={margin}
+                            width={width}
+                            height={height}
+                          />
+                          <CrosshairAxisBadge
+                            axis="x"
+                            cx={cx}
+                            cy={cy}
+                            r={getRadius(point)}
+                            label={xAxisFormat ? xAxisFormat(point.x) : String(point.x)}
+                            color={color}
+                            margin={margin}
+                            width={width}
+                            height={height}
+                          />
+                        </>
+                      )}
                     </React.Fragment>
                   );
                 })}
@@ -744,30 +797,32 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                         stroke={color} strokeDasharray="4 4" strokeOpacity={0.6} strokeWidth={1.5} pointerEvents="none" />
                       <line x1={margin.left} x2={cx} y1={cy} y2={cy}
                         stroke={color} strokeDasharray="4 4" strokeOpacity={0.6} strokeWidth={1.5} pointerEvents="none" />
-                      {crosshairLabels && (() => {
-                        const yLbl = yAxisFormat ? yAxisFormat(activePoint.y) : String(activePoint.y);
-                        const xLbl = xAxisFormat ? xAxisFormat(activePoint.x) : String(activePoint.x);
-                        const yW = Math.max(28, yLbl.length * 6 + 16);
-                        const xW = Math.max(28, xLbl.length * 6 + 16);
-                        return (
-                          <>
-                            <g transform={`translate(${margin.left}, ${cy})`} pointerEvents="none">
-                              <rect x={-yW / 2} y={-9} width={yW} height={18} rx={4}
-                                fill="#fff" fillOpacity={0.92} stroke={color} strokeWidth={1} />
-                              <text textAnchor="middle" dominantBaseline="middle" fontSize="10" fill={color}>
-                                {yLbl}
-                              </text>
-                            </g>
-                            <g transform={`translate(${cx}, ${height - margin.bottom})`} pointerEvents="none">
-                              <rect x={-xW / 2} y={-9} width={xW} height={18} rx={4}
-                                fill="#fff" fillOpacity={0.92} stroke={color} strokeWidth={1} />
-                              <text textAnchor="middle" dominantBaseline="middle" fontSize="10" fill={color}>
-                                {xLbl}
-                              </text>
-                            </g>
-                          </>
-                        );
-                      })()}
+                      {crosshairLabels && (
+                        <>
+                          <CrosshairAxisBadge
+                            axis="y"
+                            cx={cx}
+                            cy={cy}
+                            r={getRadius(activePoint)}
+                            label={yAxisFormat ? yAxisFormat(activePoint.y) : String(activePoint.y)}
+                            color={color}
+                            margin={margin}
+                            width={width}
+                            height={height}
+                          />
+                          <CrosshairAxisBadge
+                            axis="x"
+                            cx={cx}
+                            cy={cy}
+                            r={getRadius(activePoint)}
+                            label={xAxisFormat ? xAxisFormat(activePoint.x) : String(activePoint.x)}
+                            color={color}
+                            margin={margin}
+                            width={width}
+                            height={height}
+                          />
+                        </>
+                      )}
                     </>
                   );
                 })()}
