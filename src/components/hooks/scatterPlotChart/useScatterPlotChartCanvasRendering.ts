@@ -77,7 +77,9 @@ interface DrawParams {
   hoveredLabel: string | null;
   stickyLabel: string | null;
   showCrosshair: boolean;
+  crosshairLineStyle: "solid" | "dashed" | undefined;
   crosshairLabels: boolean;
+  crosshairSpan: "full" | "half";
   pinIcon: string | undefined;
   xAxisFormat?: (d: number | string) => string;
   yAxisFormat?: (d: number | string) => string;
@@ -207,17 +209,36 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
       ctx.strokeStyle = color;
       ctx.globalAlpha = isSticky ? 0.75 : 0.6;
       ctx.lineWidth = 1.5;
-      if (!isSticky) ctx.setLineDash([4, 4]);
-      // Full-span lines (axis to axis) so a badge flipped to the far axis still
-      // has a line reaching it — mirrors the SVG CrosshairOverlay.
-      ctx.beginPath();
-      ctx.moveTo(cx, p.margin.top);
-      ctx.lineTo(cx, p.height - p.margin.bottom);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(p.margin.left, cy);
-      ctx.lineTo(p.width - p.margin.right, cy);
-      ctx.stroke();
+      // Mirrors the SVG CrosshairOverlay: pinned crosshair dashed only when
+      // crosshairLineStyle="dashed"; hover crosshair dashed unless forced "solid".
+      const dashed = isSticky
+        ? p.crosshairLineStyle === "dashed"
+        : p.crosshairLineStyle !== "solid";
+      if (dashed) ctx.setLineDash([4, 4]);
+      if (p.crosshairSpan === "half") {
+        // Half crosshair: draw only the left + bottom arms — a vertical line
+        // from the bubble down to the X axis, and a horizontal line from the Y
+        // axis across to the bubble. The top and right arms are omitted.
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx, p.height - p.margin.bottom);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(p.margin.left, cy);
+        ctx.lineTo(cx, cy);
+        ctx.stroke();
+      } else {
+        // Full-span lines (axis to axis) so a badge flipped to the far axis
+        // still has a line reaching it — mirrors the SVG CrosshairOverlay.
+        ctx.beginPath();
+        ctx.moveTo(cx, p.margin.top);
+        ctx.lineTo(cx, p.height - p.margin.bottom);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(p.margin.left, cy);
+        ctx.lineTo(p.width - p.margin.right, cy);
+        ctx.stroke();
+      }
       ctx.restore();
 
       if (p.crosshairLabels) {
@@ -274,6 +295,12 @@ export interface ScatterCanvasRenderingOptions {
   enabled: boolean;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   svgRef: React.RefObject<SVGSVGElement | null>;
+  // The live <svg> DOM node, surfaced as a reactive value (not just the ref) so
+  // the pointer-listener effect below can re-bind when the node is recreated —
+  // the <svg> is conditionally rendered while loading, so its identity changes
+  // without the component remounting. Without this the listeners would stay
+  // bound to a detached node and hover/crosshair/pin would silently stop.
+  svgEl: SVGSVGElement | null;
   tooltipRef: React.RefObject<HTMLDivElement | null>;
   tooltipContentRef: React.RefObject<HTMLDivElement | null>;
   // Points sorted by descending d (paint order). Hit-testing walks this in
@@ -295,7 +322,9 @@ export interface ScatterCanvasRenderingOptions {
   yAxisFormat?: (d: number | string) => string;
   onHighlightItem?: (labels: string[]) => void;
   showCrosshair?: boolean;
+  crosshairLineStyle?: "solid" | "dashed";
   crosshairLabels?: boolean;
+  crosshairSpan?: "full" | "half";
   pinIcon?: string | React.ReactNode;
 }
 
@@ -306,6 +335,7 @@ const useScatterPlotChartCanvasRendering = (
     enabled,
     canvasRef,
     svgRef,
+    svgEl,
     width,
     height,
     renderData,
@@ -370,7 +400,9 @@ const useScatterPlotChartCanvasRendering = (
       hoveredLabel: hoveredRef.current,
       stickyLabel: isStickyRef.current ? hoveredRef.current : null,
       showCrosshair: opts.showCrosshair ?? false,
+      crosshairLineStyle: opts.crosshairLineStyle,
       crosshairLabels: opts.crosshairLabels ?? false,
+      crosshairSpan: opts.crosshairSpan ?? "full",
       pinIcon: typeof opts.pinIcon === "string" ? opts.pinIcon : undefined,
       xAxisFormat: opts.xAxisFormat,
       yAxisFormat: opts.yAxisFormat,
@@ -378,12 +410,36 @@ const useScatterPlotChartCanvasRendering = (
     });
   });
 
+  // Reset hover/pin interaction state whenever the underlying data changes.
+  // Hover + sticky are held in refs (so the once-bound pointer listener below
+  // stays fresh without re-subscribing) — but that also means they survive a
+  // dataSet swap done WITHOUT remounting the component (e.g. a consumer applies
+  // a new filter in place). A stale *sticky* pin is the harmful case: handleMove
+  // early-returns while sticky, so after the data turns over the crosshair
+  // freezes on the old point and hovering can never recover it. renderData's
+  // identity only changes on a real data change (memoised upstream), so clearing
+  // here restores interactivity exactly when the data turns over.
+  useEffect(() => {
+    if (!enabled) return;
+    hoveredRef.current = null;
+    if (isStickyRef.current) {
+      isStickyRef.current = false;
+      setIsSticky(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, renderData]);
+
   // Hover + click-to-pin: hit-test against the projected points, drive the
   // HTML tooltip + highlight. Bound once on the SVG (which sits above the
   // canvas and receives the pointer events).
   useEffect(() => {
     if (!enabled) return undefined;
-    const svg = svgRef.current;
+    // Bind to `svgEl` (the reactive node), not `svgRef.current`. Depending on
+    // `svgEl` makes this effect re-run whenever the <svg> is recreated (e.g.
+    // after a loading toggle that unmounts/remounts the node without remounting
+    // the chart), so the listeners follow the live node instead of leaking onto
+    // a detached one.
+    const svg = svgEl;
     if (!svg) return undefined;
 
     const redraw = () => {
@@ -404,7 +460,9 @@ const useScatterPlotChartCanvasRendering = (
         hoveredLabel: hoveredRef.current,
         stickyLabel: isStickyRef.current ? hoveredRef.current : null,
         showCrosshair: o.showCrosshair ?? false,
+        crosshairLineStyle: o.crosshairLineStyle,
         crosshairLabels: o.crosshairLabels ?? false,
+        crosshairSpan: o.crosshairSpan ?? "full",
         pinIcon: typeof o.pinIcon === "string" ? o.pinIcon : undefined,
         xAxisFormat: o.xAxisFormat,
         yAxisFormat: o.yAxisFormat,
@@ -534,7 +592,7 @@ const useScatterPlotChartCanvasRendering = (
       svg.removeEventListener("click", handleClick);
       document.removeEventListener("click", handleDocClick);
     };
-  }, [enabled, svgRef]);
+  }, [enabled, svgEl]);
 
   return { isSticky };
 };

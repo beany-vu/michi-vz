@@ -79,10 +79,13 @@ const CrosshairAxisBadge: React.FC<{
   );
 };
 
-// Full crosshair for one point: lines spanning the whole plot area (so a badge
-// that flipped to the far axis still has a line reaching it) plus the two axis
-// value badges. Rendered after the point cloud so it always sits on top of the
-// bubbles. Used for both pinned (solid) and hover (dashed) crosshairs.
+// Crosshair for one point: lines plus the two axis value badges. Rendered after
+// the point cloud so it always sits on top of the bubbles. Used for both pinned
+// (solid) and hover (dashed) crosshairs.
+// - span="full" (default): lines span the whole plot area (so a badge that
+//   flipped to the far axis still has a line reaching it).
+// - span="half": only the left + bottom arms are drawn — vertical from the
+//   bubble down to the X axis, horizontal from the Y axis to the bubble.
 const CrosshairOverlay: React.FC<{
   cx: number;
   cy: number;
@@ -93,17 +96,24 @@ const CrosshairOverlay: React.FC<{
   showLabels: boolean;
   xLabel: string;
   yLabel: string;
+  span?: "full" | "half";
   margin: { top: number; right: number; bottom: number; left: number };
   width: number;
   height: number;
-}> = ({ cx, cy, r, color, dashed = false, opacity, showLabels, xLabel, yLabel, margin, width, height }) => {
+}> = ({ cx, cy, r, color, dashed = false, opacity, showLabels, xLabel, yLabel, span = "full", margin, width, height }) => {
   const dash = dashed ? "4 4" : undefined;
+  const half = span === "half";
+  // x-line (vertical): full spans top→bottom; half runs bubble→bottom only.
+  const xLineY1 = half ? cy : margin.top;
+  // y-line (horizontal): full spans left→right; half runs left→bubble only.
+  const yLineX2 = half ? cx : width - margin.right;
   return (
     <>
       <line
+        data-crosshair-line="x"
         x1={cx}
         x2={cx}
-        y1={margin.top}
+        y1={xLineY1}
         y2={height - margin.bottom}
         stroke={color}
         strokeDasharray={dash}
@@ -112,8 +122,9 @@ const CrosshairOverlay: React.FC<{
         pointerEvents="none"
       />
       <line
+        data-crosshair-line="y"
         x1={margin.left}
-        x2={width - margin.right}
+        x2={yLineX2}
         y1={cy}
         y2={cy}
         stroke={color}
@@ -279,15 +290,34 @@ interface ScatterPlotChartProps<T extends number | string> {
    */
   renderer?: "svg" | "canvas";
   /**
-   * When true, shows a dashed crosshair on hover for unpinned bubbles.
-   * Pinned bubbles always show a solid crosshair regardless of this prop.
+   * When true, shows a crosshair on hover for unpinned bubbles. By default the
+   * hover crosshair is dashed and the pinned crosshair is solid (see
+   * crosshairLineStyle to override).
    */
   showCrosshair?: boolean;
+  /**
+   * Line style for the crosshair lines.
+   * - omitted (default): hover crosshair dashed, pinned crosshair solid — the
+   *   dashed-vs-solid split signals hover vs pinned state.
+   * - "dashed" / "solid": forces BOTH the hover and pinned crosshairs to the
+   *   given style uniformly (e.g. "dashed" keeps a pinned crosshair dashed).
+   */
+  crosshairLineStyle?: "solid" | "dashed";
   /**
    * When true (and showCrosshair is also true), renders a circle badge on each axis at the
    * crosshair intersection showing the formatted axis value. Default false.
    */
   crosshairLabels?: boolean;
+  /**
+   * How far the crosshair lines extend from the hovered/pinned bubble.
+   * - "full" (default): both lines span the whole plot area (axis to axis) —
+   *   a "+" through the chart.
+   * - "half": only the left + bottom arms are drawn — a vertical line from the
+   *   bubble down to the X axis and a horizontal line from the Y axis to the
+   *   bubble (an "L" connecting the point to its two axis value badges). The
+   *   top and right arms are omitted.
+   */
+  crosshairSpan?: "full" | "half";
   /**
    * Icon shown in the top-right corner of each pinned tooltip.
    * - string (e.g. `"📌"`, `"★"`) — rendered as text
@@ -330,10 +360,25 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   disabledItems = [],
   renderer = "svg",
   showCrosshair = false,
+  crosshairLineStyle,
   crosshairLabels = false,
+  crosshairSpan = "full",
   pinIcon = "📌",
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
+  // The <svg> is conditionally rendered (hidden while isLoading), so its DOM
+  // node can be destroyed and recreated WITHOUT this component remounting.
+  // Tracking the live node as state — via a callback ref that also keeps
+  // svgRef.current in sync for the imperative d3 call sites — lets effects that
+  // attach listeners to the svg (e.g. the canvas renderer's pointer handlers)
+  // depend on `svgEl` and re-bind whenever the node is recreated. A plain
+  // useRef can't do this: ref mutations don't re-run effects, so a once-bound
+  // listener would stay attached to a detached node after a loading toggle.
+  const [svgEl, setSvgEl] = useState<SVGSVGElement | null>(null);
+  const setSvgRef = useCallback((node: SVGSVGElement | null) => {
+    svgRef.current = node;
+    setSvgEl(node);
+  }, []);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const tooltipContentRef = useRef<HTMLDivElement>(null);
   const svgContainerRef = useRef<HTMLDivElement>(null);
@@ -596,6 +641,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     enabled: renderer === "canvas",
     canvasRef,
     svgRef,
+    svgEl,
     tooltipRef,
     tooltipContentRef,
     renderData: renderOrderedDataSet,
@@ -615,7 +661,9 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     yAxisFormat,
     onHighlightItem,
     showCrosshair,
+    crosshairLineStyle,
     crosshairLabels,
+    crosshairSpan,
     pinIcon,
   });
 
@@ -801,7 +849,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
               <svg
                 width={width}
                 height={height}
-                ref={svgRef}
+                ref={setSvgRef}
                 onMouseMove={handleSvgMouseMove}
                 style={{ position: "relative" }}
               >
@@ -961,7 +1009,8 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
 
                 {/* Crosshairs render last so their lines and value badges sit on
                     top of every bubble (and the axes), never hidden behind a mark. */}
-                {/* Pinned crosshairs — always shown for every pinned bubble (solid, full-span). */}
+                {/* Pinned crosshairs — always shown for every pinned bubble (full-span).
+                    Solid by default; dashed only when crosshairLineStyle="dashed". */}
                 {renderer !== "canvas" &&
                   Array.from(pinnedPoints.values()).map(point => {
                     const cx = getXValue(point) ?? 0;
@@ -974,8 +1023,10 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                         cy={cy}
                         r={getRadius(point)}
                         color={color}
+                        dashed={crosshairLineStyle === "dashed"}
                         opacity={0.75}
                         showLabels={crosshairLabels}
+                        span={crosshairSpan}
                         yLabel={yAxisFormat ? yAxisFormat(point.y) : String(point.y)}
                         xLabel={xAxisFormat ? xAxisFormat(point.x) : String(point.x)}
                         margin={margin}
@@ -985,7 +1036,8 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                     );
                   })}
 
-                {/* Hover crosshair — dashed, only when showCrosshair=true and hovering an unpinned bubble. */}
+                {/* Hover crosshair — only when showCrosshair=true and hovering an unpinned
+                    bubble. Dashed by default; forced solid when crosshairLineStyle="solid". */}
                 {renderer !== "canvas" &&
                   showCrosshair &&
                   activePoint &&
@@ -1003,9 +1055,10 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                         cy={cy}
                         r={getRadius(activePoint)}
                         color={color}
-                        dashed
+                        dashed={crosshairLineStyle !== "solid"}
                         opacity={0.6}
                         showLabels={crosshairLabels}
+                        span={crosshairSpan}
                         yLabel={yAxisFormat ? yAxisFormat(activePoint.y) : String(activePoint.y)}
                         xLabel={xAxisFormat ? xAxisFormat(activePoint.x) : String(activePoint.x)}
                         margin={margin}
