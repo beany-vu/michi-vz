@@ -1,7 +1,4 @@
-import {
-  resolveCrosshairBadgePlacement,
-  CROSSHAIR_BADGE_HEIGHT,
-} from "../crosshairBadgePlacement";
+import { resolveCrosshairBadgePlacement, CROSSHAIR_BADGE_HEIGHT } from "../crosshairBadgePlacement";
 
 const margin = { top: 50, right: 50, bottom: 50, left: 50 };
 const width = 900;
@@ -14,7 +11,14 @@ describe("resolveCrosshairBadgePlacement", () => {
 
   test("Y badge stays on the left axis for a mid-chart bubble", () => {
     const { x, y } = resolveCrosshairBadgePlacement({
-      axis: "y", cx: 450, cy: 240, r: 40, badgeW: 28, margin, width, height,
+      axis: "y",
+      cx: 450,
+      cy: 240,
+      r: 40,
+      badgeW: 28,
+      margin,
+      width,
+      height,
     });
     expect(x).toBe(margin.left); // 50
     expect(y).toBe(240);
@@ -22,7 +26,14 @@ describe("resolveCrosshairBadgePlacement", () => {
 
   test("Y badge flips to the right axis when the bubble covers the left badge", () => {
     const { x, y } = resolveCrosshairBadgePlacement({
-      axis: "y", cx: 60, cy: 240, r: 40, badgeW: 28, margin, width, height,
+      axis: "y",
+      cx: 60,
+      cy: 240,
+      r: 40,
+      badgeW: 28,
+      margin,
+      width,
+      height,
     });
     expect(x).toBe(width - margin.right); // 850
     expect(y).toBe(240);
@@ -30,7 +41,14 @@ describe("resolveCrosshairBadgePlacement", () => {
 
   test("X badge stays on the bottom axis for a mid-chart bubble", () => {
     const { x, y } = resolveCrosshairBadgePlacement({
-      axis: "x", cx: 450, cy: 240, r: 40, badgeW: 28, margin, width, height,
+      axis: "x",
+      cx: 450,
+      cy: 240,
+      r: 40,
+      badgeW: 28,
+      margin,
+      width,
+      height,
     });
     expect(x).toBe(450);
     expect(y).toBe(height - margin.bottom); // 430
@@ -38,7 +56,14 @@ describe("resolveCrosshairBadgePlacement", () => {
 
   test("X badge flips to the top when the bubble covers the bottom badge", () => {
     const { x, y } = resolveCrosshairBadgePlacement({
-      axis: "x", cx: 450, cy: 410, r: 40, badgeW: 28, margin, width, height,
+      axis: "x",
+      cx: 450,
+      cy: 410,
+      r: 40,
+      badgeW: 28,
+      margin,
+      width,
+      height,
     });
     expect(x).toBe(450);
     expect(y).toBe(margin.top); // 50
@@ -46,9 +71,14 @@ describe("resolveCrosshairBadgePlacement", () => {
 
   test("Y badge flips when the badge itself would clip the left edge", () => {
     const { x } = resolveCrosshairBadgePlacement({
-      axis: "y", cx: 900, cy: 240, r: 5, badgeW: 28,
+      axis: "y",
+      cx: 900,
+      cy: 240,
+      r: 5,
+      badgeW: 28,
       margin: { top: 50, right: 50, bottom: 50, left: 10 },
-      width: 900, height: 480,
+      width: 900,
+      height: 480,
     });
     expect(x).toBe(900 - 50); // 850 — flip comes from clipsEdge (10 - 14 < 0), not overlap
   });

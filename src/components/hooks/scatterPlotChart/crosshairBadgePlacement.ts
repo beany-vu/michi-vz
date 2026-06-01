@@ -18,9 +18,7 @@ export interface CrosshairBadgeArgs {
   height: number;
 }
 
-export function resolveCrosshairBadgePlacement(
-  args: CrosshairBadgeArgs
-): { x: number; y: number } {
+export function resolveCrosshairBadgePlacement(args: CrosshairBadgeArgs): { x: number; y: number } {
   const { axis, cx, cy, r, badgeW, margin, width, height } = args;
 
   if (axis === "y") {
