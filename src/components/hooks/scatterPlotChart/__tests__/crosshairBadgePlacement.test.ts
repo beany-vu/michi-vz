@@ -82,4 +82,29 @@ describe("resolveCrosshairBadgePlacement", () => {
     });
     expect(x).toBe(900 - 50); // 850 — flip comes from clipsEdge (10 - 14 < 0), not overlap
   });
+
+  test("a bubble near both axes flips Y to the right and X to the top", () => {
+    const yBadge = resolveCrosshairBadgePlacement({
+      axis: "y",
+      cx: 60,
+      cy: 410,
+      r: 40,
+      badgeW: 28,
+      margin,
+      width,
+      height,
+    });
+    const xBadge = resolveCrosshairBadgePlacement({
+      axis: "x",
+      cx: 60,
+      cy: 410,
+      r: 40,
+      badgeW: 28,
+      margin,
+      width,
+      height,
+    });
+    expect(yBadge.x).toBe(width - margin.right); // 850
+    expect(xBadge.y).toBe(margin.top); // 50
+  });
 });

@@ -79,6 +79,8 @@ interface DrawParams {
   showCrosshair: boolean;
   crosshairLabels: boolean;
   pinIcon: string | undefined;
+  xAxisFormat?: (d: number | string) => string;
+  yAxisFormat?: (d: number | string) => string;
   margin: { top: number; right: number; bottom: number; left: number };
 }
 
@@ -218,8 +220,8 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
 
       if (p.crosshairLabels) {
         const cr = projectRadius(cp, p.dScale, p.xAxisDataType);
-        const xText = String(cp.x);
-        const yText = String(cp.y);
+        const xText = p.xAxisFormat ? p.xAxisFormat(cp.x) : String(cp.x);
+        const yText = p.yAxisFormat ? p.yAxisFormat(cp.y) : String(cp.y);
         const h = 18;
         const pad = 8;
         ctx.save();
@@ -368,6 +370,8 @@ const useScatterPlotChartCanvasRendering = (
       showCrosshair: opts.showCrosshair ?? false,
       crosshairLabels: opts.crosshairLabels ?? false,
       pinIcon: typeof opts.pinIcon === "string" ? opts.pinIcon : undefined,
+      xAxisFormat: opts.xAxisFormat,
+      yAxisFormat: opts.yAxisFormat,
       margin: opts.margin,
     });
   });
@@ -400,6 +404,8 @@ const useScatterPlotChartCanvasRendering = (
         showCrosshair: o.showCrosshair ?? false,
         crosshairLabels: o.crosshairLabels ?? false,
         pinIcon: typeof o.pinIcon === "string" ? o.pinIcon : undefined,
+        xAxisFormat: o.xAxisFormat,
+        yAxisFormat: o.yAxisFormat,
         margin: o.margin,
       });
     };
