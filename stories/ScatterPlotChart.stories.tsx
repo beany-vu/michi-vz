@@ -54,6 +54,19 @@ const salesReps = [
   { x: 38, y: 12.0, d: 456, label: "Outlier: Bergström", shape: "triangle" as const },
 ];
 
+// Purpose-built to exercise the crosshair axis-badge auto-flip: points are
+// parked against the axes so their value badges would be hidden behind the
+// bubble if drawn in the default spot. The chart detects the overlap and flips
+// the badge to the far axis (Y → right, X → top). Labels spell out each case.
+// d drives bubble size; the bigger the bubble, the more readily it overlaps.
+const crosshairDemo = [
+  { x: 50, y: 55, d: 60, label: "Mid-chart (no flip)", color: "#1F77B4" },
+  { x: 2, y: 50, d: 90, label: "Near left axis (Y badge flips right)", color: "#D62728" },
+  { x: 52, y: 3, d: 90, label: "Near bottom axis (X badge flips up)", color: "#2CA02C" },
+  { x: 3, y: 4, d: 80, label: "Corner (both badges flip)", color: "#9467BD" },
+  { x: 90, y: 92, d: 50, label: "Top-right (no flip)", color: "#FF7F0E" },
+];
+
 // --- Common props -----------------------------------------------------------
 
 // Repeated args shared by the args-based stories.
@@ -86,6 +99,12 @@ export default {
     onChartDataProcessed: fn(),
     onHighlightItem: fn(),
     onColorMappingGenerated: fn(),
+  },
+  argTypes: {
+    // Lets any story switch between the SVG and Canvas point renderers from the
+    // controls panel — handy for verifying the crosshair badges behave the same
+    // in canvas mode.
+    renderer: { control: "radio", options: ["svg", "canvas"] },
   },
 } as Meta;
 
@@ -204,27 +223,31 @@ export const CustomSizeLegend = {
 export const WithCrosshairAndPin = {
   args: {
     ...commonProps,
-    dataSet: countryDevelopment,
-    title: "GDP per Capita vs Life Expectancy: Crosshair & Pin",
-    xAxisFormat: (d: number | string) => `$${d}k`,
-    yAxisFormat: (d: number | string) => `${d} yrs`,
-    yAxisDomain: [60, 88] as [number, number],
+    dataSet: crosshairDemo,
+    title: "Crosshair Badges: Auto-Flip Near the Axes",
+    xAxisFormat: (d: number | string) => `${d}%`,
+    yAxisFormat: (d: number | string) => `${d}%`,
+    xAxisDomain: [0, 100] as [number, number],
+    yAxisDomain: [0, 100] as [number, number],
     showGrid: { x: true, y: true },
     showCrosshair: true,
     crosshairLabels: true,
     pinIcon: "📌",
     dScaleLegend: {
-      title: "Population",
-      valueFormatter: (d: number) => `${Math.round(d)}M`,
+      title: "Bubble size",
+      valueFormatter: (d: number) => `${Math.round(d)}`,
     },
     tooltipFormatter: (d: { label: string; x: number; y: number; d: number }) =>
-      `<strong>${d.label}</strong><br/>GDP/capita: $${d.x}k · Life exp: ${d.y} yrs<br/>Population: ${d.d}M`,
+      `<strong>${d.label}</strong><br/>x: ${d.x}% · y: ${d.y}%`,
   },
   parameters: {
     docs: {
       description: {
         story:
-          "Hover any bubble to see dashed crosshair lines with axis value badges. Click to pin: lines turn solid, a ring appears, and a 📌 marks the bubble. Click more bubbles to pin multiple for comparison. Click a pinned bubble to unpin it; click empty space to clear all. Driven by `showCrosshair`, `crosshairLabels`, and `pinIcon`.",
+          "Hover any bubble for dashed crosshair lines with axis value badges; click to pin (solid lines, a ring, and a 📌). " +
+          "The labelled bubbles show the **auto-flip**: a value badge that would be hidden behind a bubble sitting on an axis moves to the opposite side — the Y badge jumps from the left axis to the right, the X badge from the bottom axis to the top. " +
+          "Hover *Near left axis* (Y badge flips right), *Near bottom axis* (X badge flips up), and *Corner* (both flip); *Mid-chart* and *Top-right* keep their badges in the default spot. " +
+          "Switch the `renderer` control to **canvas** to confirm the badges (and the `%` formatting) behave identically there. Driven by `showCrosshair`, `crosshairLabels`, and `pinIcon`.",
       },
     },
   },
