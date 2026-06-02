@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { line as d3line, curveBumpX, curveLinear, pointer } from "d3";
+import { line as d3line, pointer } from "d3";
+import { resolveCurveFactory } from "../../../utils/curve";
 import type { ScaleLinear, ScaleTime } from "d3";
 import DOMPurify from "dompurify";
 import { DataPoint, LineChartDataItem } from "../../../types/data";
@@ -120,9 +121,9 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
     ctx.lineWidth = 2.5;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
-    // Reuse d3's curve generators with a canvas context so curveBumpX /
-    // curveLinear are pixel-identical to the SVG renderer.
-    const curve = item.curve === "curveLinear" ? curveLinear : curveBumpX;
+    // Reuse d3's curve generators with a canvas context so curveMonotoneX /
+    // curveBumpX / curveLinear are pixel-identical to the SVG renderer.
+    const curve = resolveCurveFactory(item.curve);
     const lineGen = d3line<DataPoint>().x(px).y(py).curve(curve).context(ctx);
     for (const run of p.getRuns(item.series)) {
       ctx.setLineDash(run.certain ? [] : [4, 4]);

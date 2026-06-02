@@ -192,4 +192,189 @@ describe("LineChart", () => {
 
     expect(tooltip.style.visibility).toBe("hidden");
   });
+
+  const singlePointData = [
+    {
+      label: "Africa",
+      color: "orange",
+      series: [{ date: 2020, value: 42, certainty: true }],
+    },
+  ];
+
+  test("singlePointLine: renders a full-width horizontal dashed line for a one-point series", async () => {
+    const { container } = customRender(
+      <LineChart
+        dataSet={singlePointData}
+        {...defaultChartProps}
+        xAxisDataType="date_annual"
+        onHighlightItem={() => {}}
+        singlePointLine
+      />
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector("line.single-point-line")).toBeInTheDocument();
+    });
+
+    const line = container.querySelector("line.single-point-line") as SVGLineElement;
+    expect(line.getAttribute("x1")).toBe("50"); // margin.left
+    expect(line.getAttribute("x2")).toBe("850"); // width(900) - margin.right(50)
+    expect(line.getAttribute("y1")).toBe(line.getAttribute("y2")); // horizontal
+    expect(line.getAttribute("stroke-dasharray")).toBe("4,4"); // uncertainty look
+    expect(line.getAttribute("stroke")).toBe("orange"); // series color default
+    // The dot is shown even though showDataPoints defaults to false.
+    expect(container.querySelectorAll(".data-point").length).toBe(1);
+  });
+
+  test("singlePointLine: style object overrides stroke / width / dasharray", async () => {
+    const { container } = customRender(
+      <LineChart
+        dataSet={singlePointData}
+        {...defaultChartProps}
+        xAxisDataType="date_annual"
+        onHighlightItem={() => {}}
+        singlePointLine={{ stroke: "#123456", strokeWidth: 1, strokeDasharray: "2,6" }}
+      />
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector("line.single-point-line")).toBeInTheDocument();
+    });
+
+    const line = container.querySelector("line.single-point-line") as SVGLineElement;
+    expect(line.getAttribute("stroke")).toBe("#123456");
+    expect(line.getAttribute("stroke-width")).toBe("1");
+    expect(line.getAttribute("stroke-dasharray")).toBe("2,6");
+  });
+
+  test("singlePointLine: absent → no single-point line rendered", async () => {
+    const { container } = customRender(
+      <LineChart
+        dataSet={singlePointData}
+        {...defaultChartProps}
+        xAxisDataType="date_annual"
+        onHighlightItem={() => {}}
+      />
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector("svg")).toBeInTheDocument();
+    });
+
+    expect(container.querySelector("line.single-point-line")).toBeNull();
+  });
+
+  test("singlePointLine: multi-point series draws no single-point line", async () => {
+    const multiPointData = [
+      {
+        label: "Africa",
+        color: "orange",
+        series: [
+          { date: 2019, value: 10, certainty: true },
+          { date: 2020, value: 42, certainty: true },
+        ],
+      },
+    ];
+
+    const { container } = customRender(
+      <LineChart
+        dataSet={multiPointData}
+        {...defaultChartProps}
+        xAxisDataType="date_annual"
+        onHighlightItem={() => {}}
+        singlePointLine
+      />
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector("svg")).toBeInTheDocument();
+    });
+
+    expect(container.querySelector("line.single-point-line")).toBeNull();
+  });
+
+  test("singlePointLine: inherits from MichiVzProvider when the prop is omitted", async () => {
+    const { container } = customRender(
+      <LineChart
+        dataSet={singlePointData}
+        {...defaultChartProps}
+        xAxisDataType="date_annual"
+        onHighlightItem={() => {}}
+      />,
+      { providerProps: { singlePointLine: true } }
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector("line.single-point-line")).toBeInTheDocument();
+    });
+
+    const line = container.querySelector("line.single-point-line") as SVGLineElement;
+    expect(line.getAttribute("stroke")).toBe("orange"); // series-color default from the context look
+  });
+
+  test("singlePointLine: chart prop false overrides a provider that enabled it", async () => {
+    const { container } = customRender(
+      <LineChart
+        dataSet={singlePointData}
+        {...defaultChartProps}
+        xAxisDataType="date_annual"
+        onHighlightItem={() => {}}
+        singlePointLine={false}
+      />,
+      { providerProps: { singlePointLine: true } }
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector("svg")).toBeInTheDocument();
+    });
+
+    expect(container.querySelector("line.single-point-line")).toBeNull();
+  });
+});
+
+const curveSeries = (values: number[]) => ({
+  label: "Series A",
+  color: "orange",
+  series: values.map((value, i) => ({ date: 2000 + i, value, certainty: true })),
+});
+
+const firstLinePathD = (container: HTMLElement): string =>
+  container.querySelector("path.line")?.getAttribute("d") ?? "";
+
+describe("LineChart curve interpolation", () => {
+  it("draws a straight line (no cubic) for a 2-point series by default", async () => {
+    const { container, cleanup } = customRender(
+      <LineChart dataSet={[curveSeries([10, 40])]} {...defaultChartProps} xAxisDataType="number" onHighlightItem={() => {}} />
+    );
+    await waitFor(() => expect(container.querySelector("path.line")).toBeTruthy());
+    const d = firstLinePathD(container);
+    expect(d).not.toMatch(/C/);
+    expect(d).toMatch(/L/);
+    cleanup();
+  });
+
+  it("uses a monotone curve (cubic) for a 3+-point series by default", async () => {
+    const { container, cleanup } = customRender(
+      <LineChart dataSet={[curveSeries([10, 40, 25])]} {...defaultChartProps} xAxisDataType="number" onHighlightItem={() => {}} />
+    );
+    await waitFor(() => expect(container.querySelector("path.line")).toBeTruthy());
+    expect(firstLinePathD(container)).toMatch(/C/);
+    cleanup();
+  });
+
+  it("honors an explicit curveLinear override (stays straight for 3+ points)", async () => {
+    const { container, cleanup } = customRender(
+      <LineChart
+        dataSet={[{ ...curveSeries([10, 40, 25]), curve: "curveLinear" as const }]}
+        {...defaultChartProps}
+        xAxisDataType="number"
+        onHighlightItem={() => {}}
+      />
+    );
+    await waitFor(() => expect(container.querySelector("path.line")).toBeTruthy());
+    const d = firstLinePathD(container);
+    expect(d).not.toMatch(/C/);
+    expect(d).toMatch(/L/);
+    cleanup();
+  });
 });

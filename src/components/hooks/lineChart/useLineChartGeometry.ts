@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 import * as d3 from "d3";
 import { DataPoint } from "../../../types/data";
 import { getPathLengthAtX } from "./lineChartUtils";
+import { DEFAULT_CURVE } from "../../../utils/curve";
 
 interface UseLineChartGeometryArgs {
   dataSet: { label: string; color: string; series: DataPoint[] }[];
@@ -46,7 +47,7 @@ export function useLineChartGeometry({
           }
         })
         .y(d => yScale(d.value))
-        .curve((d3 as Record<string, unknown>)?.[curve] as d3.CurveFactory ?? d3.curveBumpX)(d);
+        .curve(((d3 as Record<string, unknown>)?.[curve] ?? (d3 as Record<string, unknown>)[DEFAULT_CURVE]) as d3.CurveFactory)(d);
     },
     [xScale, yScale, xAxisDataType]
   );

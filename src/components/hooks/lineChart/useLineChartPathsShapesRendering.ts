@@ -3,6 +3,21 @@ import { pointer, select, ScaleLinear, ScaleTime } from "d3";
 import DOMPurify from "dompurify";
 import { DataPoint, LineChartDataItem } from "../../../types/data";
 import type { SeriesRun } from "./useLineChartGeometry";
+import { resolveCurveName } from "../../../utils/curve";
+
+// Stroke dash pattern for "uncertain" runs (segments where the previous period's
+// data point is missing). Certain runs use no dash array. Exported so the
+// single-point guide line in LineChart can default to the same look.
+export const UNCERTAIN_DASH_PATTERN = "4,4";
+
+// Resolved style for the single-point guide line. `stroke` is optional — when
+// omitted the renderer falls back to the series' own color. `strokeWidth` and
+// `strokeDasharray` are always present (LineChart fills defaults).
+export interface SinglePointLineStyle {
+  stroke?: string;
+  strokeWidth: number;
+  strokeDasharray: string;
+}
 
 interface TooltipState {
   x?: number;
@@ -64,7 +79,9 @@ const useLineChartPathsShapesRendering = (
   showDataPoints: boolean = false,
   // When "canvas", the SVG line/point rendering is skipped — the Canvas
   // renderer owns the drawing. Default "svg" keeps the original behaviour.
-  renderer: "svg" | "canvas" = "svg"
+  renderer: "svg" | "canvas" = "svg",
+  // Resolved single-point guide-line style, or null when the feature is off.
+  singlePointLine: SinglePointLineStyle | null = null
 ) => {
   const [tooltipState, setTooltipState] = useState<TooltipState | null>(null);
 
@@ -234,10 +251,7 @@ const useLineChartPathsShapesRendering = (
     const groupKey = (d: LineChartDataItem) => d.label;
     const pointKey = (d: DataPoint) => String(d.date);
     const linePathFor = (data: LineChartDataItem) =>
-      line({ d: data.series, curve: data?.curve ?? "curveBumpX" });
-    // Stroke dash pattern used for "uncertain" runs (segments where the data point
-    // for the previous time period is missing). Certain runs use no dash array.
-    const UNCERTAIN_DASH_PATTERN = "4,4";
+      line({ d: data.series, curve: resolveCurveName(data?.curve) });
     // Key for a run's <path> based on its start date and certainty. Reusing path
     // nodes across renders means d3's data join can update only the `d` attribute
     // when geometry changes, instead of destroying and re-creating SVG nodes.
@@ -323,7 +337,7 @@ const useLineChartPathsShapesRendering = (
         .attr("data-label", data.label)
         .attr("data-label-safe", safeLabelClass)
         .attr("data-key", uniqueKey)
-        .attr("d", run => line({ d: run.points, curve: data?.curve ?? "curveBumpX" }))
+        .attr("d", run => line({ d: run.points, curve: resolveCurveName(data?.curve) }))
         .attr("stroke", color)
         // Solid for certain runs, dashed for uncertain runs. d3 understands "null"
         // as "remove the attribute" — preferred over "none" to keep markup clean.
@@ -388,8 +402,39 @@ const useLineChartPathsShapesRendering = (
         overlayPath.on("mousemove", null).on("click", null);
       }
 
+      // --- SINGLE-POINT GUIDE LINE ---
+      // A one-point series has no drawable path: d3.line() emits only an `M`
+      // command, so nothing shows. When singlePointLine is enabled, draw a
+      // full-plot-width horizontal line at the point's value. Defaults reuse the
+      // uncertainty dash look (set by LineChart). exit().remove() always runs so
+      // the line is cleaned up if the series later gains a 2nd point / is disabled.
+      const singleLineSel = g
+        .selectAll<SVGLineElement, DataPoint>("line.single-point-line")
+        .data(singlePointLine && data.series.length === 1 ? [data.series[0]] : [], pointKey);
+      singleLineSel.exit().remove();
+      if (singlePointLine && data.series.length === 1) {
+        const singleLineEnter = singleLineSel
+          .enter()
+          .append("line")
+          .attr("class", `single-point-line single-point-line-${i} data-group-${i}`)
+          .attr("pointer-events", "none");
+        singleLineEnter
+          .merge(singleLineSel as typeof singleLineEnter)
+          .attr("data-label", data.label)
+          .attr("data-label-safe", safeLabelClass)
+          .attr("data-key", uniqueKey)
+          .attr("x1", margin.left)
+          .attr("x2", width - margin.right)
+          .attr("y1", d => yScale(d.value))
+          .attr("y2", d => yScale(d.value))
+          .attr("stroke", singlePointLine.stroke ?? color)
+          .attr("stroke-width", singlePointLine.strokeWidth)
+          .attr("stroke-dasharray", singlePointLine.strokeDasharray);
+      }
+
       // --- POINTS ---
-      if (showDataPoints) {
+      const showSinglePointDot = !!singlePointLine && data.series.length === 1;
+      if (showDataPoints || showSinglePointDot) {
         const shape = data.shape || "circle";
         const tag = shape === "square" ? "rect" : shape === "triangle" ? "path" : "circle";
 
@@ -509,6 +554,7 @@ const useLineChartPathsShapesRendering = (
     handleItemHighlight,
     showDataPoints,
     renderer,
+    singlePointLine,
   ]);
 
   // Keep the tooltip visible while the cursor is over it (no-dots mode UX).

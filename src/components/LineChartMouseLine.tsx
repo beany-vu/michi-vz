@@ -1,12 +1,12 @@
 import React, { FC, useRef, useCallback, useEffect, useMemo } from "react";
 import * as d3 from "d3";
-import { DataPoint } from "src/types/data";
+import { DataPoint, CurveType } from "src/types/data";
 
 interface DataItem {
   label: string;
   color: string;
   shape?: "circle" | "square" | "triangle";
-  curve?: "curveBumpX" | "curveLinear";
+  curve?: CurveType;
   series: DataPoint[];
 }
 

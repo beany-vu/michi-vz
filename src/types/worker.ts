@@ -1,4 +1,4 @@
-import { DataPoint, XaxisDataType } from "./data";
+import { DataPoint, XaxisDataType, CurveType } from "./data";
 import { ScaleLinear, ScaleTime } from "d3-scale";
 
 export interface LineChartWorkerData {
@@ -6,14 +6,14 @@ export interface LineChartWorkerData {
     label: string;
     color: string;
     shape?: "circle" | "square" | "triangle";
-    curve?: "curveBumpX" | "curveLinear";
+    curve?: CurveType;
     series: DataPoint[];
   }[];
   visibleDataSets: {
     label: string;
     color: string;
     shape?: "circle" | "square" | "triangle";
-    curve?: "curveBumpX" | "curveLinear";
+    curve?: CurveType;
     series: DataPoint[];
   }[];
   xScale: ScaleLinear<number, number> | ScaleTime<number, number>;
@@ -38,7 +38,7 @@ export interface LineChartWorkerInput {
       label: string;
       color: string;
       shape?: "circle" | "square" | "triangle";
-      curve?: "curveBumpX" | "curveLinear";
+      curve?: CurveType;
       series: DataPoint[];
     }[];
     width: number;

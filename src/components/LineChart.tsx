@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, FC, useEffect, useRef } from "react";
 import { select } from "d3";
-import { DataPoint, ChartMetadata, LegendItem } from "../types/data";
+import { DataPoint, ChartMetadata, LegendItem, CurveType } from "../types/data";
 import { DEFAULT_COLORS } from "./shared/colors";
 import Title from "./shared/Title";
 import MichiVzCredit from "./shared/MichiVzCredit";
@@ -14,6 +14,7 @@ import useLineChartYscale from "./hooks/lineChart/useLineChartYscale";
 import useLineChartXscale from "./hooks/lineChart/useLineChartXscale";
 import useLineChartXtickValues from "./hooks/lineChart/useXtickValues";
 import useLineChartPathsShapesRendering from "./hooks/lineChart/useLineChartPathsShapesRendering";
+import { UNCERTAIN_DASH_PATTERN } from "./hooks/lineChart/useLineChartPathsShapesRendering";
 import useLineChartDecimatedData from "./hooks/lineChart/useLineChartDecimatedData";
 import useLineChartCanvasRendering from "./hooks/lineChart/useLineChartCanvasRendering";
 import useLineChartMouseInteractionCombinedMode from "./hooks/lineChart/useLineChartMouseInteractionCombinedMode";
@@ -26,6 +27,7 @@ import { useLineChartGeometry } from "./hooks/lineChart/useLineChartGeometry";
 import useLineChartTooltipToggle from "./hooks/lineChart/useLineChartHandleHover";
 import LineChartMouseLine from "src/components/LineChartMouseLine";
 import TooltipHint from "src/components/shared/TooltipHint";
+import { useChartContext, SinglePointLineConfig } from "./MichiVzProvider";
 
 export const DEFAULT_MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 export const DEFAULT_WIDTH = 900 - DEFAULT_MARGIN.left - DEFAULT_MARGIN.right;
@@ -119,7 +121,7 @@ interface LineChartProps {
     label: string;
     color: string;
     shape?: "circle" | "square" | "triangle";
-    curve?: "curveBumpX" | "curveLinear";
+    curve?: CurveType;
     series: DataPoint[];
   }[];
   width: number;
@@ -209,6 +211,17 @@ interface LineChartProps {
    *    tooltip are unchanged in both modes.
    */
   renderer?: "svg" | "canvas";
+  /**
+   * Opt-in guide line for series that have exactly ONE data point (which cannot
+   * form a drawable line). When set, such a series renders a full-plot-width
+   * horizontal dashed line at the point's value, plus the point's dot.
+   *  - `true`            → uses the uncertainty look (series color, "4,4", width 2.5)
+   *  - `{ ... }`         → same defaults with any field overridden
+   *  - `false`           → force off (overrides a provider that enabled it)
+   *  - omitted           → inherits `singlePointLine` from MichiVzProvider context
+   * SVG renderer only.
+   */
+  singlePointLine?: SinglePointLineConfig;
 }
 
 const LineChart: FC<LineChartProps> = ({
@@ -242,6 +255,7 @@ const LineChart: FC<LineChartProps> = ({
   showDataPoints = false,
   skipColorMappingDispatch = false,
   renderer = "svg",
+  singlePointLine,
 }) => {
   // Use the new hook for refs and state
   const { svgRef, tooltipRef, renderCompleteRef, prevChartDataRef, isInitialMount } =
@@ -326,6 +340,26 @@ const LineChart: FC<LineChartProps> = ({
     skipColorMappingDispatch
   );
 
+  // Normalize the public `boolean | object` prop into a fully-resolved style
+  // (or null when off). `stroke` stays optional so the renderer can fall back to
+  // each series' color; defaults reuse the uncertainty dash look.
+  // Two-level config: the `singlePointLine` PROP wins when provided (including an
+  // explicit `false` to disable one chart); otherwise fall back to the
+  // MichiVzProvider context default. This lets a provider enable it for every
+  // LineChart at once while individual charts opt out or customize.
+  const { singlePointLine: contextSinglePointLine } = useChartContext();
+  const effectiveSinglePointLine =
+    singlePointLine !== undefined ? singlePointLine : contextSinglePointLine;
+  const resolvedSinglePointLine = useMemo(() => {
+    if (!effectiveSinglePointLine) return null;
+    const opts = typeof effectiveSinglePointLine === "object" ? effectiveSinglePointLine : {};
+    return {
+      stroke: opts.stroke,
+      strokeWidth: opts.strokeWidth ?? 2.5,
+      strokeDasharray: opts.strokeDasharray ?? UNCERTAIN_DASH_PATTERN,
+    };
+  }, [effectiveSinglePointLine]);
+
   const { tooltip } = useLineChartPathsShapesRendering(
     filteredDataSet,
     visibleDataSets,
@@ -348,7 +382,8 @@ const LineChart: FC<LineChartProps> = ({
     highlightItems,
     undefined, // Remove the callback since color generation is handled by useGenerateColorMapping
     showDataPoints,
-    renderer
+    renderer,
+    resolvedSinglePointLine
   );
 
   useLineChartColorMapping(generatedColorMapping, getColor, svgRef, TRANSITION_DURATION);
