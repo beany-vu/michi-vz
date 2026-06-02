@@ -1,7 +1,7 @@
 // RangeChart.tsx
 import React, { useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import * as d3 from "d3";
-import { DataPointRangeChart, LegendItem, XaxisDataType } from "../types/data";
+import { DataPointRangeChart, LegendItem, XaxisDataType, CurveType } from "../types/data";
 import { useChartContext } from "./MichiVzProvider";
 import Title from "./shared/Title";
 import MichiVzCredit from "./shared/MichiVzCredit";
@@ -12,6 +12,7 @@ import LoadingIndicator from "./shared/LoadingIndicator";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import TooltipHint from "src/components/shared/TooltipHint";
+import { resolveCurveFactory } from "../utils/curve";
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
 const WIDTH = 900 - MARGIN.left - MARGIN.right;
@@ -31,6 +32,7 @@ interface RangeChartProps {
   yAxisFormat?: (d: number | { valueOf(): number }) => string;
   xAxisFormat?: (d: number | string | { valueOf(): number }, tickValues?: Array<string | number>) => string;
   xAxisDataType: XaxisDataType;
+  curve?: CurveType;
   tooltipFormatter?: (
     d: DataPointRangeChart,
     series: DataPointRangeChart[],
@@ -81,6 +83,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
   yAxisFormat,
   xAxisDataType = "number",
   xAxisFormat,
+  curve,
   tooltipFormatter = (d: DataPointRangeChart) =>
     `<div>${d.label} - ${d.date}: ${d?.valueMedium}</div>`,
   showCombined = false,
@@ -197,7 +200,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
     .y1(d => {
       return yScale(d.valueMax);
     })
-    .curve(d3.curveBumpX);
+    .curve(resolveCurveFactory(curve));
 
   const getLineGenerator = d3
     .line<DataPointRangeChart>()
@@ -208,7 +211,7 @@ const RangeChart: React.FC<RangeChartProps> = ({
       // Use the average for a line
       return yScale((d.valueMax + d.valueMin) / 2);
     })
-    .curve(d3.curveBumpX);
+    .curve(resolveCurveFactory(curve));
 
   const showLine = (d: DataPointRangeChart) => d.valueMin === d.valueMax;
 
