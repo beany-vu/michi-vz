@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { area as d3area, curveMonotoneX, pointer } from "d3";
+import { area as d3area, pointer } from "d3";
 import type { ScaleLinear, ScaleTime } from "d3";
 import DOMPurify from "dompurify";
 import { resolveMarkColors, type ColorProbe } from "../canvas/resolveMarkColors";
+import { resolveCurveFactory } from "../../../utils/curve";
+import type { CurveType } from "../../../types/data";
 
 // Opt-in Canvas 2D renderer for AreaChart (Phase 4 of the performance
 // overhaul). Draws the stacked area paths, the per-segment `data-indicator`
@@ -60,6 +62,7 @@ interface DrawParams {
   xScale: XScale;
   yScale: YScale;
   xAxisDataType: string;
+  curve?: CurveType;
   // Per-area fill colour resolved from the DOM (honours consumer CSS); the
   // raw datum.fill is only the fallback. See resolveMarkColors / the redraw
   // effect below for why this is needed.
@@ -97,13 +100,13 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
   const anyHighlight = highlightSet.size > 0;
 
   // Reuse d3.area with the canvas context so the stacked-area curves are
-  // pixel-identical to the SVG renderer's `d` (curveMonotoneX cubic Béziers).
+  // pixel-identical to the SVG renderer's `d` (same curve via resolveCurveFactory).
   const areaGen = d3area<AreaDataPoint>()
     .defined(() => true)
     .x(d => projectX(d, p.xScale, p.xAxisDataType))
     .y0(d => p.yScale(d[0] || 0))
     .y1(d => p.yScale(d[1] || 0))
-    .curve(curveMonotoneX)
+    .curve(resolveCurveFactory(p.curve))
     .context(ctx);
 
   // --- stacked areas: keys array order = bottom-to-top ---
@@ -165,6 +168,7 @@ export interface AreaCanvasRenderingOptions {
   xScale: XScale;
   yScale: YScale;
   xAxisDataType: "number" | "date_annual" | "date_monthly";
+  curve?: CurveType;
   highlightItems: string[];
   // Builds the tooltip HTML for a hovered row + key (already null-safe).
   tooltipFormatter: (dataPoint: DataPoint, key: string) => string | null;
@@ -185,6 +189,7 @@ const useAreaChartCanvasRendering = (
     xScale,
     yScale,
     xAxisDataType,
+    curve,
     highlightItems,
   } = opts;
 
@@ -255,6 +260,7 @@ const useAreaChartCanvasRendering = (
       xScale,
       yScale,
       xAxisDataType,
+      curve,
       resolvedColors,
       highlightItems,
       hoveredKey: hoveredRef.current,
@@ -289,6 +295,7 @@ const useAreaChartCanvasRendering = (
         xScale: o.xScale,
         yScale: o.yScale,
         xAxisDataType: o.xAxisDataType,
+        curve: o.curve,
         resolvedColors: resolvedColorsRef.current,
         highlightItems: o.highlightItems,
         hoveredKey: hoveredRef.current,

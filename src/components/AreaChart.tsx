@@ -20,7 +20,8 @@ import styled from "styled-components";
 import { sanitizeForClassName } from "./hooks/lineChart/lineChartUtils";
 import useAreaChartCanvasRendering from "./hooks/areaChart/useAreaChartCanvasRendering";
 import TooltipHint from "src/components/shared/TooltipHint";
-import { XaxisDataType } from "src/types/data";
+import { XaxisDataType, CurveType } from "src/types/data";
+import { resolveCurveFactory } from "src/utils/curve";
 
 const AreaChartContainer = styled.div`
   position: relative;
@@ -125,6 +126,7 @@ interface Props {
    * Default `"svg"` keeps behaviour byte-identical.
    */
   renderer?: "svg" | "canvas";
+  curve?: CurveType;
 }
 
 const MARGIN = { top: 50, right: 50, bottom: 50, left: 50 };
@@ -160,6 +162,7 @@ const AreaChart: React.FC<Props> = ({
   disabledItems = [],
   forcePercentageScale = false,
   renderer = "svg",
+  curve,
 }) => {
   const ref = useRef<SVGSVGElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -334,7 +337,7 @@ const AreaChart: React.FC<Props> = ({
     })
     .y0(d => yScale(d[0] || 0))
     .y1(d => yScale(d[1] || 0))
-    .curve(d3.curveMonotoneX);
+    .curve(resolveCurveFactory(curve));
 
   const handleAreaSegmentHover = useCallback(
     (dataPoint: DataPoint, key: string) => {
@@ -367,6 +370,7 @@ const AreaChart: React.FC<Props> = ({
     xScale,
     yScale,
     xAxisDataType,
+    curve,
     highlightItems,
     tooltipFormatter: handleAreaSegmentHover,
     onHighlightItem,
