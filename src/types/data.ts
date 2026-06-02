@@ -6,11 +6,13 @@ export type DataPoint = {
   code?: string;
 };
 
+export type CurveType = "curveBumpX" | "curveLinear" | "curveMonotoneX";
+
 export type LineChartDataItem = {
   label: string;
   color: string;
   shape?: "circle" | "square" | "triangle";
-  curve?: "curveBumpX" | "curveLinear";
+  curve?: CurveType;
   series: DataPoint[];
 };
 
