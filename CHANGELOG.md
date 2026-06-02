@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **📈 Default line curve is now `curveMonotoneX`** (was `curveBumpX`) for
+  `LineChart` and `RangeChart`. It passes through every point, follows the data's
+  local slope without overshoot, and renders a 2-point series as a straight line
+  instead of an S-bend. `AreaChart` already used `curveMonotoneX` (unchanged).
+  - To keep the old look, set `curve: "curveBumpX"` — per-series on `LineChart`
+    (`dataSet[].curve`), or chart-level on `AreaChart` / `RangeChart` (`curve` prop).
+  - Supported values: `"curveMonotoneX"` (default), `"curveBumpX"`, `"curveLinear"`.
+  - Both the SVG and canvas renderers honor the setting identically.
+
+### Added
+- **`curve` prop on `AreaChart` and `RangeChart`** (chart-level) for choosing the
+  interpolation. Previously both hardcoded their curve with no override.
+
 ## [0.6.3] - 2026-05-24
 
 ### Changed
