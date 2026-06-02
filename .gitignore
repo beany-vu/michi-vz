@@ -7,3 +7,9 @@ src/screenshots
 
 coverage
 .claude
+.playwright-mcp
+.venv-svgtrace/bin
+
+# Playwright (run artifacts; baselines under tests/visual/__screenshots__ ARE committed)
+test-results/
+playwright-report/
