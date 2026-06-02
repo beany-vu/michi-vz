@@ -47,7 +47,10 @@ export function useLineChartGeometry({
           }
         })
         .y(d => yScale(d.value))
-        .curve(((d3 as Record<string, unknown>)?.[curve] ?? (d3 as Record<string, unknown>)[DEFAULT_CURVE]) as d3.CurveFactory)(d);
+        .curve(
+          ((d3 as Record<string, unknown>)?.[curve] ??
+            (d3 as Record<string, unknown>)[DEFAULT_CURVE]) as d3.CurveFactory
+        )(d);
     },
     [xScale, yScale, xAxisDataType]
   );
