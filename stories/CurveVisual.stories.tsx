@@ -206,3 +206,51 @@ export const RangeMultiSvg: StoryObj = {
     </Frame>
   ),
 };
+
+// --- Gap detection (annual series with a missing 2019-2023 stretch) ---
+const lineGapAnnual = [
+  {
+    label: "A",
+    color: "#1f77b4",
+    series: [
+      { date: 2014, value: 12, certainty: true },
+      { date: 2015, value: 18, certainty: true },
+      { date: 2016, value: 15, certainty: true },
+      { date: 2017, value: 24, certainty: true },
+      { date: 2018, value: 30, certainty: true },
+      { date: 2024, value: 40, certainty: true },
+      { date: 2025, value: 38, certainty: true },
+      { date: 2026, value: 46, certainty: true },
+    ],
+  },
+];
+
+export const LineGapDetectAnnualSvg: StoryObj = {
+  render: () => (
+    <Frame>
+      <LineChart
+        dataSet={lineGapAnnual}
+        width={W}
+        height={H}
+        margin={margin}
+        xAxisDataType="date_annual"
+        detectGaps
+      />
+    </Frame>
+  ),
+};
+export const LineGapDetectAnnualCanvas: StoryObj = {
+  render: () => (
+    <Frame>
+      <LineChart
+        dataSet={lineGapAnnual}
+        width={W}
+        height={H}
+        margin={margin}
+        xAxisDataType="date_annual"
+        detectGaps
+        renderer="canvas"
+      />
+    </Frame>
+  ),
+};

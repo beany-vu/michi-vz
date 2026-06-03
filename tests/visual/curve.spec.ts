@@ -16,6 +16,8 @@ const STORIES = [
   "visual-curve--area-multi-canvas",
   "visual-curve--range-two-points-svg",
   "visual-curve--range-multi-svg",
+  "visual-curve--line-gap-detect-annual-svg",
+  "visual-curve--line-gap-detect-annual-canvas",
 ];
 
 for (const id of STORIES) {
