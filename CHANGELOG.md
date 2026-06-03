@@ -20,6 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **`curve` prop on `AreaChart` and `RangeChart`** (chart-level) for choosing the
   interpolation. Previously both hardcoded their curve with no override.
+- **`detectGaps` (opt-in) on `LineChart`**: auto-detects missing time periods and
+  renders them as dashed straight segments, without per-point `certainty` flags.
+  When on, each series is normalized (sorted, de-duplicated keeping the last,
+  invalid points dropped) and any interval larger than the expected step is
+  dashed. The expected step defaults to 1 for `date_annual`/`date_monthly`; pass
+  `expectedStep` to override, and it is required for `xAxisDataType="number"`. A
+  detected gap overrides an explicit `certainty: true`; it never overrides
+  `certainty: false`. Default off, so existing charts are unchanged.
 
 ## [0.6.3] - 2026-05-24
 
