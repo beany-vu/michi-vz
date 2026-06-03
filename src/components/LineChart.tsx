@@ -16,6 +16,7 @@ import useLineChartXtickValues from "./hooks/lineChart/useXtickValues";
 import useLineChartPathsShapesRendering from "./hooks/lineChart/useLineChartPathsShapesRendering";
 import { UNCERTAIN_DASH_PATTERN } from "./hooks/lineChart/useLineChartPathsShapesRendering";
 import useLineChartDecimatedData from "./hooks/lineChart/useLineChartDecimatedData";
+import { applyGapDetection } from "./hooks/lineChart/detectGaps";
 import useLineChartCanvasRendering from "./hooks/lineChart/useLineChartCanvasRendering";
 import useLineChartMouseInteractionCombinedMode from "./hooks/lineChart/useLineChartMouseInteractionCombinedMode";
 import useLineChartMetadataExpose from "./hooks/lineChart/useLineChartMetadataExpose";
@@ -132,6 +133,24 @@ interface LineChartProps {
   yAxisFormat?: (d: number | { valueOf(): number }) => string;
   xAxisFormat?: (d: number | string | { valueOf(): number }, tickValues?: Array<string | number>) => string;
   xAxisDataType: "number" | "date_annual" | "date_monthly";
+  /**
+   * Auto-detect missing time periods and render them as dashed straight "gap"
+   * segments, without per-point `certainty` flags. Off by default.
+   *
+   * When on, each series is normalized (sorted by x, duplicate x removed keeping
+   * the last, invalid/NaN points dropped) and any interval larger than the
+   * expected step is marked uncertain. A detected gap overrides an explicit
+   * `certainty: true`; it never flips an explicit `certainty: false`.
+   */
+  detectGaps?: boolean;
+  /**
+   * Expected interval between consecutive points, in axis units. Defaults to 1
+   * for `date_annual` (1 year) and `date_monthly` (1 month). REQUIRED when
+   * `xAxisDataType` is `"number"` (no implied cadence); if omitted there, gap
+   * detection is skipped. Override for non-unit cadence, e.g. `2` for biennial.
+   * Only consulted when `detectGaps` is true.
+   */
+  expectedStep?: number;
   tooltipFormatter?: (
     d: DataPoint,
     series: DataPoint[],
@@ -234,6 +253,8 @@ const LineChart: FC<LineChartProps> = ({
   yAxisDomain,
   yAxisFormat,
   xAxisDataType = "number",
+  detectGaps = false,
+  expectedStep,
   xAxisFormat,
   tooltipFormatter = (d: DataPoint) => `<div>${d.label} - ${d.date}: ${d.value}</div>`,
   showCombined = false,
@@ -268,6 +289,20 @@ const LineChart: FC<LineChartProps> = ({
     disabledItems
   );
 
+  // Opt-in gap detection: derive `certainty` for missing time periods so they
+  // render as dashed straight segments. Identity passthrough when off, so the
+  // default render path is byte-identical.
+  const processedDataSet = useMemo(
+    () =>
+      detectGaps
+        ? filteredDataSet.map(item => ({
+            ...item,
+            series: applyGapDetection(item.series, xAxisDataType, expectedStep),
+          }))
+        : filteredDataSet,
+    [filteredDataSet, detectGaps, xAxisDataType, expectedStep]
+  );
+
   const yScale = useLineChartYscale(filteredDataSet, yAxisDomain, height, margin);
 
   const xScale = useLineChartXscale(filteredDataSet, width, margin, xAxisDataType);
@@ -290,7 +325,7 @@ const LineChart: FC<LineChartProps> = ({
   // LTTB decimation — active only in canvas mode; an identity passthrough
   // otherwise, so the SVG path is provably unaffected.
   const { drawData } = useLineChartDecimatedData(
-    filteredDataSet,
+    processedDataSet,
     getRuns,
     getPixelX,
     width,
@@ -300,8 +335,8 @@ const LineChart: FC<LineChartProps> = ({
   const showLoadingIndicator = isLoading || !isInitialMount.current;
 
   const visibleDataSets = useMemo(() => {
-    return filteredDataSet.filter(d => d.series.length > 0);
-  }, [filteredDataSet]);
+    return processedDataSet.filter(d => d.series.length > 0);
+  }, [processedDataSet]);
 
   // Memoize callback functions to prevent infinite loops
   const memoizedOnHighlightItem = useCallback(
@@ -361,7 +396,7 @@ const LineChart: FC<LineChartProps> = ({
   }, [effectiveSinglePointLine]);
 
   const { tooltip } = useLineChartPathsShapesRendering(
-    filteredDataSet,
+    processedDataSet,
     visibleDataSets,
     width,
     height,
@@ -395,7 +430,7 @@ const LineChart: FC<LineChartProps> = ({
     svgRef,
     tooltipRef,
     drawData,
-    fullData: filteredDataSet,
+    fullData: processedDataSet,
     width,
     height,
     margin,
@@ -413,7 +448,7 @@ const LineChart: FC<LineChartProps> = ({
 
   const handleTooltipToggle = useLineChartTooltipToggle(
     xScale,
-    filteredDataSet,
+    processedDataSet,
     getYValueAtX,
     margin,
     svgRef,

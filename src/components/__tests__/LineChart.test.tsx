@@ -341,6 +341,61 @@ const curveSeries = (values: number[]) => ({
 const firstLinePathD = (container: HTMLElement): string =>
   container.querySelector("path.line")?.getAttribute("d") ?? "";
 
+describe("LineChart gap detection", () => {
+  const annualGap = [
+    {
+      label: "A",
+      color: "orange",
+      series: [
+        { date: 2016, value: 10, certainty: true },
+        { date: 2017, value: 20, certainty: true },
+        { date: 2018, value: 30, certainty: true },
+        { date: 2024, value: 40, certainty: true },
+      ],
+    },
+  ];
+
+  const dashedLinePaths = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll("path.line")).filter(
+      p => p.getAttribute("stroke-dasharray") === "4,4"
+    );
+
+  it("renders a dashed straight segment across a missing year when detectGaps is on", async () => {
+    const { container, cleanup } = customRender(
+      <LineChart
+        dataSet={annualGap}
+        {...defaultChartProps}
+        xAxisDataType="date_annual"
+        detectGaps
+        onHighlightItem={() => {}}
+      />
+    );
+    await waitFor(() => expect(container.querySelector("path.line")).toBeTruthy());
+    const dashed = dashedLinePaths(container);
+    expect(dashed.length).toBeGreaterThan(0);
+    // The gap run is two points (2018 -> 2024) so it is straight: no cubic command,
+    // but a real line-to (rules out an empty / M-only path).
+    const dashedD = dashed[0].getAttribute("d") ?? "";
+    expect(dashedD).not.toMatch(/C/);
+    expect(dashedD).toMatch(/L/);
+    cleanup();
+  });
+
+  it("does not dash anything when detectGaps is off (unchanged)", async () => {
+    const { container, cleanup } = customRender(
+      <LineChart
+        dataSet={annualGap}
+        {...defaultChartProps}
+        xAxisDataType="date_annual"
+        onHighlightItem={() => {}}
+      />
+    );
+    await waitFor(() => expect(container.querySelector("path.line")).toBeTruthy());
+    expect(dashedLinePaths(container).length).toBe(0);
+    cleanup();
+  });
+});
+
 describe("LineChart curve interpolation", () => {
   it("draws a straight line (no cubic) for a 2-point series by default", async () => {
     const { container, cleanup } = customRender(
