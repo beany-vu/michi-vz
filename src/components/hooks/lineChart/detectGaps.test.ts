@@ -57,6 +57,12 @@ describe("applyGapDetection", () => {
     expect(certaintyOf(applyGapDetection(s, "date_monthly", 3))).toEqual([true, true, true]);
   });
 
+  it("ignores a non-positive expectedStep and falls back to the axis default", () => {
+    // expectedStep 0 would dash every segment if unguarded; falls back to 1 (annual).
+    const s = [pt(2016, 10), pt(2017, 20), pt(2024, 30)];
+    expect(certaintyOf(applyGapDetection(s, "date_annual", 0))).toEqual([true, true, false]);
+  });
+
   it("normalizes unsorted input by axis x", () => {
     const s = [pt(2018, 30), pt(2016, 10), pt(2017, 20)];
     expect(datesOf(applyGapDetection(s, "date_annual"))).toEqual([2016, 2017, 2018]);

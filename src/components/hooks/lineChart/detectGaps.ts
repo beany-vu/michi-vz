@@ -83,8 +83,14 @@ export const applyGapDetection = (
     );
   }
 
-  // 2. Resolve expected step. number requires an explicit step.
-  const step = expectedStep ?? defaultStepFor(xAxisDataType);
+  // 2. Resolve expected step. number requires an explicit step. A non-positive or
+  // non-finite expectedStep is treated as "not provided" — otherwise a 0/negative
+  // step would mark every segment a gap (we can't trust the caller's value).
+  const validStep =
+    typeof expectedStep === "number" && Number.isFinite(expectedStep) && expectedStep > 0
+      ? expectedStep
+      : null;
+  const step = validStep ?? defaultStepFor(xAxisDataType);
   if (step == null) {
     if (isDev()) {
       // eslint-disable-next-line no-console
