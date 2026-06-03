@@ -1,8 +1,11 @@
 import { applyGapDetection, parseAxisUnit } from "./detectGaps";
 import { DataPoint } from "../../../types/data";
 
-const pt = (date: number | string, value: number, certainty = true): DataPoint =>
-  ({ date: date as number, value, certainty });
+const pt = (date: number | string, value: number, certainty = true): DataPoint => ({
+  date: date as number,
+  value,
+  certainty,
+});
 
 const certaintyOf = (s: DataPoint[]) => s.map(d => d.certainty);
 const datesOf = (s: DataPoint[]) => s.map(d => d.date);
