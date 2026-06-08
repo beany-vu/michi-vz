@@ -47,7 +47,8 @@ const CrosshairAxisBadge: React.FC<{
   margin: { top: number; right: number; bottom: number; left: number };
   width: number;
   height: number;
-}> = ({ axis, cx, cy, r, label, color, margin, width, height }) => {
+  placement?: "auto" | "fixed";
+}> = ({ axis, cx, cy, r, label, color, margin, width, height, placement = "auto" }) => {
   const badgeW = Math.max(28, label.length * 6 + 16);
   const { x, y } = resolveCrosshairBadgePlacement({
     axis,
@@ -58,6 +59,7 @@ const CrosshairAxisBadge: React.FC<{
     margin,
     width,
     height,
+    placement,
   });
   return (
     <g data-crosshair-badge={axis} transform={`translate(${x}, ${y})`} pointerEvents="none">
@@ -97,10 +99,11 @@ const CrosshairOverlay: React.FC<{
   xLabel: string;
   yLabel: string;
   span?: "full" | "half";
+  labelPlacement?: "auto" | "fixed";
   margin: { top: number; right: number; bottom: number; left: number };
   width: number;
   height: number;
-}> = ({ cx, cy, r, color, dashed = false, opacity, showLabels, xLabel, yLabel, span = "full", margin, width, height }) => {
+}> = ({ cx, cy, r, color, dashed = false, opacity, showLabels, xLabel, yLabel, span = "full", labelPlacement = "auto", margin, width, height }) => {
   const dash = dashed ? "4 4" : undefined;
   const half = span === "half";
   // x-line (vertical): full spans top→bottom; half runs bubble→bottom only.
@@ -145,6 +148,7 @@ const CrosshairOverlay: React.FC<{
             margin={margin}
             width={width}
             height={height}
+            placement={labelPlacement}
           />
           <CrosshairAxisBadge
             axis="x"
@@ -156,6 +160,7 @@ const CrosshairOverlay: React.FC<{
             margin={margin}
             width={width}
             height={height}
+            placement={labelPlacement}
           />
         </>
       )}
@@ -206,6 +211,7 @@ interface DataPoint {
   meta?: never;
   shape?: "square" | "circle" | "triangle";
   date?: string;
+  code?: string;
 }
 
 interface ChartMetadata {
@@ -213,6 +219,7 @@ interface ChartMetadata {
   yAxisDomain: [number, number];
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
+  renderedRankedIds?: string[];
   chartType: "scatter-plot-chart";
   legendData?: { label: string; color: string; order: number; disabled?: boolean }[];
 }
@@ -319,6 +326,17 @@ interface ScatterPlotChartProps<T extends number | string> {
    */
   crosshairSpan?: "full" | "half";
   /**
+   * Placement strategy for the crosshair axis value badges (when
+   * crosshairLabels is true).
+   * - "auto" (default): collision-aware. A badge that the bubble would cover,
+   *   or that would clip the chart edge, flips to the far axis (Y -> right,
+   *   X -> top) so it stays readable.
+   * - "fixed": both badges always stay anchored to the bottom/left axes and
+   *   never flip. The bubble may then partly cover a badge when it sits near
+   *   its axis. Use when you want the value labels pinned to the origin corner.
+   */
+  crosshairLabelPlacement?: "auto" | "fixed";
+  /**
    * Icon shown in the top-right corner of each pinned tooltip.
    * - string (e.g. `"📌"`, `"★"`) — rendered as text
    * - React.ReactNode — rendered as JSX
@@ -363,6 +381,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   crosshairLineStyle,
   crosshairLabels = false,
   crosshairSpan = "full",
+  crosshairLabelPlacement = "auto",
   pinIcon = "📌",
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -664,6 +683,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
     crosshairLineStyle,
     crosshairLabels,
     crosshairSpan,
+    crosshairLabelPlacement,
     pinIcon,
   });
 
@@ -765,6 +785,10 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
         renderedData: {
           points: renderOrderedDataSet,
         },
+        // Post-slice ranked ids (codes), in ranked order — lets consumers read the
+        // Top/Bottom-N for the scatter, whose renderedData is a single { points }
+        // bucket (not a { [label]: points } map).
+        renderedRankedIds: filteredDataSet.map(d => d.code).filter((c): c is string => Boolean(c)),
         chartType: "scatter-plot-chart",
         legendData: legendData,
       };
@@ -1027,6 +1051,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                         opacity={0.75}
                         showLabels={crosshairLabels}
                         span={crosshairSpan}
+                        labelPlacement={crosshairLabelPlacement}
                         yLabel={yAxisFormat ? yAxisFormat(point.y) : String(point.y)}
                         xLabel={xAxisFormat ? xAxisFormat(point.x) : String(point.x)}
                         margin={margin}
@@ -1059,6 +1084,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                         opacity={0.6}
                         showLabels={crosshairLabels}
                         span={crosshairSpan}
+                        labelPlacement={crosshairLabelPlacement}
                         yLabel={yAxisFormat ? yAxisFormat(activePoint.y) : String(activePoint.y)}
                         xLabel={xAxisFormat ? xAxisFormat(activePoint.x) : String(activePoint.x)}
                         margin={margin}

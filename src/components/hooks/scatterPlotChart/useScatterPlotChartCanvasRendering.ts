@@ -80,6 +80,7 @@ interface DrawParams {
   crosshairLineStyle: "solid" | "dashed" | undefined;
   crosshairLabels: boolean;
   crosshairSpan: "full" | "half";
+  crosshairLabelPlacement: "auto" | "fixed";
   pinIcon: string | undefined;
   xAxisFormat?: (d: number | string) => string;
   yAxisFormat?: (d: number | string) => string;
@@ -256,6 +257,7 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
         const yPos = resolveCrosshairBadgePlacement({
           axis: "y", cx, cy, r: cr, badgeW: yW,
           margin: p.margin, width: p.width, height: p.height,
+          placement: p.crosshairLabelPlacement,
         });
         ctx.globalAlpha = 0.92;
         ctx.fillStyle = "#fff";
@@ -273,6 +275,7 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): void => {
         const xPos = resolveCrosshairBadgePlacement({
           axis: "x", cx, cy, r: cr, badgeW: xW,
           margin: p.margin, width: p.width, height: p.height,
+          placement: p.crosshairLabelPlacement,
         });
         ctx.globalAlpha = 0.92;
         ctx.fillStyle = "#fff";
@@ -325,6 +328,7 @@ export interface ScatterCanvasRenderingOptions {
   crosshairLineStyle?: "solid" | "dashed";
   crosshairLabels?: boolean;
   crosshairSpan?: "full" | "half";
+  crosshairLabelPlacement?: "auto" | "fixed";
   pinIcon?: string | React.ReactNode;
 }
 
@@ -403,6 +407,7 @@ const useScatterPlotChartCanvasRendering = (
       crosshairLineStyle: opts.crosshairLineStyle,
       crosshairLabels: opts.crosshairLabels ?? false,
       crosshairSpan: opts.crosshairSpan ?? "full",
+      crosshairLabelPlacement: opts.crosshairLabelPlacement ?? "auto",
       pinIcon: typeof opts.pinIcon === "string" ? opts.pinIcon : undefined,
       xAxisFormat: opts.xAxisFormat,
       yAxisFormat: opts.yAxisFormat,
@@ -463,6 +468,7 @@ const useScatterPlotChartCanvasRendering = (
         crosshairLineStyle: o.crosshairLineStyle,
         crosshairLabels: o.crosshairLabels ?? false,
         crosshairSpan: o.crosshairSpan ?? "full",
+        crosshairLabelPlacement: o.crosshairLabelPlacement ?? "auto",
         pinIcon: typeof o.pinIcon === "string" ? o.pinIcon : undefined,
         xAxisFormat: o.xAxisFormat,
         yAxisFormat: o.yAxisFormat,
