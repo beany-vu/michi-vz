@@ -28,7 +28,11 @@ const YaxisBand: FC<Props> = ({
   yAxisFormat,
   showGrid,
   onHover,
-  hoveredItem,
+  // Default to null (not undefined): the dimming effect's no-hover guard is
+  // `hoveredItem === null`, so a caller that omits the prop (e.g.
+  // ComparableHorizontalBarChart, which never wires hover) would otherwise leave
+  // it `undefined`, fail the `=== null` check, and fade every label to 0.3.
+  hoveredItem = null,
   tickHtmlWidth = 100,
   enableTransitions = true,
   defaultTickPosition = { x: -100, y: -10 },

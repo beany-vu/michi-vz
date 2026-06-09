@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **📊 `VerticalStackBarChart` now floors small bars so tiny data stays visible.**
+  `minBarHeight` (new, default `15`) floors a non-zero segment's height;
+  `minBarWidth` default was raised `1` → `5` so thin bars in dense charts keep a
+  visible thickness. This is a **visual change**: existing charts with small
+  segments or very narrow bands will show the minimum where they previously
+  showed (almost) nothing. The height floor only affects segments whose natural
+  height is below it; taller bars are unchanged. Segments are stacked with a
+  running pixel cursor, so floored segments push their neighbors up rather than
+  overlap, which means a stack full of tiny values may extend slightly past the
+  axis top. Literal `0` values (and missing values) are never floored. Set
+  `minBarHeight={0}` / `minBarWidth={0}` to restore the old behavior. Applies to
+  both the SVG and canvas renderers.
+- **📊 `ComparableHorizontalBarChart` bar-length floor is now configurable and
+  defaults to 5px** (was a hardcoded 3px). A bar's length encodes its value, so
+  tiny values were clamped to 3px; the new `minBarWidth` prop controls this and
+  raising the default 3 → 5 is a small **visual change** for charts with very
+  small values. Set `minBarWidth={3}` to keep the old length. Applies to both
+  the SVG and canvas renderers.
 - **📈 Default line curve is now `curveMonotoneX`** (was `curveBumpX`) for
   `LineChart` and `RangeChart`. It passes through every point, follows the data's
   local slope without overshoot, and renders a 2-point series as a straight line
@@ -18,6 +36,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Both the SVG and canvas renderers honor the setting identically.
 
 ### Added
+- **`minBarHeight` prop on `VerticalStackBarChart`** (default `15`) controlling the
+  minimum drawn height of non-zero stacked segments. Mirrors `minBarWidth` (whose
+  default was raised to `5`). Pass `0` to opt out of the floor.
+- **`minBarHeightZero` prop on `VerticalStackBarChart`** (default `0`, opt-in) — a
+  separate, smaller floor applied only to segments whose value is exactly `0`, so
+  a present-but-zero entry can show a thin stub instead of vanishing. Kept distinct
+  from `minBarHeight` so real-but-small values and true zeros read differently.
+  Stubs stack like any segment; missing values (null/undefined) are unaffected
+  (use `missingDataMarker` for those).
+- **`minBarWidth` prop on `ComparableHorizontalBarChart`** (default `5`)
+  controlling the minimum drawn bar length, replacing the previous hardcoded 3px.
+  Pass `0` to opt out of the floor.
 - **`curve` prop on `AreaChart` and `RangeChart`** (chart-level) for choosing the
   interpolation. Previously both hardcoded their curve with no override.
 - **`detectGaps` (opt-in) on `LineChart`**: auto-detects missing time periods and
@@ -28,6 +58,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `expectedStep` to override, and it is required for `xAxisDataType="number"`. A
   detected gap overrides an explicit `certainty: true`; it never overrides
   `certainty: false`. Default off, so existing charts are unchanged.
+
+### Fixed
+- **`YaxisBand` no longer fades all tick labels to 0.3** when the consumer omits
+  `hoveredItem` (e.g. `ComparableHorizontalBarChart`, which never wires hover).
+  The no-hover guard `hoveredItem === null` failed for an `undefined` prop and
+  dimmed every label on first paint; `hoveredItem` now defaults to `null`.
 
 ## [0.6.3] - 2026-05-24
 
