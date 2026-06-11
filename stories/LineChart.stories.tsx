@@ -332,3 +332,34 @@ export const CanvasLargeDataset = {
     },
   },
 };
+
+// --- Single-point guide line ------------------------------------------------
+
+// A one-point series has no drawable path. Opting into `singlePointLine` draws a
+// full-plot-width horizontal dashed line through the point plus the point's dot.
+export const SinglePointLine = {
+  args: {
+    width: 900,
+    height: 480,
+    margin: { top: 50, right: 50, bottom: 50, left: 50 },
+    title: "Single data point",
+    xAxisDataType: "date_annual",
+    singlePointLine: true,
+    onHighlightItem: () => {},
+    dataSet: [
+      {
+        label: "Africa",
+        color: "#1f77b4",
+        series: [{ date: 2020, value: 42, certainty: true }],
+      },
+    ],
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "A series with a single data point cannot form a drawable line, `d3.line()` emits only an `M` command, so nothing shows. Opting into `singlePointLine` draws a full-plot-width horizontal dashed line at the point's value and forces the point's dot to render, while the x-axis still shows the year. Pass `singlePointLine={{ ... }}` to override the stroke, width, or dash pattern.",
+      },
+    },
+  },
+};

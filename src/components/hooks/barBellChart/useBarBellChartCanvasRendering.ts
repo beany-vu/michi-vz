@@ -118,10 +118,12 @@ const drawChart = (
       cumulativeX += barW;
     }
     // Dodge end-cap circles that would overlap (near-equal cx, e.g. zero-value
-    // segments) vertically into a column centred on the row line.
+    // segments) vertically into a column centred on the row line, bounded to the
+    // row's box (its y-band) so circles stay inside the row.
     const dodge = computeCircleDodgeOffsets(
       rowSegs.map(s => s.cx),
-      CIRCLE_RADIUS
+      CIRCLE_RADIUS,
+      p.yScale.bandwidth()
     );
     rowSegs.forEach((s, i) => {
       s.cy = rowMid + dodge[i];

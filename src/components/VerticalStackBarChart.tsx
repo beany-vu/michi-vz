@@ -83,10 +83,33 @@ interface Props {
    * scale shrinks each bar; without a floor they become sub-pixel and vanish
    * (worst on the Canvas renderer). The bar width is clamped to at least this
    * value. When that exceeds the available band, bars overlap rather than
-   * disappear. Default `1` keeps every bar visible with negligible effect on
-   * non-dense charts.
+   * disappear. Default `5` keeps every bar visible; on non-dense charts the
+   * natural band width is far larger, so the floor has no effect.
    */
   minBarWidth?: number;
+  /**
+   * Minimum drawn height (px) for each stacked segment that has a non-zero
+   * value. Tiny values produce sub-pixel segments that vanish (worst on the
+   * Canvas renderer); this floors them so very small data stays visible.
+   * Segments are stacked with a running pixel cursor, so floored segments push
+   * their neighbours up instead of overlapping — a stack full of tiny values
+   * may therefore extend slightly past the axis top. A literal `0` (or a
+   * missing value) is never floored, so it stays invisible. Note the floor only
+   * affects segments whose natural height is below it; values already taller are
+   * unchanged. Default `15`.
+   */
+  minBarHeight?: number;
+  /**
+   * Minimum drawn height (px) for a segment whose value is exactly `0`. Lets a
+   * present-but-zero entry show a small stub so the slot reads as "value is 0"
+   * rather than vanishing — useful when consumers want every selected category
+   * visible. Kept separate from (and typically much smaller than) `minBarHeight`
+   * so real-but-small values and true zeros read differently. Stubs stack like
+   * any segment, so in a chart with many zero-valued keys each zero adds a thin
+   * band; keep this small. Missing values (null/undefined/NaN) are unaffected —
+   * use `missingDataMarker` for those. Default `0` (zeros stay invisible).
+   */
+  minBarHeightZero?: number;
   /**
    * When set, draws a thin stub bar of `height` pixels for any
    * (date × series × key) where the key is selected (not in `disabledItems`)
@@ -198,7 +221,9 @@ const VerticalStackBarChart: React.FC<Props> = ({
   isNodataComponent,
   isNodata,
   colorCallbackFn,
-  minBarWidth = 1,
+  minBarWidth = 5,
+  minBarHeight = 15,
+  minBarHeightZero = 0,
   missingDataMarker,
   filter,
   onChartDataProcessed,
@@ -408,6 +433,11 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
           series.forEach(yearData => {
             let y0 = 0;
+            // Pixel-space cursor for the bottom edge of the next segment. Starts
+            // on the zero line and walks upward as segments are placed. Floored
+            // segments advance it by more than their natural height, which is
+            // what keeps later segments from overlapping them.
+            let pixelBottom = yScale(0);
             effectiveKeys
               .filter(key => !disabledItems.includes(key))
               .reverse()
@@ -461,16 +491,31 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
                 const y1 = parseFloat(String(y0)) + numericValue;
                 const rawHeight = yScale(y0) - yScale(y1);
-                // Only apply minimum height if the value exists (even if it's 0)
+                // Height floors:
+                //  - non-zero segments are lifted to `minBarHeight` so tiny
+                //    values stay visible instead of collapsing to sub-pixel;
+                //  - a literal `0` gets `minBarHeightZero` (default 0 = stays
+                //    invisible), an opt-in thin stub so a present-but-zero entry
+                //    still reads as a slot.
+                // Any degenerate/negative natural height collapses to 0.
                 const itemHeight =
-                  value !== undefined && value !== null ? Math.max(0, rawHeight) : 0;
+                  numericValue !== 0 && rawHeight > 0
+                    ? Math.max(minBarHeight, rawHeight)
+                    : numericValue === 0
+                      ? minBarHeightZero
+                      : Math.max(0, rawHeight);
+                // Place the segment on the running pixel cursor rather than
+                // re-deriving its top from yScale(y1). With no flooring this is
+                // exactly yScale(y1); when a segment is floored the extra pixels
+                // push the segments above it up instead of overlapping them.
+                const rectY = pixelBottom - itemHeight;
                 const rectData = {
                   key,
                   height: itemHeight,
                   // Clamp to `minBarWidth` so dense datasets (tiny band width)
                   // don't shrink bars to sub-pixel and make them disappear.
                   width: Math.max(groupWidth - 4, minBarWidth),
-                  y: yScale(y1),
+                  y: rectY,
                   x:
                     (xScale(String(yearData.date)) ?? 0) +
                     groupWidth * groupIndex +
@@ -486,6 +531,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                   code: yearData.code,
                 };
                 y0 = y1;
+                pixelBottom = rectY;
                 stackedData[key].push(rectData as unknown as RectData);
               });
           });
@@ -500,6 +546,8 @@ const VerticalStackBarChart: React.FC<Props> = ({
       yScale,
       generatedColorsMapping,
       minBarWidth,
+      minBarHeight,
+      minBarHeightZero,
       missingDataMarker,
     ]
   );

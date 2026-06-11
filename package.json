@@ -1,6 +1,6 @@
 {
   "name": "michi-vz",
-  "version": "0.6.14",
+  "version": "0.6.15",
   "description": "A React + D3 chart library: ready-made line, area, bar, radar, and scatter charts with shared theming.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

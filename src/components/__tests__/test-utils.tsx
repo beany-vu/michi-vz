@@ -1,6 +1,6 @@
 import React from "react";
 import { render, RenderOptions } from "@testing-library/react";
-import { MichiVzProvider } from "../MichiVzProvider";
+import { MichiVzProvider, SinglePointLineConfig } from "../MichiVzProvider";
 
 // Add TypeScript declarations for SVG element prototype
 declare global {
@@ -116,6 +116,7 @@ const customRender = (
       disabledItems?: string[];
       highlightItems?: string[];
       colorsMapping?: { [key: string]: string };
+      singlePointLine?: SinglePointLineConfig;
     };
   }
 ): ReturnType<typeof render> & { cleanup: () => void } => {

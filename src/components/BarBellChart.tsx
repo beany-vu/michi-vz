@@ -500,7 +500,8 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
 
             // Pre-pass: vertical-dodge offsets for end-cap circles that would
             // overlap (near-equal x, e.g. zero-value segments). Keeps every
-            // circle visible in a column centred on the row line.
+            // circle visible in a column centred on the row line, bounded to the
+            // row's box (its y-band) so circles never spill into neighbour rows.
             let circleCx = margin.left;
             const circleDodge = computeCircleDodgeOffsets(
               keys
@@ -509,7 +510,8 @@ const BarBellChart: React.FC<BarBellChartProps> = ({
                   circleCx += xScale(d[key] ?? 0);
                   return circleCx;
                 }),
-              6
+              6,
+              yScale.bandwidth()
             );
 
             return (

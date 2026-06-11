@@ -11,7 +11,18 @@
 // (px, delta from the row centre line) for each circle — 0 for circles that do
 // not overlap a neighbour. Shared by the SVG renderer and the canvas renderer
 // so both dodge identically.
-export const computeCircleDodgeOffsets = (cxs: number[], radius: number): number[] => {
+//
+// `boxHeight` (optional) is the row's vertical "box" — its y-band height. When
+// given, a cluster's spread is bounded to that box: the circles stay inside it
+// (50% above / 50% below the bar line) instead of spilling into neighbouring
+// rows. The natural one-diameter spacing is kept whenever it fits; only when a
+// cluster is too tall for the box is the spacing compressed to make it fit.
+// Omitting `boxHeight` preserves the original unbounded, fixed-diameter spread.
+export const computeCircleDodgeOffsets = (
+  cxs: number[],
+  radius: number,
+  boxHeight?: number
+): number[] => {
   const n = cxs.length;
   const offsets = new Array<number>(n).fill(0);
   if (n < 2) return offsets;
@@ -22,8 +33,19 @@ export const computeCircleDodgeOffsets = (cxs: number[], radius: number): number
   const spread = (start: number, end: number): void => {
     const size = end - start;
     if (size < 2) return;
+    // Default step keeps neighbouring circles exactly touching (one diameter
+    // centre-to-centre). When a box height is given, the circle centres must
+    // fit within +/- (boxHeight/2 - radius) so the circles themselves stay
+    // inside the box; that caps the usable centre span at `boxHeight - diameter`
+    // shared across the (size - 1) gaps. Compress the step to the smaller of the
+    // two (never expand beyond the natural diameter).
+    let step = diameter;
+    if (boxHeight !== undefined) {
+      const fitStep = Math.max(0, (boxHeight - diameter) / (size - 1));
+      step = Math.min(diameter, fitStep);
+    }
     for (let i = start; i < end; i++) {
-      offsets[i] = (i - start - (size - 1) / 2) * diameter;
+      offsets[i] = (i - start - (size - 1) / 2) * step;
     }
   };
 

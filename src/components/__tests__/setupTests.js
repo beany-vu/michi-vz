@@ -1,6 +1,19 @@
 // jest-dom adds custom jest matchers for asserting on DOM nodes.
 require("@testing-library/jest-dom");
 
+// Some canvas renderers pull in `react-dom/server` (via renderToStaticMarkup
+// for HTML tooltips). Its browser build references MessageChannel, TextEncoder
+// and TextDecoder at module load, which jsdom does not provide. Back them with
+// Node's real implementations.
+if (typeof global.MessageChannel === "undefined") {
+  global.MessageChannel = require("worker_threads").MessageChannel;
+}
+if (typeof global.TextEncoder === "undefined") {
+  const { TextEncoder, TextDecoder } = require("util");
+  global.TextEncoder = TextEncoder;
+  global.TextDecoder = TextDecoder;
+}
+
 // Mock for React 19's new behavior
 jest.mock("react", () => {
   const originalReact = jest.requireActual("react");

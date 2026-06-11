@@ -128,6 +128,14 @@ interface GapChartProps {
   isLoadingComponent?: React.ReactNode;
   enableTransitions?: boolean;
   legendAlign?: "left" | "center" | "right";
+  /**
+   * Render the built-in legend at the bottom of the chart. Default `true`.
+   * Set `false` to opt out of the internal legend entirely — e.g. when the
+   * consumer renders its own legend elsewhere (it still receives the items via
+   * `onLegendDataChange`). Mirrors omitting Recharts' `<Legend>`. The
+   * `legendAlign` / formatter props are ignored when this is `false`.
+   */
+  showLegend?: boolean;
   squareRadius?: number; // border radius for square shapes (default: 2)
   enableShadow?: boolean; // enable shadow filter for shapes (default: false)
   shadowConfig?: {
@@ -206,6 +214,7 @@ const GapChart: FC<GapChartProps> = ({
   isLoadingComponent,
   enableTransitions = true,
   legendAlign = "left",
+  showLegend = true,
   squareRadius = 2,
   enableShadow = false,
   shadowConfig = {
@@ -572,7 +581,7 @@ const GapChart: FC<GapChartProps> = ({
         {renderer !== "canvas" && <g className="gap-chart-content">{renderGapBars}</g>}
 
         {/* Legend */}
-        {shapesLabelsMapping && legendItems.length > 0 && (
+        {showLegend && shapesLabelsMapping && legendItems.length > 0 && (
           <g
             transform={`translate(${
               legendAlign === "left"

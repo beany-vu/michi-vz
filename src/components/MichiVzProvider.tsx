@@ -1,5 +1,17 @@
 import React, { createContext, useContext, ReactNode } from "react";
 
+/**
+ * Config for the LineChart single-point guide line, shared between the
+ * MichiVzProvider context (global default) and the LineChart `singlePointLine`
+ * prop (per-chart override).
+ *  - `false` (or omitted) → off
+ *  - `true`               → on, using the uncertainty look (series color, "4,4", width 2.5)
+ *  - object               → on, with the given fields overriding those defaults
+ */
+export type SinglePointLineConfig =
+  | boolean
+  | { stroke?: string; strokeWidth?: number; strokeDasharray?: string };
+
 // 1. Define the types for our context
 interface ChartContextProps {
   disabledItems: string[];
@@ -18,6 +30,14 @@ interface ChartContextProps {
    * does NOT consult this value. Default: `"sans-serif"`.
    */
   fontFamily: string;
+  /**
+   * Global default for the LineChart single-point guide line (a full-plot-width
+   * horizontal dashed line + dot for series with exactly one data point). Each
+   * LineChart's `singlePointLine` prop overrides this (including `false` to
+   * disable it for one chart). LineChart-only; other charts ignore it.
+   * Default: `false`.
+   */
+  singlePointLine: SinglePointLineConfig;
 }
 
 // 2. Provide default values for the context
@@ -31,6 +51,7 @@ const defaultChartContext: ChartContextProps = {
   visibleItems: [],
   availableItems: [],
   fontFamily: "sans-serif",
+  singlePointLine: false,
 };
 
 const MichiVzContext = createContext<ChartContextProps>(defaultChartContext);
@@ -47,6 +68,7 @@ interface MichiVzProps {
   visibleItems?: string[];
   availableItems?: string[];
   fontFamily?: string;
+  singlePointLine?: SinglePointLineConfig;
 }
 
 export const MichiVzProvider: React.FC<MichiVzProps> = ({
@@ -60,6 +82,7 @@ export const MichiVzProvider: React.FC<MichiVzProps> = ({
   visibleItems = [],
   availableItems = visibleItems,
   fontFamily = "sans-serif",
+  singlePointLine = false,
 }) => {
   const contextValue = {
     disabledItems,
@@ -71,6 +94,7 @@ export const MichiVzProvider: React.FC<MichiVzProps> = ({
     visibleItems,
     availableItems,
     fontFamily,
+    singlePointLine,
   };
 
   return <MichiVzContext.Provider value={contextValue}>{children}</MichiVzContext.Provider>;

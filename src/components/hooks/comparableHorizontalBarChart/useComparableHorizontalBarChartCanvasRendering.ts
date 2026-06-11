@@ -72,13 +72,20 @@ export interface CHBCDataPoint {
 type BarType = "based" | "compared";
 
 const BAR_HEIGHT = 30;
-const MIN_BAR_WIDTH = 3;
 const BAR_RX = 5;
-// Opacity values mirror the SVG renderer's inline opacity logic.
+// Default opacity values mirror the SVG renderer's inline opacity logic. The
+// consumer can override them per-bar via the chart's valueBasedOpacity /
+// valueComparedOpacity props (e.g. pass 1 to match a solid legend swatch).
 const OPACITY_BASED = 0.45;
 const OPACITY_COMPARED = 0.9;
 const OPACITY_DIMMED = 0.3;
 const BAR_STROKE = "#fff";
+
+// A bar whose resolved fill is transparent is treated as absent — getComputedStyle
+// returns "rgba(0, 0, 0, 0)" for `fill: transparent`, and the literal keyword can
+// also flow through from the data colour.
+const isTransparentFill = (c: string): boolean =>
+  c === "transparent" || c === "rgba(0, 0, 0, 0)" || c === "rgba(0,0,0,0)";
 
 // A drawn bar, kept after the paint pass so the hover handler can hit-test
 // without re-deriving the bar layout.
@@ -98,6 +105,8 @@ interface DrawParams {
   xScale: XScale;
   yScale: { (label: string): number | undefined; bandwidth: () => number };
   padding: { top: number; right: number; bottom: number; left: number };
+  // Minimum drawn bar length (px); mirrors the SVG renderer's `minBarWidth`.
+  minBarWidth: number;
   // Per-label resolved fill for the `valueBased` sub-bar — honours consumer CSS
   // (skipColorMappingDispatch); falls back to the data colour when no rule hits.
   resolvedBasedColors: Map<string, string>;
@@ -109,6 +118,9 @@ interface DrawParams {
   patterns: Map<string, HTMLImageElement>;
   highlightItems: string[];
   hoveredLabel: string | null;
+  // Per-sub-bar fill opacity (consumer-overridable; defaults 0.45 / 0.9).
+  opacityBased: number;
+  opacityCompared: number;
 }
 
 // Stroke a rounded rectangle path. We build the path manually so the canvas
@@ -181,13 +193,18 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): BarHit[] =>
       color: string,
       type: BarType
     ): void => {
-      const w = Math.max(bw, MIN_BAR_WIDTH);
-      ctx.globalAlpha = itemAlpha * (type === "based" ? OPACITY_BASED : OPACITY_COMPARED);
+      const patternImg = type === "based" ? p.patterns.get(item.label) : undefined;
+      // A bar whose resolved fill is transparent (e.g. the consumer hides one of
+      // the two sub-bars in single-value mode via `fill: transparent`) draws as
+      // nothing — no fill, no stroke, no hit target. Without this the minBarWidth
+      // floor would still paint a tiny stroked stub at the zero line.
+      if (!patternImg && isTransparentFill(color)) return;
+      const w = Math.max(bw, p.minBarWidth);
+      ctx.globalAlpha = itemAlpha * (type === "based" ? p.opacityBased : p.opacityCompared);
       roundRectPath(ctx, bx, y, w, BAR_HEIGHT, BAR_RX);
       // The `valueBased` bar uses a tiled pattern fill when one is supplied for
       // this label (via `patternsMapping`) and its image has finished loading;
       // otherwise — and always for `valueCompared` — a solid colour.
-      const patternImg = type === "based" ? p.patterns.get(item.label) : undefined;
       const pattern = patternImg ? ctx.createPattern(patternImg, "repeat") : null;
       ctx.fillStyle = pattern || color;
       ctx.fill();
@@ -231,6 +248,8 @@ export interface CHBCCanvasRenderingOptions {
   padding: { top: number; right: number; bottom: number; left: number };
   xScale: XScale;
   yScale: { (label: string): number | undefined; bandwidth: () => number };
+  // Minimum drawn bar length (px); mirrors the SVG renderer's `minBarWidth`.
+  minBarWidth: number;
   finalColorsMapping: { [key: string]: string };
   colorsBasedMapping: { [key: string]: string };
   // Optional per-label pattern image source (URL / data-URI) for the
@@ -238,6 +257,9 @@ export interface CHBCCanvasRenderingOptions {
   // the `valueCompared` bar stay solid-coloured.
   patternsMapping?: { [key: string]: string };
   highlightItems: string[];
+  // Per-sub-bar fill opacity (defaults 0.45 / 0.9 when omitted).
+  valueBasedOpacity?: number;
+  valueComparedOpacity?: number;
   // May return an HTML string OR a React node — ComparableHorizontalBarChart's
   // public `tooltipFormatter` is typed `=> React.ReactNode`. A node is rendered
   // to static markup before being injected into the HTML tooltip overlay.
@@ -265,6 +287,9 @@ const useComparableHorizontalBarChartCanvasRendering = (
     finalColorsMapping,
     colorsBasedMapping,
     highlightItems,
+    minBarWidth,
+    valueBasedOpacity = OPACITY_BASED,
+    valueComparedOpacity = OPACITY_COMPARED,
   } = opts;
 
   // Latest options for the once-bound hover listener (avoids stale closures).
@@ -352,11 +377,14 @@ const useComparableHorizontalBarChartCanvasRendering = (
       xScale,
       yScale,
       padding,
+      minBarWidth,
       resolvedBasedColors,
       resolvedComparedColors,
       patterns,
       highlightItems,
       hoveredLabel: hoveredRef.current,
+      opacityBased: valueBasedOpacity,
+      opacityCompared: valueComparedOpacity,
     });
   });
 
@@ -377,11 +405,14 @@ const useComparableHorizontalBarChartCanvasRendering = (
         xScale: o.xScale,
         yScale: o.yScale,
         padding: o.padding,
+        minBarWidth: o.minBarWidth,
         resolvedBasedColors: resolvedBasedColorsRef.current,
         resolvedComparedColors: resolvedComparedColorsRef.current,
         patterns: patternsRef.current,
         highlightItems: o.highlightItems,
         hoveredLabel: hoveredRef.current,
+        opacityBased: o.valueBasedOpacity ?? OPACITY_BASED,
+        opacityCompared: o.valueComparedOpacity ?? OPACITY_COMPARED,
       });
     };
 

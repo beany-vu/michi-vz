@@ -57,6 +57,11 @@ export type ChartMetadata = {
   yAxisDomain: [number, number];
   visibleItems: string[];
   renderedData: { [key: string]: DataPoint[] };
+  // Flat, chart-type-agnostic list of the rendered (post Top/Bottom-N slice)
+  // item ids/codes, in ranked order. Lets a consumer read the rendered ranked set
+  // uniformly for chart types whose renderedData shape isn't a { [label]: points }
+  // map (scatter, horizontal-bar, area, …). Populated from the data items' `code`.
+  renderedRankedIds?: string[];
   chartType:
     | "line-chart"
     | "range-chart"

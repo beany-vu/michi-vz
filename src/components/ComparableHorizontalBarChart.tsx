@@ -123,6 +123,13 @@ interface LineChartProps {
   disabledItems?: string[];
   hideTickLabels?: boolean;
   /**
+   * Minimum drawn length (px) for each comparative bar. A bar's length encodes
+   * its value, so very small values produce sub-pixel bars that vanish; this
+   * floors them so small data stays visible. Default `5`. Applies to both the
+   * SVG and Canvas renderers.
+   */
+  minBarWidth?: number;
+  /**
    * Rendering backend for the comparative bars.
    *  - "svg" (default): the original SVG/D3 rendering, unchanged.
    *  - "canvas": draw the two bars per item onto a <canvas> instead of two
@@ -131,6 +138,14 @@ interface LineChartProps {
    *    loading / no-data overlays are unchanged in both modes.
    */
   renderer?: "svg" | "canvas";
+  /**
+   * Fill opacity for the two comparative sub-bars. `valueBased` defaults to 0.45
+   * and `valueCompared` to 0.9 (the historical look). Pass `1` to make a bar
+   * fully opaque so it matches a solid legend swatch. Applies to both the SVG
+   * and Canvas renderers.
+   */
+  valueBasedOpacity?: number;
+  valueComparedOpacity?: number;
 }
 
 interface ChartMetadata {
@@ -175,7 +190,10 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
   highlightItems = [],
   disabledItems = [],
   hideTickLabels = false,
+  minBarWidth = 5,
   renderer = "svg",
+  valueBasedOpacity = VALUE_BASED_OPACITY,
+  valueComparedOpacity = VALUE_COMPARED_OPACITY,
 }) => {
   const [tooltip, setTooltip] = React.useState<{
     x: number;
@@ -472,10 +490,10 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   className="value-compared"
                   x={x2}
                   y={y + (standardHeight - 30) / 2}
-                  width={Math.max(width2, 3)}
+                  width={Math.max(width2, minBarWidth)}
                   height={30}
                   fill={comparedColor}
-                  opacity={VALUE_COMPARED_OPACITY}
+                  opacity={valueComparedOpacity}
                   rx={5}
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event, "compared")}
@@ -488,7 +506,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   className="value-based"
                   x={x1}
                   y={y + (standardHeight - 30) / 2}
-                  width={Math.max(width1, 3)}
+                  width={Math.max(width1, minBarWidth)}
                   height={30}
                   fill={basedColor}
                   rx={5}
@@ -496,7 +514,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   onMouseOver={event => handleMouseOver(d, event, "based")}
                   onMouseOut={handleMouseOut}
                   onClick={event => handleMouseClick(d, event, "based")}
-                  opacity={VALUE_BASED_OPACITY}
+                  opacity={valueBasedOpacity}
                   stroke="#fff"
                   strokeWidth={1}
                 />
@@ -507,7 +525,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   className="value-based"
                   x={x1}
                   y={y + (standardHeight - 30) / 2}
-                  width={Math.max(width1, 3)}
+                  width={Math.max(width1, minBarWidth)}
                   height={30}
                   fill={basedColor}
                   rx={5}
@@ -515,7 +533,7 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   onMouseOver={event => handleMouseOver(d, event, "based")}
                   onMouseOut={handleMouseOut}
                   onClick={event => handleMouseClick(d, event, "based")}
-                  opacity={VALUE_BASED_OPACITY}
+                  opacity={valueBasedOpacity}
                   stroke="#fff"
                   strokeWidth={1}
                 />
@@ -523,10 +541,10 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
                   className="value-compared"
                   x={x2}
                   y={y + (standardHeight - 30) / 2}
-                  width={Math.max(width2, 3)}
+                  width={Math.max(width2, minBarWidth)}
                   height={30}
                   fill={comparedColor}
-                  opacity={VALUE_COMPARED_OPACITY}
+                  opacity={valueComparedOpacity}
                   rx={5}
                   ry={5}
                   onMouseOver={event => handleMouseOver(d, event, "compared")}
@@ -555,6 +573,8 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     handleMouseOver,
     handleMouseClick,
     padding.left,
+    valueBasedOpacity,
+    valueComparedOpacity,
   ]);
 
   // The items the canvas renderer paints — same visibility cull the SVG
@@ -583,10 +603,13 @@ const ComparableHorizontalBarChart: React.FC<LineChartProps> = ({
     padding,
     xScale: xAxisScale as never,
     yScale: yAxisScale,
+    minBarWidth,
     finalColorsMapping,
     colorsBasedMapping,
     patternsMapping,
     highlightItems,
+    valueBasedOpacity,
+    valueComparedOpacity,
     tooltipFormatter: tooltipFormatter as never,
     onHighlightItem,
   });

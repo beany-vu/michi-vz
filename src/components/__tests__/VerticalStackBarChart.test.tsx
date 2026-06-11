@@ -218,4 +218,176 @@ describe("VerticalStackBarChart", () => {
     expect(africaRects).toHaveLength(2);
     expect(africaRects.every((r: { isMissing?: boolean }) => !r.isMissing)).toBe(true);
   });
+
+  // A single bar whose stack mixes one large value with a tiny one. The tiny
+  // segment's natural pixel height is well under a pixel, so without a floor it
+  // disappears. `Big` dwarfs `Tiny` to force `Tiny` sub-pixel for any sane plot
+  // height.
+  const stackWithTiny = [
+    {
+      seriesKey: "Africa",
+      seriesKeyAbbreviation: "Africa",
+      series: [{ date: "2001", Big: "1000", Tiny: "0.5" }],
+    },
+  ];
+
+  test("minBarHeight: a sub-pixel segment is floored to the default 15px", async () => {
+    const mockCallback = jest.fn();
+
+    customRender(
+      <VerticalStackBarChart
+        dataSet={stackWithTiny}
+        {...defaultChartProps}
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(() => expect(mockCallback).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    const tinyRect = metadata.renderedData?.Tiny?.[0];
+    const bigRect = metadata.renderedData?.Big?.[0];
+    // Tiny is floored up to the default 15px so it stays visible...
+    expect(tinyRect.height).toBe(15);
+    // ...while the large segment keeps its natural (much larger) height.
+    expect(bigRect.height).toBeGreaterThan(15);
+  });
+
+  test("minBarWidth: a sub-pixel bar thickness is floored to the default 5px", async () => {
+    const mockCallback = jest.fn();
+    // A narrow chart with many dates squeezes each band's width below the floor,
+    // so the bar thickness (width) clamps to the default minBarWidth.
+    const denseDates = Array.from({ length: 10 }, (_, i) => ({
+      date: String(2000 + i),
+      V: "10",
+    }));
+    const denseData = [{ seriesKey: "V", seriesKeyAbbreviation: "V", series: denseDates }];
+
+    customRender(
+      <VerticalStackBarChart
+        dataSet={denseData}
+        {...defaultChartProps}
+        width={120}
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(() => expect(mockCallback).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    // groupWidth - 4 is sub-pixel here, so width clamps to the 5px default.
+    expect(metadata.renderedData?.V?.[0].width).toBe(5);
+  });
+
+  test("minBarHeight: a custom value overrides the default floor", async () => {
+    const mockCallback = jest.fn();
+
+    customRender(
+      <VerticalStackBarChart
+        dataSet={stackWithTiny}
+        {...defaultChartProps}
+        minBarHeight={8}
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(() => expect(mockCallback).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    expect(metadata.renderedData?.Tiny?.[0].height).toBe(8);
+  });
+
+  test("minBarHeight: a literal zero value is not floored (no phantom bar)", async () => {
+    const mockCallback = jest.fn();
+    const stackWithZero = [
+      {
+        seriesKey: "Africa",
+        seriesKeyAbbreviation: "Africa",
+        series: [{ date: "2001", Big: "1000", Zero: "0" }],
+      },
+    ];
+
+    customRender(
+      <VerticalStackBarChart
+        dataSet={stackWithZero}
+        {...defaultChartProps}
+        minBarHeight={5}
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(() => expect(mockCallback).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    // By default a real 0 stays invisible (minBarHeightZero defaults to 0) —
+    // the 15px `minBarHeight` floor never applies to a zero value.
+    expect(metadata.renderedData?.Zero?.[0].height).toBe(0);
+  });
+
+  test("minBarHeightZero: a literal zero gets a small stub when opted in", async () => {
+    const mockCallback = jest.fn();
+    const stackWithZero = [
+      {
+        seriesKey: "Africa",
+        seriesKeyAbbreviation: "Africa",
+        series: [{ date: "2001", Big: "1000", Zero: "0" }],
+      },
+    ];
+
+    customRender(
+      <VerticalStackBarChart
+        dataSet={stackWithZero}
+        {...defaultChartProps}
+        minBarHeight={15}
+        minBarHeightZero={3}
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(() => expect(mockCallback).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    // Opted in: the zero segment gets a small 3px stub (distinct from the 15px
+    // real-value floor), while the real value keeps its own (larger) floor.
+    expect(metadata.renderedData?.Zero?.[0].height).toBe(3);
+    expect(metadata.renderedData?.Big?.[0].height).toBeGreaterThanOrEqual(15);
+  });
+
+  test("minBarHeight: floored segments stack without overlapping", async () => {
+    const mockCallback = jest.fn();
+    // Two tiny segments plus one big one: both tiny segments get floored, so the
+    // running pixel cursor must push them apart instead of letting them overlap.
+    const stackTwoTiny = [
+      {
+        seriesKey: "Africa",
+        seriesKeyAbbreviation: "Africa",
+        series: [{ date: "2001", Big: "1000", A: "0.5", B: "0.5" }],
+      },
+    ];
+
+    customRender(
+      <VerticalStackBarChart
+        dataSet={stackTwoTiny}
+        {...defaultChartProps}
+        minBarHeight={3}
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(() => expect(mockCallback).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    const rects = [
+      metadata.renderedData?.Big?.[0],
+      metadata.renderedData?.A?.[0],
+      metadata.renderedData?.B?.[0],
+    ].sort((p, q) => p.y - q.y); // top-to-bottom on screen
+
+    // Adjacent segments touch but never overlap: each rect's bottom edge sits at
+    // or above the next rect's top edge (small float tolerance).
+    for (let i = 0; i < rects.length - 1; i++) {
+      const bottom = rects[i].y + rects[i].height;
+      expect(bottom).toBeLessThanOrEqual(rects[i + 1].y + 0.01);
+    }
+  });
 });

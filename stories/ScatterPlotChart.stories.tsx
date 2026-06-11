@@ -253,6 +253,41 @@ export const WithCrosshairAndPin = {
   },
 };
 
+// Keep the crosshair dashed even after pinning, via crosshairLineStyle.
+export const DashedPinnedCrosshair = {
+  args: {
+    ...commonProps,
+    dataSet: crosshairDemo,
+    title: "Crosshair: Dashed Even When Pinned",
+    xAxisFormat: (d: number | string) => `${d}%`,
+    yAxisFormat: (d: number | string) => `${d}%`,
+    xAxisDomain: [0, 100] as [number, number],
+    yAxisDomain: [0, 100] as [number, number],
+    showGrid: { x: true, y: true },
+    showCrosshair: true,
+    crosshairLabels: true,
+    crosshairLineStyle: "dashed" as const,
+    pinIcon: "📌",
+    dScaleLegend: {
+      title: "Bubble size",
+      valueFormatter: (d: number) => `${Math.round(d)}`,
+    },
+    tooltipFormatter: (d: { label: string; x: number; y: number; d: number }) =>
+      `<strong>${d.label}</strong><br/>x: ${d.x}% · y: ${d.y}%`,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "By default the hover crosshair is dashed and the pinned crosshair is solid, signalling the state change. " +
+          "Set `crosshairLineStyle=\"dashed\"` to force **both** crosshairs dashed, so a pinned bubble keeps its dashed lines; " +
+          "`crosshairLineStyle=\"solid\"` makes both solid. Omit the prop to keep the default hover-dashed / pinned-solid split. " +
+          "Click a bubble to pin it and confirm the lines stay dashed — identical in the `svg` and `canvas` renderers.",
+      },
+    },
+  },
+};
+
 // Filtering a larger set down to the points worth comparing.
 export const TopByPopulation = {
   args: {
