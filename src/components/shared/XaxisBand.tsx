@@ -14,8 +14,23 @@ interface Props {
   isLoading?: boolean;
   isEmpty?: boolean;
   xAxisLabelMode?: "auto" | "horizontal";
-  onAxisModeChange?: (mode: AxisMode) => void;
+  /**
+   * Fired when the label layout changes. `requiredBottomMargin` is the bottom
+   * margin (px) the chart must provide so rotated labels are not clipped by
+   * the SVG edge — measured from the longest rendered tick label (0 when
+   * horizontal). Consumers grow their margin via
+   * `Math.max(margin.bottom, requiredBottomMargin)`.
+   */
+  onAxisModeChange?: (mode: AxisMode, requiredBottomMargin?: number) => void;
 }
+
+// Rotated labels hang below the axis line by labelWidth·sin(45°), on top of
+// the axis group's own +25px offset and the label's translate(0, 14). The
+// extra 12px covers the font box/descender so the last glyph clears the edge.
+const AXIS_GROUP_OFFSET = 25;
+const ROTATED_LABEL_TRANSLATE = 14;
+const ROTATED_LABEL_PADDING = 12;
+const SIN_45 = Math.SQRT1_2;
 
 const XaxisBand: FC<Props> = ({
   xScale,
@@ -45,11 +60,15 @@ const XaxisBand: FC<Props> = ({
     [xAxisFormat]
   );
 
-  const { mode, tickValues } = useMemo<{ mode: AxisMode; tickValues: string[] }>(() => {
+  const { mode, tickValues, requiredBottomMargin } = useMemo<{
+    mode: AxisMode;
+    tickValues: string[];
+    requiredBottomMargin: number;
+  }>(() => {
     if (isLoading || isEmpty) {
-      return { mode: "horizontal", tickValues: [] };
+      return { mode: "horizontal", tickValues: [], requiredBottomMargin: 0 };
     }
-    return chooseAxisMode({
+    const result = chooseAxisMode({
       domain: xScale.domain(),
       formatter: d => formatter(d),
       bandWidth: xScale.step(),
@@ -57,17 +76,33 @@ const XaxisBand: FC<Props> = ({
       maxTicks: ticks,
       forceMode: xAxisLabelMode,
     });
+    // How much bottom margin the chart needs so rotated labels render fully
+    // inside the SVG (independent of margin, so no feedback loop with charts
+    // that grow their margin from this value).
+    let required = 0;
+    if (result.mode === "rotated") {
+      const maxLabelWidth = result.tickValues.reduce(
+        (max, value) => Math.max(max, measureLabelWidth(formatter(value))),
+        0
+      );
+      required = Math.ceil(
+        AXIS_GROUP_OFFSET + ROTATED_LABEL_TRANSLATE + maxLabelWidth * SIN_45 + ROTATED_LABEL_PADDING
+      );
+    }
+    return { ...result, requiredBottomMargin: required };
   }, [xScale, formatter, ticks, isLoading, isEmpty, xAxisLabelMode]);
 
-  // Notify parent when mode changes (used by VerticalStackBarChart to reserve
-  // extra bottom space for rotated labels).
+  // Notify parent when the layout changes (used by charts to reserve extra
+  // bottom space for rotated labels — see VerticalStackBarChart/ScatterPlotChart).
+  const prevRequiredRef = useRef<number | null>(null);
   useEffect(() => {
-    if (prevModeRef.current === mode) return;
+    if (prevModeRef.current === mode && prevRequiredRef.current === requiredBottomMargin) return;
     prevModeRef.current = mode;
+    prevRequiredRef.current = requiredBottomMargin;
     if (onAxisModeChange) {
-      onAxisModeChange(mode);
+      onAxisModeChange(mode, requiredBottomMargin);
     }
-  }, [mode, onAxisModeChange]);
+  }, [mode, requiredBottomMargin, onAxisModeChange]);
 
   useLayoutEffect(() => {
     if (!ref.current || !xScale || renderedRef.current) return;

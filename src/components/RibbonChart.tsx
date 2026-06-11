@@ -1,8 +1,9 @@
-import React, { useMemo, useRef, useLayoutEffect, useState, useEffect } from "react";
+import React, { useMemo, useRef, useLayoutEffect, useState, useEffect, useCallback } from "react";
 import * as d3 from "d3";
 import Title from "./shared/Title";
 import MichiVzCredit from "./shared/MichiVzCredit";
 import XaxisBand from "./shared/XaxisBand";
+import type { AxisMode } from "./shared/xaxisBand/chooseAxisMode";
 import YaxisLinear from "./shared/YaxisLinear";
 import { useChartContext } from "./MichiVzProvider";
 import LoadingIndicator from "./shared/LoadingIndicator";
@@ -67,7 +68,7 @@ const RibbonChart: React.FC<Props> = ({
   series,
   width = WIDTH,
   height = HEIGHT,
-  margin = MARGIN,
+  margin: marginProp = MARGIN,
   title,
   yAxisFormat,
   xAxisFormat,
@@ -84,6 +85,19 @@ const RibbonChart: React.FC<Props> = ({
   highlightItems = [],
   disabledItems = [],
 }) => {
+  // Grow the bottom margin when XaxisBand lays its band labels out rotated, by
+  // exactly the space the longest label needs — otherwise long category labels
+  // hang past height and get clipped by the SVG edge. All internal geometry
+  // reads this effective `margin`, never the raw prop.
+  const [axisRequiredBottom, setAxisRequiredBottom] = useState(0);
+  const handleAxisModeChange = useCallback((_mode: AxisMode, requiredBottomMargin = 0) => {
+    setAxisRequiredBottom(requiredBottomMargin);
+  }, []);
+  const margin = useMemo(
+    () => ({ ...marginProp, bottom: Math.max(marginProp.bottom, axisRequiredBottom) }),
+    [marginProp, axisRequiredBottom]
+  );
+
   const { colorsMapping } = useChartContext();
   const ref = useRef<SVGSVGElement>(null);
   const renderCompleteRef = useRef(false);
@@ -336,7 +350,13 @@ const RibbonChart: React.FC<Props> = ({
         </Title>
         {filteredDataSet.length > 0 && !isLoading && (
           <>
-            <XaxisBand xScale={xScale} height={height} margin={margin} xAxisFormat={xAxisFormat} />
+            <XaxisBand
+            xScale={xScale}
+            height={height}
+            margin={margin}
+            xAxisFormat={xAxisFormat}
+            onAxisModeChange={handleAxisModeChange}
+          />
             <YaxisLinear
               yScale={yScale}
               width={width}

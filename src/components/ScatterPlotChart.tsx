@@ -13,6 +13,7 @@ import * as d3 from "d3";
 import Title from "./shared/Title";
 import XaxisLinear from "./shared/XaxisLinear";
 import XaxisBand from "./shared/XaxisBand";
+import { AxisMode } from "./shared/xaxisBand/chooseAxisMode";
 import { DEFAULT_COLORS } from "./shared/colors";
 import YaxisLinear from "./shared/YaxisLinear";
 import { drawHalfLeftCircle } from "../components/shared/helpers";
@@ -350,7 +351,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   dataSet = [],
   width = defaultConf.WIDTH,
   height = defaultConf.HEIGHT,
-  margin = defaultConf.MARGIN,
+  margin: marginProp = defaultConf.MARGIN,
   title,
   children,
   isLoading = false,
@@ -384,6 +385,19 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
   crosshairLabelPlacement = "auto",
   pinIcon = "📌",
 }) => {
+  // Grow the bottom margin when XaxisBand lays its band labels out rotated, by
+  // exactly the space the longest label needs — otherwise long category labels
+  // (e.g. country names) hang past height and get clipped by the SVG edge.
+  // All internal geometry reads this effective `margin`, never the raw prop.
+  const [axisRequiredBottom, setAxisRequiredBottom] = useState(0);
+  const handleAxisModeChange = useCallback((_mode: AxisMode, requiredBottomMargin = 0) => {
+    setAxisRequiredBottom(requiredBottomMargin);
+  }, []);
+  const margin = useMemo(
+    () => ({ ...marginProp, bottom: Math.max(marginProp.bottom, axisRequiredBottom) }),
+    [marginProp, axisRequiredBottom]
+  );
+
   const svgRef = useRef<SVGSVGElement>(null);
   // The <svg> is conditionally rendered (hidden while isLoading), so its DOM
   // node can be destroyed and recreated WITHOUT this component remounting.
@@ -1018,6 +1032,7 @@ const ScatterPlotChart: React.FC<ScatterPlotChartProps<number | string>> = ({
                         height={height}
                         margin={margin}
                         xAxisFormat={xAxisFormat}
+                        onAxisModeChange={handleAxisModeChange}
                       />
                     )}
                     <YaxisLinear

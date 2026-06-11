@@ -67,4 +67,33 @@ describe("XaxisBand component", () => {
     // Check that the scale domain length matches the expected number from the mock
     expect(defaultProps.xScale.domain().length).toBe(5);
   });
+
+  test("reports requiredBottomMargin for rotated long labels via onAxisModeChange", () => {
+    // Long country-style labels on narrow bands force the rotated mode.
+    const longDomain = [
+      "Sao Tome and Principe",
+      "Central African Republic",
+      "Democratic Republic of the Congo",
+      "Burkina Faso",
+      "Equatorial Guinea",
+    ];
+    const scale = d3.scaleBand().domain(longDomain).range([0, 400]).padding(0.1);
+    const onAxisModeChange = jest.fn();
+
+    render(<XaxisBand {...defaultProps} xScale={scale} onAxisModeChange={onAxisModeChange} />);
+
+    expect(onAxisModeChange).toHaveBeenCalledWith("rotated", expect.any(Number));
+    const required = onAxisModeChange.mock.calls[onAxisModeChange.mock.calls.length - 1][1];
+    // Must exceed the 25px axis-group offset by the rotated label extent —
+    // i.e. clearly more than a default 30-50px bottom margin provides.
+    expect(required).toBeGreaterThan(50);
+  });
+
+  test("reports 0 requiredBottomMargin when labels fit horizontally", () => {
+    const onAxisModeChange = jest.fn();
+
+    render(<XaxisBand {...defaultProps} onAxisModeChange={onAxisModeChange} />);
+
+    expect(onAxisModeChange).toHaveBeenCalledWith("horizontal", 0);
+  });
 });

@@ -253,14 +253,25 @@ const VerticalStackBarChart: React.FC<Props> = ({
   const [isTooltipSticky, setIsTooltipSticky] = useState(false);
 
   const [axisMode, setAxisMode] = useState<AxisMode>("horizontal");
+  // Exact bottom margin the rotated band labels need (measured by XaxisBand
+  // from the longest rendered label); the fixed reserve stays as a fallback
+  // for the first paint before the measurement lands.
+  const [axisRequiredBottom, setAxisRequiredBottom] = useState(0);
+  const handleAxisModeChange = useCallback((mode: AxisMode, requiredBottomMargin = 0) => {
+    setAxisMode(mode);
+    setAxisRequiredBottom(requiredBottomMargin);
+  }, []);
 
   const ROTATED_BOTTOM_RESERVE = 40;
   const effectiveMargin = useMemo(
     () => ({
       ...margin,
-      bottom: margin.bottom + (axisMode === "rotated" ? ROTATED_BOTTOM_RESERVE : 0),
+      bottom: Math.max(
+        margin.bottom + (axisMode === "rotated" ? ROTATED_BOTTOM_RESERVE : 0),
+        axisRequiredBottom
+      ),
     }),
-    [margin, axisMode]
+    [margin, axisMode, axisRequiredBottom]
   );
 
   // Update refs when props change
@@ -914,7 +925,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
               margin={effectiveMargin}
               xAxisFormat={xAxisFormat}
               xAxisLabelMode={xAxisLabelMode}
-              onAxisModeChange={setAxisMode}
+              onAxisModeChange={handleAxisModeChange}
             />
             <YaxisLinear
               yScale={yScale}

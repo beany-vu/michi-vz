@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **📊 Rotated band-axis labels are no longer clipped at the bottom edge.**
+  `XaxisBand` now measures the longest rendered tick label and reports the
+  bottom margin it needs via `onAxisModeChange(mode, requiredBottomMargin)`
+  (backward-compatible second argument). `ScatterPlotChart`, `RibbonChart` and
+  `VerticalStackBarChart` grow their effective bottom margin to
+  `max(margin.bottom, requiredBottomMargin)`, so long category labels (e.g.
+  "Sao Tome and Principe" rotated -45°) render fully inside the SVG instead of
+  being cropped. The consumer-passed `margin.bottom` remains the minimum; the
+  plot area shrinks only by what the labels actually need.
+
+
 ### Changed
 - **📊 `VerticalStackBarChart` now floors small bars so tiny data stays visible.**
   `minBarHeight` (new, default `15`) floors a non-zero segment's height;
