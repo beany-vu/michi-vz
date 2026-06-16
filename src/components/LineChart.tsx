@@ -382,9 +382,20 @@ const LineChart: FC<LineChartProps> = ({
   // explicit `false` to disable one chart); otherwise fall back to the
   // MichiVzProvider context default. This lets a provider enable it for every
   // LineChart at once while individual charts opt out or customize.
-  const { singlePointLine: contextSinglePointLine } = useChartContext();
+  const { singlePointLine: contextSinglePointLine, colorsMapping: contextColorsMapping } =
+    useChartContext();
   const effectiveSinglePointLine =
     singlePointLine !== undefined ? singlePointLine : contextSinglePointLine;
+
+  // Resolve the colour map from BOTH the prop and the MichiVzProvider context, so
+  // a consumer that supplies colours globally via the provider (rather than per
+  // chart) still binds each label to a stable colour. Prop entries win per-label.
+  // Without this, the legend falls back to index-based palette colours and every
+  // item cascades up a slot when an earlier one is removed.
+  const effectiveColorsMapping = useMemo(
+    () => ({ ...(contextColorsMapping ?? {}), ...colorsMapping }),
+    [contextColorsMapping, colorsMapping]
+  );
   const resolvedSinglePointLine = useMemo(() => {
     if (!effectiveSinglePointLine) return null;
     const opts = typeof effectiveSinglePointLine === "object" ? effectiveSinglePointLine : {};
@@ -495,9 +506,15 @@ const LineChart: FC<LineChartProps> = ({
     memoizedOnChartDataProcessed,
     renderCompleteRef,
     prevChartDataRef,
-    colorsMapping,
+    effectiveColorsMapping,
     colors,
-    memoizedOnColorMappingGenerated,
+    // Honour skipColorMappingDispatch here too: in wait-for-legend mode the
+    // consumer owns the colour map, so the chart must NOT dispatch its own
+    // (index-based) legend colours back — that overwrote the consumer's mapping
+    // and made every chart fight over the shared colour slot. The bars' hook
+    // (useGenerateColorMapping) already guards this; the metadata/legend path did
+    // not, which is the actual leak.
+    skipColorMappingDispatch ? undefined : memoizedOnColorMappingGenerated,
     onLegendDataChange,
     topNItems
   );

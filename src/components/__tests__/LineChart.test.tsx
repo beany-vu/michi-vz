@@ -433,3 +433,52 @@ describe("LineChart curve interpolation", () => {
     cleanup();
   });
 });
+
+// Regression: the exposed legendData (which thd's LegendGeneral + canvas CSS read)
+// must HONOR a provided colorsMapping per label, not assign colours by raw index.
+// Index assignment is what makes a removed item cascade every following item up a
+// palette slot. Mirrors VerticalStackBarChart's `colorsMapping[key] || palette[i]`.
+describe("LineChart legendData honours colorsMapping", () => {
+  const seriesOf = (label: string, values: number[]) => ({
+    label,
+    color: "blue",
+    series: values.map((value, i) => ({ date: 2001 + i, value, certainty: true })),
+  });
+
+  it("colours legendData from the provided map, not by index", async () => {
+    const onChartDataProcessed = jest.fn();
+    // Sentinel colours deliberately NOT in the default palette, so honouring the
+    // map vs. falling back to palette[index] is unambiguous.
+    const colorsMapping = {
+      Africa: "#111111",
+      "Rest of the World": "#222222",
+      "Eastern Africa": "#333333",
+    };
+
+    const { cleanup } = customRender(
+      <LineChart
+        dataSet={[
+          seriesOf("Africa", [666, 777, 989]),
+          seriesOf("Rest of the World", [444, 333, 222]),
+          seriesOf("Eastern Africa", [789, 456, 123]),
+        ]}
+        {...defaultChartProps}
+        xAxisDataType="number"
+        colorsMapping={colorsMapping}
+        onChartDataProcessed={onChartDataProcessed}
+        onHighlightItem={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(onChartDataProcessed).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = onChartDataProcessed.mock.calls[onChartDataProcessed.mock.calls.length - 1][0];
+    const colorOf = (label: string) =>
+      metadata.legendData.find((item: { label: string }) => item.label === label)?.color;
+
+    expect(colorOf("Africa")).toBe("#111111");
+    expect(colorOf("Rest of the World")).toBe("#222222");
+    expect(colorOf("Eastern Africa")).toBe("#333333");
+    cleanup();
+  });
+});

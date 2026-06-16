@@ -100,21 +100,28 @@ const useLineChartMetadataExpose = (
 
       // Create legend data for unique labels only
       const legendData = uniqueLabels.map((label, index) => {
-        // Assign colors based on legend order using DEFAULT_COLORS
-        const colorIndex = index % defaultColors.length;
-        const baseColor = defaultColors[colorIndex];
+        // Honor a provided colorsMapping first so a label keeps its color even
+        // when earlier items are removed (otherwise index-based assignment makes
+        // every following item cascade up a palette slot). Mirrors
+        // VerticalStackBarChart. Fall back to the palette by legend order.
+        let finalColor = colorsMapping[label];
 
-        // Calculate opacity for repeat items beyond color palette
-        const repeatCycle = Math.floor(index / defaultColors.length);
-        const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
+        if (!finalColor) {
+          const colorIndex = index % defaultColors.length;
+          const baseColor = defaultColors[colorIndex];
 
-        // Create color with opacity if needed
-        const finalColor =
-          repeatCycle > 0
-            ? `${baseColor}${Math.round(opacity * 255)
-                .toString(16)
-                .padStart(2, "0")}`
-            : baseColor;
+          // Calculate opacity for repeat items beyond color palette
+          const repeatCycle = Math.floor(index / defaultColors.length);
+          const opacity = Math.max(0.1, 1 - repeatCycle * 0.1);
+
+          // Create color with opacity if needed
+          finalColor =
+            repeatCycle > 0
+              ? `${baseColor}${Math.round(opacity * 255)
+                  .toString(16)
+                  .padStart(2, "0")}`
+              : baseColor;
+        }
 
         return {
           label,
