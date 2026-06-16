@@ -313,3 +313,39 @@ export const AutoRotatingXAxisLabels = {
   },
 };
 
+// Explicit, fixed stacking order — pin the layers by their latest-year value so
+// the stack doesn't reshuffle between periods. Product lines ranked by their
+// latest-year (2023) total across both regions, largest first.
+const LATEST_REVENUE_YEAR = "2023";
+const revenueKeysByLatestYearDesc = (() => {
+  const totals: { [key: string]: number } = {};
+  revenueByRegionDataSet.forEach(ds => {
+    const row = ds.series.find(s => s.date === LATEST_REVENUE_YEAR);
+    if (!row) return;
+    Object.entries(row).forEach(([key, value]) => {
+      if (key !== "date") totals[key] = (totals[key] ?? 0) + Number(value);
+    });
+  });
+  return Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
+})();
+
+// Largest category anchored at the bottom, fixed across periods.
+export const FixedOrderByLatestYear = {
+  args: {
+    ...commonProps,
+    dataSet: revenueByRegionDataSet,
+    title: "Revenue by Product Line: Fixed Order (Largest at Bottom)",
+    yAxisFormat: (d: number) => `$${d}M`,
+    keys: revenueKeysByLatestYearDesc,
+    keysOrder: "bottomToTop" as const,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "By default a stacked bar orders its segments by the data's insertion order, so the visual stack can reshuffle between periods and frustrate year-over-year comparison. Here `keys` pins an explicit order — the product lines ranked by their latest-year (2023) total — and `keysOrder=\"bottomToTop\"` anchors the largest line (Cloud) at the bottom of every bar. The order is identical across 2021–2023, so a reader can track each layer's growth without the stack rearranging underneath them.",
+      },
+    },
+  },
+};
+

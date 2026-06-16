@@ -62,6 +62,28 @@ interface ChartMetadata {
 
 interface Props {
   dataSet: DataSet[];
+  /**
+   * Optional explicit ordering for the stacking keys. When provided it becomes
+   * the canonical order for the stack, legend and colour assignment. The prop
+   * order is honoured first (filtered to keys actually present in the data),
+   * then any data-derived keys the prop omitted are appended in their natural
+   * (insertion) order — so a partial list never DROPS data, and entries not
+   * present in the data are ignored. Omit for the original insertion-order
+   * behaviour. Pair with `keysOrder` to choose which end sits at the bottom.
+   */
+  keys?: string[];
+  /**
+   * How the `keys` array maps to vertical position (only meaningful when `keys`
+   * is set). Segments are drawn from the zero line up, so:
+   *  - `"topToBottom"` (default): `keys[0]` renders at the TOP and `keys[last]`
+   *    at the BOTTOM — pass keys sorted ascending to put the largest at the
+   *    bottom.
+   *  - `"bottomToTop"`: `keys[0]` renders at the BOTTOM and `keys[last]` at the
+   *    TOP — pass keys sorted descending (largest first) to put the largest at
+   *    the bottom.
+   * Default `"topToBottom"` preserves backward-compatible behaviour.
+   */
+  keysOrder?: "topToBottom" | "bottomToTop";
   width: number;
   height: number;
   margin: { top: number; right: number; bottom: number; left: number };
@@ -205,6 +227,8 @@ const HEIGHT = 480;
 
 const VerticalStackBarChart: React.FC<Props> = ({
   dataSet,
+  keys: keysProp,
+  keysOrder = "topToBottom",
   width = WIDTH,
   height = HEIGHT,
   margin = MARGIN,
@@ -277,9 +301,12 @@ const VerticalStackBarChart: React.FC<Props> = ({
   // Update refs when props change
   onHighlightItemRef.current = onHighlightItem;
 
-  // First, get all keys from the dataset
+  // First, get all keys from the dataset (natural insertion order), then apply
+  // an explicit `keys` ordering when the consumer provides one. Everything
+  // downstream (effectiveKeys, the stack draw, legend topNKeys and colour
+  // assignment) derives from allKeys, so reordering here reorders all of them.
   const allKeys = useMemo(() => {
-    return Array.from(
+    const dataKeys = Array.from(
       new Set(
         dataSet
           .map(ds => ds.series.map(s => Object.keys(s)))
@@ -287,7 +314,25 @@ const VerticalStackBarChart: React.FC<Props> = ({
           .filter(d => d !== "date" && d !== "code")
       )
     );
-  }, [dataSet]);
+
+    // No explicit order requested -> preserve the original insertion-order behaviour.
+    if (!keysProp || keysProp.length === 0) {
+      return dataKeys;
+    }
+
+    // Explicit order: honour the prop order for keys that actually exist in the
+    // data (drop unknown prop entries so they can't create empty slots), then
+    // append any data keys the prop omitted in their natural order (so a partial
+    // list never drops data). The draw loop reverses the keys (allKeys[last] =
+    // bottom), so "topToBottom" keeps keys[0] at the top while "bottomToTop"
+    // puts keys[0] at the bottom.
+    const dataKeySet = new Set(dataKeys);
+    const ordered = keysProp.filter(key => dataKeySet.has(key));
+    const orderedSet = new Set(ordered);
+    const remainder = dataKeys.filter(key => !orderedSet.has(key));
+    const result = [...ordered, ...remainder];
+    return keysOrder === "bottomToTop" ? result.reverse() : result;
+  }, [dataSet, keysProp, keysOrder]);
 
   // Generate colors for keys that don't have colors in colorsMapping
   const generatedColorsMapping = useMemo(() => {
@@ -760,7 +805,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
           }
         });
 
-        topNKeys = allKeys.sort((a, b) => {
+        topNKeys = [...allKeys].sort((a, b) => {
           if (filter.date) {
             const aValue = sortValues[a];
             const bValue = sortValues[b];

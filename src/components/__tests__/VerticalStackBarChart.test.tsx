@@ -390,4 +390,122 @@ describe("VerticalStackBarChart", () => {
       expect(bottom).toBeLessThanOrEqual(rects[i + 1].y + 0.01);
     }
   });
+
+  // --- keys / keysOrder: explicit, fixed stacking order ----------------------
+  // One bar (single date) with three keys. The natural property insertion order
+  // is [C, B, A] — deliberately NOT value-sorted (C is the largest) — so the
+  // default "follow the data" behavior puts the smallest key at the bottom.
+  // `metadata.visibleItems` reports keys in the chart's resolved order, so it
+  // reads the stacking order directly without depending on SVG/canvas geometry.
+  const singleStack = [
+    {
+      seriesKey: "Region",
+      seriesKeyAbbreviation: "R",
+      series: [{ date: "2001", C: "300", B: "200", A: "100" }],
+    },
+  ];
+
+  test("keys: an explicit order is honored (default topToBottom)", async () => {
+    const mockCallback = jest.fn();
+    customRender(
+      <VerticalStackBarChart
+        dataSet={singleStack}
+        {...defaultChartProps}
+        keys={["A", "B", "C"]}
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(() => expect(mockCallback).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    // allKeys follows the prop order, overriding the natural [C, B, A] data order.
+    expect(metadata.visibleItems).toEqual(["A", "B", "C"]);
+  });
+
+  test("keysOrder='bottomToTop': keys[0] anchors the bottom (largest-at-bottom)", async () => {
+    const mockCallback = jest.fn();
+    // The real consumer pattern: keys sorted DESCENDING (largest first) +
+    // bottomToTop, so the largest category (C) sits on the zero line and the
+    // order is fixed regardless of the natural data order.
+    customRender(
+      <VerticalStackBarChart
+        dataSet={singleStack}
+        {...defaultChartProps}
+        keys={["C", "B", "A"]}
+        keysOrder="bottomToTop"
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(() => expect(mockCallback).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    // bottomToTop reverses the prop order for allKeys / legend...
+    expect(metadata.visibleItems).toEqual(["A", "B", "C"]);
+    // ...and the largest key (C) is the bottom-most rendered segment (largest y,
+    // since SVG y grows downward).
+    const positions = metadata.visibleItems.map((k: string) => ({
+      k,
+      y: metadata.renderedData[k][0].y,
+    }));
+    const bottom = positions.reduce(
+      (lo: { k: string; y: number }, cur: { k: string; y: number }) => (cur.y > lo.y ? cur : lo)
+    );
+    expect(bottom.k).toBe("C");
+  });
+
+  test("keys: a partial list keeps prop order first, then appends omitted data keys", async () => {
+    const mockCallback = jest.fn();
+    customRender(
+      <VerticalStackBarChart
+        dataSet={singleStack}
+        {...defaultChartProps}
+        keys={["A"]}
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(() => expect(mockCallback).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    // A first (from the prop), then the omitted keys in natural order — nothing dropped.
+    expect(metadata.visibleItems).toEqual(["A", "C", "B"]);
+  });
+
+  test("keys: an unknown key is ignored and does not break rendering", async () => {
+    const mockCallback = jest.fn();
+    expect(() =>
+      customRender(
+        <VerticalStackBarChart
+          dataSet={singleStack}
+          {...defaultChartProps}
+          keys={["Z", "A"]}
+          onChartDataProcessed={mockCallback}
+        />
+      )
+    ).not.toThrow();
+
+    await waitFor(() => expect(mockCallback).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    // "Z" isn't in the data, so it's dropped; A leads, then the rest in natural order.
+    expect(metadata.visibleItems).toEqual(["A", "C", "B"]);
+  });
+
+  test("keys omitted: natural insertion order is unchanged (backward compat)", async () => {
+    const mockCallback = jest.fn();
+    customRender(
+      <VerticalStackBarChart
+        dataSet={singleStack}
+        {...defaultChartProps}
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(() => expect(mockCallback).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    expect(metadata.visibleItems).toEqual(["C", "B", "A"]);
+  });
 });

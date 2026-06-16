@@ -77,6 +77,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The no-hover guard `hoveredItem === null` failed for an `undefined` prop and
   dimmed every label on first paint; `hoveredItem` now defaults to `null`.
 
+## [0.6.17] - 2026-06-16
+
+### Added
+- **📊 `VerticalStackBarChart` accepts an explicit `keys` ordering.** A new
+  optional `keys?: string[]` prop sets the canonical order for the stack,
+  legend and colour assignment: prop order wins for keys present in the data,
+  data keys the prop omits are appended (never dropped), and entries not in the
+  data are ignored. A companion `keysOrder?: "topToBottom" | "bottomToTop"`
+  (default `"topToBottom"`) chooses which end of the array anchors the bottom of
+  the stack — pass keys sorted descending with `"bottomToTop"` to keep the
+  largest category at the bottom and the order fixed across periods. Both props
+  are optional and default to the previous insertion-order behaviour, so
+  existing charts are unaffected.
+
 ## [0.6.3] - 2026-05-24
 
 ### Changed
