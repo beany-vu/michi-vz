@@ -508,4 +508,70 @@ describe("VerticalStackBarChart", () => {
     const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
     expect(metadata.visibleItems).toEqual(["C", "B", "A"]);
   });
+
+  // --- filter: legend MUST equal the rendered bars -------------------------
+  // Regression: the legend (legendData) used to be picked INDEPENDENTLY of the
+  // bars — `topNKeys` re-sorted allKeys by value at filter.date and sliced —
+  // while the bars come from `filteredDataSet` (ranked by total across all
+  // years). For Bottom-N these select DIFFERENT sectors, so the legend named
+  // sectors that had no bar and, because consumers key their canvas colour CSS
+  // off legendData, the real bars resolved to "transparent" (invisible).
+  //
+  // This dataset is built so the two criteria DIVERGE for Bottom-2:
+  //   totals:        A=101, B=102, C=6   -> smallest-by-total  => {C, A}  (BARS)
+  //   value@2002:    A=100, B=2,   C=3   -> smallest-at-2002    => {B, C}  (old legend)
+  // After the fix, the legend must equal the bars ({C, A}); B (which has no
+  // bar in the Bottom-2 set) must NOT appear.
+  const divergentRanking = [
+    {
+      seriesKey: "SectorA",
+      seriesKeyAbbreviation: "SectorA",
+      series: [
+        { date: "2001", SectorA: "1" },
+        { date: "2002", SectorA: "100" },
+      ],
+    },
+    {
+      seriesKey: "SectorB",
+      seriesKeyAbbreviation: "SectorB",
+      series: [
+        { date: "2001", SectorB: "100" },
+        { date: "2002", SectorB: "2" },
+      ],
+    },
+    {
+      seriesKey: "SectorC",
+      seriesKeyAbbreviation: "SectorC",
+      series: [
+        { date: "2001", SectorC: "3" },
+        { date: "2002", SectorC: "3" },
+      ],
+    },
+  ];
+
+  test("filter: legendData equals the rendered (filtered) bars, not a value-at-date pick", async () => {
+    const mockCallback = jest.fn();
+
+    customRender(
+      <VerticalStackBarChart
+        dataSet={divergentRanking}
+        {...defaultChartProps}
+        filter={{ limit: 2, sortingDir: "asc", date: "2002" }}
+        onChartDataProcessed={mockCallback}
+      />
+    );
+
+    await waitFor(() => expect(mockCallback).toHaveBeenCalled(), { timeout: 5000 });
+
+    const metadata = mockCallback.mock.calls[mockCallback.mock.calls.length - 1][0];
+    const legendLabels = (metadata.legendData ?? []).map((d: { label: string }) => d.label).sort();
+    const renderedKeys = Object.keys(metadata.renderedData ?? {}).sort();
+
+    // The legend lists exactly the sectors that were rendered as bars...
+    expect(legendLabels).toEqual(renderedKeys);
+    // ...which are the smallest-by-total pair {SectorA, SectorC}...
+    expect(legendLabels).toEqual(["SectorA", "SectorC"]);
+    // ...and never the value-at-2002 outlier SectorB (which has no bar here).
+    expect(legendLabels).not.toContain("SectorB");
+  });
 });

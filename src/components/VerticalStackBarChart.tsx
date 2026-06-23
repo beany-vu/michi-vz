@@ -343,7 +343,9 @@ const VerticalStackBarChart: React.FC<Props> = ({
       let colorIndex = Object.keys(colorsMapping).length;
       for (const key of allKeys) {
         if (!newMapping[key]) {
-          newMapping[key] = skipColorMappingDispatch ? "transparent" : colors[colorIndex % colors.length];
+          newMapping[key] = skipColorMappingDispatch
+            ? "transparent"
+            : colors[colorIndex % colors.length];
           colorIndex++;
         }
       }
@@ -501,8 +503,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
                 const value = yearData[key];
                 const numericValue =
                   typeof value === "string" ? parseFloat(value) : (value as unknown as number);
-                const isMissingValue =
-                  value === undefined || value === null || isNaN(numericValue);
+                const isMissingValue = value === undefined || value === null || isNaN(numericValue);
 
                 if (isMissingValue) {
                   // Stub marker (opt-in via `missingDataMarker`): a thin bar on
@@ -616,13 +617,7 @@ const VerticalStackBarChart: React.FC<Props> = ({
 
   // Memoize the tooltip content generation
   const generateTooltipContent = useCallback(
-    (
-      key: string,
-      seriesKey: string,
-      data: DataPoint,
-      series: DataPoint[],
-      isMissing?: boolean
-    ) => {
+    (key: string, seriesKey: string, data: DataPoint, series: DataPoint[], isMissing?: boolean) => {
       if (tooltipFormatterRef.current) {
         return tooltipFormatterRef.current({
           item: data,
@@ -775,14 +770,25 @@ const VerticalStackBarChart: React.FC<Props> = ({
           .slice(0, filter.limit);
       }
 
-      // Sort keys based on filter criteria for consistent legend ordering
-      // Keep track of original top N keys for legend (including disabled items)
+      // The legend MUST list exactly the sectors that are drawn as bars.
+      //
+      // The bars come from `filteredDataSet`, which ranks sectors by their total
+      // across the whole visible range and slices to `filter.limit`. Previously
+      // the legend's keys were picked INDEPENDENTLY here — re-sorting `allKeys`
+      // by value at a single `filter.date` and slicing — which, for Bottom-N,
+      // selected a DIFFERENT set than the bars: the legend named sectors that had
+      // no bar, while real bars whose label was absent from the legend went
+      // unmatched. Consumers key their canvas colour CSS off `legendData`, so
+      // those unmatched bars resolved to "transparent" (invisible). Restrict the
+      // legend to the keys actually present in `filteredDataSet`, preserving
+      // `allKeys` order (= the colour/stack order), so legend === bars.
       let topNKeys = allKeys;
       const sortValues: { [key: string]: number } = {};
 
       if (filter) {
-        // Calculate sort values for all keys using original data (including disabled items)
-        // Calculate raw sum values directly from the dataset for accurate sorting
+        // Per-key value at filter.date — kept only to populate the legendData
+        // `sortValue` field (consumers may read it); it no longer drives which
+        // keys appear in the legend or their order.
         allKeys.forEach(key => {
           if (filter.date) {
             // Calculate sum across all series for this key and date
@@ -805,19 +811,13 @@ const VerticalStackBarChart: React.FC<Props> = ({
           }
         });
 
-        topNKeys = [...allKeys].sort((a, b) => {
-          if (filter.date) {
-            const aValue = sortValues[a];
-            const bValue = sortValues[b];
-            return filter.sortingDir === "desc" ? bValue - aValue : aValue - bValue;
-          }
-          return 0;
-        });
-
-        // Apply limit to get top N keys for legend generation
-        if (filter.limit) {
-          topNKeys = topNKeys.slice(0, filter.limit);
-        }
+        // Keys actually present in the rendered (filtered + sliced) bars.
+        const renderedKeySet = new Set(
+          filteredDataSet
+            .flatMap(dataItem => dataItem.series.flatMap(point => Object.keys(point)))
+            .filter(k => k !== "date" && k !== "code")
+        );
+        topNKeys = allKeys.filter(key => renderedKeySet.has(key));
       }
 
       // Generate legend data based on top N keys (include disabled items)
@@ -985,58 +985,58 @@ const VerticalStackBarChart: React.FC<Props> = ({
         {/* Stacked bars + series labels: SVG renderer only. In canvas mode
             these are painted on the <canvas> behind the SVG instead. */}
         {renderer !== "canvas" && (
-        <g>
-          {keys.map(key => {
-            return (
-              <g key={key}>
-                {stackedRectData[key] &&
-                  stackedRectData[key].map((d: RectData, i: number) => (
-                    <React.Fragment key={`item-${i}`}>
-                      <rect
-                        x={d.x}
-                        y={d.y}
-                        width={d.width}
-                        height={d.height}
-                        fill={colorCallbackFn?.(key, d) ?? d.fill ?? "transparent"}
-                        rx={2}
-                        stroke={"#fff"}
-                        className={`bar`}
-                        data-value-zero={d.value === 0}
-                        data-label={key}
-                        data-label-safe={sanitizeForClassName(key)}
-                        opacity={
-                          highlightItems.length === 0 || highlightItems.includes(key) ? 1 : 0.2
-                        }
-                        onMouseOver={() => handleMouseOver(key, d)}
-                        onMouseMove={event => {
-                          if (isTooltipSticky) return;
-                          updateTooltipPosition(event);
-                        }}
-                        onMouseOut={handleMouseOut}
-                        onClick={event => {
-                          handleDataSelection(key, d);
-                          updateTooltipPosition(event);
-                          setIsTooltipSticky(true);
-                        }}
-                      />
-                      {d.seriesKeyAbbreviation && d.width >= 20 && (
-                        <text
-                          x={d.x + d.width / 2}
-                          y={height - effectiveMargin.bottom + 15}
-                          textAnchor="middle"
-                          fontSize="12"
-                          fill="#000"
-                          className={"x-axis-label"}
-                        >
-                          <tspan>{d.seriesKeyAbbreviation}</tspan>
-                        </text>
-                      )}
-                    </React.Fragment>
-                  ))}
-              </g>
-            );
-          })}
-        </g>
+          <g>
+            {keys.map(key => {
+              return (
+                <g key={key}>
+                  {stackedRectData[key] &&
+                    stackedRectData[key].map((d: RectData, i: number) => (
+                      <React.Fragment key={`item-${i}`}>
+                        <rect
+                          x={d.x}
+                          y={d.y}
+                          width={d.width}
+                          height={d.height}
+                          fill={colorCallbackFn?.(key, d) ?? d.fill ?? "transparent"}
+                          rx={2}
+                          stroke={"#fff"}
+                          className={`bar`}
+                          data-value-zero={d.value === 0}
+                          data-label={key}
+                          data-label-safe={sanitizeForClassName(key)}
+                          opacity={
+                            highlightItems.length === 0 || highlightItems.includes(key) ? 1 : 0.2
+                          }
+                          onMouseOver={() => handleMouseOver(key, d)}
+                          onMouseMove={event => {
+                            if (isTooltipSticky) return;
+                            updateTooltipPosition(event);
+                          }}
+                          onMouseOut={handleMouseOut}
+                          onClick={event => {
+                            handleDataSelection(key, d);
+                            updateTooltipPosition(event);
+                            setIsTooltipSticky(true);
+                          }}
+                        />
+                        {d.seriesKeyAbbreviation && d.width >= 20 && (
+                          <text
+                            x={d.x + d.width / 2}
+                            y={height - effectiveMargin.bottom + 15}
+                            textAnchor="middle"
+                            fontSize="12"
+                            fill="#000"
+                            className={"x-axis-label"}
+                          >
+                            <tspan>{d.seriesKeyAbbreviation}</tspan>
+                          </text>
+                        )}
+                      </React.Fragment>
+                    ))}
+                </g>
+              );
+            })}
+          </g>
         )}
       </svg>
 
