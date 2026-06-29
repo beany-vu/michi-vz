@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **🎯 RadarChart (canvas): the highlighted/current path is now easy to hover.**
+  In canvas mode the tooltip previously only appeared within ~7px of a vertex or
+  ~6px of an edge, and hovering the polygon body returned a hit with no data
+  point (highlight only, no tooltip) — so the bright path's dots (drawn invisible
+  until hovered) were a tiny, hard-to-find target. The hit-test now treats the
+  ACTIVE (non-`dimmed`) subset as *forgiving*: an interior hover snaps to the
+  nearest vertex, and a final pass snaps to the nearest vertex within
+  `NEAREST_VERTEX_SNAP` (24px) even just outside the path. The dimmed/faded
+  subset is unchanged (tight target), so "highlight a subset, ignore the rest"
+  UX still reads correctly. Pure-geometry change in `pickHit`/`hitTestSubset`;
+  SVG mode and non-canvas consumers are unaffected.
 - **📊 Rotated band-axis labels are no longer clipped at the bottom edge.**
   `XaxisBand` now measures the longest rendered tick label and reports the
   bottom margin it needs via `onAxisModeChange(mode, requiredBottomMargin)`

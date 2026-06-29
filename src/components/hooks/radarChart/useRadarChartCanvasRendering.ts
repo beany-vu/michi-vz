@@ -10,6 +10,15 @@ import { resolveMarkColors, ColorProbe } from "../canvas/resolveMarkColors";
 // loading / no-data overlays stay in the SVG/HTML layer above the canvas.
 
 const POINT_RADIUS = 5;
+// Hovering within this many px of a polygon EDGE (not just a vertex) counts as a
+// hit on that series — so hovering "the line" reveals the nearest dot + tooltip.
+const EDGE_HIT_TOLERANCE = 6;
+// Generous snap radius for the ACTIVE (non-dimmed) path only: hovering within
+// this many px of any of its vertices snaps the tooltip to the nearest one, so
+// the highlighted path's data points are easy to reach without landing exactly
+// on the (thin, invisible-until-hovered) dot. Faded/dimmed paths never get this
+// halo — they keep the tight vertex/edge target so they stay "ignorable".
+const NEAREST_VERTEX_SNAP = 24;
 const POLYGON_STROKE_WIDTH = 2;
 // When any series in the chart is `dimmed: true`, the non-dimmed series get a
 // thicker stroke so the highlighted subset stands out. Gated on "anyone is
@@ -48,6 +57,9 @@ interface SeriesHit {
   // The raw data array, handed to the tooltip formatter unchanged.
   // `value` is typed loosely because RadarChart's DataPoint allows string|number.
   data: { value: string | number; date: string }[];
+  // Mirrors RadarSeries.dimmed — lets the hit-test prefer the ACTIVE (non-dimmed)
+  // series when an active polygon overlaps a dimmed (e.g. other-year) one.
+  dimmed?: boolean;
 }
 
 interface DrawParams {
@@ -158,6 +170,127 @@ const pointInPolygon = (mx: number, my: number, pts: PolarPoint[]): boolean => {
   return inside;
 };
 
+// Distance from (mx,my) to the segment a→b — lets hovering ON a series' outline
+// ("the line"), not just a vertex or the interior, register as a hit.
+const distToSegment = (mx: number, my: number, a: PolarPoint, b: PolarPoint): number => {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return Math.hypot(mx - a.x, my - a.y);
+  let t = ((mx - a.x) * dx + (my - a.y) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(mx - (a.x + t * dx), my - (a.y + t * dy));
+};
+
+// Nearest vertex of a single series to (mx,my). Used by the forgiving subset to
+// turn an interior / near-by hover into a concrete data point for the tooltip.
+const nearestVertex = (h: SeriesHit, mx: number, my: number): PolarPoint | null => {
+  let best: PolarPoint | null = null;
+  let bestDist = Infinity;
+  for (const pt of h.points) {
+    const dist = Math.hypot(pt.x - mx, pt.y - my);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = pt;
+    }
+  }
+  return best;
+};
+
+// Hit-test a SUBSET of drawn series in priority order: pole-point (paints on
+// top) → outline edge ("the line", within EDGE_HIT_TOLERANCE, returning the
+// nearest vertex so its dot/tooltip show) → polygon interior.
+//
+// `forgiving` (set only for the ACTIVE/non-dimmed subset) makes the highlighted
+// path easy to inspect: an interior hover snaps to the nearest vertex instead of
+// returning a tooltip-less hit, and a final pass snaps to the nearest vertex
+// within NEAREST_VERTEX_SNAP even when the cursor is just OUTSIDE the path. The
+// tight (dimmed) subset passes `false`, preserving the historical behaviour —
+// faded paths stay hard to hit on purpose.
+const hitTestSubset = (
+  subset: SeriesHit[],
+  mx: number,
+  my: number,
+  forgiving = false
+): { hit: SeriesHit; point: PolarPoint | null } | null => {
+  // Pole-point hit first (nearest within the point radius).
+  let pointHit: { hit: SeriesHit; point: PolarPoint } | null = null;
+  let bestDist = POINT_RADIUS + 2;
+  for (const h of subset) {
+    for (const pt of h.points) {
+      const dist = Math.hypot(pt.x - mx, pt.y - my);
+      if (dist <= bestDist) {
+        bestDist = dist;
+        pointHit = { hit: h, point: pt };
+      }
+    }
+  }
+  if (pointHit) return pointHit;
+  // Then the OUTLINE ("the line"): within a few px of any polygon edge counts as
+  // a hit, returning the nearest vertex so its dot + tooltip show. Before this the
+  // connecting edges weren't hittable at all — only a vertex (tiny target) or the
+  // interior — so hovering the line did nothing and the dots (opacity 0 until
+  // hovered) never appeared.
+  let edgeHit: { hit: SeriesHit; point: PolarPoint } | null = null;
+  let bestEdgeDist = EDGE_HIT_TOLERANCE;
+  for (const h of subset) {
+    const pts = h.points;
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i];
+      const b = pts[(i + 1) % pts.length];
+      const dist = distToSegment(mx, my, a, b);
+      if (dist <= bestEdgeDist) {
+        bestEdgeDist = dist;
+        const nearest = Math.hypot(a.x - mx, a.y - my) <= Math.hypot(b.x - mx, b.y - my) ? a : b;
+        edgeHit = { hit: h, point: nearest };
+      }
+    }
+  }
+  if (edgeHit) return edgeHit;
+  // Then the polygon body. The forgiving subset snaps to the nearest vertex so
+  // hovering anywhere inside the bright shape shows a tooltip; the tight subset
+  // keeps the historical highlight-only (point: null) interior hit.
+  for (const h of subset) {
+    if (pointInPolygon(mx, my, h.points)) {
+      return { hit: h, point: forgiving ? nearestVertex(h, mx, my) : null };
+    }
+  }
+  // Forgiving-only final pass: snap to the nearest vertex within
+  // NEAREST_VERTEX_SNAP so the highlighted path is reachable even when the
+  // cursor sits just OUTSIDE it (the dots are tiny and hidden until hovered).
+  if (forgiving) {
+    let snapHit: { hit: SeriesHit; point: PolarPoint } | null = null;
+    let bestSnap = NEAREST_VERTEX_SNAP;
+    for (const h of subset) {
+      for (const pt of h.points) {
+        const dist = Math.hypot(pt.x - mx, pt.y - my);
+        if (dist <= bestSnap) {
+          bestSnap = dist;
+          snapHit = { hit: h, point: pt };
+        }
+      }
+    }
+    if (snapHit) return snapHit;
+  }
+  return null;
+};
+
+// ACTIVE-over-dimmed priority: when an active (non-dimmed) polygon overlaps a
+// dimmed one — e.g. the current-year radar line crossing a faded other-year line
+// — the active series must win the hit so its dot/tooltip stays reachable. Sweep
+// the non-dimmed series FIRST, then fall back to the dimmed ones. With no dimmed
+// series the second pass is empty and behaviour is unchanged. Exported for tests.
+export const pickHit = (
+  hits: SeriesHit[],
+  mx: number,
+  my: number
+): { hit: SeriesHit; point: PolarPoint | null } | null => {
+  const active = hits.filter(h => !h.dimmed);
+  const dimmed = hits.filter(h => h.dimmed);
+  // Active subset is FORGIVING (body + nearby snap); dimmed subset stays tight.
+  return hitTestSubset(active, mx, my, true) ?? hitTestSubset(dimmed, mx, my, false);
+};
+
 // Pure draw routine — clears the canvas, repaints every series and returns the
 // drawn series for hit-testing. Kept at module scope (no React closure) so both
 // the redraw effect and the hover handler can call it.
@@ -193,7 +326,7 @@ const drawChart = (canvas: HTMLCanvasElement | null, p: DrawParams): SeriesHit[]
   for (const item of p.series) {
     if (p.disabledItems.includes(item.label)) continue; // culled before drawing
     const points = projectSeries(item.data, p.poleLabels, p.scale, p.width, p.height);
-    hits.push({ label: item.label, points, data: item.data });
+    hits.push({ label: item.label, points, data: item.data, dimmed: item.dimmed });
     if (points.length === 0) continue;
 
     // Prefer the DOM-resolved colour (honours consumer CSS in
@@ -397,33 +530,9 @@ const useRadarChartCanvasRendering = (
       optsRef.current.onHighlightItem?.(label ? [label] : []);
     };
 
-    // The series + (optional) pole point under the cursor. A pole point within
-    // its radius is checked first (it paints on top of the polygon); failing
-    // that, a point-in-polygon test against each series' vertices.
-    const hitTest = (
-      mx: number,
-      my: number
-    ): { hit: SeriesHit; point: PolarPoint | null } | null => {
-      const hits = hitsRef.current;
-      // Pole-point hit first (nearest within the point radius).
-      let pointHit: { hit: SeriesHit; point: PolarPoint } | null = null;
-      let bestDist = POINT_RADIUS + 2;
-      for (const h of hits) {
-        for (const pt of h.points) {
-          const dist = Math.hypot(pt.x - mx, pt.y - my);
-          if (dist <= bestDist) {
-            bestDist = dist;
-            pointHit = { hit: h, point: pt };
-          }
-        }
-      }
-      if (pointHit) return pointHit;
-      // Then the polygon body.
-      for (const h of hits) {
-        if (pointInPolygon(mx, my, h.points)) return { hit: h, point: null };
-      }
-      return null;
-    };
+    // Series + (optional) pole point under the cursor — pole → edge → interior,
+    // with ACTIVE-over-dimmed priority (see module-scope `pickHit`).
+    const hitTest = (mx: number, my: number) => pickHit(hitsRef.current, mx, my);
 
     // Position + fill the HTML tooltip for a pole-point hit at pixel (mx, my).
     const showTooltip = (mx: number, my: number, hit: SeriesHit, point: PolarPoint) => {
