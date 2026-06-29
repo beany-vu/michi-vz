@@ -38,14 +38,7 @@ const phoneComparison = [
 
 // City livability scores (0–10) across six dimensions used by relocation and
 // urban-planning comparisons. Auto-coloured so the colour-mapping pipeline runs.
-const livabilityAxes = [
-  "Affordability",
-  "Safety",
-  "Healthcare",
-  "Transit",
-  "Culture",
-  "Climate",
-];
+const livabilityAxes = ["Affordability", "Safety", "Healthcare", "Transit", "Culture", "Climate"];
 
 const cityLivability = [
   seriesFrom("Vienna", {
@@ -146,6 +139,58 @@ const candidateComparison = [
   ),
 ];
 
+// Monthly footfall index (0–10) for one store across three years, used by the
+// canvas "current vs history" story below. The current year is drawn solid; the
+// prior years are `dimmed` so they recede into the background — the exact
+// "highlight one path, fade the rest" pattern ATO MonitorV2's Seasonality radar
+// uses. Twelve poles (months) deliberately crowd the vertices near the centre,
+// which is what made the bright path's data points hard to hover before the
+// forgiving hit-test landed.
+const monthAxes = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+const footfallByYear = [
+  {
+    label: "2024",
+    color: "#1F77B4",
+    dimmed: false, // the current/active path — drawn bright and easy to hover
+    data: [6.1, 5.4, 7.2, 8.0, 8.6, 9.1, 9.4, 9.0, 7.8, 7.1, 6.6, 8.9].map((v, i) => ({
+      date: monthAxes[i],
+      value: String(v),
+    })),
+  },
+  {
+    label: "2023",
+    color: "#FF7F0E",
+    dimmed: true, // a faded prior year — kept ignorable on hover
+    data: [5.3, 4.9, 6.4, 7.1, 7.9, 8.2, 8.7, 8.1, 7.0, 6.3, 5.8, 8.0].map((v, i) => ({
+      date: monthAxes[i],
+      value: String(v),
+    })),
+  },
+  {
+    label: "2022",
+    color: "#2CA02C",
+    dimmed: true,
+    data: [4.6, 4.2, 5.7, 6.5, 7.0, 7.6, 7.9, 7.4, 6.2, 5.6, 5.1, 7.2].map((v, i) => ({
+      date: monthAxes[i],
+      value: String(v),
+    })),
+  },
+];
+
 // --- Common props -----------------------------------------------------------
 
 // Standard `poles` config: axes evenly spaced around the full circle, with a
@@ -163,8 +208,7 @@ const commonProps = {
   poles: makePoles(phoneAxes),
   // Stringify the radial axis ticks with at most one decimal — otherwise non-
   // round domains (e.g. decathlete 0..10 / 6 ticks) print `7.223188405797102`.
-  radialLabelFormatter: (item: number) =>
-    Number.isInteger(item) ? `${item}` : item.toFixed(1),
+  radialLabelFormatter: (item: number) => (Number.isInteger(item) ? `${item}` : item.toFixed(1)),
   tooltipFormatter: (item: { date: string; value: number }) => (
     <div>
       <strong>{item.date}</strong>
@@ -311,17 +355,12 @@ export const InteractiveLegend: Story = {
     >([]);
 
     const handleColorMappingGenerated = useCallback((mapping: { [key: string]: string }) => {
-      setColorsMapping(prev =>
-        JSON.stringify(prev) === JSON.stringify(mapping) ? prev : mapping
-      );
+      setColorsMapping(prev => (JSON.stringify(prev) === JSON.stringify(mapping) ? prev : mapping));
     }, []);
 
-    const handleChartDataProcessed = useCallback(
-      (metadata: { legendData?: typeof legendData }) => {
-        if (metadata.legendData) setLegendData(metadata.legendData);
-      },
-      []
-    );
+    const handleChartDataProcessed = useCallback((metadata: { legendData?: typeof legendData }) => {
+      if (metadata.legendData) setLegendData(metadata.legendData);
+    }, []);
 
     const toggleDisabled = useCallback((label: string) => {
       setDisabledItems(prev =>
@@ -388,6 +427,36 @@ export const InteractiveLegend: Story = {
           "at a time is the standard fix for the radar's main weakness: too much overlap. " +
           "The emitted legend data (via `onChartDataProcessed`) is dumped below for wiring " +
           "up external legends.",
+      },
+    },
+  },
+};
+
+// Canvas renderer + per-series `dimmed`: the "highlight the current path, fade
+// the history" pattern, and the showcase for the forgiving hover hit-test.
+export const CurrentVsHistoryCanvas: Story = {
+  args: {
+    series: footfallByYear,
+    poles: makePoles(monthAxes),
+    renderer: "canvas",
+    showFilled: false,
+    // Canvas tooltips are injected as sanitized HTML, so the formatter MUST
+    // return a string (a React node is dropped in favour of a bare default).
+    tooltipFormatter: (item: { date: string; value: number }) =>
+      `<strong>${item.date}</strong><br/>Footfall index: ${item.value}`,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "One store's monthly footfall index for three years on a 12-pole radar, drawn with " +
+          "the **canvas** renderer. The current year (2024) is solid; the prior years are " +
+          "`dimmed` so they recede. This is the path the *forgiving hit-test* improves: hover " +
+          "anywhere inside the bright 2024 polygon — or just outside it — and the tooltip " +
+          "snaps to the nearest month's point, instead of only firing within a few pixels of " +
+          "the (invisible-until-hovered) dot. The faded years keep a tight target, so they " +
+          "stay easy to ignore. Twelve poles crowd the vertices near the centre, which is " +
+          "exactly where the old pixel-perfect target was painful.",
       },
     },
   },
