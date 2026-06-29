@@ -32,7 +32,7 @@
     "test:e2e": "playwright test",
     "test:e2e:update": "playwright test --update-snapshots",
     "build": "node node_modules/typescript/bin/tsc --pretty && node node_modules/tsc-alias/dist/bin/index.js",
-    "build:to-thd": "npm run build && rm -rf /mnt/c/Coding/thd/frontend/node_modules/michi-vz/dist && cp -r ./dist /mnt/c/Coding/thd/frontend/node_modules/michi-vz/dist && echo '✓ michi-vz dist copied to thd/frontend/node_modules. Restart the dev server to pick it up.'",
+    "build:to-thd": "npm run build && rm -rf ../thd/frontend/node_modules/michi-vz/dist && cp -r ./dist ../thd/frontend/node_modules/michi-vz/dist && echo '✓ michi-vz dist copied to thd/frontend/node_modules. Restart the dev server to pick it up.'",
     "build:files": "node node_modules/typescript/bin/tsc --pretty --listFiles && node node_modules/tsc-alias/dist/bin/index.js",
     "build:debug": "node node_modules/typescript/bin/tsc --pretty --extendedDiagnostics && node node_modules/tsc-alias/dist/bin/index.js",
     "build:trace": "node node_modules/typescript/bin/tsc --pretty --traceResolution && node node_modules/tsc-alias/dist/bin/index.js",
